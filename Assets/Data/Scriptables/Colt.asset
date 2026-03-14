@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
+  m_Name: Colt
+  m_EditorClassIdentifier: 
+  BrawlerName: Colt
+  ModelPrefab: {fileID: 0}
+  BaseHealth: 3000
+  BaseMoveSpeed: 5
+  BaseDamage: 500
+  MainAttack: {fileID: 11400000, guid: b9cc8a39d471248a99765683ce652014, type: 2}
+  SuperAbility: {fileID: 0}
+  Gadget: {fileID: 0}
