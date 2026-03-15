@@ -31,6 +31,7 @@ namespace MOBA.Core.Infrastructure
         // The Bridge calls this to set the "Intent"
         public void SetMoveInput(Vector3 direction)
         {
+            Debug.Log("Move Input: " + direction);
             _currentMoveInput = direction;
         }
 
@@ -186,9 +187,6 @@ namespace MOBA.Core.Infrastructure
             base.OnDisable();
             SimulationClock.Grid?.Remove(this, transform.position);
         }
-
-        [Header("Infrastructure")]
-        [SerializeField] private SimpleObjectPool _projectilePool; // Assign in Inspector
 
         public void FireProjectile(Vector3 origin, Vector3 direction, float speed, float range, float damage)
         {

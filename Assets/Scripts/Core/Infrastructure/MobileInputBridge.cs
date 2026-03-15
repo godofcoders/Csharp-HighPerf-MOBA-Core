@@ -14,6 +14,7 @@ namespace MOBA.Core.Infrastructure
 
         private void Awake()
         {
+            Debug.Log("[INPUT] MobileInputBridge is Awake!");
             _inputActions = new GameInput();
         }
 
@@ -40,10 +41,15 @@ namespace MOBA.Core.Infrastructure
 
         private void Update()
         {
+            if (_targetBrawler == null)
+                return;
+
             // 1. Read Movement
             _moveInput = _inputActions.Player.Move.ReadValue<Vector2>();
+            Debug.Log($"[INPUT] Move Input: {_moveInput}");
             if (_moveInput.sqrMagnitude > 0.01f)
             {
+                Debug.Log($"[INPUT] Moving: {_moveInput}");
                 Vector3 moveDir = new Vector3(_moveInput.x, 0, _moveInput.y);
                 _targetBrawler.SetMoveInput(moveDir);
             }

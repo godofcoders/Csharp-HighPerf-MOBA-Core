@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Simulation;
+using UnityEngine.Pool;
 
 namespace MOBA.Core.Infrastructure
 {
@@ -80,9 +81,12 @@ namespace MOBA.Core.Infrastructure
                 }
                 else
                 {
-                    // 3. INJECT the player reference into the MobileInputBridge
                     var mobileInput = FindObjectOfType<MobileInputBridge>();
-                    if (mobileInput != null) mobileInput.SetTarget(controller);
+                    if (mobileInput != null)
+                        mobileInput.SetTarget(controller);
+
+                    // camera follow fix
+                    SetPlayerTarget(controller.transform);
                 }
             }
         }

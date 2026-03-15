@@ -12,19 +12,41 @@ namespace MOBA.Core.Simulation.AI
 
         public override BTNodeState Evaluate()
         {
+            Debug.Log("Evaluating Find Target");
             // 1. Guard: Is the global Grid ready?
-            if (SimulationClock.Grid == null) return BTNodeState.Failure;
+            if (SimulationClock.Grid == null)
+            {
+                Debug.Log("Find Target failed: Grid null");
+                return BTNodeState.Failure;
+            }
 
             // 2. Guard: Does this node have its own reference to the brawler?
             // This is likely where your error is!
-            if (_self == null) return BTNodeState.Failure;
+            if (_self == null)
+            {
+                Debug.Log("Find Target failed: Brawler null");
+                return BTNodeState.Failure;
+            }
+
+            if (_self.State == null)
+            {
+                Debug.Log("Find Target failed: State null");
+                return BTNodeState.Failure;
+            }
+
+            if (_self.State.IsDead)
+            {
+                Debug.Log("Find Target failed: Brawler is dead");
+                return BTNodeState.Failure;
+            }
+
 
             ISpatialEntity closest = null;
             float minDist = float.MaxValue;
 
             // 3. The logic call (uses _self.Position)
-            var targets = SimulationClock.Grid.GetEntitiesInRadius(_self.Position, 10f);
-
+            var targets = SimulationClock.Grid.GetEntitiesInRadius(_self.Position, 30f);
+            Debug.Log($"Entities in radius: {targets?.Count}");
             if (targets == null || targets.Count == 0) return BTNodeState.Failure;
 
             foreach (var entity in targets)
