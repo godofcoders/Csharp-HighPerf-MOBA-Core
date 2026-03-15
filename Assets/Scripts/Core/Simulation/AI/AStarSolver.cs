@@ -7,16 +7,43 @@ namespace MOBA.Core.Simulation.AI
     {
         private PathNode[,] _grid;
         private int _width, _height;
+        private UnityEngine.Vector3 _origin;
+        private float _cellSize;
 
-        public AStarSolver(bool[,] walkableMap)
+        public AStarSolver(bool[,] walkableMap, float cellSize, UnityEngine.Vector3 origin)
         {
             _width = walkableMap.GetLength(0);
             _height = walkableMap.GetLength(1);
+            _cellSize = cellSize;
+            _origin = origin;
+
             _grid = new PathNode[_width, _height];
 
             for (int x = 0; x < _width; x++)
                 for (int y = 0; y < _height; y++)
                     _grid[x, y] = new PathNode(x, y, walkableMap[x, y]);
+        }
+
+        // NEW: Translate World Position -> Grid Coordinates
+        public UnityEngine.Vector2Int GetGridCoords(UnityEngine.Vector3 worldPos)
+        {
+            int x = UnityEngine.Mathf.FloorToInt((worldPos.x - _origin.x) / _cellSize);
+            int y = UnityEngine.Mathf.FloorToInt((worldPos.z - _origin.z) / _cellSize);
+
+            // Clamp to ensure we stay inside the array bounds
+            x = UnityEngine.Mathf.Clamp(x, 0, _width - 1);
+            y = UnityEngine.Mathf.Clamp(y, 0, _height - 1);
+
+            return new UnityEngine.Vector2Int(x, y);
+        }
+
+        // NEW: Translate Grid Coordinates -> World Position (Center of the cell)
+        public UnityEngine.Vector3 GetWorldPos(int x, int y)
+        {
+            float worldX = _origin.x + (x * _cellSize) + (_cellSize / 2f);
+            float worldZ = _origin.z + (y * _cellSize) + (_cellSize / 2f);
+
+            return new UnityEngine.Vector3(worldX, 0, worldZ);
         }
 
         public List<PathNode> FindPath(int startX, int startY, int endX, int endY)

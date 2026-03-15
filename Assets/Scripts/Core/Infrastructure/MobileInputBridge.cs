@@ -32,6 +32,12 @@ namespace MOBA.Core.Infrastructure
             _inputActions.Player.Disable();
         }
 
+        public void SetTarget(BrawlerController brawler)
+        {
+            _targetBrawler = brawler;
+            Debug.Log($"[INPUT] Mobile Input Bridge linked to {brawler.name}");
+        }
+
         private void Update()
         {
             // 1. Read Movement

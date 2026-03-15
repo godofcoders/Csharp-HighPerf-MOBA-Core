@@ -3,7 +3,7 @@ using MOBA.Core.Simulation;
 using MOBA.Core.Simulation.AI;
 using UnityEngine;
 
-public class SimulationClock : MonoBehaviour
+public class SimulationClock : MonoBehaviour, ISimulationClock
 {
     [SerializeField] private int _ticksPerSecond = 30;
 
@@ -12,12 +12,13 @@ public class SimulationClock : MonoBehaviour
     public const float TickDeltaTime = 1f / 30f;
     public static SimulationRegistry Registry { get; private set; }
     public static SpatialGrid Grid { get; private set; }
-    public static uint CurrentTick => _instance != null && _instance._processor != null
-                ? _instance._processor.CurrentTick
-                : 0;
+    public static AStarSolver Pathfinder { get; private set; }
+
+    public uint CurrentTick => _processor?.CurrentTick ?? 0;
+    public float TickDelta => 1f / _ticksPerSecond;
 
     private static SimulationClock _instance;
-    public static AStarSolver Pathfinder { get; private set; }
+
 
     private void Awake()
     {
@@ -27,6 +28,8 @@ public class SimulationClock : MonoBehaviour
             return;
         }
         _instance = this;
+
+        ServiceProvider.Register<ISimulationClock>(this);
 
         _processor = new TickProcessor(_ticksPerSecond);
         _registry = new SimulationRegistry();
@@ -41,7 +44,7 @@ public class SimulationClock : MonoBehaviour
         if (generator != null)
         {
             var data = generator.BakeMap();
-            Pathfinder = new AStarSolver(data.WalkabilityGrid);
+            Pathfinder = new AStarSolver(data.WalkabilityGrid, data.CellSize, data.Origin);
         }
     }
 
@@ -52,7 +55,18 @@ public class SimulationClock : MonoBehaviour
         int ticks = _processor.Update(Time.deltaTime);
         for (int i = 0; i < ticks; i++)
         {
-            _registry.TickAll(_processor.CurrentTick);
+            uint tickCount = _processor.CurrentTick;
+
+            // 1. Tick all Entities (Brawlers)
+            _registry.TickAll(tickCount);
+
+            // 2. Tick all Projectiles via the Service
+            try
+            {
+                var projectileService = ServiceProvider.Get<IProjectileService>();
+                projectileService.ManualTick(tickCount);
+            }
+            catch { /* Handle case where no projectiles are in scene */ }
         }
     }
 }

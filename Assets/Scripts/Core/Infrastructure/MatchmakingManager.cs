@@ -9,7 +9,10 @@ namespace MOBA.Core.Infrastructure
     {
         public static MatchmakingManager Instance { get; private set; }
 
-        [Header("Settings")]
+        [Header("Player Settings")]
+        [SerializeField] private BrawlerDefinition _playerBrawler; // Assign your brawler here!
+
+        [Header("Match Settings")]
         [SerializeField] private int _teamSize = 3;
         [SerializeField] private BrawlerDefinition _defaultBotBrawler;
 
@@ -18,34 +21,44 @@ namespace MOBA.Core.Infrastructure
 
         private void Awake() => Instance = this;
 
-        // 1. Add the Local Player
+        private void Start()
+        {
+            // For now, we auto-join the player on Start for testing.
+            // In a finished game, this would be called by a "Play" button.
+            if (_playerBrawler != null)
+            {
+                JoinLocalPlayer(_playerBrawler);
+            }
+            else
+            {
+                Debug.LogError("[Lobby] No Player Brawler assigned in MatchmakingManager!");
+            }
+        }
+
         public void JoinLocalPlayer(BrawlerDefinition selected)
         {
             _roster.Add(new MatchParticipant("Player (You)", TeamType.Blue, selected, false));
-            Debug.Log("Player joined Blue team.");
-
-            // In a real game, you'd wait for server pings. 
-            // Here, we simulate "finding" bots immediately.
+            Debug.Log($"[Lobby] Player joined as {selected.BrawlerName}");
+            
             FillWithBots();
         }
 
-        // 2. Fill remaining slots with AI
         private void FillWithBots()
         {
             int totalSlots = _teamSize * 2;
             while (_roster.Count < totalSlots)
             {
+                // Fill Team Blue first, then Team Red
                 TeamType team = (_roster.Count < _teamSize) ? TeamType.Blue : TeamType.Red;
                 _roster.Add(new MatchParticipant($"Bot {_roster.Count}", team, _defaultBotBrawler, true));
             }
 
-            Debug.Log("Lobby Full. Starting Match...");
+            Debug.Log("[Lobby] Roster full. Initializing Spawn Sequence...");
             StartMatch();
         }
 
         private void StartMatch()
         {
-            // Pass the roster to the SpawnManager and start the countdown
             SpawnManager.Instance.PrepareMatch(_roster);
             MatchManager.Instance.StartMatchFlow();
         }

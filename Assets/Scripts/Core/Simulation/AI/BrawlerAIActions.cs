@@ -12,16 +12,25 @@ namespace MOBA.Core.Simulation.AI
 
         public override BTNodeState Evaluate()
         {
-            // Use our Spatial Grid to find enemies efficiently
-            var nearby = SimulationClock.Grid?.GetEntitiesInCell(_self.Position);
-            if (nearby == null) return BTNodeState.Failure;
+            // 1. Guard: Is the global Grid ready?
+            if (SimulationClock.Grid == null) return BTNodeState.Failure;
+
+            // 2. Guard: Does this node have its own reference to the brawler?
+            // This is likely where your error is!
+            if (_self == null) return BTNodeState.Failure;
 
             ISpatialEntity closest = null;
             float minDist = float.MaxValue;
 
-            foreach (var entity in nearby)
+            // 3. The logic call (uses _self.Position)
+            var targets = SimulationClock.Grid.GetEntitiesInRadius(_self.Position, 10f);
+
+            if (targets == null || targets.Count == 0) return BTNodeState.Failure;
+
+            foreach (var entity in targets)
             {
-                if (entity.EntityID == _self.EntityID) continue;
+                // Don't target yourself or teammates
+                if (entity.EntityID == _self.EntityID || entity.Team == _self.Team) continue;
 
                 float dist = (entity.Position - _self.Position).sqrMagnitude;
                 if (dist < minDist)
@@ -36,6 +45,7 @@ namespace MOBA.Core.Simulation.AI
                 Blackboard.Set("Target", closest);
                 return BTNodeState.Success;
             }
+
             return BTNodeState.Failure;
         }
     }
@@ -52,20 +62,43 @@ namespace MOBA.Core.Simulation.AI
         {
             var target = Blackboard.Get<ISpatialEntity>("Target");
             if (target == null) return BTNodeState.Failure;
-            if (_currentPath == null || _pathIndex >= _currentPath.Count)
+
+            var pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null) return BTNodeState.Failure;
+
+            // 1. Path Calculation (Bake path only if target moved significantly or we have no path)
+            if (_currentPath == null || ServiceProvider.Get<ISimulationClock>().CurrentTick % 20 == 0)
             {
-                // Note: You would call SimulationClock.Pathfinder.FindPath() here
-                // using the target's grid position
+                var startCoords = SimulationClock.Pathfinder.GetGridCoords(_self.Position);
+                var endCoords = SimulationClock.Pathfinder.GetGridCoords(target.Position);
+
+                // A* Solve
+                _currentPath = SimulationClock.Pathfinder.FindPath(startCoords.x, startCoords.y, endCoords.x, endCoords.y);
+                _pathIndex = 0;
+            }
+
+            if (_currentPath == null || _currentPath.Count == 0) return BTNodeState.Failure;
+
+            // 2. Waypoint Following
+            if (_pathIndex < _currentPath.Count)
+            {
+                // Convert Grid Node back to World Position
+                Vector3 targetPos = SimulationClock.Pathfinder.GetWorldPos(_currentPath[_pathIndex].X, _currentPath[_pathIndex].Y);
+                Vector3 dir = (targetPos - _self.Position).normalized;
+
+                // Push movement to the "Body"
+                _self.SetMoveInput(dir);
+
+                // Check if we reached this waypoint
+                if ((targetPos - _self.Position).sqrMagnitude < 0.25f)
+                {
+                    _pathIndex++;
+                }
+
                 return BTNodeState.Running;
             }
-            Vector3 targetPos = new Vector3(_currentPath[_pathIndex].X, 0, _currentPath[_pathIndex].Y);
-            Vector3 dir = (targetPos - _self.Position).normalized;
-            _self.SetMoveInput(dir); // Pushing intent to the controller
 
-            // If we are close enough, we succeeded in moving to them
-            if ((targetPos - _self.Position).sqrMagnitude < 0.2f) _pathIndex++;
-
-            return BTNodeState.Running;
+            return BTNodeState.Success;
         }
     }
 }

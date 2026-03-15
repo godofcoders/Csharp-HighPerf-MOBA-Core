@@ -8,6 +8,7 @@ namespace MOBA.Core.Infrastructure
     public class BrawlerAIController : SimulationEntity
     {
         [SerializeField] private BrawlerController _brawler;
+        public void SetTarget(BrawlerController b) => _brawler = b;
 
         private AIBlackboard _blackboard;
         private BTNode _treeRoot;
@@ -26,9 +27,15 @@ namespace MOBA.Core.Infrastructure
             });
         }
 
+
         public override void Tick(uint currentTick)
         {
-            if (_brawler.State.IsDead) return;
+            if (SimulationClock.Grid == null || _brawler == null || _brawler.State == null)
+            {
+                return;
+            }
+            if (_brawler.State.IsDead)
+                return;
 
             // The brain "thinks" every tick
             _treeRoot.Evaluate();
@@ -38,7 +45,7 @@ namespace MOBA.Core.Infrastructure
             if (target != null && currentTick % 30 == 0) // Fire once per second
             {
                 Vector3 dir = (target.Position - _brawler.Position).normalized;
-                _brawler.BufferAttack(Simulation.InputCommandType.MainAttack, dir);
+                _brawler.BufferAttack(InputCommandType.MainAttack, dir);
             }
         }
     }

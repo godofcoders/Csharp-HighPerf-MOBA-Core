@@ -192,13 +192,19 @@ namespace MOBA.Core.Infrastructure
 
         public void FireProjectile(Vector3 origin, Vector3 direction, float speed, float range, float damage)
         {
-            GameObject bulletObj = _projectilePool.Get();
+            // 1. Fetch the Projectile Service from the registry
+            var projectileService = ServiceProvider.Get<IProjectileService>();
 
-            if (bulletObj.TryGetComponent<ProjectileController>(out var projectile))
-            {
-                // Pass 'this.EntityID' so the bullet doesn't hit the shooter
-                projectile.Initialize(origin, direction, speed, range, damage, this.EntityID, _projectilePool);
-            }
+            // 2. Delegate the firing logic to the manager
+            // We pass 'this.Team' to the service so the manager knows which team to ignore (No Friendly Fire)
+            projectileService.FireProjectile(
+                origin,
+                direction,
+                speed,
+                range,
+                damage,
+                this.Team
+            );
         }
 
         private void ExecuteCommand(BufferedCommand cmd)
@@ -208,7 +214,7 @@ namespace MOBA.Core.Infrastructure
             {
                 Origin = transform.position,
                 Direction = cmd.Direction,
-                StartTick = SimulationClock.CurrentTick
+                StartTick = ServiceProvider.Get<ISimulationClock>().CurrentTick
             };
 
             switch (cmd.Type)
@@ -242,7 +248,7 @@ namespace MOBA.Core.Infrastructure
             // Hypercharge doesn't go through the buffer; it's an instant state change
             if (State.Hypercharge.ChargePercent >= 1.0f)
             {
-                State.Hypercharge.Activate(SimulationClock.CurrentTick);
+                State.Hypercharge.Activate(ServiceProvider.Get<ISimulationClock>().CurrentTick);
 
                 // Apply the "Pioneer" modifiers
                 var speedMod = new StatModifier(0.25f, ModifierType.Multiplicative, State.Hypercharge);

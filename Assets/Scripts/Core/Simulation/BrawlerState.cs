@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using MOBA.Core.Definitions;
+using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation
 {
@@ -86,7 +87,8 @@ namespace MOBA.Core.Simulation
         }
         public void ApplyEffect(StatusEffect effect, float duration)
         {
-            effect.Initialize(this, duration, SimulationClock.CurrentTick);
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            effect.Initialize(this, duration, currentTick);
             _activeEffects.Add(effect);
         }
 
@@ -108,8 +110,10 @@ namespace MOBA.Core.Simulation
         {
             if (observerTeam == this.Team) return false;
 
-            // Revealed if: Not in bush OR recently attacked (e.g., last 2 seconds/60 ticks) OR forced reveal
-            bool recentlyAttacked = (SimulationClock.CurrentTick - LastAttackTick) < 60;
+            // Get the current tick via the Service Locator
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+
+            bool recentlyAttacked = (currentTick - LastAttackTick) < 60;
 
             if (!IsInBush || recentlyAttacked || IsRevealed) return false;
 

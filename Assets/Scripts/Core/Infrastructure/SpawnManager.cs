@@ -71,13 +71,18 @@ namespace MOBA.Core.Infrastructure
                 // 4. If participant is AI, attach the Brain
                 if (participant.IsAI)
                 {
-                    go.AddComponent<BrawlerAIController>();
+                    // 1. Add/Get the AI Brain
+                    var aiBrain = go.GetComponent<BrawlerAIController>();
+                    if (aiBrain == null) aiBrain = go.AddComponent<BrawlerAIController>();
+
+                    // 2. INJECT the reference (Assuming you made the field public or added a setter)
+                    aiBrain.SetTarget(controller);
                 }
                 else
                 {
-                    // If player, tell the Camera and InputBridge to track this one
-                    FindObjectOfType<CameraController>().SetTarget(go.transform);
-                    // FindObjectOfType<MobileInputBridge>().SetTarget(controller);
+                    // 3. INJECT the player reference into the MobileInputBridge
+                    var mobileInput = FindObjectOfType<MobileInputBridge>();
+                    if (mobileInput != null) mobileInput.SetTarget(controller);
                 }
             }
         }
