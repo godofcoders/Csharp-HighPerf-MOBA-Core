@@ -1,17 +1,17 @@
-using MOBA.Core.Infrastructure;
 using UnityEngine;
+using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation;
 
 namespace MOBA.Core.Simulation.AI
 {
     public class NodeWander : BTNode
     {
-        private BrawlerController _self;
-        private Vector3 _wanderDir;
-        private int _nextChangeTick;
+        private NavigationAgent _agent;
+        private uint _nextChangeTick;
 
-        public NodeWander(AIBlackboard bb, BrawlerController self) : base(bb)
+        public NodeWander(AIBlackboard bb, NavigationAgent agent) : base(bb)
         {
-            _self = self;
+            _agent = agent;
         }
 
         public override BTNodeState Evaluate()
@@ -20,16 +20,18 @@ namespace MOBA.Core.Simulation.AI
 
             if (tick > _nextChangeTick)
             {
-                _wanderDir = new Vector3(
-                    Random.Range(-1f, 1f),
-                    0,
-                    Random.Range(-1f, 1f)
-                ).normalized;
+                Vector3 randomOffset = new Vector3(
+                    Random.Range(-6f, 6f),
+                    0f,
+                    Random.Range(-6f, 6f)
+                );
 
-                _nextChangeTick = (int)tick + 60;
+                Vector3 wanderPoint = _agent.Position + randomOffset;
+
+                _agent.SetDestination(wanderPoint);
+
+                _nextChangeTick = tick + 120;
             }
-
-            _self.SetMoveInput(_wanderDir);
 
             return BTNodeState.Running;
         }

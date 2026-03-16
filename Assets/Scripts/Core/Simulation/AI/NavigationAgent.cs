@@ -8,6 +8,7 @@ public class NavigationAgent
     private BrawlerController _brawler;
     private List<PathNode> _path;
     private int _index;
+    public Vector3 Position => _brawler.Position;
 
     public NavigationAgent(BrawlerController brawler)
     {
