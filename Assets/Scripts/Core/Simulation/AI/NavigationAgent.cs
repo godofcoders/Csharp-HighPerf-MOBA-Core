@@ -1,39 +1,161 @@
 using System.Collections.Generic;
-using MOBA.Core.Infrastructure;
-using MOBA.Core.Simulation.AI;
 using UnityEngine;
+using MOBA.Core.Infrastructure;
 
-public class NavigationAgent
+namespace MOBA.Core.Simulation.AI
 {
-    private BrawlerController _brawler;
-    private List<PathNode> _path;
-    private int _index;
-    public Vector3 Position => _brawler.Position;
-
-    public NavigationAgent(BrawlerController brawler)
+    public class NavigationAgent
     {
-        _brawler = brawler;
-    }
+        private readonly BrawlerController _brawler;
+        private readonly ISimulationClock _clock;
 
-    public void SetDestination(Vector3 target)
-    {
-        var start = SimulationClock.Pathfinder.GetGridCoords(_brawler.Position);
-        var end = SimulationClock.Pathfinder.GetGridCoords(target);
+        private List<PathNode> _path;
+        private int _pathIndex;
 
-        _path = SimulationClock.Pathfinder.FindPath(start.x, start.y, end.x, end.y);
-        _index = 0;
-    }
+        private Vector3 _destination;
+        private bool _hasDestination;
+        private float _arrivalDistance = 0.6f;
 
-    public void Tick()
-    {
-        if (_path == null || _index >= _path.Count) return;
+        private uint _nextRepathTick;
+        private readonly uint _repathCooldownTicks = 12;
+        private readonly float _repathDistanceThreshold = 1.0f;
 
-        Vector3 targetPos = SimulationClock.Pathfinder.GetWorldPos(_path[_index].X, _path[_index].Y);
-        Vector3 dir = (targetPos - _brawler.Position).normalized;
+        private Vector3 _lastSamplePosition;
+        private uint _lastSampleTick;
+        private readonly uint _stuckSampleInterval = 15;
+        private readonly float _stuckMoveThreshold = 0.15f;
 
-        _brawler.SetMoveInput(dir);
+        public Vector3 Position => _brawler.Position;
+        public bool HasDestination => _hasDestination;
 
-        if ((targetPos - _brawler.Position).sqrMagnitude < 0.25f)
-            _index++;
+        public NavigationAgent(BrawlerController brawler)
+        {
+            _brawler = brawler;
+            _clock = ServiceProvider.Get<ISimulationClock>();
+            _lastSamplePosition = brawler.Position;
+            _lastSampleTick = _clock.CurrentTick;
+        }
+
+        public void RequestDestination(Vector3 target, float arrivalDistance = 0.6f)
+        {
+            _arrivalDistance = arrivalDistance;
+
+            if (!_hasDestination)
+            {
+                ForceRepath(target);
+                return;
+            }
+
+            float movedTargetSq = (target - _destination).sqrMagnitude;
+            if (movedTargetSq >= (_repathDistanceThreshold * _repathDistanceThreshold) &&
+                _clock.CurrentTick >= _nextRepathTick)
+            {
+                ForceRepath(target);
+                return;
+            }
+
+            _destination = target;
+        }
+
+        public void ForceRepath(Vector3 target)
+        {
+            _destination = target;
+
+            if (SimulationClock.Pathfinder == null)
+            {
+                _hasDestination = true;
+                _path = null;
+                _pathIndex = 0;
+                _nextRepathTick = _clock.CurrentTick + _repathCooldownTicks;
+                return;
+            }
+
+            var start = SimulationClock.Pathfinder.GetGridCoords(_brawler.Position);
+            var end = SimulationClock.Pathfinder.GetGridCoords(target);
+
+            _path = SimulationClock.Pathfinder.FindPath(start.x, start.y, end.x, end.y);
+            _pathIndex = 0;
+            _hasDestination = true;
+            _nextRepathTick = _clock.CurrentTick + _repathCooldownTicks;
+        }
+
+        public void Stop()
+        {
+            _hasDestination = false;
+            _path = null;
+            _pathIndex = 0;
+            _brawler.SetMoveInput(Vector3.zero);
+        }
+
+        public void Tick()
+        {
+            if (!_hasDestination)
+            {
+                _brawler.SetMoveInput(Vector3.zero);
+                return;
+            }
+
+            float distToDestinationSq = (_destination - _brawler.Position).sqrMagnitude;
+            if (distToDestinationSq <= (_arrivalDistance * _arrivalDistance))
+            {
+                Stop();
+                return;
+            }
+
+            UpdateStuckCheck();
+
+            if (_path == null || _pathIndex >= _path.Count)
+            {
+                Vector3 directDir = _destination - _brawler.Position;
+                if (directDir.sqrMagnitude > 0.0001f)
+                {
+                    _brawler.SetMoveInput(directDir.normalized);
+                }
+                else
+                {
+                    _brawler.SetMoveInput(Vector3.zero);
+                }
+                return;
+            }
+
+            Vector3 nodeWorld = SimulationClock.Pathfinder.GetWorldPos(_path[_pathIndex].X, _path[_pathIndex].Y);
+
+            if ((nodeWorld - _brawler.Position).sqrMagnitude <= 0.25f)
+            {
+                _pathIndex++;
+
+                if (_pathIndex >= _path.Count)
+                {
+                    Vector3 finalDir = _destination - _brawler.Position;
+                    _brawler.SetMoveInput(finalDir.sqrMagnitude > 0.0001f ? finalDir.normalized : Vector3.zero);
+                    return;
+                }
+
+                nodeWorld = SimulationClock.Pathfinder.GetWorldPos(_path[_pathIndex].X, _path[_pathIndex].Y);
+            }
+
+            Vector3 dir = nodeWorld - _brawler.Position;
+            _brawler.SetMoveInput(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero);
+        }
+
+        private void UpdateStuckCheck()
+        {
+            uint currentTick = _clock.CurrentTick;
+            if ((currentTick - _lastSampleTick) < _stuckSampleInterval)
+                return;
+
+            float movedSq = (_brawler.Position - _lastSamplePosition).sqrMagnitude;
+            float distToDestinationSq = (_destination - _brawler.Position).sqrMagnitude;
+
+            if (movedSq < (_stuckMoveThreshold * _stuckMoveThreshold) &&
+                distToDestinationSq > (_arrivalDistance * _arrivalDistance) &&
+                currentTick >= _nextRepathTick)
+            {
+                ForceRepath(_destination);
+            }
+
+            _lastSamplePosition = _brawler.Position;
+            _lastSampleTick = currentTick;
+        }
     }
 }

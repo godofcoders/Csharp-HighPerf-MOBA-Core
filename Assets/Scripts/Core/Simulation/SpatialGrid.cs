@@ -86,11 +86,13 @@ namespace MOBA.Core.Simulation
             return null;
         }
 
-        public List<ISpatialEntity> GetEntitiesInRadius(Vector3 position, float radius)
+        public void GetEntitiesInRadiusNonAlloc(Vector3 position, float radius, List<ISpatialEntity> results)
         {
-            List<ISpatialEntity> results = new List<ISpatialEntity>();
+            results.Clear();
+
             Vector2Int centerCell = GetCellCoords(position);
             int cellRange = Mathf.CeilToInt(radius / _cellSize);
+            float radiusSq = radius * radius;
 
             for (int x = -cellRange; x <= cellRange; x++)
             {
@@ -98,10 +100,26 @@ namespace MOBA.Core.Simulation
                 {
                     if (_cells.TryGetValue(centerCell + new Vector2Int(x, y), out var entities))
                     {
-                        results.AddRange(entities);
+                        for (int i = 0; i < entities.Count; i++)
+                        {
+                            var entity = entities[i];
+                            float distSq = (entity.Position - position).sqrMagnitude;
+                            if (distSq <= radiusSq)
+                            {
+                                results.Add(entity);
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        // Optional: keep this only for compatibility with older code.
+        // Internally it still allocates, so avoid using it in AI code.
+        public List<ISpatialEntity> GetEntitiesInRadius(Vector3 position, float radius)
+        {
+            List<ISpatialEntity> results = new List<ISpatialEntity>();
+            GetEntitiesInRadiusNonAlloc(position, radius, results);
             return results;
         }
     }

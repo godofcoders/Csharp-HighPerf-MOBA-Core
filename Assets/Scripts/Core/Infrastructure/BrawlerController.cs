@@ -28,10 +28,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private GameObject _visualModel;
         public TeamType Team => _team;
         private bool _isInitialized; // The Guard
-        // The Bridge calls this to set the "Intent"
+                                     // The Bridge calls this to set the "Intent"
         public void SetMoveInput(Vector3 direction)
         {
-            Debug.Log("Move Input: " + direction);
             _currentMoveInput = direction;
         }
 
@@ -142,11 +141,7 @@ namespace MOBA.Core.Infrastructure
             if (_inputBuffer.HasPending && !State.IsStunned && CanPerformAction())
             {
                 var cmd = _inputBuffer.Consume();
-                // Consume 1 ammo bar per attack
-                if (State.Ammo.Consume(1))
-                {
-                    ExecuteCommand(cmd);
-                }
+                ExecuteCommand(cmd);
             }
 
             // 2. Spatial Grid Update
@@ -159,7 +154,6 @@ namespace MOBA.Core.Infrastructure
         }
         private bool CanPerformAction()
         {
-            // Now we check if we actually have at least 1 bar of ammo
             return State.Ammo.AvailableBars >= 1;
         }
 
