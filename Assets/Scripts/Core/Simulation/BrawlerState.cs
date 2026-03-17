@@ -9,7 +9,12 @@ namespace MOBA.Core.Simulation
     {
         public BrawlerDefinition Definition { get; private set; }
         public TeamType Team { get; private set; }
+        public MOBA.Core.Simulation.AI.ThreatTracker ThreatTracker { get; private set; }
+        public MOBA.Core.Simulation.AI.AssistTracker AssistTracker { get; private set; }
 
+        public DamageModifierCollection IncomingDamageModifiers { get; private set; }
+        public DamageModifierCollection OutgoingDamageModifiers { get; private set; }
+        public float ShieldHealth { get; private set; }
         public ModifiableStat MaxHealth { get; private set; }
         public ModifiableStat MoveSpeed { get; private set; }
         public ModifiableStat Damage { get; private set; }
@@ -45,6 +50,11 @@ namespace MOBA.Core.Simulation
             Ammo = new ResourceStorage(3, 0.5f);
             Hypercharge = new HyperchargeTracker();
             SuperCharge = new SuperChargeTracker();
+            ThreatTracker = new MOBA.Core.Simulation.AI.ThreatTracker();
+            AssistTracker = new MOBA.Core.Simulation.AI.AssistTracker();
+            IncomingDamageModifiers = new DamageModifierCollection();
+            OutgoingDamageModifiers = new DamageModifierCollection();
+            ShieldHealth = 0f;
 
             RemainingGadgets = definition.Gadget != null ? definition.Gadget.MaxCharges : 0;
             CurrentHealth = MaxHealth.Value;
@@ -111,6 +121,11 @@ namespace MOBA.Core.Simulation
             IsInBush = false;
             IsRevealed = false;
             LastAttackTick = 0;
+            ThreatTracker.Clear();
+            AssistTracker.Clear();
+            IncomingDamageModifiers.Clear();
+            OutgoingDamageModifiers.Clear();
+            ShieldHealth = 0f;
 
             _activeEffects.Clear();
             OnHealthChanged?.Invoke(CurrentHealth);
@@ -150,6 +165,36 @@ namespace MOBA.Core.Simulation
                 return false;
 
             return true;
+        }
+        public void AddShield(float amount)
+        {
+            if (amount <= 0f) return;
+            ShieldHealth += amount;
+        }
+
+        public void ClearShield()
+        {
+            ShieldHealth = 0f;
+        }
+
+        public void AddIncomingDamageModifier(DamageModifier modifier)
+        {
+            IncomingDamageModifiers.Add(modifier);
+        }
+
+        public void AddOutgoingDamageModifier(DamageModifier modifier)
+        {
+            OutgoingDamageModifiers.Add(modifier);
+        }
+
+        public void RemoveIncomingDamageModifiersFromSource(object source)
+        {
+            IncomingDamageModifiers.RemoveBySource(source);
+        }
+
+        public void RemoveOutgoingDamageModifiersFromSource(object source)
+        {
+            OutgoingDamageModifiers.RemoveBySource(source);
         }
     }
 }

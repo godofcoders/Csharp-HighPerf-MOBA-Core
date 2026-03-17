@@ -73,6 +73,7 @@ namespace MOBA.Core.Infrastructure
 
             _profile = ResolveAIProfile(_brawler.Definition);
             _targetInfo = new AITargetInfo();
+            _reactiveListener = new AIReactiveListener(_brawler, _targetInfo);
             _navAgent = new NavigationAgent(_brawler);
             _targetScorer = new AITargetScorer(_brawler, _profile);
             _perception = new AIPerception(_profile.DetectionRadius, _profile.MemoryDurationTicks, _targetScorer);
@@ -429,6 +430,12 @@ namespace MOBA.Core.Infrastructure
             }
 
             return true;
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            _reactiveListener?.Dispose();
         }
     }
 }

@@ -8,7 +8,8 @@ namespace MOBA.Core.Simulation.Abilities
     {
         private float _damage;
         private float _radius;
-        private GameObject _vfxPrefab; // Reference for the View to spawn
+
+        private readonly List<ISpatialEntity> _targetBuffer = new List<ISpatialEntity>(16);
 
         public AoEAbilityLogic(float damage, float radius)
         {
@@ -18,31 +19,25 @@ namespace MOBA.Core.Simulation.Abilities
 
         public void Execute(IAbilityUser user, AbilityContext context)
         {
-            // 1. Tell the View to play the "Explosion" effect at the target location
-            // user.PlayVFX(context.Origin, _radius); 
+            var damageService = ServiceProvider.Get<IDamageService>();
 
-            // 2. Query the SpatialGrid
-            // Note: For large radii, we might check neighboring cells
-            List<ISpatialEntity> targets = SimulationClock.Grid?.GetEntitiesInCell(context.Origin);
+            if (SimulationClock.Grid == null)
+                return;
 
-            if (targets == null) return;
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(context.Origin, _radius, _targetBuffer);
 
             float sqrRadius = _radius * _radius;
 
-            for (int i = 0; i < targets.Count; i++)
+            for (int i = 0; i < _targetBuffer.Count; i++)
             {
-                var target = targets[i];
+                var target = _targetBuffer[i];
 
-                // Don't hit the caster (optional)
                 if (user is BrawlerController owner && target.EntityID == owner.EntityID)
                     continue;
 
                 float distSq = (target.Position - context.Origin).sqrMagnitude;
-
                 if (distSq <= sqrRadius)
                 {
-                    var damageService = ServiceProvider.Get<IDamageService>();
-
                     damageService.ApplyDamage(new DamageContext
                     {
                         Attacker = user as BrawlerController,
@@ -50,13 +45,14 @@ namespace MOBA.Core.Simulation.Abilities
                         Damage = _damage,
                         Type = DamageType.AoE,
                         HitPosition = target.Position,
-                        Direction = (target.Position - context.Origin).normalized
+                        Direction = (target.Position - context.Origin).normalized,
+                        SourceAbility = null,
+                        IsSuper = false
                     });
-                    Debug.Log($"[SIM] AoE Hit on {target.EntityID} for {_damage} damage!");
                 }
             }
         }
 
-        public void Tick(uint currentTick) { /* Logic for 'Lingering' AoEs like poison would go here */ }
+        public void Tick(uint currentTick) { }
     }
 }

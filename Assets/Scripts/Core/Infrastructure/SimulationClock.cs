@@ -8,6 +8,7 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
     [SerializeField] private int _ticksPerSecond = 30;
 
     private TickProcessor _processor;
+    private CombatEventRouter _combatEventRouter;
     private SimulationRegistry _registry;
     public const float TickDeltaTime = 1f / 30f;
     public static SimulationRegistry Registry { get; private set; }
@@ -31,6 +32,7 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
 
         ServiceProvider.Register<ISimulationClock>(this);
         ServiceProvider.Register<IDamageService>(new DamageService());
+        _combatEventRouter = new CombatEventRouter();
 
         _processor = new TickProcessor(_ticksPerSecond);
         _registry = new SimulationRegistry();

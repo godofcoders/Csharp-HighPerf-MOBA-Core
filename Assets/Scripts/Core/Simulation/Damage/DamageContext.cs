@@ -1,5 +1,6 @@
 using UnityEngine;
 using MOBA.Core.Infrastructure;
+using MOBA.Core.Definitions;
 
 namespace MOBA.Core.Simulation
 {
@@ -23,5 +24,8 @@ namespace MOBA.Core.Simulation
         public Vector3 Direction;
 
         public bool IsCritical;
+
+        public AbilityDefinition SourceAbility;
+        public bool IsSuper;
     }
 }

@@ -4,11 +4,11 @@ namespace MOBA.Core.Simulation
 {
     public static class DamageEventBus
     {
-        public static event Action<DamageContext> OnDamage;
+        public static event Action<DamageResultContext> OnDamageApplied;
 
-        public static void RaiseDamage(DamageContext ctx)
+        public static void RaiseDamageApplied(DamageResultContext ctx)
         {
-            OnDamage?.Invoke(ctx);
+            OnDamageApplied?.Invoke(ctx);
         }
     }
 }

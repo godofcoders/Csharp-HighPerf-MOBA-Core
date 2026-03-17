@@ -55,7 +55,8 @@ namespace MOBA.Core.Simulation.AI
 
         private bool ShouldUseSuperOnTarget(ISpatialEntity target, float superRange)
         {
-            if (_self.Definition?.SuperAbility == null)
+            var super = _self.Definition?.SuperAbility;
+            if (super == null)
                 return false;
 
             if (target is BrawlerController targetBrawler && targetBrawler.State != null)
@@ -63,18 +64,46 @@ namespace MOBA.Core.Simulation.AI
                 float healthRatio = targetBrawler.State.CurrentHealth /
                                     Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
 
-                if (healthRatio <= _profile.SuperLowHealthTargetThreshold)
+                if (AIAbilityIntentUtility.IsFinisher(super) &&
+                    healthRatio <= _profile.SuperLowHealthTargetThreshold)
+                {
                     return true;
+                }
             }
 
-            if (_self.Definition.SuperAbility is AoEAbilityDefinition aoe)
+            if (AIAbilityIntentUtility.IsEscape(super))
+            {
+                float selfHealthRatio = _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value);
+                if (selfHealthRatio <= _profile.LowHealthRetreatRatio)
+                {
+                    return true;
+                }
+
+                if (_self.State.ThreatTracker != null)
+                {
+                    float threat = _self.State.ThreatTracker.GetThreat(target.EntityID,
+                        ServiceProvider.Get<ISimulationClock>().CurrentTick, 240);
+
+                    if (threat > 0f)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if (AIAbilityIntentUtility.IsEngage(super))
+            {
+                return true;
+            }
+
+            if (super is AoEAbilityDefinition aoe)
             {
                 int clusterCount = CountEnemiesNear(target.Position, aoe.Radius * 1.15f);
                 if (clusterCount >= _profile.SuperMinClusterCount)
                     return true;
             }
 
-            if (_self.Definition.SuperAbility is ProjectileAbilityDefinition)
+            if (super is ProjectileAbilityDefinition)
             {
                 return true;
             }

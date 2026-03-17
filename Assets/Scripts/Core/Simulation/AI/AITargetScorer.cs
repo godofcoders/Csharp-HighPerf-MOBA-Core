@@ -11,6 +11,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerController _self;
         private readonly BrawlerAIProfile _profile;
         private readonly List<ISpatialEntity> _clusterBuffer;
+        private readonly uint _threatForgetTicks = 240;
 
         public AITargetScorer(BrawlerController self, BrawlerAIProfile profile, int initialCapacity = 16)
         {
@@ -62,17 +63,21 @@ namespace MOBA.Core.Simulation.AI
                 float healthRatio = targetBrawler.State.CurrentHealth / maxHealth;
                 score += (1f - healthRatio) * _profile.LowHealthTargetBias;
 
-                // Prefer targets that are also low enough to plausibly finish soon.
                 if (healthRatio <= _profile.FinisherHealthThreshold)
                 {
                     score += _profile.FinisherBonus;
                 }
 
-                // Threat bonus: enemies that are close are more urgent.
                 score += Mathf.Clamp01(1f - (Mathf.Sqrt(distSq) / Mathf.Max(1f, _profile.ThreatRange))) * _profile.ThreatBonus;
             }
 
-            // Ability-aware bonus
+            // ADD THIS BLOCK HERE
+            if (_self.State != null && _self.State.ThreatTracker != null)
+            {
+                float rememberedThreat = _self.State.ThreatTracker.GetThreat(target.EntityID, currentTick, _threatForgetTicks);
+                score += rememberedThreat * 0.75f;
+            }
+
             score += ScoreByAbilityShape(target);
 
             return score;

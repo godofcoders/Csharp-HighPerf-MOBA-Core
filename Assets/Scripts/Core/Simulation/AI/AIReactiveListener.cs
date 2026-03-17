@@ -1,10 +1,8 @@
-using MOBA.Core.Simulation;
 using MOBA.Core.Infrastructure;
-using UnityEngine;
 
 namespace MOBA.Core.Simulation.AI
 {
-    public class AIReactiveListener
+    public sealed class AIReactiveListener
     {
         private readonly BrawlerController _self;
         private readonly AITargetInfo _targetInfo;
@@ -13,28 +11,29 @@ namespace MOBA.Core.Simulation.AI
         {
             _self = self;
             _targetInfo = targetInfo;
-
-            DamageEventBus.OnDamage += OnDamage;
+            DamageEventBus.OnDamageApplied += OnDamageApplied;
         }
 
-        private void OnDamage(DamageContext ctx)
+        private void OnDamageApplied(DamageResultContext result)
         {
             if (_self == null || _self.State == null || _self.State.IsDead)
                 return;
 
-            // If I got hit → react immediately
-            if (ctx.Target == _self)
-            {
-                if (ctx.Attacker != null)
-                {
-                    _targetInfo.Remember(ctx.Attacker, ServiceProvider.Get<ISimulationClock>().CurrentTick);
-                }
-            }
+            var damage = result.Damage;
+
+            if (!ReferenceEquals(damage.Target, _self))
+                return;
+
+            if (damage.Attacker == null)
+                return;
+
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            _targetInfo.Remember(damage.Attacker, currentTick);
         }
 
         public void Dispose()
         {
-            DamageEventBus.OnDamage -= OnDamage;
+            DamageEventBus.OnDamageApplied -= OnDamageApplied;
         }
     }
 }

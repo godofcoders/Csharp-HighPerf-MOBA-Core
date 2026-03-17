@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Simulation;
+using MOBA.Core.Definitions;
 
 namespace MOBA.Core.Infrastructure
 {
@@ -41,7 +42,9 @@ namespace MOBA.Core.Infrastructure
                 MaxRangeSq = range * range,
                 Damage = damage,
                 Team = team,
-                SuperChargeOnHit = superChargeOnHit
+                SuperChargeOnHit = superChargeOnHit,
+                SourceAbility = null,
+                IsSuper = false
             });
         }
 
@@ -73,7 +76,9 @@ namespace MOBA.Core.Infrastructure
                         Damage = p.Damage,
                         Type = DamageType.Projectile,
                         HitPosition = p.GameObject.transform.position,
-                        Direction = p.Direction
+                        Direction = p.Direction,
+                        SourceAbility = p.SourceAbility,
+                        IsSuper = p.IsSuper
                     });
 
                     Despawn(i);
@@ -99,6 +104,9 @@ namespace MOBA.Core.Infrastructure
             public float Damage;
             public TeamType Team;
             public float SuperChargeOnHit;
+
+            public AbilityDefinition SourceAbility;
+            public bool IsSuper;
         }
     }
 }
