@@ -1,4 +1,5 @@
 using UnityEngine;
+using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
 using MOBA.Core.Simulation.AI;
 
@@ -7,48 +8,36 @@ namespace MOBA.Core.Infrastructure
     public class BrawlerAIController : SimulationEntity
     {
         [SerializeField] private BrawlerController _brawler;
-
-        [Header("Perception")]
-        [SerializeField] private float _detectionRadius = 40f;
-        [SerializeField] private uint _combatSenseIntervalTicks = 4;
-        [SerializeField] private uint _idleSenseIntervalTicks = 12;
-        [SerializeField] private uint _memoryDurationTicks = 60;
-        [SerializeField] private uint _sharedHotspotMemoryTicks = 120;
-
-        [Header("Combat")]
-        [SerializeField] private float _attackRange = 6f;
-        [SerializeField] private float _attackRangeBuffer = 1.0f;
-        [SerializeField] private float _minPreferredDistance = 3.0f;
-        [SerializeField] private float _retreatDistance = 2.0f;
-        [SerializeField] private float _lowHealthRetreatRatio = 0.30f;
-        [SerializeField] private uint _attackCadenceTicks = 30;
-        [SerializeField] private float _leashDistance = 30f;
+        private AISuperDecider _superDecider;
+        private AIReactiveListener _reactiveListener;
 
         [Header("Patrol")]
         [SerializeField] private AIPatrolMode _patrolMode = AIPatrolMode.Loop;
         [SerializeField] private Transform[] _patrolPoints;
-        [SerializeField] private float _patrolArrivalDistance = 1.0f;
-        [SerializeField] private float _fallbackWanderRadius = 8f;
-        [SerializeField] private uint _fallbackWanderRetargetTicks = 120;
 
         private NavigationAgent _navAgent;
         private AIPerception _perception;
         private AITargetInfo _targetInfo;
+        private AITargetScorer _targetScorer;
+        private AIAbilityDecider _abilityDecider;
+
         private AICombatState _combatState = AICombatState.Idle;
+        private BrawlerAIProfile _profile;
 
         private uint _nextSenseTick;
-        private uint _nextAttackTick;
         private uint _nextFallbackWanderTick;
-        private Vector3 _fallbackWanderPoint;
+        private uint _nextStrafeTick;
 
+        private Vector3 _fallbackWanderPoint;
         private int _patrolIndex;
         private int _patrolDirection = 1;
+
         private bool _brainInitialized;
 
         public void SetTarget(BrawlerController brawler)
         {
             _brawler = brawler;
-            InitializeBrain();
+            TryInitializeBrain();
         }
 
         protected override void Awake()
@@ -58,7 +47,7 @@ namespace MOBA.Core.Infrastructure
             if (_brawler == null)
                 _brawler = GetComponent<BrawlerController>();
 
-            InitializeBrain();
+            TryInitializeBrain();
         }
 
         public override void Tick(uint currentTick)
@@ -77,39 +66,64 @@ namespace MOBA.Core.Infrastructure
             _navAgent.Tick();
         }
 
-        private void InitializeBrain()
+        private void TryInitializeBrain()
         {
-            if (_brainInitialized || _brawler == null)
+            if (_brainInitialized || _brawler == null || _brawler.Definition == null)
                 return;
 
-            _navAgent = new NavigationAgent(_brawler);
-            _perception = new AIPerception(_detectionRadius, _memoryDurationTicks);
+            _profile = ResolveAIProfile(_brawler.Definition);
             _targetInfo = new AITargetInfo();
+            _navAgent = new NavigationAgent(_brawler);
+            _targetScorer = new AITargetScorer(_brawler, _profile);
+            _perception = new AIPerception(_profile.DetectionRadius, _profile.MemoryDurationTicks, _targetScorer);
+            _abilityDecider = new AIAbilityDecider(_brawler, _profile);
+            _superDecider = new AISuperDecider(_brawler, _profile);
+            _reactiveListener = new AIReactiveListener(_brawler, _targetInfo);
 
-            // Stagger first sense tick so all bots do not spike on same frame
             _nextSenseTick = (uint)Random.Range(0, 8);
-
             _brainInitialized = true;
+        }
+
+        private float GetSuperMaxRange()
+        {
+            var super = _brawler.Definition?.SuperAbility;
+            return super != null ? super.GetAIMaxRange() : 6f;
+        }
+
+        private BrawlerAIProfile ResolveAIProfile(BrawlerDefinition definition)
+        {
+            if (definition != null && definition.AIProfile != null)
+                return definition.AIProfile;
+
+            Debug.LogWarning($"Brawler '{definition?.BrawlerName}' has no AIProfile assigned. Using emergency fallback values.");
+            return ScriptableObject.CreateInstance<BrawlerAIProfile>();
         }
 
         private bool CanRunAI()
         {
-            if (!_brainInitialized)
-                return false;
-
-            if (_brawler == null || _brawler.State == null || _brawler.State.IsDead)
-                return false;
-
-            if (SimulationClock.Grid == null)
-                return false;
-
-            return true;
+            return _brainInitialized &&
+                   _brawler != null &&
+                   _brawler.State != null &&
+                   !_brawler.State.IsDead &&
+                   SimulationClock.Grid != null;
         }
 
         private void ScheduleNextSense(uint currentTick)
         {
             bool hot = _targetInfo.HasLiveTarget || _combatState == AICombatState.Search;
-            _nextSenseTick = currentTick + (hot ? _combatSenseIntervalTicks : _idleSenseIntervalTicks);
+            _nextSenseTick = currentTick + (hot ? _profile.CombatSenseIntervalTicks : _profile.IdleSenseIntervalTicks);
+        }
+
+        private float GetAbilityIdealRange()
+        {
+            var attack = _brawler.Definition?.MainAttack;
+            return attack != null ? attack.GetAIIdealRange() : 6f;
+        }
+
+        private float GetAbilityMaxRange()
+        {
+            var attack = _brawler.Definition?.MainAttack;
+            return attack != null ? attack.GetAIMaxRange() : 6f;
         }
 
         private void DecideState(uint currentTick)
@@ -120,12 +134,18 @@ namespace MOBA.Core.Infrastructure
 
                 Vector3 toTarget = _targetInfo.Target.Position - _brawler.Position;
                 float distSq = toTarget.sqrMagnitude;
-                float attackRangeSq = _attackRange * _attackRange;
-                float minPreferredDistSq = _minPreferredDistance * _minPreferredDistance;
-                float retreatDistSq = _retreatDistance * _retreatDistance;
-                float leashSq = _leashDistance * _leashDistance;
 
-                if ((_targetInfo.Target.Position - _brawler.Position).sqrMagnitude > leashSq)
+                float idealRange = GetAbilityIdealRange();
+                float attackRange = GetAbilityMaxRange();
+                float preferredRange = _profile.GetPreferredAttackRange(idealRange);
+                float tooCloseDistance = _profile.GetTooCloseDistance(idealRange);
+
+                float attackRangeSq = attackRange * attackRange;
+                float preferredRangeSq = preferredRange * preferredRange;
+                float tooCloseSq = tooCloseDistance * tooCloseDistance;
+                float leashSq = _profile.LeashDistance * _profile.LeashDistance;
+
+                if (distSq > leashSq)
                 {
                     _targetInfo.LoseLiveTarget();
                 }
@@ -133,19 +153,19 @@ namespace MOBA.Core.Infrastructure
                 {
                     float healthRatio = _brawler.State.CurrentHealth / Mathf.Max(1f, _brawler.State.MaxHealth.Value);
 
-                    if (healthRatio <= _lowHealthRetreatRatio && distSq <= retreatDistSq)
+                    if (healthRatio <= _profile.LowHealthRetreatRatio && distSq <= tooCloseSq)
                     {
                         _combatState = AICombatState.Retreat;
                         return;
                     }
 
-                    if (distSq < minPreferredDistSq)
+                    if (distSq < tooCloseSq)
                     {
                         _combatState = AICombatState.Reposition;
                         return;
                     }
 
-                    float bufferedAttackRange = _attackRange + _attackRangeBuffer;
+                    float bufferedAttackRange = attackRange + _profile.AttackRangeBuffer;
                     float bufferedAttackRangeSq = bufferedAttackRange * bufferedAttackRange;
 
                     if (distSq > bufferedAttackRangeSq)
@@ -154,9 +174,15 @@ namespace MOBA.Core.Infrastructure
                         return;
                     }
 
-                    if (distSq <= attackRangeSq)
+                    if (distSq <= attackRangeSq && distSq >= preferredRangeSq * 0.60f)
                     {
                         _combatState = AICombatState.HoldRange;
+                        return;
+                    }
+
+                    if (distSq <= attackRangeSq)
+                    {
+                        _combatState = AICombatState.Reposition;
                         return;
                     }
 
@@ -165,13 +191,13 @@ namespace MOBA.Core.Infrastructure
                 }
             }
 
-            if (_targetInfo.HasRecentMemory(currentTick, _memoryDurationTicks))
+            if (_targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
             {
                 _combatState = AICombatState.Search;
                 return;
             }
 
-            if (AITeamMemory.TryGetRecentHotspot(_brawler.Team, currentTick, _sharedHotspotMemoryTicks, out _))
+            if (AITeamMemory.TryGetRecentHotspot(_brawler.Team, currentTick, _profile.SharedHotspotMemoryTicks, out _))
             {
                 _combatState = AICombatState.Search;
                 return;
@@ -185,18 +211,15 @@ namespace MOBA.Core.Infrastructure
             switch (_combatState)
             {
                 case AICombatState.Approach:
-                    RunApproach();
-                    TryAttack(currentTick);
+                    RunApproach(currentTick);
                     break;
 
                 case AICombatState.HoldRange:
-                    RunHoldRange();
-                    TryAttack(currentTick);
+                    RunHoldRange(currentTick);
                     break;
 
                 case AICombatState.Reposition:
-                    RunReposition();
-                    TryAttack(currentTick);
+                    RunReposition(currentTick);
                     break;
 
                 case AICombatState.Retreat:
@@ -217,20 +240,60 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
-        private void RunApproach()
+        private void RunApproach(uint currentTick)
         {
             if (!_targetInfo.HasLiveTarget)
                 return;
 
-            _navAgent.RequestDestination(_targetInfo.Target.Position, _attackRange * 0.9f);
+            float desiredArrival = Mathf.Max(0.8f, _profile.GetPreferredAttackRange(GetAbilityIdealRange()) * 0.9f);
+            _navAgent.RequestDestination(_targetInfo.Target.Position, desiredArrival);
+
+            float maxRange = GetAbilityMaxRange();
+            _abilityDecider.TryUseMainAttack(_targetInfo.Target, currentTick, maxRange);
+            _abilityDecider.TryUseGadget(_targetInfo.Target, currentTick);
+
+            float superRange = GetSuperMaxRange();
+            _superDecider.TryUseSuper(_targetInfo.Target, currentTick, superRange);
         }
 
-        private void RunHoldRange()
+        private void RunHoldRange(uint currentTick)
         {
-            _navAgent.Stop();
+            if (!_targetInfo.HasLiveTarget)
+            {
+                _navAgent.Stop();
+                return;
+            }
+
+            float maxRange = GetAbilityMaxRange();
+            _abilityDecider.TryUseMainAttack(_targetInfo.Target, currentTick, maxRange);
+            _abilityDecider.TryUseGadget(_targetInfo.Target, currentTick);
+
+            float superRange = GetSuperMaxRange();
+            _superDecider.TryUseSuper(_targetInfo.Target, currentTick, superRange);
+
+            if (!_profile.UseStrafe)
+            {
+                _navAgent.Stop();
+                return;
+            }
+
+            if (currentTick >= _nextStrafeTick || !_navAgent.HasDestination)
+            {
+                Vector3 toTarget = (_targetInfo.Target.Position - _brawler.Position).normalized;
+                Vector3 right = new Vector3(toTarget.z, 0f, -toTarget.x);
+
+                if (right.sqrMagnitude < 0.0001f)
+                    right = _brawler.transform.right;
+
+                float side = Random.value < 0.5f ? -1f : 1f;
+                Vector3 strafePoint = _brawler.Position + (right * side * _profile.StrafeDistance);
+
+                _navAgent.RequestDestination(strafePoint, 0.4f);
+                _nextStrafeTick = currentTick + _profile.StrafeRetargetTicks;
+            }
         }
 
-        private void RunReposition()
+        private void RunReposition(uint currentTick)
         {
             if (!_targetInfo.HasLiveTarget)
                 return;
@@ -239,8 +302,14 @@ namespace MOBA.Core.Infrastructure
             if (away.sqrMagnitude < 0.0001f)
                 away = _brawler.transform.forward;
 
-            Vector3 repositionPoint = _brawler.Position + away * 2.5f;
+            Vector3 repositionPoint = _brawler.Position + away * _profile.RepositionStepDistance;
             _navAgent.RequestDestination(repositionPoint, 0.4f);
+
+            float maxRange = GetAbilityMaxRange();
+            _abilityDecider.TryUseMainAttack(_targetInfo.Target, currentTick, maxRange);
+
+            float superRange = GetSuperMaxRange();
+            _superDecider.TryUseSuper(_targetInfo.Target, currentTick, superRange);
         }
 
         private void RunRetreat()
@@ -252,22 +321,19 @@ namespace MOBA.Core.Infrastructure
             if (away.sqrMagnitude < 0.0001f)
                 away = _brawler.transform.forward;
 
-            Vector3 retreatPoint = _brawler.Position + away * 5f;
+            Vector3 retreatPoint = _brawler.Position + away * _profile.RetreatStepDistance;
             _navAgent.RequestDestination(retreatPoint, 0.5f);
         }
 
         private void RunSearch(uint currentTick)
         {
-            Vector3 destination;
-
-            if (_targetInfo.HasRecentMemory(currentTick, _memoryDurationTicks))
+            if (_targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
             {
-                destination = _targetInfo.LastKnownPosition;
-                _navAgent.RequestDestination(destination, 1.0f);
+                _navAgent.RequestDestination(_targetInfo.LastKnownPosition, 1.0f);
                 return;
             }
 
-            if (AITeamMemory.TryGetRecentHotspot(_brawler.Team, currentTick, _sharedHotspotMemoryTicks, out destination))
+            if (AITeamMemory.TryGetRecentHotspot(_brawler.Team, currentTick, _profile.SharedHotspotMemoryTicks, out var destination))
             {
                 _navAgent.RequestDestination(destination, 1.0f);
                 return;
@@ -293,10 +359,10 @@ namespace MOBA.Core.Infrastructure
             if (point == null)
                 return;
 
-            _navAgent.RequestDestination(point.position, _patrolArrivalDistance);
+            _navAgent.RequestDestination(point.position, _profile.PatrolArrivalDistance);
 
             float distSq = (point.position - _brawler.Position).sqrMagnitude;
-            if (distSq <= (_patrolArrivalDistance * _patrolArrivalDistance))
+            if (distSq <= (_profile.PatrolArrivalDistance * _profile.PatrolArrivalDistance))
             {
                 AdvancePatrolIndex();
             }
@@ -341,35 +407,16 @@ namespace MOBA.Core.Infrastructure
         {
             if (currentTick >= _nextFallbackWanderTick || !_navAgent.HasDestination)
             {
-                Vector2 random2D = Random.insideUnitCircle * _fallbackWanderRadius;
+                Vector2 random2D = Random.insideUnitCircle * _profile.FallbackWanderRadius;
                 _fallbackWanderPoint = _brawler.Position + new Vector3(random2D.x, 0f, random2D.y);
                 _navAgent.RequestDestination(_fallbackWanderPoint, 0.5f);
-                _nextFallbackWanderTick = currentTick + _fallbackWanderRetargetTicks;
+                _nextFallbackWanderTick = currentTick + _profile.FallbackWanderRetargetTicks;
             }
-        }
-
-        private void TryAttack(uint currentTick)
-        {
-            if (!_targetInfo.HasLiveTarget)
-                return;
-
-            if (currentTick < _nextAttackTick)
-                return;
-
-            Vector3 toTarget = _targetInfo.Target.Position - _brawler.Position;
-            if (toTarget.sqrMagnitude > (_attackRange * _attackRange))
-                return;
-
-            _brawler.BufferAttack(InputCommandType.MainAttack, toTarget.normalized);
-            _nextAttackTick = currentTick + _attackCadenceTicks;
         }
 
         private bool IsTargetStillUsable(ISpatialEntity target)
         {
-            if (target == null)
-                return false;
-
-            if (target.Team == _brawler.Team)
+            if (target == null || target.Team == _brawler.Team)
                 return false;
 
             if (target is BrawlerController targetBrawler)

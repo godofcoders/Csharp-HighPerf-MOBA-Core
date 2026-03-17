@@ -6,7 +6,7 @@ namespace MOBA.Core.Simulation
     {
         public int MaxAmmo { get; private set; }
         public float CurrentAmmo { get; private set; }
-        public float ReloadSpeed { get; private set; } // Ammo per second
+        public float ReloadSpeed { get; private set; }
 
         public ResourceStorage(int max, float reloadSpeed)
         {
@@ -22,6 +22,7 @@ namespace MOBA.Core.Simulation
                 CurrentAmmo -= amount;
                 return true;
             }
+
             return false;
         }
 
@@ -30,11 +31,17 @@ namespace MOBA.Core.Simulation
             if (CurrentAmmo < MaxAmmo)
             {
                 CurrentAmmo += ReloadSpeed * deltaTime;
-                if (CurrentAmmo > MaxAmmo) CurrentAmmo = MaxAmmo;
+
+                if (CurrentAmmo > MaxAmmo)
+                    CurrentAmmo = MaxAmmo;
             }
         }
 
-        // Returns the integer count for the UI (e.g., 3 bars)
+        public void Refill()
+        {
+            CurrentAmmo = MaxAmmo;
+        }
+
         public int AvailableBars => Mathf.FloorToInt(CurrentAmmo);
     }
 }

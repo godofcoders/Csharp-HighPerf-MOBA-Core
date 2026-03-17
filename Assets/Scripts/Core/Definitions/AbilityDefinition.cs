@@ -8,8 +8,19 @@ namespace MOBA.Core.Definitions
         public Sprite Icon;
         public float Cooldown = 1.0f;
 
-        // This is a "Factory Method" - it will return the logic POCO 
-        // we will build in the next phase.
         public abstract MOBA.Core.Simulation.IAbilityLogic CreateLogic();
+
+        // AI-facing hooks.
+        // These let the brain derive spacing from the real gameplay ability,
+        // instead of inventing a separate fake range model.
+        public virtual float GetAIIdealRange()
+        {
+            return 6f;
+        }
+
+        public virtual float GetAIMaxRange()
+        {
+            return GetAIIdealRange();
+        }
     }
 }

@@ -17,9 +17,13 @@ namespace MOBA.Core.Definitions
         [Header("Abilities")]
         public AbilityDefinition MainAttack;
         public AbilityDefinition SuperAbility;
+
         [Header("Supplemental Systems")]
         public GadgetDefinition Gadget;
         public StarPowerDefinition StarPower;
         public HyperchargeDefinition Hypercharge;
+
+        [Header("AI")]
+        public BrawlerAIProfile AIProfile;
     }
 }

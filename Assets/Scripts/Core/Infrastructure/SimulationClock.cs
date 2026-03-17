@@ -30,6 +30,7 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
         _instance = this;
 
         ServiceProvider.Register<ISimulationClock>(this);
+        ServiceProvider.Register<IDamageService>(new DamageService());
 
         _processor = new TickProcessor(_ticksPerSecond);
         _registry = new SimulationRegistry();

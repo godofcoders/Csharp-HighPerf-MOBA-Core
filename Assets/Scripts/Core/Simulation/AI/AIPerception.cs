@@ -4,16 +4,18 @@ using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation.AI
 {
-    public class AIPerception
+    public sealed class AIPerception
     {
         private readonly float _detectionRadius;
         private readonly uint _memoryDurationTicks;
         private readonly List<ISpatialEntity> _nearbyBuffer;
+        private readonly AITargetScorer _targetScorer;
 
-        public AIPerception(float detectionRadius, uint memoryDurationTicks, int initialBufferCapacity = 32)
+        public AIPerception(float detectionRadius, uint memoryDurationTicks, AITargetScorer targetScorer, int initialBufferCapacity = 32)
         {
             _detectionRadius = detectionRadius;
             _memoryDurationTicks = memoryDurationTicks;
+            _targetScorer = targetScorer;
             _nearbyBuffer = new List<ISpatialEntity>(initialBufferCapacity);
         }
 
@@ -33,24 +35,9 @@ namespace MOBA.Core.Simulation.AI
 
             SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(self.Position, _detectionRadius, _nearbyBuffer);
 
-            ISpatialEntity bestTarget = null;
-            float bestScore = float.MinValue;
+            CompactAndFilterTargets(self);
 
-            for (int i = 0; i < _nearbyBuffer.Count; i++)
-            {
-                var entity = _nearbyBuffer[i];
-
-                if (!IsValidTarget(self, entity))
-                    continue;
-
-                float score = ScoreTarget(self, memory, entity);
-
-                if (score > bestScore)
-                {
-                    bestScore = score;
-                    bestTarget = entity;
-                }
-            }
+            ISpatialEntity bestTarget = _targetScorer.SelectBestTarget(_nearbyBuffer, memory, currentTick);
 
             if (bestTarget != null)
             {
@@ -67,6 +54,27 @@ namespace MOBA.Core.Simulation.AI
             if (!memory.HasRecentMemory(currentTick, _memoryDurationTicks))
             {
                 memory.Clear();
+            }
+        }
+
+        private void CompactAndFilterTargets(BrawlerController self)
+        {
+            int writeIndex = 0;
+
+            for (int i = 0; i < _nearbyBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _nearbyBuffer[i];
+
+                if (!IsValidTarget(self, entity))
+                    continue;
+
+                _nearbyBuffer[writeIndex] = entity;
+                writeIndex++;
+            }
+
+            if (writeIndex < _nearbyBuffer.Count)
+            {
+                _nearbyBuffer.RemoveRange(writeIndex, _nearbyBuffer.Count - writeIndex);
             }
         }
 
@@ -91,27 +99,6 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return true;
-        }
-
-        private float ScoreTarget(BrawlerController self, AITargetInfo memory, ISpatialEntity entity)
-        {
-            Vector3 delta = entity.Position - self.Position;
-            float distSq = delta.sqrMagnitude;
-
-            float score = -distSq;
-
-            if (memory.HasLiveTarget && memory.Target != null && memory.Target.EntityID == entity.EntityID)
-            {
-                score += 20f;
-            }
-
-            if (entity is BrawlerController targetBrawler && targetBrawler.State != null)
-            {
-                float healthRatio = targetBrawler.State.CurrentHealth / Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
-                score += (1f - healthRatio) * 10f;
-            }
-
-            return score;
         }
     }
 }

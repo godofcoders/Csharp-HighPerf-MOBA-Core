@@ -7,27 +7,28 @@ namespace MOBA.Core.Simulation
 {
     public class BrawlerState
     {
-        // Reference to the static data
         public BrawlerDefinition Definition { get; private set; }
-        public TeamType Team { get; private set; } // Add this property
+        public TeamType Team { get; private set; }
 
-        // Dynamic, modifiable stats
         public ModifiableStat MaxHealth { get; private set; }
         public ModifiableStat MoveSpeed { get; private set; }
         public ModifiableStat Damage { get; private set; }
 
         public int RemainingGadgets { get; private set; }
         public HyperchargeTracker Hypercharge { get; private set; }
-        // Current mutable values
+        public SuperChargeTracker SuperCharge { get; private set; }
+
         public float CurrentHealth { get; private set; }
         public bool IsDead => CurrentHealth <= 0;
 
-        // Events for the View Layer to listen to
         public Action OnDeath;
         public Action<float> OnHealthChanged;
+
         public ResourceStorage Ammo { get; private set; }
         public bool IsStunned;
-        private List<StatusEffect> _activeEffects = new List<StatusEffect>();
+
+        private readonly List<StatusEffect> _activeEffects = new List<StatusEffect>();
+
         public bool IsInBush { get; set; }
         public uint LastAttackTick { get; set; }
         public bool IsRevealed { get; set; }
@@ -37,21 +38,38 @@ namespace MOBA.Core.Simulation
             Definition = definition;
             Team = team;
 
-            // Initialize stats from definition data
             MaxHealth = new ModifiableStat(definition.BaseHealth);
             MoveSpeed = new ModifiableStat(definition.BaseMoveSpeed);
             Damage = new ModifiableStat(definition.BaseDamage);
+
             Ammo = new ResourceStorage(3, 0.5f);
             Hypercharge = new HyperchargeTracker();
-            RemainingGadgets = (definition.Gadget != null) ? definition.Gadget.MaxCharges : 0;
-            // Start at full health
+            SuperCharge = new SuperChargeTracker();
+
+            RemainingGadgets = definition.Gadget != null ? definition.Gadget.MaxCharges : 0;
             CurrentHealth = MaxHealth.Value;
         }
-        public void UseGadgetCharge() => RemainingGadgets--;
+
+        public void UseGadgetCharge()
+        {
+            if (RemainingGadgets > 0)
+                RemainingGadgets--;
+        }
+
+        public void AddSuperCharge(float amount)
+        {
+            SuperCharge.AddCharge(amount);
+        }
+
+        public bool TryConsumeSuper()
+        {
+            return SuperCharge.TryConsume();
+        }
 
         public void TakeDamage(float amount)
         {
-            if (IsDead) return;
+            if (IsDead)
+                return;
 
             CurrentHealth -= amount;
             CurrentHealth = Math.Max(0, CurrentHealth);
@@ -66,7 +84,8 @@ namespace MOBA.Core.Simulation
 
         public void Heal(float amount)
         {
-            if (IsDead) return;
+            if (IsDead)
+                return;
 
             CurrentHealth += amount;
             CurrentHealth = Math.Min(CurrentHealth, MaxHealth.Value);
@@ -82,9 +101,21 @@ namespace MOBA.Core.Simulation
         public void Reset()
         {
             CurrentHealth = MaxHealth.Value;
-            Ammo.Consume((int)-Ammo.MaxAmmo); // Hacky way to refill ammo to max
-                                              // Note: Better to add a 'Refill()' method to ResourceStorage later!
+            Ammo.Refill();
+
+            RemainingGadgets = Definition.Gadget != null ? Definition.Gadget.MaxCharges : 0;
+            Hypercharge = new HyperchargeTracker();
+            SuperCharge.Reset(false);
+
+            IsStunned = false;
+            IsInBush = false;
+            IsRevealed = false;
+            LastAttackTick = 0;
+
+            _activeEffects.Clear();
+            OnHealthChanged?.Invoke(CurrentHealth);
         }
+
         public void ApplyEffect(StatusEffect effect, float duration)
         {
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
@@ -106,16 +137,17 @@ namespace MOBA.Core.Simulation
                 }
             }
         }
+
         public bool IsHiddenTo(TeamType observerTeam)
         {
-            if (observerTeam == this.Team) return false;
+            if (observerTeam == Team)
+                return false;
 
-            // Get the current tick via the Service Locator
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
-
             bool recentlyAttacked = (currentTick - LastAttackTick) < 60;
 
-            if (!IsInBush || recentlyAttacked || IsRevealed) return false;
+            if (!IsInBush || recentlyAttacked || IsRevealed)
+                return false;
 
             return true;
         }

@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation.Abilities
 {
@@ -33,13 +34,24 @@ namespace MOBA.Core.Simulation.Abilities
                 var target = targets[i];
 
                 // Don't hit the caster (optional)
-                if (target.EntityID == user.State.Definition.GetInstanceID()) continue;
+                if (user is BrawlerController owner && target.EntityID == owner.EntityID)
+                    continue;
 
                 float distSq = (target.Position - context.Origin).sqrMagnitude;
 
                 if (distSq <= sqrRadius)
                 {
-                    target.TakeDamage(_damage);
+                    var damageService = ServiceProvider.Get<IDamageService>();
+
+                    damageService.ApplyDamage(new DamageContext
+                    {
+                        Attacker = user as BrawlerController,
+                        Target = target,
+                        Damage = _damage,
+                        Type = DamageType.AoE,
+                        HitPosition = target.Position,
+                        Direction = (target.Position - context.Origin).normalized
+                    });
                     Debug.Log($"[SIM] AoE Hit on {target.EntityID} for {_damage} damage!");
                 }
             }

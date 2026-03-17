@@ -14,8 +14,18 @@ namespace MOBA.Core.Definitions
 
         public override IAbilityLogic CreateLogic()
         {
-            // The Factory creates the POCO with the SO's data
             return new StraightProjectileLogic(Damage, Range, Speed, ProjectileCount);
+        }
+
+        public override float GetAIIdealRange()
+        {
+            // Slightly under max projectile range usually feels better than max-edge fighting.
+            return Range * 0.85f;
+        }
+
+        public override float GetAIMaxRange()
+        {
+            return Range;
         }
     }
 }

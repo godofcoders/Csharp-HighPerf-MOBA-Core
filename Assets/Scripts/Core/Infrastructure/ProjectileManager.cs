@@ -8,16 +8,24 @@ namespace MOBA.Core.Infrastructure
     public class ProjectileManager : MonoBehaviour, IProjectileService
     {
         private SimpleObjectPool _pool;
-        private List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>();
+
+        private readonly List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>(64);
 
         private void Awake()
         {
             _pool = GetComponent<SimpleObjectPool>();
-            // AAA: Register via ServiceProvider, no Singletons.
             ServiceProvider.Register<IProjectileService>(this);
         }
 
-        public void FireProjectile(Vector3 origin, Vector3 direction, float speed, float range, float damage, TeamType team)
+        public void FireProjectile(
+            BrawlerController owner,
+            Vector3 origin,
+            Vector3 direction,
+            float speed,
+            float range,
+            float damage,
+            TeamType team,
+            float superChargeOnHit)
         {
             GameObject go = _pool.Get();
             go.transform.position = origin;
@@ -25,40 +33,49 @@ namespace MOBA.Core.Infrastructure
 
             _activeProjectiles.Add(new ActiveProjectile
             {
+                Owner = owner,
                 GameObject = go,
                 Origin = origin,
                 Direction = direction.normalized,
                 Speed = speed,
                 MaxRangeSq = range * range,
                 Damage = damage,
-                Team = team
+                Team = team,
+                SuperChargeOnHit = superChargeOnHit
             });
         }
 
         public void ManualTick(uint currentTick)
         {
-            // Iterate backwards so we can safely remove items during the loop
             for (int i = _activeProjectiles.Count - 1; i >= 0; i--)
             {
                 var p = _activeProjectiles[i];
 
-                // 1. Logic Movement
                 Vector3 movement = p.Direction * (p.Speed * SimulationClock.TickDeltaTime);
                 p.GameObject.transform.position += movement;
 
-                // 2. Range Expiry
                 if ((p.GameObject.transform.position - p.Origin).sqrMagnitude >= p.MaxRangeSq)
                 {
                     Despawn(i);
                     continue;
                 }
 
-                // 3. High-Performance Collision (Spatial Grid Query)
-                // We check if an entity on a different team is within 0.5 units
                 var hit = SimulationClock.Grid?.CheckCollision(p.GameObject.transform.position, 0.5f, p.Team);
+
                 if (hit != null)
                 {
-                    hit.TakeDamage(p.Damage);
+                    var damageService = ServiceProvider.Get<IDamageService>();
+
+                    damageService.ApplyDamage(new DamageContext
+                    {
+                        Attacker = p.Owner,
+                        Target = hit,
+                        Damage = p.Damage,
+                        Type = DamageType.Projectile,
+                        HitPosition = p.GameObject.transform.position,
+                        Direction = p.Direction
+                    });
+
                     Despawn(i);
                 }
             }
@@ -71,9 +88,9 @@ namespace MOBA.Core.Infrastructure
             _activeProjectiles.RemoveAt(index);
         }
 
-        // Internal class to track simulation state without GC allocations
-        private class ActiveProjectile
+        private sealed class ActiveProjectile
         {
+            public BrawlerController Owner;
             public GameObject GameObject;
             public Vector3 Origin;
             public Vector3 Direction;
@@ -81,6 +98,7 @@ namespace MOBA.Core.Infrastructure
             public float MaxRangeSq;
             public float Damage;
             public TeamType Team;
+            public float SuperChargeOnHit;
         }
     }
 }
