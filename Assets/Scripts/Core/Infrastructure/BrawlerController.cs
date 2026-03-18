@@ -77,6 +77,7 @@ namespace MOBA.Core.Infrastructure
 
             State = new BrawlerState(_definition, _team);
 
+            State.Owner = this;
             _mainAttack = _definition.MainAttack?.CreateLogic();
             _superAbility = _definition.SuperAbility?.CreateLogic();
             _gadgetLogic = _definition.Gadget?.CreateLogic();
@@ -152,7 +153,7 @@ namespace MOBA.Core.Infrastructure
             if (_currentMoveInput.sqrMagnitude <= 0.01f)
                 return;
 
-            float speed = State.MoveSpeed.Value;
+            float speed = State.IncomingMovementModifiers.Apply(State.MoveSpeed.Value);
             float tickDelta = 1f / 30f;
 
             Vector3 movement = _currentMoveInput.normalized * (speed * tickDelta);

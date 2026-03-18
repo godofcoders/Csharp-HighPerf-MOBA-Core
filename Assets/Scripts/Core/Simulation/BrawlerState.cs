@@ -32,11 +32,13 @@ namespace MOBA.Core.Simulation
         public ResourceStorage Ammo { get; private set; }
         public bool IsStunned;
 
-        private readonly List<StatusEffect> _activeEffects = new List<StatusEffect>();
-
         public bool IsInBush { get; set; }
         public uint LastAttackTick { get; set; }
         public bool IsRevealed { get; set; }
+
+        public BrawlerController Owner { get; set; }
+        public MovementModifierCollection IncomingMovementModifiers { get; private set; }
+        public List<IStatusEffectInstance> ActiveStatusEffects { get; private set; }
 
         public BrawlerState(BrawlerDefinition definition, TeamType team)
         {
@@ -55,9 +57,20 @@ namespace MOBA.Core.Simulation
             IncomingDamageModifiers = new DamageModifierCollection();
             OutgoingDamageModifiers = new DamageModifierCollection();
             ShieldHealth = 0f;
+            IncomingMovementModifiers = new MovementModifierCollection();
+            ActiveStatusEffects = new List<IStatusEffectInstance>(8);
 
             RemainingGadgets = definition.Gadget != null ? definition.Gadget.MaxCharges : 0;
             CurrentHealth = MaxHealth.Value;
+        }
+        public void AddIncomingMovementModifier(MovementModifier modifier)
+        {
+            IncomingMovementModifiers.Add(modifier);
+        }
+
+        public void RemoveIncomingMovementModifiersFromSource(object source)
+        {
+            IncomingMovementModifiers.RemoveBySource(source);
         }
 
         public void UseGadgetCharge()
@@ -126,29 +139,31 @@ namespace MOBA.Core.Simulation
             IncomingDamageModifiers.Clear();
             OutgoingDamageModifiers.Clear();
             ShieldHealth = 0f;
+            IncomingMovementModifiers.Clear();
+            ActiveStatusEffects.Clear();
 
-            _activeEffects.Clear();
             OnHealthChanged?.Invoke(CurrentHealth);
-        }
-
-        public void ApplyEffect(StatusEffect effect, float duration)
-        {
-            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
-            effect.Initialize(this, duration, currentTick);
-            _activeEffects.Add(effect);
         }
 
         public void TickEffects(uint currentTick)
         {
-            for (int i = _activeEffects.Count - 1; i >= 0; i--)
+            for (int i = ActiveStatusEffects.Count - 1; i >= 0; i--)
             {
-                var effect = _activeEffects[i];
-                effect.OnTick(currentTick);
+                var effect = ActiveStatusEffects[i];
+                effect.Tick(this, currentTick);
 
                 if (effect.IsExpired(currentTick))
                 {
-                    effect.OnRemove();
-                    _activeEffects.RemoveAt(i);
+                    var context = new StatusEffectResult
+                    {
+                        Context = default,
+                        Applied = false,
+                        Refreshed = false
+                    };
+
+                    effect.Remove(this, currentTick);
+                    ActiveStatusEffects.RemoveAt(i);
+                    StatusEffectEventBus.RaiseRemoved(context);
                 }
             }
         }

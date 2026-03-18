@@ -33,6 +33,7 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
         ServiceProvider.Register<ISimulationClock>(this);
         ServiceProvider.Register<IDamageService>(new DamageService());
         _combatEventRouter = new CombatEventRouter();
+        ServiceProvider.Register<IStatusEffectService>(new StatusEffectService());
 
         _processor = new TickProcessor(_ticksPerSecond);
         _registry = new SimulationRegistry();
