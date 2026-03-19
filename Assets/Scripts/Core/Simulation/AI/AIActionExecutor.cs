@@ -11,23 +11,26 @@ namespace MOBA.Core.Simulation.AI
         private readonly NavigationAgent _navAgent;
         private readonly AIAbilityDecider _abilityDecider;
         private readonly AISuperDecider _superDecider;
+        private readonly AIObjectiveMemory _objectiveMemory;
 
         private uint _nextFallbackWanderTick;
         private uint _nextStrafeTick;
         private Vector3 _fallbackWanderPoint;
 
         public AIActionExecutor(
-            BrawlerController brawler,
-            BrawlerAIProfile profile,
-            NavigationAgent navAgent,
-            AIAbilityDecider abilityDecider,
-            AISuperDecider superDecider)
+      BrawlerController brawler,
+      BrawlerAIProfile profile,
+      NavigationAgent navAgent,
+      AIAbilityDecider abilityDecider,
+      AISuperDecider superDecider,
+      AIObjectiveMemory objectiveMemory)
         {
             _brawler = brawler;
             _profile = profile;
             _navAgent = navAgent;
             _abilityDecider = abilityDecider;
             _superDecider = superDecider;
+            _objectiveMemory = objectiveMemory;
         }
 
         public void Execute(
@@ -165,6 +168,16 @@ namespace MOBA.Core.Simulation.AI
             {
                 _navAgent.RequestDestination(destination, 1.0f);
                 return;
+            }
+
+            if (_objectiveMemory != null)
+            {
+                var objective = _objectiveMemory.GetBestObjective(_brawler.Position, _profile.PreferredObjective);
+                if (objective != null)
+                {
+                    _navAgent.RequestDestination(objective.transform.position, 1.0f);
+                    return;
+                }
             }
 
             _navAgent.Stop();

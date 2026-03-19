@@ -17,6 +17,7 @@ namespace MOBA.Core.Infrastructure
         private AISuperDecider _superDecider;
         private AIUtilityScorer _utilityScorer;
         private AIActionExecutor _actionExecutor;
+        private AIObjectiveMemory _objectiveMemory;
 
         private BrawlerAIProfile _profile;
 
@@ -75,14 +76,24 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             _profile = ResolveAIProfile(_brawler.Definition);
+            _profile.ApplyArchetypeDefaults();
+
             _targetInfo = new AITargetInfo();
             _navAgent = new NavigationAgent(_brawler);
             _targetScorer = new AITargetScorer(_brawler, _profile);
+            _objectiveMemory = new AIObjectiveMemory();
+
             _perception = new AIPerception(_profile.DetectionRadius, _profile.MemoryDurationTicks, _targetScorer);
             _abilityDecider = new AIAbilityDecider(_brawler, _profile);
             _superDecider = new AISuperDecider(_brawler, _profile);
-            _utilityScorer = new AIUtilityScorer(_brawler, _profile);
-            _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider);
+            _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory);
+            _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory);
+
+            var objectivePoints = FindObjectsOfType<AIObjectivePoint>();
+            for (int i = 0; i < objectivePoints.Length; i++)
+            {
+                _objectiveMemory.Register(objectivePoints[i]);
+            }
 
             _nextSenseTick = (uint)Random.Range(0, 8);
             _brainInitialized = true;

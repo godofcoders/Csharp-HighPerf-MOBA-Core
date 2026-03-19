@@ -9,11 +9,13 @@ namespace MOBA.Core.Simulation.AI
     {
         private readonly BrawlerController _self;
         private readonly BrawlerAIProfile _profile;
+        private readonly AIObjectiveMemory _objectiveMemory;
 
-        public AIUtilityScorer(BrawlerController self, BrawlerAIProfile profile)
+        public AIUtilityScorer(BrawlerController self, BrawlerAIProfile profile, AIObjectiveMemory objectiveMemory)
         {
             _self = self;
             _profile = profile;
+            _objectiveMemory = objectiveMemory;
         }
 
         public AIActionScore ScoreBestAction(AITargetInfo targetInfo, uint currentTick)
@@ -27,6 +29,7 @@ namespace MOBA.Core.Simulation.AI
             ScoreAndReplace(ref best, ScoreApproach(targetInfo));
             ScoreAndReplace(ref best, ScoreSearch(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScoreWander());
+            ScoreAndReplace(ref best, ScoreObjective());
 
             return best;
         }
@@ -61,7 +64,7 @@ namespace MOBA.Core.Simulation.AI
                     score += 20f;
             }
 
-            return new AIActionScore(AIActionType.Retreat, score);
+            return new AIActionScore(AIActionType.Retreat, score * _profile.RetreatWeight);
         }
 
         private AIActionScore ScoreUseSuper(AITargetInfo targetInfo)
@@ -102,7 +105,7 @@ namespace MOBA.Core.Simulation.AI
                 }
             }
 
-            return new AIActionScore(AIActionType.UseSuper, score);
+            return new AIActionScore(AIActionType.UseSuper, score * _profile.SuperWeight);
         }
 
         private AIActionScore ScoreHoldRange(AITargetInfo targetInfo)
@@ -126,7 +129,7 @@ namespace MOBA.Core.Simulation.AI
                     score += 25f;
             }
 
-            return new AIActionScore(AIActionType.HoldRange, score);
+            return new AIActionScore(AIActionType.HoldRange, score * _profile.HoldRangeWeight);
         }
 
         private AIActionScore ScoreReposition(AITargetInfo targetInfo)
@@ -142,7 +145,7 @@ namespace MOBA.Core.Simulation.AI
             if (dist < tooClose)
                 score += 60f;
 
-            return new AIActionScore(AIActionType.Reposition, score);
+            return new AIActionScore(AIActionType.Reposition, score * _profile.RepositionWeight);
         }
 
         private AIActionScore ScoreApproach(AITargetInfo targetInfo)
@@ -166,7 +169,7 @@ namespace MOBA.Core.Simulation.AI
                     score += 15f;
             }
 
-            return new AIActionScore(AIActionType.Approach, score);
+            return new AIActionScore(AIActionType.Approach, score * _profile.ApproachWeight);
         }
 
         private AIActionScore ScoreSearch(AITargetInfo targetInfo, uint currentTick)
@@ -179,12 +182,12 @@ namespace MOBA.Core.Simulation.AI
             if (AITeamMemory.TryGetRecentHotspot(_self.Team, currentTick, _profile.SharedHotspotMemoryTicks, out _))
                 score += 20f;
 
-            return new AIActionScore(AIActionType.Search, score);
+            return new AIActionScore(AIActionType.Search, score * _profile.SearchWeight);
         }
 
         private AIActionScore ScoreWander()
         {
-            return new AIActionScore(AIActionType.Wander, 5f);
+            return new AIActionScore(AIActionType.Wander, 5f * _profile.WanderWeight);
         }
 
         private float GetAbilityIdealRange()
@@ -197,6 +200,19 @@ namespace MOBA.Core.Simulation.AI
         {
             var attack = _self.Definition?.MainAttack;
             return attack != null ? attack.GetAIMaxRange() : 6f;
+        }
+
+        private AIActionScore ScoreObjective()
+        {
+            if (_objectiveMemory == null)
+                return new AIActionScore(AIActionType.Wander, 0f);
+
+            var objective = _objectiveMemory.GetBestObjective(_self.Position, _profile.PreferredObjective);
+            if (objective == null)
+                return new AIActionScore(AIActionType.Wander, 0f);
+
+            float score = _profile.ObjectiveWeight;
+            return new AIActionScore(AIActionType.Search, score);
         }
     }
 }
