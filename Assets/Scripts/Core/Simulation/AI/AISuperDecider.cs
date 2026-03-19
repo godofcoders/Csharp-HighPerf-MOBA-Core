@@ -59,16 +59,28 @@ namespace MOBA.Core.Simulation.AI
             if (super == null)
                 return false;
 
-            if (target is BrawlerController targetBrawler && targetBrawler.State != null)
-            {
-                float healthRatio = targetBrawler.State.CurrentHealth /
-                                    Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
+            if (target is not BrawlerController targetBrawler || targetBrawler.State == null)
+                return false;
 
-                if (AIAbilityIntentUtility.IsFinisher(super) &&
-                    healthRatio <= _profile.SuperLowHealthTargetThreshold)
-                {
-                    return true;
-                }
+            float healthRatio = targetBrawler.State.CurrentHealth /
+                                Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
+
+            // EASY STATUS OPPORTUNITIES
+            if (targetBrawler.State.HasStatus(StatusEffectType.Stun))
+            {
+                return true;
+            }
+
+            if (targetBrawler.State.HasStatus(StatusEffectType.Slow))
+            {
+                return true;
+            }
+
+            // TAG-DRIVEN LOGIC
+            if (AIAbilityIntentUtility.IsFinisher(super) &&
+                healthRatio <= _profile.SuperLowHealthTargetThreshold)
+            {
+                return true;
             }
 
             if (AIAbilityIntentUtility.IsEscape(super))
@@ -81,8 +93,10 @@ namespace MOBA.Core.Simulation.AI
 
                 if (_self.State.ThreatTracker != null)
                 {
-                    float threat = _self.State.ThreatTracker.GetThreat(target.EntityID,
-                        ServiceProvider.Get<ISimulationClock>().CurrentTick, 240);
+                    float threat = _self.State.ThreatTracker.GetThreat(
+                        target.EntityID,
+                        ServiceProvider.Get<ISimulationClock>().CurrentTick,
+                        240);
 
                     if (threat > 0f)
                     {

@@ -211,5 +211,16 @@ namespace MOBA.Core.Simulation
         {
             OutgoingDamageModifiers.RemoveBySource(source);
         }
+
+        public bool HasStatus(StatusEffectType type)
+        {
+            for (int i = 0; i < ActiveStatusEffects.Count; i++)
+            {
+                if (ActiveStatusEffects[i].Type == type)
+                    return true;
+            }
+
+            return false;
+        }
     }
 }

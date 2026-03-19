@@ -69,6 +69,22 @@ namespace MOBA.Core.Simulation.AI
                 }
 
                 score += Mathf.Clamp01(1f - (Mathf.Sqrt(distSq) / Mathf.Max(1f, _profile.ThreatRange))) * _profile.ThreatBonus;
+
+                // STATUS-AWARE TARGETING
+                if (targetBrawler.State.HasStatus(StatusEffectType.Stun))
+                {
+                    score += 50f;
+                }
+
+                if (targetBrawler.State.HasStatus(StatusEffectType.Slow))
+                {
+                    score += 20f;
+                }
+
+                if (targetBrawler.State.HasStatus(StatusEffectType.Burn))
+                {
+                    score += 10f;
+                }
             }
 
             // ADD THIS BLOCK HERE

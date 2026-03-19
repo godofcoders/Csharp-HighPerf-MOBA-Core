@@ -55,6 +55,13 @@ namespace MOBA.Core.Infrastructure
             if (!CanRunAI())
                 return;
 
+            // SELF STATUS CHECKS
+            if (_brawler.State.HasStatus(StatusEffectType.Stun))
+            {
+                _brawler.SetMoveInput(Vector3.zero);
+                return;
+            }
+
             if (currentTick >= _nextSenseTick)
             {
                 _perception.UpdateTarget(_brawler, _targetInfo, currentTick);
@@ -129,9 +136,38 @@ namespace MOBA.Core.Infrastructure
 
         private void DecideState(uint currentTick)
         {
+
+            if (_brawler.State.HasStatus(StatusEffectType.Burn))
+            {
+                float selfHealthRatio = _brawler.State.CurrentHealth / Mathf.Max(1f, _brawler.State.MaxHealth.Value);
+                if (selfHealthRatio <= 0.4f)
+                {
+                    _combatState = AICombatState.Retreat;
+                    return;
+                }
+            }
+
             if (_targetInfo.HasLiveTarget && IsTargetStillUsable(_targetInfo.Target))
             {
                 _targetInfo.RefreshLastKnownPosition(currentTick);
+
+                if (_targetInfo.Target is BrawlerController targetBrawler &&
+    targetBrawler.State != null)
+                {
+                    // If enemy is stunned, play more aggressively
+                    if (targetBrawler.State.HasStatus(StatusEffectType.Stun))
+                    {
+                        _combatState = AICombatState.Approach;
+                        return;
+                    }
+
+                    // If enemy is slowed, also push pressure
+                    if (targetBrawler.State.HasStatus(StatusEffectType.Slow))
+                    {
+                        _combatState = AICombatState.Approach;
+                        return;
+                    }
+                }
 
                 Vector3 toTarget = _targetInfo.Target.Position - _brawler.Position;
                 float distSq = toTarget.sqrMagnitude;
