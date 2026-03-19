@@ -75,6 +75,13 @@ namespace MOBA.Core.Definitions
         public float WanderWeight = 1.0f;
         public float SuperWeight = 1.0f;
 
+        [Header("Team Tactics")]
+        public float FocusFireWeight = 25f;
+        public float RegroupWeight = 30f;
+        public float PeelWeight = 20f;
+        public float RegroupHealthThreshold = 0.35f;
+        public float AllySupportRange = 8f;
+
         [Header("Objective Preference")]
         public AIObjectiveType PreferredObjective = AIObjectiveType.MidControl;
         public float ObjectiveWeight = 35f;
@@ -103,6 +110,12 @@ namespace MOBA.Core.Definitions
                     SuperWeight = 1.1f;
                     PreferredObjective = AIObjectiveType.MidControl;
                     ObjectiveWeight = 45f;
+
+                    FocusFireWeight = 30f;
+                    RegroupWeight = 35f;
+                    PeelWeight = 15f;
+                    RegroupHealthThreshold = 0.45f;
+                    AllySupportRange = 9f;
                     break;
 
                 case AIArchetype.Tank:
@@ -115,6 +128,12 @@ namespace MOBA.Core.Definitions
                     SuperWeight = 1.0f;
                     PreferredObjective = AIObjectiveType.HotZone;
                     ObjectiveWeight = 50f;
+
+                    FocusFireWeight = 20f;
+                    RegroupWeight = 18f;
+                    PeelWeight = 35f;
+                    RegroupHealthThreshold = 0.20f;
+                    AllySupportRange = 10f;
                     break;
 
                 case AIArchetype.Assassin:
@@ -127,6 +146,12 @@ namespace MOBA.Core.Definitions
                     SuperWeight = 1.25f;
                     PreferredObjective = AIObjectiveType.LanePressure;
                     ObjectiveWeight = 40f;
+
+                    FocusFireWeight = 28f;
+                    RegroupWeight = 15f;
+                    PeelWeight = 10f;
+                    RegroupHealthThreshold = 0.25f;
+                    AllySupportRange = 7f;
                     break;
 
                 case AIArchetype.Support:
@@ -139,6 +164,12 @@ namespace MOBA.Core.Definitions
                     SuperWeight = 1.15f;
                     PreferredObjective = AIObjectiveType.GemMine;
                     ObjectiveWeight = 42f;
+
+                    FocusFireWeight = 22f;
+                    RegroupWeight = 30f;
+                    PeelWeight = 40f;
+                    RegroupHealthThreshold = 0.40f;
+                    AllySupportRange = 11f;
                     break;
 
                 default:
@@ -151,6 +182,12 @@ namespace MOBA.Core.Definitions
                     SuperWeight = 1.0f;
                     PreferredObjective = AIObjectiveType.MidControl;
                     ObjectiveWeight = 35f;
+
+                    FocusFireWeight = 25f;
+                    RegroupWeight = 30f;
+                    PeelWeight = 20f;
+                    RegroupHealthThreshold = 0.35f;
+                    AllySupportRange = 8f;
                     break;
             }
         }

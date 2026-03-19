@@ -12,6 +12,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly AIAbilityDecider _abilityDecider;
         private readonly AISuperDecider _superDecider;
         private readonly AIObjectiveMemory _objectiveMemory;
+        private readonly AITeamCoordinator _teamCoordinator;
 
         private uint _nextFallbackWanderTick;
         private uint _nextStrafeTick;
@@ -23,7 +24,8 @@ namespace MOBA.Core.Simulation.AI
       NavigationAgent navAgent,
       AIAbilityDecider abilityDecider,
       AISuperDecider superDecider,
-      AIObjectiveMemory objectiveMemory)
+      AIObjectiveMemory objectiveMemory,
+      AITeamCoordinator teamCoordinator)
         {
             _brawler = brawler;
             _profile = profile;
@@ -31,6 +33,7 @@ namespace MOBA.Core.Simulation.AI
             _abilityDecider = abilityDecider;
             _superDecider = superDecider;
             _objectiveMemory = objectiveMemory;
+            _teamCoordinator = teamCoordinator;
         }
 
         public void Execute(
@@ -69,6 +72,14 @@ namespace MOBA.Core.Simulation.AI
 
                 case AIActionType.UseSuper:
                     RunUseSuper(targetInfo, currentTick, attackRange, idealRange, superRange);
+                    break;
+
+                case AIActionType.Regroup:
+                    RunRegroup(currentTick);
+                    break;
+
+                case AIActionType.Peel:
+                    RunPeel(currentTick, attackRange, superRange);
                     break;
 
                 default:
@@ -204,6 +215,38 @@ namespace MOBA.Core.Simulation.AI
 
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
             _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
+        }
+
+        private void RunRegroup(uint currentTick)
+        {
+            if (_teamCoordinator != null && _teamCoordinator.TryGetRegroupPoint(currentTick, out var point))
+            {
+                _navAgent.RequestDestination(point, 1.0f);
+                return;
+            }
+
+            _navAgent.Stop();
+        }
+
+        private void RunPeel(uint currentTick, float attackRange, float superRange)
+        {
+            if (_teamCoordinator == null || !_teamCoordinator.TryGetAllyUnderThreat(currentTick, out var ally) || ally == null)
+            {
+                _navAgent.Stop();
+                return;
+            }
+
+            _navAgent.RequestDestination(ally.Position, 1.0f);
+
+            if (ally.State != null && ally.State.ThreatTracker != null)
+            {
+                int attackerId = ally.State.ThreatTracker.GetHighestThreatTarget(currentTick, 240);
+                if (attackerId != 0 && _brawler.State != null)
+                {
+                    // basic peel follow-up: if our own target is live, attack it;
+                    // later we can map entity id -> controller directly
+                }
+            }
         }
     }
 }

@@ -11,11 +11,13 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerAIProfile _profile;
         private readonly AIObjectiveMemory _objectiveMemory;
 
-        public AIUtilityScorer(BrawlerController self, BrawlerAIProfile profile, AIObjectiveMemory objectiveMemory)
+        private readonly AITeamCoordinator _teamCoordinator;
+        public AIUtilityScorer(BrawlerController self, BrawlerAIProfile profile, AIObjectiveMemory objectiveMemory, AITeamCoordinator teamCoordinator)
         {
             _self = self;
             _profile = profile;
             _objectiveMemory = objectiveMemory;
+            _teamCoordinator = teamCoordinator;
         }
 
         public AIActionScore ScoreBestAction(AITargetInfo targetInfo, uint currentTick)
@@ -27,6 +29,8 @@ namespace MOBA.Core.Simulation.AI
             ScoreAndReplace(ref best, ScoreHoldRange(targetInfo));
             ScoreAndReplace(ref best, ScoreReposition(targetInfo));
             ScoreAndReplace(ref best, ScoreApproach(targetInfo));
+            ScoreAndReplace(ref best, ScorePeel(currentTick));
+            ScoreAndReplace(ref best, ScoreRegroup(currentTick));
             ScoreAndReplace(ref best, ScoreSearch(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScoreWander());
             ScoreAndReplace(ref best, ScoreObjective());
@@ -169,6 +173,15 @@ namespace MOBA.Core.Simulation.AI
                     score += 15f;
             }
 
+            if (_teamCoordinator != null &&
+    _teamCoordinator.TryGetFocusTarget(ServiceProvider.Get<ISimulationClock>().CurrentTick, out var focusTarget) &&
+    focusTarget != null &&
+    targetInfo.HasLiveTarget &&
+    ReferenceEquals(targetInfo.Target, focusTarget))
+            {
+                score += _profile.FocusFireWeight;
+            }
+
             return new AIActionScore(AIActionType.Approach, score * _profile.ApproachWeight);
         }
 
@@ -213,6 +226,42 @@ namespace MOBA.Core.Simulation.AI
 
             float score = _profile.ObjectiveWeight;
             return new AIActionScore(AIActionType.Search, score);
+        }
+
+        private AIActionScore ScoreRegroup(uint currentTick)
+        {
+            if (_teamCoordinator == null || _self == null || _self.State == null)
+                return new AIActionScore(AIActionType.Regroup, 0f);
+
+            float healthRatio = _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value);
+            float score = 0f;
+
+            if (healthRatio <= _profile.RegroupHealthThreshold)
+                score += 40f;
+
+            if (_teamCoordinator.TryGetRegroupPoint(currentTick, out _))
+                score += 20f;
+
+            return new AIActionScore(AIActionType.Regroup, score * _profile.RegroupWeight);
+        }
+
+        private AIActionScore ScorePeel(uint currentTick)
+        {
+            if (_teamCoordinator == null)
+                return new AIActionScore(AIActionType.Peel, 0f);
+
+            float score = 0f;
+
+            if (_teamCoordinator.TryGetAllyUnderThreat(currentTick, out var ally) && ally != null)
+            {
+                float dist = Vector3.Distance(_self.Position, ally.Position);
+                if (dist <= _profile.AllySupportRange)
+                {
+                    score += 35f;
+                }
+            }
+
+            return new AIActionScore(AIActionType.Peel, score * _profile.PeelWeight);
         }
     }
 }

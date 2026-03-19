@@ -9,6 +9,8 @@ namespace MOBA.Core.Simulation.AI
         HoldRange,
         Reposition,
         Retreat,
-        UseSuper
+        UseSuper,
+        Regroup,
+        Peel
     }
 }

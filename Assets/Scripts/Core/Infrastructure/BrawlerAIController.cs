@@ -18,6 +18,7 @@ namespace MOBA.Core.Infrastructure
         private AIUtilityScorer _utilityScorer;
         private AIActionExecutor _actionExecutor;
         private AIObjectiveMemory _objectiveMemory;
+        private AITeamCoordinator _teamCoordinator;
 
         private BrawlerAIProfile _profile;
 
@@ -56,6 +57,7 @@ namespace MOBA.Core.Infrastructure
                 _perception.UpdateTarget(_brawler, _targetInfo, currentTick);
                 ScheduleNextSense(currentTick);
             }
+            _teamCoordinator.UpdateTeamSignals(_targetInfo, currentTick);
 
             AIActionScore bestAction = _utilityScorer.ScoreBestAction(_targetInfo, currentTick);
 
@@ -82,12 +84,13 @@ namespace MOBA.Core.Infrastructure
             _navAgent = new NavigationAgent(_brawler);
             _targetScorer = new AITargetScorer(_brawler, _profile);
             _objectiveMemory = new AIObjectiveMemory();
+            _teamCoordinator = new AITeamCoordinator(_brawler);
 
             _perception = new AIPerception(_profile.DetectionRadius, _profile.MemoryDurationTicks, _targetScorer);
             _abilityDecider = new AIAbilityDecider(_brawler, _profile);
             _superDecider = new AISuperDecider(_brawler, _profile);
-            _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory);
-            _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory);
+            _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory, _teamCoordinator);
+            _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory, _teamCoordinator);
 
             var objectivePoints = FindObjectsOfType<AIObjectivePoint>();
             for (int i = 0; i < objectivePoints.Length; i++)
