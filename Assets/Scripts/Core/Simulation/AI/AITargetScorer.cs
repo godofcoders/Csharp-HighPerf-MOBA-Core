@@ -50,13 +50,16 @@ namespace MOBA.Core.Simulation.AI
 
             float score = 0f;
 
+            // 1. Distance matters
             score -= distSq * Mathf.Max(0.01f, _profile.DistanceWeight);
 
+            // 2. Prefer keeping current target a bit
             if (memory.HasLiveTarget && memory.Target != null && memory.Target.EntityID == target.EntityID)
             {
                 score += _profile.CurrentTargetStickiness;
             }
 
+            // 3. Target health / status scoring
             if (target is BrawlerController targetBrawler && targetBrawler.State != null)
             {
                 float maxHealth = Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
@@ -68,6 +71,7 @@ namespace MOBA.Core.Simulation.AI
                     score += _profile.FinisherBonus;
                 }
 
+                // Close enemies are more urgent
                 score += Mathf.Clamp01(1f - (Mathf.Sqrt(distSq) / Mathf.Max(1f, _profile.ThreatRange))) * _profile.ThreatBonus;
 
                 // STATUS-AWARE TARGETING
@@ -87,13 +91,28 @@ namespace MOBA.Core.Simulation.AI
                 }
             }
 
-            // ADD THIS BLOCK HERE
+            // 4. My own remembered threat memory
             if (_self.State != null && _self.State.ThreatTracker != null)
             {
                 float rememberedThreat = _self.State.ThreatTracker.GetThreat(target.EntityID, currentTick, _threatForgetTicks);
                 score += rememberedThreat * 0.75f;
+
+                int topThreatId = _self.State.ThreatTracker.GetHighestThreatTarget(currentTick, _threatForgetTicks);
+                if (topThreatId != 0 && topThreatId == target.EntityID)
+                {
+                    score += 30f;
+                }
             }
 
+            // 5. Team focus-fire bonus
+            if (AITeamBlackboard.TryGetFocusTarget(_self.Team, currentTick, 90, out var focusTarget) &&
+                focusTarget != null &&
+                focusTarget.EntityID == target.EntityID)
+            {
+                score += _profile.FocusFireWeight;
+            }
+
+            // 6. Ability-aware bonus
             score += ScoreByAbilityShape(target);
 
             return score;
