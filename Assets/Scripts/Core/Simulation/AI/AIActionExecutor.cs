@@ -241,10 +241,21 @@ namespace MOBA.Core.Simulation.AI
             if (ally.State != null && ally.State.ThreatTracker != null)
             {
                 int attackerId = ally.State.ThreatTracker.GetHighestThreatTarget(currentTick, 240);
-                if (attackerId != 0 && _brawler.State != null)
+
+                if (attackerId != 0)
                 {
-                    // basic peel follow-up: if our own target is live, attack it;
-                    // later we can map entity id -> controller directly
+                    var entity = CombatRegistry.GetEntity(attackerId);
+
+                    if (entity is BrawlerController attacker && attacker.State != null && !attacker.State.IsDead)
+                    {
+                        // Move toward attacker instead of ally
+                        _navAgent.RequestDestination(attacker.Position, 1.0f);
+
+                        _abilityDecider.TryUseMainAttack(attacker, currentTick, attackRange);
+                        _superDecider.TryUseSuper(attacker, currentTick, superRange);
+
+                        return;
+                    }
                 }
             }
         }

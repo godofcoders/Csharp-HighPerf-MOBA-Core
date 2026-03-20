@@ -86,7 +86,7 @@ namespace MOBA.Core.Infrastructure
 
             _lastTickPosition = transform.position;
             _isInitialized = true;
-
+            CombatRegistry.Register(this);
             SimulationClock.Grid?.Add(this);
             State.OnDeath += HandleDeath;
 
@@ -172,6 +172,7 @@ namespace MOBA.Core.Infrastructure
         {
             base.OnDisable();
             SimulationClock.Grid?.Remove(this, transform.position);
+            CombatRegistry.Unregister(this);
         }
 
         public void FireProjectile(Vector3 origin, Vector3 direction, float speed, float range, float damage)
