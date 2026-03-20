@@ -91,18 +91,24 @@ namespace MOBA.Core.Simulation
                 wasFatal = wasAliveBefore && targetBrawler.State.IsDead;
             }
 
-            DamageEventBus.RaiseDamageApplied(new DamageResultContext
+            var result = new DamageResultContext
             {
                 Damage = ctx,
                 WasFatal = wasFatal,
                 FinalDamageApplied = workingDamage,
                 ShieldAbsorbed = shieldBefore - shieldAfter
-            });
+            };
+
+            DamageEventBus.RaiseDamageApplied(result);
 
             if (ctx.Attacker != null)
             {
                 ctx.Attacker.GrantSuperCharge(DefaultSuperChargePerHit);
             }
+
+            var combatLog = ServiceProvider.Get<ICombatLogService>();
+            var currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            combatLog.AddEntry(CombatLogEntry.CreateDamage(currentTick, result));
         }
 
         private float ApplyOutgoingDamage(BrawlerController attacker, float damage)

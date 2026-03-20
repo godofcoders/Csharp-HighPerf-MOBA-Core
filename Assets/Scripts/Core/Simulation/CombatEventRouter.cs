@@ -35,9 +35,13 @@ namespace MOBA.Core.Simulation
             {
                 var assists = victim.State.AssistTracker.GetAssistContributors(currentTick, AssistWindowTicks, attackerId);
 
-                // Hook point for future score feed / UI / analytics.
-                // Example:
-                // MatchManager.Instance.RegisterKill(damage.Attacker, victim, assists);
+                var combatLog = ServiceProvider.Get<ICombatLogService>();
+                combatLog.AddEntry(CombatLogEntry.CreateKill(currentTick, attackerId, victim.EntityID));
+
+                for (int i = 0; i < assists.Count; i++)
+                {
+                    combatLog.AddEntry(CombatLogEntry.CreateAssist(currentTick, assists[i], victim.EntityID));
+                }
 
                 ListPool<int>.Release(assists);
             }

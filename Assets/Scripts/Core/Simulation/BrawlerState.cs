@@ -154,16 +154,28 @@ namespace MOBA.Core.Simulation
 
                 if (effect.IsExpired(currentTick))
                 {
-                    var context = new StatusEffectResult
+                    var result = new StatusEffectResult
                     {
-                        Context = default,
+                        Context = new StatusEffectContext
+                        {
+                            Source = null,
+                            Target = Owner,
+                            Type = effect.Type,
+                            Duration = 0f,
+                            Magnitude = 0f,
+                            Origin = default,
+                            SourceToken = null
+                        },
                         Applied = false,
                         Refreshed = false
                     };
 
                     effect.Remove(this, currentTick);
                     ActiveStatusEffects.RemoveAt(i);
-                    StatusEffectEventBus.RaiseRemoved(context);
+                    StatusEffectEventBus.RaiseRemoved(result);
+
+                    var combatLog = ServiceProvider.Get<ICombatLogService>();
+                    combatLog.AddEntry(CombatLogEntry.CreateStatusRemoved(currentTick, result));
                 }
             }
         }

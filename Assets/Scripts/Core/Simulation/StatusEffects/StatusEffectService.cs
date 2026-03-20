@@ -25,12 +25,17 @@ namespace MOBA.Core.Simulation
                 {
                     effects[i].Merge(context, currentTick);
 
-                    StatusEffectEventBus.RaiseApplied(new StatusEffectResult
+                    var refreshResult = new StatusEffectResult
                     {
                         Context = context,
                         Applied = true,
                         Refreshed = true
-                    });
+                    };
+
+                    StatusEffectEventBus.RaiseApplied(refreshResult);
+
+                    var combatLog = ServiceProvider.Get<ICombatLogService>();
+                    combatLog.AddEntry(CombatLogEntry.CreateStatusApplied(currentTick, refreshResult));
                     return;
                 }
             }
@@ -42,12 +47,17 @@ namespace MOBA.Core.Simulation
             instance.Apply(state, currentTick);
             effects.Add(instance);
 
-            StatusEffectEventBus.RaiseApplied(new StatusEffectResult
+            var applyResult = new StatusEffectResult
             {
                 Context = context,
                 Applied = true,
                 Refreshed = false
-            });
+            };
+
+            StatusEffectEventBus.RaiseApplied(applyResult);
+
+            var logService = ServiceProvider.Get<ICombatLogService>();
+            logService.AddEntry(CombatLogEntry.CreateStatusApplied(currentTick, applyResult));
         }
 
         private IStatusEffectInstance CreateInstance(StatusEffectContext context, uint currentTick)
