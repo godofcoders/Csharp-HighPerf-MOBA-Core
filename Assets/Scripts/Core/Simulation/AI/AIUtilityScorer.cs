@@ -38,6 +38,22 @@ namespace MOBA.Core.Simulation.AI
             return best;
         }
 
+        public void CollectActionScores(AITargetInfo targetInfo, uint currentTick, List<AIActionScore> results)
+        {
+            results.Clear();
+
+            results.Add(ScoreRetreat(targetInfo));
+            results.Add(ScoreUseSuper(targetInfo));
+            results.Add(ScoreHoldRange(targetInfo));
+            results.Add(ScoreReposition(targetInfo));
+            results.Add(ScoreApproach(targetInfo));
+            results.Add(ScorePeel(currentTick));
+            results.Add(ScoreRegroup(currentTick));
+            results.Add(ScoreSearch(targetInfo, currentTick));
+            results.Add(ScoreWander());
+            results.Add(ScoreObjective());
+        }
+
         private void ScoreAndReplace(ref AIActionScore best, AIActionScore candidate)
         {
             if (candidate.Score > best.Score)

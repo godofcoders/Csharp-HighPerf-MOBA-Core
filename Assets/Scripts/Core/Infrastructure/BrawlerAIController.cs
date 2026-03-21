@@ -24,6 +24,9 @@ namespace MOBA.Core.Infrastructure
 
         private uint _nextSenseTick;
         private bool _brainInitialized;
+        private readonly AIDebugSnapshot _debugSnapshot = new AIDebugSnapshot();
+        private readonly System.Collections.Generic.List<AIActionScore> _debugScores = new System.Collections.Generic.List<AIActionScore>(16);
+        private AIActionScore _lastChosenAction;
 
         public void SetTarget(BrawlerController brawler)
         {
@@ -59,7 +62,10 @@ namespace MOBA.Core.Infrastructure
             }
             _teamCoordinator.UpdateTeamSignals(_targetInfo, currentTick);
 
+            _utilityScorer.CollectActionScores(_targetInfo, currentTick, _debugScores);
+
             AIActionScore bestAction = _utilityScorer.ScoreBestAction(_targetInfo, currentTick);
+            _lastChosenAction = bestAction;
 
             _actionExecutor.Execute(
                 bestAction.ActionType,
@@ -69,7 +75,82 @@ namespace MOBA.Core.Infrastructure
                 GetAbilityIdealRange(),
                 GetSuperMaxRange());
 
+            UpdateDebugSnapshot(currentTick);
+
             _navAgent.Tick();
+        }
+
+        private void UpdateDebugSnapshot(uint currentTick)
+        {
+            if (_brawler == null || _brawler.State == null)
+                return;
+
+            _debugSnapshot.ClearLists();
+
+            _debugSnapshot.BrawlerName = _brawler.Definition != null ? _brawler.Definition.BrawlerName : _brawler.name;
+            _debugSnapshot.CurrentAction = _lastChosenAction.ActionType.ToString();
+            _debugSnapshot.Health = _brawler.State.CurrentHealth;
+            _debugSnapshot.MaxHealth = _brawler.State.MaxHealth.Value;
+            _debugSnapshot.Position = _brawler.Position;
+
+            _debugSnapshot.IsStunned = _brawler.State.HasStatus(StatusEffectType.Stun);
+            _debugSnapshot.IsBurning = _brawler.State.HasStatus(StatusEffectType.Burn);
+            _debugSnapshot.IsSlowed = _brawler.State.HasStatus(StatusEffectType.Slow);
+            _debugSnapshot.IsRevealed = _brawler.State.HasStatus(StatusEffectType.Reveal);
+
+            if (_targetInfo.HasLiveTarget && _targetInfo.Target is BrawlerController targetBrawler)
+            {
+                _debugSnapshot.CurrentTargetName = targetBrawler.Definition != null
+                    ? targetBrawler.Definition.BrawlerName
+                    : targetBrawler.name;
+
+                _debugSnapshot.CurrentTargetId = targetBrawler.EntityID;
+                _debugSnapshot.TargetPosition = targetBrawler.Position;
+            }
+            else
+            {
+                _debugSnapshot.CurrentTargetName = "None";
+                _debugSnapshot.CurrentTargetId = 0;
+                _debugSnapshot.TargetPosition = null;
+            }
+
+            if (_teamCoordinator != null)
+            {
+                if (_teamCoordinator.TryGetFocusTarget(currentTick, out var focusTarget) && focusTarget != null)
+                {
+                    _debugSnapshot.TeamTactic = $"FocusFire:{focusTarget.EntityID}";
+                }
+                else if (_teamCoordinator.TryGetAllyUnderThreat(currentTick, out var ally) && ally != null)
+                {
+                    _debugSnapshot.TeamTactic = $"Peel:{ally.EntityID}";
+                }
+                else if (_teamCoordinator.TryGetRegroupPoint(currentTick, out _))
+                {
+                    _debugSnapshot.TeamTactic = "Regroup";
+                }
+                else
+                {
+                    _debugSnapshot.TeamTactic = "None";
+                }
+            }
+            else
+            {
+                _debugSnapshot.TeamTactic = "None";
+            }
+
+            _debugSnapshot.ObjectiveName = _profile != null ? _profile.PreferredObjective.ToString() : "None";
+
+            for (int i = 0; i < _debugScores.Count; i++)
+            {
+                _debugSnapshot.ActionScores.Add(_debugScores[i]);
+            }
+
+            for (int i = 0; i < _brawler.State.ActiveStatusEffects.Count; i++)
+            {
+                _debugSnapshot.ActiveStatuses.Add(_brawler.State.ActiveStatusEffects[i].Type.ToString());
+            }
+
+            AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }
 
         private void TryInitializeBrain()
@@ -99,6 +180,8 @@ namespace MOBA.Core.Infrastructure
             }
 
             _nextSenseTick = (uint)Random.Range(0, 8);
+            AIDebugTracker.Register(_brawler);
+
             _brainInitialized = true;
         }
 
@@ -142,6 +225,29 @@ namespace MOBA.Core.Infrastructure
         {
             var super = _brawler.Definition?.SuperAbility;
             return super != null ? super.GetAIMaxRange() : 6f;
+        }
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+
+            if (_brawler != null)
+            {
+                AIDebugTracker.Unregister(_brawler);
+            }
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (_brawler == null)
+                return;
+
+            var snapshot = AIDebugTracker.GetSnapshot(_brawler.EntityID);
+            if (snapshot == null || !snapshot.TargetPosition.HasValue)
+                return;
+
+            Gizmos.color = Color.green;
+            Gizmos.DrawLine(_brawler.Position, snapshot.TargetPosition.Value);
+            Gizmos.DrawSphere(snapshot.TargetPosition.Value, 0.25f);
         }
     }
 }
