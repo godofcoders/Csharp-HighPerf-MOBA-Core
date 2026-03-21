@@ -40,6 +40,19 @@ namespace MOBA.Core.Infrastructure
                 Team = context.Team,
                 SuperChargeOnHit = context.SuperChargeOnHit
             });
+
+            CombatPresentationEventBus.Raise(new CombatPresentationEvent
+            {
+                EventType = CombatPresentationEventType.ProjectileSpawned,
+                Source = context.Owner,
+                Target = null,
+                AbilityDefinition = context.SourceAbility,
+                SlotType = context.SlotType,
+                Position = context.Origin,
+                Direction = context.Direction,
+                Value = context.Damage,
+                IsSuper = context.IsSuper
+            });
         }
 
         public void ManualTick(uint currentTick)
@@ -72,6 +85,19 @@ namespace MOBA.Core.Infrastructure
                         HitPosition = p.GameObject.transform.position,
                         Direction = p.Direction,
                         SourceAbility = p.SourceAbility,
+                        IsSuper = p.IsSuper
+                    });
+
+                    CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                    {
+                        EventType = CombatPresentationEventType.DamageHit,
+                        Source = p.Owner,
+                        Target = hit as BrawlerController,
+                        AbilityDefinition = p.SourceAbility,
+                        SlotType = p.SlotType,
+                        Position = p.GameObject.transform.position,
+                        Direction = p.Direction,
+                        Value = p.Damage,
                         IsSuper = p.IsSuper
                     });
 

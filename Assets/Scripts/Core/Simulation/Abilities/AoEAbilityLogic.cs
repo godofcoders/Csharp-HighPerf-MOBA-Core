@@ -50,6 +50,18 @@ namespace MOBA.Core.Simulation.Abilities
                         SourceAbility = context.AbilityDefinition,
                         IsSuper = context.IsSuper
                     });
+                    CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                    {
+                        EventType = CombatPresentationEventType.DamageHit,
+                        Source = context.Source,
+                        Target = target as BrawlerController,
+                        AbilityDefinition = context.AbilityDefinition,
+                        SlotType = context.SlotType,
+                        Position = target.Position,
+                        Direction = (target.Position - context.Origin).normalized,
+                        Value = _damage,
+                        IsSuper = context.IsSuper
+                    });
 
                     targetsAffected++;
                 }
@@ -59,6 +71,22 @@ namespace MOBA.Core.Simulation.Abilities
             result.AppliedAreaEffect = true;
             result.TargetsAffected = targetsAffected;
             result.ConsumedResource = true;
+
+            if (targetsAffected > 0)
+            {
+                CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                {
+                    EventType = CombatPresentationEventType.AreaEffectResolved,
+                    Source = context.Source,
+                    Target = null,
+                    AbilityDefinition = context.AbilityDefinition,
+                    SlotType = context.SlotType,
+                    Position = context.Origin,
+                    Direction = context.Direction,
+                    Value = targetsAffected,
+                    IsSuper = context.IsSuper
+                });
+            }
 
             return result;
         }

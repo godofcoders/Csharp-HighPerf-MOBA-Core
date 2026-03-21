@@ -255,6 +255,19 @@ namespace MOBA.Core.Infrastructure
                             Result = default
                         });
 
+                        CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                        {
+                            EventType = CombatPresentationEventType.AbilityCastStarted,
+                            Source = this,
+                            Target = null,
+                            AbilityDefinition = _definition.MainAttack,
+                            SlotType = AbilitySlotType.MainAttack,
+                            Position = executionContext.Origin,
+                            Direction = executionContext.Direction,
+                            Value = 0f,
+                            IsSuper = false
+                        });
+
                         var result = _mainAttack != null
                             ? _mainAttack.Execute(this, executionContext)
                             : AbilityExecutionResult.Failed(_definition.MainAttack, AbilitySlotType.MainAttack);
@@ -278,6 +291,22 @@ namespace MOBA.Core.Infrastructure
                             Tick = currentTick,
                             Result = result
                         });
+
+                        if (result.Success)
+                        {
+                            CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                            {
+                                EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                Source = this,
+                                Target = null,
+                                AbilityDefinition = _definition.MainAttack,
+                                SlotType = AbilitySlotType.MainAttack,
+                                Position = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Value = 0f,
+                                IsSuper = false
+                            });
+                        }
                     }
                     break;
 
@@ -318,6 +347,19 @@ namespace MOBA.Core.Infrastructure
                             Result = default
                         });
 
+                        CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                        {
+                            EventType = CombatPresentationEventType.AbilityCastStarted,
+                            Source = this,
+                            Target = null,
+                            AbilityDefinition = _definition.Gadget,
+                            SlotType = AbilitySlotType.Gadget,
+                            Position = executionContext.Origin,
+                            Direction = executionContext.Direction,
+                            Value = 0f,
+                            IsSuper = false
+                        });
+
                         var result = _gadgetLogic != null
                             ? _gadgetLogic.Execute(this, executionContext)
                             : AbilityExecutionResult.Failed(_definition.Gadget, AbilitySlotType.Gadget);
@@ -344,6 +386,22 @@ namespace MOBA.Core.Infrastructure
                             Tick = currentTick,
                             Result = result
                         });
+
+                        if (result.Success)
+                        {
+                            CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                            {
+                                EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                Source = this,
+                                Target = null,
+                                AbilityDefinition = _definition.Gadget,
+                                SlotType = AbilitySlotType.Gadget,
+                                Position = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Value = 0f,
+                                IsSuper = false
+                            });
+                        }
                     }
                     break;
 
@@ -386,6 +444,19 @@ namespace MOBA.Core.Infrastructure
                             Result = default
                         });
 
+                        CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                        {
+                            EventType = CombatPresentationEventType.AbilityCastStarted,
+                            Source = this,
+                            Target = null,
+                            AbilityDefinition = _definition.SuperAbility,
+                            SlotType = AbilitySlotType.Super,
+                            Position = executionContext.Origin,
+                            Direction = executionContext.Direction,
+                            Value = 0f,
+                            IsSuper = true
+                        });
+
                         var result = _superAbility != null
                             ? _superAbility.Execute(this, executionContext)
                             : AbilityExecutionResult.Failed(_definition.SuperAbility, AbilitySlotType.Super);
@@ -417,6 +488,22 @@ namespace MOBA.Core.Infrastructure
                             Tick = currentTick,
                             Result = result
                         });
+
+                        if (result.Success)
+                        {
+                            CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                            {
+                                EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                Source = this,
+                                Target = null,
+                                AbilityDefinition = _definition.SuperAbility,
+                                SlotType = AbilitySlotType.Super,
+                                Position = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Value = 0f,
+                                IsSuper = true
+                            });
+                        }
                     }
                     break;
             }
@@ -449,6 +536,7 @@ namespace MOBA.Core.Infrastructure
             State.Reset();
 
             gameObject.SetActive(true);
+            CombatRegistry.Register(this);
             SimulationClock.Grid?.Add(this);
         }
 
