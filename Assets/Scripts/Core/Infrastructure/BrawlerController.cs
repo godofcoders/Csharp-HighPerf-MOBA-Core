@@ -178,20 +178,36 @@ namespace MOBA.Core.Infrastructure
             CombatRegistry.Unregister(this);
         }
 
-        public void FireProjectile(Vector3 origin, Vector3 direction, float speed, float range, float damage)
+        public void FireProjectile(
+      Vector3 origin,
+      Vector3 direction,
+      float speed,
+      float range,
+      float damage,
+      AbilityDefinition sourceAbility,
+      AbilitySlotType slotType,
+      bool isSuper,
+      bool isGadget)
         {
             var projectileService = ServiceProvider.Get<IProjectileService>();
 
-            projectileService.FireProjectile(
-                this,
-                origin,
-                direction,
-                speed,
-                range,
-                damage,
-                Team,
-                0.20f
-            );
+            var spawnContext = new ProjectileSpawnContext
+            {
+                Owner = this,
+                SourceAbility = sourceAbility,
+                SlotType = slotType,
+                Origin = origin,
+                Direction = direction,
+                Speed = speed,
+                Range = range,
+                Damage = damage,
+                Team = Team,
+                SuperChargeOnHit = 0.20f,
+                IsSuper = isSuper,
+                IsGadget = isGadget
+            };
+
+            projectileService.FireProjectile(spawnContext);
         }
 
         private void ExecuteCommand(BufferedCommand cmd)

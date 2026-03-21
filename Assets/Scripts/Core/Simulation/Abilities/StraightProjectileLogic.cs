@@ -26,7 +26,16 @@ namespace MOBA.Core.Simulation.Abilities
 
             for (int i = 0; i < _projectileCount; i++)
             {
-                brawler.FireProjectile(context.Origin, context.Direction, _speed, _range, _damage);
+                brawler.FireProjectile(
+                    context.Origin,
+                    context.Direction,
+                    _speed,
+                    _range,
+                    _damage,
+                    context.AbilityDefinition,
+                    context.SlotType,
+                    context.IsSuper,
+                    context.IsGadget);
             }
 
             var result = AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);

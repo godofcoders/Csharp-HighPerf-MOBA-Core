@@ -9,7 +9,6 @@ namespace MOBA.Core.Infrastructure
     public class ProjectileManager : MonoBehaviour, IProjectileService
     {
         private SimpleObjectPool _pool;
-
         private readonly List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>(64);
 
         private void Awake()
@@ -18,33 +17,28 @@ namespace MOBA.Core.Infrastructure
             ServiceProvider.Register<IProjectileService>(this);
         }
 
-        public void FireProjectile(
-            BrawlerController owner,
-            Vector3 origin,
-            Vector3 direction,
-            float speed,
-            float range,
-            float damage,
-            TeamType team,
-            float superChargeOnHit)
+        public void FireProjectile(in ProjectileSpawnContext context)
         {
             GameObject go = _pool.Get();
-            go.transform.position = origin;
-            go.transform.rotation = Quaternion.LookRotation(direction);
+            go.transform.position = context.Origin;
+            go.transform.rotation = Quaternion.LookRotation(context.Direction);
 
             _activeProjectiles.Add(new ActiveProjectile
             {
-                Owner = owner,
+                Owner = context.Owner,
+                SourceAbility = context.SourceAbility,
+                SlotType = context.SlotType,
+                IsSuper = context.IsSuper,
+                IsGadget = context.IsGadget,
+
                 GameObject = go,
-                Origin = origin,
-                Direction = direction.normalized,
-                Speed = speed,
-                MaxRangeSq = range * range,
-                Damage = damage,
-                Team = team,
-                SuperChargeOnHit = superChargeOnHit,
-                SourceAbility = null,
-                IsSuper = false
+                Origin = context.Origin,
+                Direction = context.Direction.normalized,
+                Speed = context.Speed,
+                MaxRangeSq = context.Range * context.Range,
+                Damage = context.Damage,
+                Team = context.Team,
+                SuperChargeOnHit = context.SuperChargeOnHit
             });
         }
 
@@ -96,6 +90,11 @@ namespace MOBA.Core.Infrastructure
         private sealed class ActiveProjectile
         {
             public BrawlerController Owner;
+            public AbilityDefinition SourceAbility;
+            public AbilitySlotType SlotType;
+            public bool IsSuper;
+            public bool IsGadget;
+
             public GameObject GameObject;
             public Vector3 Origin;
             public Vector3 Direction;
@@ -104,9 +103,6 @@ namespace MOBA.Core.Infrastructure
             public float Damage;
             public TeamType Team;
             public float SuperChargeOnHit;
-
-            public AbilityDefinition SourceAbility;
-            public bool IsSuper;
         }
     }
 }
