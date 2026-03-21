@@ -1,8 +1,8 @@
 using UnityEngine;
-using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
 using System.Collections.Generic;
+using MOBA.Core.Definitions;
 
 namespace MOBA.Core.Simulation.AI
 {
@@ -11,9 +11,20 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerController _self;
         private readonly BrawlerAIProfile _profile;
         private readonly AIObjectiveMemory _objectiveMemory;
-
         private readonly AITeamCoordinator _teamCoordinator;
-        public AIUtilityScorer(BrawlerController self, BrawlerAIProfile profile, AIObjectiveMemory objectiveMemory, AITeamCoordinator teamCoordinator)
+
+        private readonly uint _threatForgetTicks = 240;
+
+        private bool IsSniper => _profile.Archetype == AIArchetype.Sniper;
+        private bool IsTank => _profile.Archetype == AIArchetype.Tank;
+        private bool IsAssassin => _profile.Archetype == AIArchetype.Assassin;
+        private bool IsSupport => _profile.Archetype == AIArchetype.Support;
+
+        public AIUtilityScorer(
+            BrawlerController self,
+            BrawlerAIProfile profile,
+            AIObjectiveMemory objectiveMemory,
+            AITeamCoordinator teamCoordinator)
         {
             _self = self;
             _profile = profile;
@@ -29,7 +40,7 @@ namespace MOBA.Core.Simulation.AI
             ScoreAndReplace(ref best, ScoreUseSuper(targetInfo));
             ScoreAndReplace(ref best, ScoreHoldRange(targetInfo));
             ScoreAndReplace(ref best, ScoreReposition(targetInfo));
-            ScoreAndReplace(ref best, ScoreApproach(targetInfo));
+            ScoreAndReplace(ref best, ScoreApproach(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScorePeel(currentTick));
             ScoreAndReplace(ref best, ScoreRegroup(currentTick));
             ScoreAndReplace(ref best, ScoreSearch(targetInfo, currentTick));
@@ -47,7 +58,7 @@ namespace MOBA.Core.Simulation.AI
             results.Add(ScoreUseSuper(targetInfo));
             results.Add(ScoreHoldRange(targetInfo));
             results.Add(ScoreReposition(targetInfo));
-            results.Add(ScoreApproach(targetInfo));
+            results.Add(ScoreApproach(targetInfo, currentTick));
             results.Add(ScorePeel(currentTick));
             results.Add(ScoreRegroup(currentTick));
             results.Add(ScoreSearch(targetInfo, currentTick));
@@ -63,7 +74,7 @@ namespace MOBA.Core.Simulation.AI
 
         private AIActionScore ScoreRetreat(AITargetInfo targetInfo)
         {
-            if (_self == null || _self.State == null)
+            if (_self.State == null)
                 return new AIActionScore(AIActionType.Retreat, 0f);
 
             float score = 0f;
@@ -76,7 +87,7 @@ namespace MOBA.Core.Simulation.AI
                 score += 25f;
 
             if (_self.State.HasStatus(StatusEffectType.Stun))
-                score -= 1000f; // cannot actively retreat while stunned
+                score -= 1000f;
 
             if (targetInfo.HasLiveTarget)
             {
@@ -85,18 +96,20 @@ namespace MOBA.Core.Simulation.AI
                     score += 20f;
             }
 
+            if (IsSniper) score += 20f;
+            if (IsSupport) score += 15f;
+            if (IsAssassin) score -= 10f;
+            if (IsTank) score -= 20f;
+
             return new AIActionScore(AIActionType.Retreat, score * _profile.RetreatWeight);
         }
 
         private AIActionScore ScoreUseSuper(AITargetInfo targetInfo)
         {
-            if (_self == null || _self.State == null || !_self.State.SuperCharge.IsReady || !targetInfo.HasLiveTarget)
+            if (_self.State == null || !_self.State.SuperCharge.IsReady || !targetInfo.HasLiveTarget)
                 return new AIActionScore(AIActionType.UseSuper, 0f);
 
-            float score = 0f;
-            AbilityDefinition super = _self.Definition?.SuperAbility;
-            if (super == null)
-                return new AIActionScore(AIActionType.UseSuper, 0f);
+            float score = 50f;
 
             if (targetInfo.Target is BrawlerController targetBrawler && targetBrawler.State != null)
             {
@@ -109,22 +122,14 @@ namespace MOBA.Core.Simulation.AI
                 if (targetBrawler.State.HasStatus(StatusEffectType.Slow))
                     score += 20f;
 
-                if (AIAbilityIntentUtility.IsFinisher(super) &&
-                    targetHealthRatio <= _profile.SuperLowHealthTargetThreshold)
-                {
-                    score += 50f;
-                }
-
-                if (AIAbilityIntentUtility.IsEngage(super))
-                    score += 30f;
-
-                if (AIAbilityIntentUtility.IsEscape(super))
-                {
-                    float selfHealthRatio = _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value);
-                    if (selfHealthRatio <= _profile.LowHealthRetreatRatio)
-                        score += 45f;
-                }
+                if (targetHealthRatio <= _profile.SuperLowHealthTargetThreshold)
+                    score += 25f;
             }
+
+            if (IsAssassin) score += 30f;
+            if (IsTank) score += 20f;
+            if (IsSniper) score += 10f;
+            if (IsSupport) score += 15f;
 
             return new AIActionScore(AIActionType.UseSuper, score * _profile.SuperWeight);
         }
@@ -150,6 +155,11 @@ namespace MOBA.Core.Simulation.AI
                     score += 25f;
             }
 
+            if (IsSniper) score += 40f;
+            if (IsSupport) score += 20f;
+            if (IsTank) score -= 20f;
+            if (IsAssassin) score -= 10f;
+
             return new AIActionScore(AIActionType.HoldRange, score * _profile.HoldRangeWeight);
         }
 
@@ -166,10 +176,15 @@ namespace MOBA.Core.Simulation.AI
             if (dist < tooClose)
                 score += 60f;
 
+            if (IsSniper) score += 25f;
+            if (IsSupport) score += 20f;
+            if (IsAssassin) score += 10f;
+            if (IsTank) score -= 10f;
+
             return new AIActionScore(AIActionType.Reposition, score * _profile.RepositionWeight);
         }
 
-        private AIActionScore ScoreApproach(AITargetInfo targetInfo)
+        private AIActionScore ScoreApproach(AITargetInfo targetInfo, uint currentTick)
         {
             if (!targetInfo.HasLiveTarget)
                 return new AIActionScore(AIActionType.Approach, 0f);
@@ -191,13 +206,17 @@ namespace MOBA.Core.Simulation.AI
             }
 
             if (_teamCoordinator != null &&
-    _teamCoordinator.TryGetFocusTarget(ServiceProvider.Get<ISimulationClock>().CurrentTick, out var focusTarget) &&
-    focusTarget != null &&
-    targetInfo.HasLiveTarget &&
-    ReferenceEquals(targetInfo.Target, focusTarget))
+                _teamCoordinator.TryGetFocusTarget(currentTick, out var focusTarget) &&
+                focusTarget != null &&
+                targetInfo.Target.EntityID == focusTarget.EntityID)
             {
                 score += _profile.FocusFireWeight;
             }
+
+            if (IsTank) score += 30f;
+            if (IsAssassin) score += 20f;
+            if (IsSniper) score -= 15f;
+            if (IsSupport) score -= 10f;
 
             return new AIActionScore(AIActionType.Approach, score * _profile.ApproachWeight);
         }
@@ -220,18 +239,6 @@ namespace MOBA.Core.Simulation.AI
             return new AIActionScore(AIActionType.Wander, 5f * _profile.WanderWeight);
         }
 
-        private float GetAbilityIdealRange()
-        {
-            var attack = _self.Definition?.MainAttack;
-            return attack != null ? attack.GetAIIdealRange() : 6f;
-        }
-
-        private float GetAbilityMaxRange()
-        {
-            var attack = _self.Definition?.MainAttack;
-            return attack != null ? attack.GetAIMaxRange() : 6f;
-        }
-
         private AIActionScore ScoreObjective()
         {
             if (_objectiveMemory == null)
@@ -247,38 +254,48 @@ namespace MOBA.Core.Simulation.AI
 
         private AIActionScore ScoreRegroup(uint currentTick)
         {
-            if (_teamCoordinator == null || _self == null || _self.State == null)
-                return new AIActionScore(AIActionType.Regroup, 0f);
-
-            float healthRatio = _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value);
             float score = 0f;
 
-            if (healthRatio <= _profile.RegroupHealthThreshold)
-                score += 40f;
+            if (_teamCoordinator != null && _teamCoordinator.TryGetRegroupPoint(currentTick, out _))
+            {
+                score += 25f;
 
-            if (_teamCoordinator.TryGetRegroupPoint(currentTick, out _))
-                score += 20f;
+                if (IsSupport) score += 20f;
+                if (IsSniper) score += 10f;
+                if (IsTank) score -= 10f;
+            }
 
             return new AIActionScore(AIActionType.Regroup, score * _profile.RegroupWeight);
         }
 
         private AIActionScore ScorePeel(uint currentTick)
         {
-            if (_teamCoordinator == null)
-                return new AIActionScore(AIActionType.Peel, 0f);
-
             float score = 0f;
 
-            if (_teamCoordinator.TryGetAllyUnderThreat(currentTick, out var ally) && ally != null)
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetAllyUnderThreat(currentTick, out var ally) &&
+                ally != null)
             {
-                float dist = Vector3.Distance(_self.Position, ally.Position);
-                if (dist <= _profile.AllySupportRange)
-                {
-                    score += 35f;
-                }
+                score += 40f;
+
+                if (IsSupport) score += 30f;
+                if (IsTank) score += 20f;
+                if (IsAssassin) score -= 10f;
             }
 
             return new AIActionScore(AIActionType.Peel, score * _profile.PeelWeight);
+        }
+
+        private float GetAbilityIdealRange()
+        {
+            var attack = _self.Definition?.MainAttack;
+            return attack != null ? attack.GetAIIdealRange() : 6f;
+        }
+
+        private float GetAbilityMaxRange()
+        {
+            var attack = _self.Definition?.MainAttack;
+            return attack != null ? attack.GetAIMaxRange() : 6f;
         }
     }
 }

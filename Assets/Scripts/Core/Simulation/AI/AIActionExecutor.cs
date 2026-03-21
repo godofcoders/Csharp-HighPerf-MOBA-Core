@@ -13,20 +13,20 @@ namespace MOBA.Core.Simulation.AI
         private readonly AISuperDecider _superDecider;
         private readonly AIObjectiveMemory _objectiveMemory;
         private readonly AITeamCoordinator _teamCoordinator;
+        private readonly AISpacingUtility _spacingUtility;
 
         private uint _nextFallbackWanderTick;
         private uint _nextStrafeTick;
         private Vector3 _fallbackWanderPoint;
-        private readonly AISpacingUtility _spacingUtility;
 
         public AIActionExecutor(
-       BrawlerController brawler,
-       BrawlerAIProfile profile,
-       NavigationAgent navAgent,
-       AIAbilityDecider abilityDecider,
-       AISuperDecider superDecider,
-       AIObjectiveMemory objectiveMemory,
-       AITeamCoordinator teamCoordinator)
+            BrawlerController brawler,
+            BrawlerAIProfile profile,
+            NavigationAgent navAgent,
+            AIAbilityDecider abilityDecider,
+            AISuperDecider superDecider,
+            AIObjectiveMemory objectiveMemory,
+            AITeamCoordinator teamCoordinator)
         {
             _brawler = brawler;
             _profile = profile;
@@ -53,11 +53,11 @@ namespace MOBA.Core.Simulation.AI
                     break;
 
                 case AIActionType.HoldRange:
-                    RunHoldRange(targetInfo, currentTick, attackRange, superRange);
+                    RunHoldRange(targetInfo, currentTick, attackRange, idealRange, superRange);
                     break;
 
                 case AIActionType.Reposition:
-                    RunReposition(targetInfo, currentTick, attackRange, superRange);
+                    RunReposition(targetInfo, currentTick, attackRange, idealRange, superRange);
                     break;
 
                 case AIActionType.Retreat:
@@ -81,7 +81,7 @@ namespace MOBA.Core.Simulation.AI
                     break;
 
                 case AIActionType.Peel:
-                    RunPeel(currentTick, attackRange, superRange);
+                    RunPeel(currentTick, attackRange, idealRange, superRange);
                     break;
 
                 default:
@@ -93,7 +93,10 @@ namespace MOBA.Core.Simulation.AI
         private void RunApproach(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)
         {
             if (!targetInfo.HasLiveTarget)
+            {
+                _navAgent.Stop();
                 return;
+            }
 
             float preferredRange = _profile.GetPreferredAttackRange(idealRange) + _profile.PreferredCombatOffset;
 
@@ -110,7 +113,7 @@ namespace MOBA.Core.Simulation.AI
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
         }
 
-        private void RunHoldRange(AITargetInfo targetInfo, uint currentTick, float attackRange, float superRange)
+        private void RunHoldRange(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)
         {
             if (!targetInfo.HasLiveTarget)
             {
@@ -122,11 +125,13 @@ namespace MOBA.Core.Simulation.AI
             _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
 
+            float preferredRange = _profile.GetPreferredAttackRange(idealRange) + _profile.PreferredCombatOffset;
+
             if (!_profile.UseStrafe)
             {
                 Vector3 preferredPoint = _spacingUtility.GetPreferredRangePosition(
                     targetInfo.Target.Position,
-                    attackRange * 0.85f,
+                    preferredRange,
                     _profile.AllyAvoidanceRadius,
                     _profile.AllyAvoidanceWeight);
 
@@ -146,7 +151,7 @@ namespace MOBA.Core.Simulation.AI
 
                 Vector3 preferredPoint = _spacingUtility.GetPreferredRangePosition(
                     targetInfo.Target.Position,
-                    attackRange * 0.85f,
+                    preferredRange,
                     _profile.AllyAvoidanceRadius,
                     _profile.AllyAvoidanceWeight);
 
@@ -157,12 +162,15 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
-        private void RunReposition(AITargetInfo targetInfo, uint currentTick, float attackRange, float superRange)
+        private void RunReposition(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)
         {
             if (!targetInfo.HasLiveTarget)
+            {
+                _navAgent.Stop();
                 return;
+            }
 
-            float desiredRange = Mathf.Max(attackRange * 0.85f, _profile.GetPreferredAttackRange(attackRange));
+            float desiredRange = Mathf.Max(idealRange * 0.85f, _profile.GetPreferredAttackRange(idealRange));
             Vector3 repositionPoint = _spacingUtility.GetPreferredRangePosition(
                 targetInfo.Target.Position,
                 desiredRange,
@@ -233,10 +241,20 @@ namespace MOBA.Core.Simulation.AI
         private void RunUseSuper(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)
         {
             if (!targetInfo.HasLiveTarget)
+            {
+                _navAgent.Stop();
                 return;
+            }
 
-            float desiredArrival = Mathf.Max(0.8f, _profile.GetPreferredAttackRange(idealRange) * 0.9f);
-            _navAgent.RequestDestination(targetInfo.Target.Position, desiredArrival);
+            float preferredRange = _profile.GetPreferredAttackRange(idealRange) + _profile.PreferredCombatOffset;
+
+            Vector3 destination = _spacingUtility.GetPreferredRangePosition(
+                targetInfo.Target.Position,
+                preferredRange,
+                _profile.AllyAvoidanceRadius,
+                _profile.AllyAvoidanceWeight);
+
+            _navAgent.RequestDestination(destination, 0.8f);
 
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
             _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
@@ -253,15 +271,13 @@ namespace MOBA.Core.Simulation.AI
             _navAgent.Stop();
         }
 
-        private void RunPeel(uint currentTick, float attackRange, float superRange)
+        private void RunPeel(uint currentTick, float attackRange, float idealRange, float superRange)
         {
             if (_teamCoordinator == null || !_teamCoordinator.TryGetAllyUnderThreat(currentTick, out var ally) || ally == null)
             {
                 _navAgent.Stop();
                 return;
             }
-
-            _navAgent.RequestDestination(ally.Position, 1.0f);
 
             if (ally.State != null && ally.State.ThreatTracker != null)
             {
@@ -273,16 +289,23 @@ namespace MOBA.Core.Simulation.AI
 
                     if (entity is BrawlerController attacker && attacker.State != null && !attacker.State.IsDead)
                     {
-                        // Move toward attacker instead of ally
-                        _navAgent.RequestDestination(attacker.Position, 1.0f);
+                        float preferredRange = _profile.GetPreferredAttackRange(idealRange) + _profile.PreferredCombatOffset;
 
+                        Vector3 destination = _spacingUtility.GetPreferredRangePosition(
+                            attacker.Position,
+                            preferredRange,
+                            _profile.AllyAvoidanceRadius,
+                            _profile.AllyAvoidanceWeight);
+
+                        _navAgent.RequestDestination(destination, 1.0f);
                         _abilityDecider.TryUseMainAttack(attacker, currentTick, attackRange);
                         _superDecider.TryUseSuper(attacker, currentTick, superRange);
-
                         return;
                     }
                 }
             }
+
+            _navAgent.RequestDestination(ally.Position, 1.0f);
         }
     }
 }
