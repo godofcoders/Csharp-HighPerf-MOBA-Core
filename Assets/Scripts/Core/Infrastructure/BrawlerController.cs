@@ -201,7 +201,9 @@ namespace MOBA.Core.Infrastructure
             switch (cmd.Type)
             {
                 case InputCommandType.MainAttack:
-                    if (_definition.MainAttack != null && State.Ammo.Consume(1))
+                    if (_definition.MainAttack != null &&
+                        State.IsAbilityReady(AbilityRuntimeSlot.MainAttack, currentTick) &&
+                        State.Ammo.Consume(1))
                     {
                         State.EnterActionState(
                             BrawlerActionStateType.CastingMainAttack,
@@ -241,6 +243,14 @@ namespace MOBA.Core.Infrastructure
                             ? _mainAttack.Execute(this, executionContext)
                             : AbilityExecutionResult.Failed(_definition.MainAttack, AbilitySlotType.MainAttack);
 
+                        if (result.Success)
+                        {
+                            State.StartAbilityCooldown(
+                                AbilityRuntimeSlot.MainAttack,
+                                currentTick,
+                                _definition.MainAttack.Cooldown);
+                        }
+
                         AbilityEventBus.Raise(new AbilityExecutionEvent
                         {
                             EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
@@ -256,7 +266,9 @@ namespace MOBA.Core.Infrastructure
                     break;
 
                 case InputCommandType.Gadget:
-                    if (_definition.Gadget != null && State.RemainingGadgets > 0)
+                    if (_definition.Gadget != null &&
+                        State.RemainingGadgets > 0 &&
+                        State.IsAbilityReady(AbilityRuntimeSlot.Gadget, currentTick))
                     {
                         State.EnterActionState(
                             BrawlerActionStateType.CastingGadget,
@@ -297,6 +309,11 @@ namespace MOBA.Core.Infrastructure
                         if (result.Success)
                         {
                             State.UseGadgetCharge();
+                            State.StartAbilityCooldown(
+                                AbilityRuntimeSlot.Gadget,
+                                currentTick,
+                                _definition.Gadget.Cooldown);
+
                             Debug.Log($"[SIM] Gadget used! Remaining: {State.RemainingGadgets}");
                         }
 
@@ -315,7 +332,9 @@ namespace MOBA.Core.Infrastructure
                     break;
 
                 case InputCommandType.Super:
-                    if (_definition.SuperAbility != null && State.TryConsumeSuper())
+                    if (_definition.SuperAbility != null &&
+                        State.SuperCharge.IsReady &&
+                        State.IsAbilityReady(AbilityRuntimeSlot.Super, currentTick))
                     {
                         State.EnterActionState(
                             BrawlerActionStateType.CastingSuper,
@@ -354,6 +373,22 @@ namespace MOBA.Core.Infrastructure
                         var result = _superAbility != null
                             ? _superAbility.Execute(this, executionContext)
                             : AbilityExecutionResult.Failed(_definition.SuperAbility, AbilitySlotType.Super);
+
+                        if (result.Success)
+                        {
+                            State.TryConsumeSuper();
+                            State.StartAbilityCooldown(
+                                AbilityRuntimeSlot.Super,
+                                currentTick,
+                                _definition.SuperAbility.Cooldown);
+                        }
+                        else
+                        {
+                            if (State.ActionState.StateType == BrawlerActionStateType.CastingSuper)
+                            {
+                                State.ClearActionState();
+                            }
+                        }
 
                         AbilityEventBus.Raise(new AbilityExecutionEvent
                         {

@@ -41,6 +41,10 @@ namespace MOBA.Core.Simulation
         public List<IStatusEffectInstance> ActiveStatusEffects { get; private set; }
         public BrawlerActionStateData ActionState { get; private set; }
 
+        public AbilityCooldownState MainAttackCooldown { get; private set; }
+        public AbilityCooldownState SuperCooldown { get; private set; }
+        public AbilityCooldownState GadgetCooldown { get; private set; }
+
         public BrawlerState(BrawlerDefinition definition, TeamType team)
         {
             Definition = definition;
@@ -64,6 +68,8 @@ namespace MOBA.Core.Simulation
             RemainingGadgets = definition.Gadget != null ? definition.Gadget.MaxCharges : 0;
             CurrentHealth = MaxHealth.Value;
             ClearActionState();
+            ResetAbilityCooldowns();
+
         }
         public void AddIncomingMovementModifier(MovementModifier modifier)
         {
@@ -152,6 +158,7 @@ namespace MOBA.Core.Simulation
             IncomingMovementModifiers.Clear();
             ActiveStatusEffects.Clear();
             ClearActionState();
+            ResetAbilityCooldowns();
 
             OnHealthChanged?.Invoke(CurrentHealth);
         }
@@ -259,6 +266,50 @@ namespace MOBA.Core.Simulation
         {
             return ActionState.StateType != BrawlerActionStateType.None &&
                    ActionState.IsActive(currentTick);
+        }
+        public bool IsAbilityReady(AbilityRuntimeSlot slot, uint currentTick)
+        {
+            switch (slot)
+            {
+                case AbilityRuntimeSlot.MainAttack:
+                    return MainAttackCooldown.IsReady(currentTick);
+
+                case AbilityRuntimeSlot.Super:
+                    return SuperCooldown.IsReady(currentTick);
+
+                case AbilityRuntimeSlot.Gadget:
+                    return GadgetCooldown.IsReady(currentTick);
+
+                default:
+                    return false;
+            }
+        }
+
+        public void StartAbilityCooldown(AbilityRuntimeSlot slot, uint currentTick, float cooldownSeconds)
+        {
+            uint cooldownTicks = (uint)(cooldownSeconds * 30f);
+
+            switch (slot)
+            {
+                case AbilityRuntimeSlot.MainAttack:
+                    MainAttackCooldown.StartCooldown(currentTick, cooldownTicks);
+                    break;
+
+                case AbilityRuntimeSlot.Super:
+                    SuperCooldown.StartCooldown(currentTick, cooldownTicks);
+                    break;
+
+                case AbilityRuntimeSlot.Gadget:
+                    GadgetCooldown.StartCooldown(currentTick, cooldownTicks);
+                    break;
+            }
+        }
+
+        public void ResetAbilityCooldowns()
+        {
+            MainAttackCooldown.Reset();
+            SuperCooldown.Reset();
+            GadgetCooldown.Reset();
         }
 
         public bool CanMove(uint currentTick)
