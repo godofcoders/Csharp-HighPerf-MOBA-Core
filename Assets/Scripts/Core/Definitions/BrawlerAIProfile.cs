@@ -82,6 +82,12 @@ namespace MOBA.Core.Definitions
         public float RegroupHealthThreshold = 0.35f;
         public float AllySupportRange = 8f;
 
+        [Header("Spacing / Anti-Clump")]
+        public float AllyAvoidanceRadius = 2.5f;
+        public float AllyAvoidanceWeight = 1.5f;
+        public float HoldRangePositionRefreshTicks = 20f;
+        public float PreferredCombatOffset = 0.75f;
+
         [Header("Objective Preference")]
         public AIObjectiveType PreferredObjective = AIObjectiveType.MidControl;
         public float ObjectiveWeight = 35f;
@@ -116,6 +122,10 @@ namespace MOBA.Core.Definitions
                     PeelWeight = 15f;
                     RegroupHealthThreshold = 0.45f;
                     AllySupportRange = 9f;
+
+                    AllyAvoidanceRadius = 3.5f;
+                    AllyAvoidanceWeight = 2.0f;
+                    PreferredCombatOffset = 1.2f;
                     break;
 
                 case AIArchetype.Tank:
@@ -134,6 +144,10 @@ namespace MOBA.Core.Definitions
                     PeelWeight = 35f;
                     RegroupHealthThreshold = 0.20f;
                     AllySupportRange = 10f;
+
+                    AllyAvoidanceRadius = 2.0f;
+                    AllyAvoidanceWeight = 0.8f;
+                    PreferredCombatOffset = 0.3f;
                     break;
 
                 case AIArchetype.Assassin:
@@ -152,6 +166,10 @@ namespace MOBA.Core.Definitions
                     PeelWeight = 10f;
                     RegroupHealthThreshold = 0.25f;
                     AllySupportRange = 7f;
+
+                    AllyAvoidanceRadius = 2.3f;
+                    AllyAvoidanceWeight = 1.1f;
+                    PreferredCombatOffset = 0.5f;
                     break;
 
                 case AIArchetype.Support:
@@ -170,6 +188,10 @@ namespace MOBA.Core.Definitions
                     PeelWeight = 40f;
                     RegroupHealthThreshold = 0.40f;
                     AllySupportRange = 11f;
+
+                    AllyAvoidanceRadius = 3.0f;
+                    AllyAvoidanceWeight = 1.8f;
+                    PreferredCombatOffset = 1.0f;
                     break;
 
                 default:
@@ -188,6 +210,10 @@ namespace MOBA.Core.Definitions
                     PeelWeight = 20f;
                     RegroupHealthThreshold = 0.35f;
                     AllySupportRange = 8f;
+
+                    AllyAvoidanceRadius = 2.5f;
+                    AllyAvoidanceWeight = 1.5f;
+                    PreferredCombatOffset = 0.75f;
                     break;
             }
         }

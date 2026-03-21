@@ -17,15 +17,16 @@ namespace MOBA.Core.Simulation.AI
         private uint _nextFallbackWanderTick;
         private uint _nextStrafeTick;
         private Vector3 _fallbackWanderPoint;
+        private readonly AISpacingUtility _spacingUtility;
 
         public AIActionExecutor(
-      BrawlerController brawler,
-      BrawlerAIProfile profile,
-      NavigationAgent navAgent,
-      AIAbilityDecider abilityDecider,
-      AISuperDecider superDecider,
-      AIObjectiveMemory objectiveMemory,
-      AITeamCoordinator teamCoordinator)
+       BrawlerController brawler,
+       BrawlerAIProfile profile,
+       NavigationAgent navAgent,
+       AIAbilityDecider abilityDecider,
+       AISuperDecider superDecider,
+       AIObjectiveMemory objectiveMemory,
+       AITeamCoordinator teamCoordinator)
         {
             _brawler = brawler;
             _profile = profile;
@@ -34,6 +35,7 @@ namespace MOBA.Core.Simulation.AI
             _superDecider = superDecider;
             _objectiveMemory = objectiveMemory;
             _teamCoordinator = teamCoordinator;
+            _spacingUtility = new AISpacingUtility(brawler);
         }
 
         public void Execute(
@@ -93,8 +95,15 @@ namespace MOBA.Core.Simulation.AI
             if (!targetInfo.HasLiveTarget)
                 return;
 
-            float desiredArrival = Mathf.Max(0.8f, _profile.GetPreferredAttackRange(idealRange) * 0.9f);
-            _navAgent.RequestDestination(targetInfo.Target.Position, desiredArrival);
+            float preferredRange = _profile.GetPreferredAttackRange(idealRange) + _profile.PreferredCombatOffset;
+
+            Vector3 destination = _spacingUtility.GetPreferredRangePosition(
+                targetInfo.Target.Position,
+                preferredRange,
+                _profile.AllyAvoidanceRadius,
+                _profile.AllyAvoidanceWeight);
+
+            _navAgent.RequestDestination(destination, 0.8f);
 
             _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
             _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
@@ -115,7 +124,13 @@ namespace MOBA.Core.Simulation.AI
 
             if (!_profile.UseStrafe)
             {
-                _navAgent.Stop();
+                Vector3 preferredPoint = _spacingUtility.GetPreferredRangePosition(
+                    targetInfo.Target.Position,
+                    attackRange * 0.85f,
+                    _profile.AllyAvoidanceRadius,
+                    _profile.AllyAvoidanceWeight);
+
+                _navAgent.RequestDestination(preferredPoint, 0.5f);
                 return;
             }
 
@@ -128,7 +143,14 @@ namespace MOBA.Core.Simulation.AI
                     right = _brawler.transform.right;
 
                 float side = Random.value < 0.5f ? -1f : 1f;
-                Vector3 strafePoint = _brawler.Position + (right * side * _profile.StrafeDistance);
+
+                Vector3 preferredPoint = _spacingUtility.GetPreferredRangePosition(
+                    targetInfo.Target.Position,
+                    attackRange * 0.85f,
+                    _profile.AllyAvoidanceRadius,
+                    _profile.AllyAvoidanceWeight);
+
+                Vector3 strafePoint = preferredPoint + (right * side * _profile.StrafeDistance);
 
                 _navAgent.RequestDestination(strafePoint, 0.4f);
                 _nextStrafeTick = currentTick + _profile.StrafeRetargetTicks;
@@ -140,11 +162,13 @@ namespace MOBA.Core.Simulation.AI
             if (!targetInfo.HasLiveTarget)
                 return;
 
-            Vector3 away = (_brawler.Position - targetInfo.Target.Position).normalized;
-            if (away.sqrMagnitude < 0.0001f)
-                away = _brawler.transform.forward;
+            float desiredRange = Mathf.Max(attackRange * 0.85f, _profile.GetPreferredAttackRange(attackRange));
+            Vector3 repositionPoint = _spacingUtility.GetPreferredRangePosition(
+                targetInfo.Target.Position,
+                desiredRange,
+                _profile.AllyAvoidanceRadius,
+                _profile.AllyAvoidanceWeight);
 
-            Vector3 repositionPoint = _brawler.Position + away * _profile.RepositionStepDistance;
             _navAgent.RequestDestination(repositionPoint, 0.4f);
 
             _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
@@ -159,11 +183,12 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
-            Vector3 away = (_brawler.Position - targetInfo.Target.Position).normalized;
-            if (away.sqrMagnitude < 0.0001f)
-                away = _brawler.transform.forward;
+            Vector3 retreatPoint = _spacingUtility.GetRetreatPosition(
+                targetInfo.Target.Position,
+                _profile.RetreatStepDistance,
+                _profile.AllyAvoidanceRadius,
+                _profile.AllyAvoidanceWeight);
 
-            Vector3 retreatPoint = _brawler.Position + away * _profile.RetreatStepDistance;
             _navAgent.RequestDestination(retreatPoint, 0.5f);
         }
 

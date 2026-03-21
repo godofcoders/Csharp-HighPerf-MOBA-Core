@@ -2,6 +2,7 @@ using UnityEngine;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
+using System.Collections.Generic;
 
 namespace MOBA.Core.Simulation.AI
 {
