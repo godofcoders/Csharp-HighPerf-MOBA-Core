@@ -15,13 +15,40 @@ namespace MOBA.Core.Simulation
         public void Apply(BrawlerState state, uint currentTick)
         {
             state.IsStunned = true;
+
+            state.EnterActionState(
+                BrawlerActionStateType.Stunned,
+                currentTick,
+                EndTick - currentTick,
+                false,
+                false,
+                false);
         }
 
-        public void Tick(BrawlerState state, uint currentTick) { }
+        public void Tick(BrawlerState state, uint currentTick)
+        {
+            if (state.ActionState.StateType == BrawlerActionStateType.Stunned)
+            {
+                uint remaining = EndTick > currentTick ? EndTick - currentTick : 0;
+
+                state.EnterActionState(
+                    BrawlerActionStateType.Stunned,
+                    currentTick,
+                    remaining,
+                    false,
+                    false,
+                    false);
+            }
+        }
 
         public void Remove(BrawlerState state, uint currentTick)
         {
             state.IsStunned = false;
+
+            if (state.ActionState.StateType == BrawlerActionStateType.Stunned)
+            {
+                state.ClearActionState();
+            }
         }
 
         public bool CanMerge(StatusEffectContext context)

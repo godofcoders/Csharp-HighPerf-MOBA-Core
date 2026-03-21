@@ -6,9 +6,8 @@ namespace MOBA.Core.Simulation.Abilities
 {
     public class AoEAbilityLogic : IAbilityLogic
     {
-        private float _damage;
-        private float _radius;
-
+        private readonly float _damage;
+        private readonly float _radius;
         private readonly List<ISpatialEntity> _targetBuffer = new List<ISpatialEntity>(16);
 
         public AoEAbilityLogic(float damage, float radius)
@@ -17,16 +16,18 @@ namespace MOBA.Core.Simulation.Abilities
             _radius = radius;
         }
 
-        public void Execute(IAbilityUser user, AbilityContext context)
+        public AbilityExecutionResult Execute(IAbilityUser user, AbilityExecutionContext context)
         {
             var damageService = ServiceProvider.Get<IDamageService>();
 
             if (SimulationClock.Grid == null)
-                return;
+                return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
 
+            _targetBuffer.Clear();
             SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(context.Origin, _radius, _targetBuffer);
 
             float sqrRadius = _radius * _radius;
+            int targetsAffected = 0;
 
             for (int i = 0; i < _targetBuffer.Count; i++)
             {
@@ -40,17 +41,26 @@ namespace MOBA.Core.Simulation.Abilities
                 {
                     damageService.ApplyDamage(new DamageContext
                     {
-                        Attacker = user as BrawlerController,
+                        Attacker = context.Source,
                         Target = target,
                         Damage = _damage,
                         Type = DamageType.AoE,
                         HitPosition = target.Position,
                         Direction = (target.Position - context.Origin).normalized,
-                        SourceAbility = null,
-                        IsSuper = false
+                        SourceAbility = context.AbilityDefinition,
+                        IsSuper = context.IsSuper
                     });
+
+                    targetsAffected++;
                 }
             }
+
+            var result = AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);
+            result.AppliedAreaEffect = true;
+            result.TargetsAffected = targetsAffected;
+            result.ConsumedResource = true;
+
+            return result;
         }
 
         public void Tick(uint currentTick) { }

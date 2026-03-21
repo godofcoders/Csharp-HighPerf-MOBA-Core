@@ -1,22 +1,32 @@
 using UnityEngine;
+using MOBA.Core.Definitions;
 
 namespace MOBA.Core.Simulation.Abilities
 {
     public class DashGadgetLogic : IAbilityLogic
     {
-        private float _dashForce;
+        private readonly float _dashForce;
 
-        public DashGadgetLogic(float force) => _dashForce = force;
-
-        public void Execute(IAbilityUser user, AbilityContext context)
+        public DashGadgetLogic(float force)
         {
-            // Direct manipulation of the transform via the Bridge
-            if (user is MonoBehaviour mb)
+            _dashForce = force;
+        }
+
+        public AbilityExecutionResult Execute(IAbilityUser user, AbilityExecutionContext context)
+        {
+            if (user is not MonoBehaviour mb)
             {
-                Vector3 dashVec = context.Direction.normalized * _dashForce;
-                mb.transform.position += dashVec; // Instant dash
-                Debug.Log("[SIM] Gadget Executed: Dash");
+                return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
             }
+
+            Vector3 dashVec = context.Direction.normalized * _dashForce;
+            mb.transform.position += dashVec;
+
+            Debug.Log("[SIM] Gadget Executed: Dash");
+
+            var result = AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);
+            result.ConsumedResource = true;
+            return result;
         }
 
         public void Tick(uint currentTick) { }

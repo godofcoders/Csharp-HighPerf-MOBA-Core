@@ -39,6 +39,7 @@ namespace MOBA.Core.Simulation
         public BrawlerController Owner { get; set; }
         public MovementModifierCollection IncomingMovementModifiers { get; private set; }
         public List<IStatusEffectInstance> ActiveStatusEffects { get; private set; }
+        public BrawlerActionStateData ActionState { get; private set; }
 
         public BrawlerState(BrawlerDefinition definition, TeamType team)
         {
@@ -62,6 +63,7 @@ namespace MOBA.Core.Simulation
 
             RemainingGadgets = definition.Gadget != null ? definition.Gadget.MaxCharges : 0;
             CurrentHealth = MaxHealth.Value;
+            ClearActionState();
         }
         public void AddIncomingMovementModifier(MovementModifier modifier)
         {
@@ -101,6 +103,14 @@ namespace MOBA.Core.Simulation
 
             if (IsDead)
             {
+                uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+                EnterActionState(
+                    BrawlerActionStateType.Dead,
+                    currentTick,
+                    uint.MaxValue / 4,
+                    false,
+                    false,
+                    false);
                 OnDeath?.Invoke();
             }
         }
@@ -141,6 +151,7 @@ namespace MOBA.Core.Simulation
             ShieldHealth = 0f;
             IncomingMovementModifiers.Clear();
             ActiveStatusEffects.Clear();
+            ClearActionState();
 
             OnHealthChanged?.Invoke(CurrentHealth);
         }
@@ -204,6 +215,80 @@ namespace MOBA.Core.Simulation
             ShieldHealth = 0f;
         }
 
+        public void EnterActionState(
+    BrawlerActionStateType stateType,
+    uint currentTick,
+    uint durationTicks,
+    bool allowMovement,
+    bool allowActionInput,
+    bool isInterruptible)
+        {
+            ActionState = new BrawlerActionStateData
+            {
+                StateType = stateType,
+                StartTick = currentTick,
+                LockUntilTick = currentTick + durationTicks,
+                AllowMovement = allowMovement,
+                AllowActionInput = allowActionInput,
+                IsInterruptible = isInterruptible
+            };
+        }
+
+        public void ClearActionState()
+        {
+            ActionState = new BrawlerActionStateData
+            {
+                StateType = BrawlerActionStateType.None,
+                StartTick = 0,
+                LockUntilTick = 0,
+                AllowMovement = true,
+                AllowActionInput = true,
+                IsInterruptible = true
+            };
+        }
+        public void UpdateActionState(uint currentTick)
+        {
+            if (ActionState.StateType != BrawlerActionStateType.None &&
+                !ActionState.IsActive(currentTick))
+            {
+                ClearActionState();
+            }
+        }
+
+        public bool HasActiveActionState(uint currentTick)
+        {
+            return ActionState.StateType != BrawlerActionStateType.None &&
+                   ActionState.IsActive(currentTick);
+        }
+
+        public bool CanMove(uint currentTick)
+        {
+            if (!HasActiveActionState(currentTick))
+                return !IsDead;
+
+            return ActionState.AllowMovement && !IsDead;
+        }
+
+        public bool CanUseActionInput(uint currentTick)
+        {
+            if (!HasActiveActionState(currentTick))
+                return !IsDead && !IsStunned;
+
+            return ActionState.AllowActionInput && !IsDead && !IsStunned;
+        }
+
+        public bool TryInterruptActionState()
+        {
+            if (ActionState.StateType == BrawlerActionStateType.None)
+                return true;
+
+            if (!ActionState.IsInterruptible)
+                return false;
+
+            ClearActionState();
+            return true;
+        }
+
         public void AddIncomingDamageModifier(DamageModifier modifier)
         {
             IncomingDamageModifiers.Add(modifier);
@@ -233,6 +318,11 @@ namespace MOBA.Core.Simulation
             }
 
             return false;
+        }
+
+        public bool IsInActionState(BrawlerActionStateType type, uint currentTick)
+        {
+            return ActionState.StateType == type && ActionState.IsActive(currentTick);
         }
     }
 }

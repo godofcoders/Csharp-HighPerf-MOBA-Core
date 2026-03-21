@@ -1,32 +1,42 @@
-using UnityEngine;
+using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation.Abilities
 {
     public class StraightProjectileLogic : IAbilityLogic
     {
-        private float _damage;
-        private float _range;
-        private float _speed;
-        private int _projectileCount;
+        private readonly float _damage;
+        private readonly float _range;
+        private readonly float _speed;
+        private readonly int _projectileCount;
 
-        public StraightProjectileLogic(float damage, float range, float speed, int count)
+        public StraightProjectileLogic(float damage, float range, float speed, int projectileCount)
         {
             _damage = damage;
             _range = range;
             _speed = speed;
-            _projectileCount = count;
+            _projectileCount = projectileCount;
         }
 
-        public void Execute(IAbilityUser user, AbilityContext context)
+        public AbilityExecutionResult Execute(IAbilityUser user, AbilityExecutionContext context)
         {
-            // Logic: Create N projectiles with a slight delay or offset
+            if (user is not BrawlerController brawler)
+            {
+                return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
+            }
+
             for (int i = 0; i < _projectileCount; i++)
             {
-                // In a AAA engine, we might queue these to fire over several ticks
-                user.FireProjectile(context.Origin, context.Direction, _speed, _range, _damage);
+                brawler.FireProjectile(context.Origin, context.Direction, _speed, _range, _damage);
             }
+
+            var result = AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);
+            result.SpawnedProjectile = true;
+            result.ProjectileCount = _projectileCount;
+            result.ConsumedResource = true;
+
+            return result;
         }
 
-        public void Tick(uint currentTick) { /* Not needed for instant fire */ }
+        public void Tick(uint currentTick) { }
     }
 }

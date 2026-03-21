@@ -7,10 +7,26 @@ namespace MOBA.Core.Definitions
     [CreateAssetMenu(fileName = "NewProjectileAbility", menuName = "MOBA/Abilities/Projectile")]
     public class ProjectileAbilityDefinition : AbilityDefinition
     {
+        [Header("Projectile")]
         public float Damage = 500f;
         public float Range = 10f;
         public float Speed = 15f;
         public int ProjectileCount = 1;
+
+        private void OnValidate()
+        {
+            DeliveryType = AbilityDeliveryType.Projectile;
+
+            if (SlotType != AbilitySlotType.Super && SlotType != AbilitySlotType.Gadget)
+            {
+                SlotType = AbilitySlotType.MainAttack;
+            }
+
+            if (TargetingType == AbilityTargetingType.Self)
+            {
+                TargetingType = AbilityTargetingType.Directional;
+            }
+        }
 
         public override IAbilityLogic CreateLogic()
         {
@@ -19,7 +35,6 @@ namespace MOBA.Core.Definitions
 
         public override float GetAIIdealRange()
         {
-            // Slightly under max projectile range usually feels better than max-edge fighting.
             return Range * 0.85f;
         }
 

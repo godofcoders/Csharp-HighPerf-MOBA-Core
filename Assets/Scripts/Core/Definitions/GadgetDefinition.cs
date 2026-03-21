@@ -1,14 +1,15 @@
 using UnityEngine;
-using MOBA.Core.Simulation;
 
 namespace MOBA.Core.Definitions
 {
-    public abstract class GadgetDefinition : ScriptableObject
+    public abstract class GadgetDefinition : AbilityDefinition
     {
-        public string AbilityName;
+        [Header("Gadget")]
         public int MaxCharges = 3;
-        public float Cooldown = 5f;
 
-        public abstract IAbilityLogic CreateLogic();
+        protected virtual void OnValidate()
+        {
+            SlotType = AbilitySlotType.Gadget;
+        }
     }
 }

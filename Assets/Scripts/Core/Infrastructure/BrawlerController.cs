@@ -116,10 +116,13 @@ namespace MOBA.Core.Infrastructure
             }
 
             State.TickEffects(currentTick);
+            State.UpdateActionState(currentTick);
             State.UpdateResources(SimulationClock.TickDeltaTime);
 
-            if (!State.IsStunned)
+            if (State.CanMove(currentTick))
                 ProcessMovement();
+            else
+                SetMoveInput(Vector3.zero);
 
             State.Hypercharge.Tick(currentTick, () =>
             {
@@ -127,7 +130,7 @@ namespace MOBA.Core.Infrastructure
                 Debug.Log("[SIM] Hypercharge Ended");
             });
 
-            if (_inputBuffer.HasPending && !State.IsStunned && CanPerformAction())
+            if (_inputBuffer.HasPending && State.CanUseActionInput(currentTick) && CanPerformAction())
             {
                 var cmd = _inputBuffer.Consume();
                 ExecuteCommand(cmd);
@@ -193,42 +196,96 @@ namespace MOBA.Core.Infrastructure
 
         private void ExecuteCommand(BufferedCommand cmd)
         {
-            var context = new AbilityContext
-            {
-                Origin = transform.position,
-                Direction = cmd.Direction,
-                StartTick = ServiceProvider.Get<ISimulationClock>().CurrentTick
-            };
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
 
             switch (cmd.Type)
             {
                 case InputCommandType.MainAttack:
-                    if (State.Ammo.Consume(1))
+                    if (_definition.MainAttack != null && State.Ammo.Consume(1))
                     {
-                        State.LastAttackTick = context.StartTick;
-                        _mainAttack?.Execute(this, context);
+                        State.EnterActionState(
+                            BrawlerActionStateType.CastingMainAttack,
+                            currentTick,
+                            _definition.MainAttack.GetCastDurationTicks(),
+                            _definition.MainAttack.AllowMovementDuringCast,
+                            _definition.MainAttack.AllowActionInputDuringCast,
+                            _definition.MainAttack.IsInterruptible);
+
+                        var executionContext = new AbilityExecutionContext
+                        {
+                            Source = this,
+                            AbilityDefinition = _definition.MainAttack,
+                            SlotType = AbilitySlotType.MainAttack,
+                            Origin = transform.position,
+                            Direction = cmd.Direction,
+                            StartTick = currentTick,
+                            IsSuper = false,
+                            IsGadget = false
+                        };
+
+                        State.LastAttackTick = currentTick;
+                        _mainAttack?.Execute(this, executionContext);
                     }
                     break;
 
                 case InputCommandType.Gadget:
-                    if (State.RemainingGadgets > 0)
+                    if (_definition.Gadget != null && State.RemainingGadgets > 0)
                     {
-                        _gadgetLogic?.Execute(this, context);
+                        State.EnterActionState(
+                            BrawlerActionStateType.CastingGadget,
+                            currentTick,
+                            _definition.Gadget.GetCastDurationTicks(),
+                            _definition.Gadget.AllowMovementDuringCast,
+                            _definition.Gadget.AllowActionInputDuringCast,
+                            _definition.Gadget.IsInterruptible);
+
+                        var executionContext = new AbilityExecutionContext
+                        {
+                            Source = this,
+                            AbilityDefinition = _definition.Gadget,
+                            SlotType = AbilitySlotType.Gadget,
+                            Origin = transform.position,
+                            Direction = cmd.Direction,
+                            StartTick = currentTick,
+                            IsSuper = false,
+                            IsGadget = true
+                        };
+
+                        _gadgetLogic?.Execute(this, executionContext);
                         State.UseGadgetCharge();
                         Debug.Log($"[SIM] Gadget used! Remaining: {State.RemainingGadgets}");
                     }
                     break;
 
                 case InputCommandType.Super:
-                    if (State.TryConsumeSuper())
+                    if (_definition.SuperAbility != null && State.TryConsumeSuper())
                     {
-                        State.LastAttackTick = context.StartTick;
-                        _superAbility?.Execute(this, context);
+                        State.EnterActionState(
+                            BrawlerActionStateType.CastingSuper,
+                            currentTick,
+                            _definition.SuperAbility.GetCastDurationTicks(),
+                            _definition.SuperAbility.AllowMovementDuringCast,
+                            _definition.SuperAbility.AllowActionInputDuringCast,
+                            _definition.SuperAbility.IsInterruptible);
+
+                        var executionContext = new AbilityExecutionContext
+                        {
+                            Source = this,
+                            AbilityDefinition = _definition.SuperAbility,
+                            SlotType = AbilitySlotType.Super,
+                            Origin = transform.position,
+                            Direction = cmd.Direction,
+                            StartTick = currentTick,
+                            IsSuper = true,
+                            IsGadget = false
+                        };
+
+                        State.LastAttackTick = currentTick;
+                        _superAbility?.Execute(this, executionContext);
                     }
                     break;
             }
         }
-
         public void ActivateHypercharge()
         {
             var def = _definition.Hypercharge;
