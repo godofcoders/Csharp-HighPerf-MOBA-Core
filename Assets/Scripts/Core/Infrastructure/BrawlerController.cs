@@ -224,7 +224,34 @@ namespace MOBA.Core.Infrastructure
                         };
 
                         State.LastAttackTick = currentTick;
-                        _mainAttack?.Execute(this, executionContext);
+
+                        AbilityEventBus.Raise(new AbilityExecutionEvent
+                        {
+                            EventType = AbilityEventType.CastStarted,
+                            Source = this,
+                            AbilityDefinition = _definition.MainAttack,
+                            SlotType = AbilitySlotType.MainAttack,
+                            Origin = executionContext.Origin,
+                            Direction = executionContext.Direction,
+                            Tick = currentTick,
+                            Result = default
+                        });
+
+                        var result = _mainAttack != null
+                            ? _mainAttack.Execute(this, executionContext)
+                            : AbilityExecutionResult.Failed(_definition.MainAttack, AbilitySlotType.MainAttack);
+
+                        AbilityEventBus.Raise(new AbilityExecutionEvent
+                        {
+                            EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
+                            Source = this,
+                            AbilityDefinition = _definition.MainAttack,
+                            SlotType = AbilitySlotType.MainAttack,
+                            Origin = executionContext.Origin,
+                            Direction = executionContext.Direction,
+                            Tick = currentTick,
+                            Result = result
+                        });
                     }
                     break;
 
@@ -251,9 +278,39 @@ namespace MOBA.Core.Infrastructure
                             IsGadget = true
                         };
 
-                        _gadgetLogic?.Execute(this, executionContext);
-                        State.UseGadgetCharge();
-                        Debug.Log($"[SIM] Gadget used! Remaining: {State.RemainingGadgets}");
+                        AbilityEventBus.Raise(new AbilityExecutionEvent
+                        {
+                            EventType = AbilityEventType.CastStarted,
+                            Source = this,
+                            AbilityDefinition = _definition.Gadget,
+                            SlotType = AbilitySlotType.Gadget,
+                            Origin = executionContext.Origin,
+                            Direction = executionContext.Direction,
+                            Tick = currentTick,
+                            Result = default
+                        });
+
+                        var result = _gadgetLogic != null
+                            ? _gadgetLogic.Execute(this, executionContext)
+                            : AbilityExecutionResult.Failed(_definition.Gadget, AbilitySlotType.Gadget);
+
+                        if (result.Success)
+                        {
+                            State.UseGadgetCharge();
+                            Debug.Log($"[SIM] Gadget used! Remaining: {State.RemainingGadgets}");
+                        }
+
+                        AbilityEventBus.Raise(new AbilityExecutionEvent
+                        {
+                            EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
+                            Source = this,
+                            AbilityDefinition = _definition.Gadget,
+                            SlotType = AbilitySlotType.Gadget,
+                            Origin = executionContext.Origin,
+                            Direction = executionContext.Direction,
+                            Tick = currentTick,
+                            Result = result
+                        });
                     }
                     break;
 
@@ -281,7 +338,34 @@ namespace MOBA.Core.Infrastructure
                         };
 
                         State.LastAttackTick = currentTick;
-                        _superAbility?.Execute(this, executionContext);
+
+                        AbilityEventBus.Raise(new AbilityExecutionEvent
+                        {
+                            EventType = AbilityEventType.CastStarted,
+                            Source = this,
+                            AbilityDefinition = _definition.SuperAbility,
+                            SlotType = AbilitySlotType.Super,
+                            Origin = executionContext.Origin,
+                            Direction = executionContext.Direction,
+                            Tick = currentTick,
+                            Result = default
+                        });
+
+                        var result = _superAbility != null
+                            ? _superAbility.Execute(this, executionContext)
+                            : AbilityExecutionResult.Failed(_definition.SuperAbility, AbilitySlotType.Super);
+
+                        AbilityEventBus.Raise(new AbilityExecutionEvent
+                        {
+                            EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
+                            Source = this,
+                            AbilityDefinition = _definition.SuperAbility,
+                            SlotType = AbilitySlotType.Super,
+                            Origin = executionContext.Origin,
+                            Direction = executionContext.Direction,
+                            Tick = currentTick,
+                            Result = result
+                        });
                     }
                     break;
             }
