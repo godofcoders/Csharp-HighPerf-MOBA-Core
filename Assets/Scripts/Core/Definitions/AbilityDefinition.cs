@@ -31,6 +31,8 @@ namespace MOBA.Core.Definitions
 
         [Tooltip("Whether this cast can be interrupted by stronger states like stun.")]
         public bool IsInterruptible = true;
+        [Header("AI Intent")]
+        public AbilityIntentType Intent;
 
         public abstract MOBA.Core.Simulation.IAbilityLogic CreateLogic();
 

@@ -1,70 +1,66 @@
 using UnityEngine;
-using MOBA.Core.Simulation.AI;
+using MOBA.Core.Definitions;
 
-namespace MOBA.Core.Definitions
+namespace MOBA.Core.Simulation.AI
 {
-    [CreateAssetMenu(fileName = "NewBrawlerAIProfile", menuName = "MOBA/AI/Brawler AI Profile")]
+    [CreateAssetMenu(fileName = "BrawlerAIProfile", menuName = "MOBA/AI/Brawler AI Profile")]
     public class BrawlerAIProfile : ScriptableObject
     {
-        [Header("Identity")]
-        public AIArchetype Archetype = AIArchetype.Balanced;
-
         [Header("Perception")]
-        public float DetectionRadius = 40f;
-        public uint CombatSenseIntervalTicks = 4;
-        public uint IdleSenseIntervalTicks = 12;
-        public uint MemoryDurationTicks = 60;
-        public uint SharedHotspotMemoryTicks = 120;
+        public float DetectionRadius = 10f;
+        public uint MemoryDurationTicks = 90;
+        public uint IdleSenseIntervalTicks = 10;
+        public uint CombatSenseIntervalTicks = 3;
 
-        [Header("Combat Distance")]
-        public float PreferredRangeMultiplier = 0.90f;
-        public float TooCloseRangeMultiplier = 0.45f;
-        public float AttackRangeBuffer = 1.0f;
-        public float LeashDistance = 30f;
-
-        [Header("Health / Courage")]
-        [Range(0.05f, 0.95f)]
-        public float LowHealthRetreatRatio = 0.30f;
-
-        [Header("Combat Cadence")]
-        public uint AttackCadenceTicks = 30;
-
-        [Header("Movement")]
-        public bool UseStrafe = true;
-        public float StrafeDistance = 2f;
-        public uint StrafeRetargetTicks = 25;
-        public float RepositionStepDistance = 2.5f;
-        public float RetreatStepDistance = 5f;
-
-        [Header("Patrol / Idle")]
-        public float PatrolArrivalDistance = 1f;
-        public float FallbackWanderRadius = 8f;
-        public uint FallbackWanderRetargetTicks = 120;
-
-        [Header("Target Selection Weights")]
-        public float CurrentTargetStickiness = 20f;
-        public float LowHealthTargetBias = 10f;
+        [Header("Target Scoring")]
         public float DistanceWeight = 1f;
-        public float ThreatBonus = 8f;
-        public float ThreatRange = 8f;
-        public float FinisherHealthThreshold = 0.30f;
-        public float FinisherBonus = 12f;
-        public float ClusterTargetBonus = 6f;
-        public float InRangeTargetBonus = 4f;
+        public float CurrentTargetStickiness = 15f;
+        public float LowHealthTargetBias = 25f;
+        public float FinisherHealthThreshold = 0.35f;
+        public float FinisherBonus = 20f;
+        public float ThreatRange = 6f;
+        public float ThreatBonus = 12f;
+        public float ClusterTargetBonus = 10f;
+        public float InRangeTargetBonus = 12f;
+
+        [Header("Combat Distances")]
+        public float AttackRangeBuffer = 0.75f;
+        public float PreferredAttackRangeRatio = 0.85f;
+        public float TooCloseRangeRatio = 0.45f;
+
+        [Header("Attack / Ability Cadence")]
+        public uint AttackCadenceTicks = 10;
 
         [Header("Gadget Usage")]
         public bool EnableGadgetUsage = true;
-        public float GadgetLowHealthThreshold = 0.35f;
+        public float GadgetLowHealthThreshold = 0.45f;
         public float GadgetEnemyDistanceThreshold = 4f;
-        public uint GadgetCooldownTicks = 120;
+        public uint GadgetCooldownTicks = 90;
+
+        [Header("Retreat")]
+        public float LowHealthRetreatRatio = 0.35f;
+        public float RetreatStepDistance = 4f;
+
+        [Header("Search / Shared Memory")]
+        public uint SharedHotspotMemoryTicks = 120;
 
         [Header("Super Usage")]
         public bool EnableSuperUsage = true;
-        public float SuperMinRangeRatio = 0.35f;
-        public float SuperMaxRangeMultiplier = 1.1f;
-        public float SuperLowHealthTargetThreshold = 0.40f;
+        public float SuperLowHealthTargetThreshold = 0.35f;
+        public float SuperMinRangeRatio = 0.15f;
+        public float SuperMaxRangeMultiplier = 1.2f;
         public int SuperMinClusterCount = 2;
-        public uint SuperDecisionCooldownTicks = 45;
+        public uint SuperDecisionCooldownTicks = 20;
+
+        [Header("Movement / Strafe")]
+        public bool UseStrafe = true;
+        public float StrafeDistance = 1.5f;
+        public uint StrafeRetargetTicks = 15;
+        public float RepositionStepDistance = 2.5f;
+
+        [Header("Fallback Wander")]
+        public float FallbackWanderRadius = 5f;
+        public uint FallbackWanderRetargetTicks = 45;
 
         [Header("Utility Weights")]
         public float RetreatWeight = 1.0f;
@@ -74,6 +70,10 @@ namespace MOBA.Core.Definitions
         public float SearchWeight = 1.0f;
         public float WanderWeight = 1.0f;
         public float SuperWeight = 1.0f;
+
+        [Header("Objective Preference")]
+        public AIObjectiveType PreferredObjective = AIObjectiveType.MidControl;
+        public float ObjectiveWeight = 35f;
 
         [Header("Team Tactics")]
         public float FocusFireWeight = 25f;
@@ -88,25 +88,21 @@ namespace MOBA.Core.Definitions
         public float HoldRangePositionRefreshTicks = 20f;
         public float PreferredCombatOffset = 0.75f;
 
-        [Header("Objective Preference")]
-        public AIObjectiveType PreferredObjective = AIObjectiveType.MidControl;
-        public float ObjectiveWeight = 35f;
-
-        public float GetPreferredAttackRange(float abilityIdealRange)
+        public float GetPreferredAttackRange(float idealRange)
         {
-            return Mathf.Max(1f, abilityIdealRange * PreferredRangeMultiplier);
+            return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);
         }
 
-        public float GetTooCloseDistance(float abilityIdealRange)
+        public float GetTooCloseDistance(float idealRange)
         {
-            return Mathf.Max(0.75f, abilityIdealRange * TooCloseRangeMultiplier);
+            return Mathf.Max(0.5f, idealRange * TooCloseRangeRatio);
         }
 
-        public void ApplyArchetypeDefaults()
+        public void ApplyArchetypeDefaults(BrawlerArchetype archetype)
         {
-            switch (Archetype)
+            switch (archetype)
             {
-                case AIArchetype.Sniper:
+                case BrawlerArchetype.Sniper:
                     RetreatWeight = 1.25f;
                     ApproachWeight = 0.75f;
                     HoldRangeWeight = 1.35f;
@@ -114,6 +110,7 @@ namespace MOBA.Core.Definitions
                     SearchWeight = 1.0f;
                     WanderWeight = 0.8f;
                     SuperWeight = 1.1f;
+
                     PreferredObjective = AIObjectiveType.MidControl;
                     ObjectiveWeight = 45f;
 
@@ -126,9 +123,15 @@ namespace MOBA.Core.Definitions
                     AllyAvoidanceRadius = 3.5f;
                     AllyAvoidanceWeight = 2.0f;
                     PreferredCombatOffset = 1.2f;
+
+                    AttackCadenceTicks = 14;
+                    EnableGadgetUsage = true;
+                    GadgetLowHealthThreshold = 0.55f;
+                    GadgetEnemyDistanceThreshold = 5f;
+                    GadgetCooldownTicks = 120;
                     break;
 
-                case AIArchetype.Tank:
+                case BrawlerArchetype.Tank:
                     RetreatWeight = 0.7f;
                     ApproachWeight = 1.3f;
                     HoldRangeWeight = 0.9f;
@@ -136,6 +139,7 @@ namespace MOBA.Core.Definitions
                     SearchWeight = 1.0f;
                     WanderWeight = 0.9f;
                     SuperWeight = 1.0f;
+
                     PreferredObjective = AIObjectiveType.HotZone;
                     ObjectiveWeight = 50f;
 
@@ -148,9 +152,15 @@ namespace MOBA.Core.Definitions
                     AllyAvoidanceRadius = 2.0f;
                     AllyAvoidanceWeight = 0.8f;
                     PreferredCombatOffset = 0.3f;
+
+                    AttackCadenceTicks = 8;
+                    EnableGadgetUsage = true;
+                    GadgetLowHealthThreshold = 0.35f;
+                    GadgetEnemyDistanceThreshold = 3.5f;
+                    GadgetCooldownTicks = 75;
                     break;
 
-                case AIArchetype.Assassin:
+                case BrawlerArchetype.Assassin:
                     RetreatWeight = 0.85f;
                     ApproachWeight = 1.35f;
                     HoldRangeWeight = 0.75f;
@@ -158,6 +168,7 @@ namespace MOBA.Core.Definitions
                     SearchWeight = 1.15f;
                     WanderWeight = 0.9f;
                     SuperWeight = 1.25f;
+
                     PreferredObjective = AIObjectiveType.LanePressure;
                     ObjectiveWeight = 40f;
 
@@ -170,9 +181,15 @@ namespace MOBA.Core.Definitions
                     AllyAvoidanceRadius = 2.3f;
                     AllyAvoidanceWeight = 1.1f;
                     PreferredCombatOffset = 0.5f;
+
+                    AttackCadenceTicks = 6;
+                    EnableGadgetUsage = true;
+                    GadgetLowHealthThreshold = 0.40f;
+                    GadgetEnemyDistanceThreshold = 4.5f;
+                    GadgetCooldownTicks = 60;
                     break;
 
-                case AIArchetype.Support:
+                case BrawlerArchetype.Support:
                     RetreatWeight = 1.15f;
                     ApproachWeight = 0.85f;
                     HoldRangeWeight = 1.15f;
@@ -180,6 +197,7 @@ namespace MOBA.Core.Definitions
                     SearchWeight = 1.05f;
                     WanderWeight = 0.9f;
                     SuperWeight = 1.15f;
+
                     PreferredObjective = AIObjectiveType.GemMine;
                     ObjectiveWeight = 42f;
 
@@ -192,8 +210,15 @@ namespace MOBA.Core.Definitions
                     AllyAvoidanceRadius = 3.0f;
                     AllyAvoidanceWeight = 1.8f;
                     PreferredCombatOffset = 1.0f;
+
+                    AttackCadenceTicks = 12;
+                    EnableGadgetUsage = true;
+                    GadgetLowHealthThreshold = 0.50f;
+                    GadgetEnemyDistanceThreshold = 4f;
+                    GadgetCooldownTicks = 105;
                     break;
 
+                case BrawlerArchetype.Fighter:
                 default:
                     RetreatWeight = 1.0f;
                     ApproachWeight = 1.0f;
@@ -202,6 +227,7 @@ namespace MOBA.Core.Definitions
                     SearchWeight = 1.0f;
                     WanderWeight = 1.0f;
                     SuperWeight = 1.0f;
+
                     PreferredObjective = AIObjectiveType.MidControl;
                     ObjectiveWeight = 35f;
 
@@ -214,6 +240,12 @@ namespace MOBA.Core.Definitions
                     AllyAvoidanceRadius = 2.5f;
                     AllyAvoidanceWeight = 1.5f;
                     PreferredCombatOffset = 0.75f;
+
+                    AttackCadenceTicks = 10;
+                    EnableGadgetUsage = true;
+                    GadgetLowHealthThreshold = 0.45f;
+                    GadgetEnemyDistanceThreshold = 4f;
+                    GadgetCooldownTicks = 90;
                     break;
             }
         }

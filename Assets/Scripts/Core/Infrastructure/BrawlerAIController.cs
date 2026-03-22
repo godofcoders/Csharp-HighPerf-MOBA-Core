@@ -159,7 +159,7 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             _profile = ResolveAIProfile(_brawler.Definition);
-            _profile.ApplyArchetypeDefaults();
+            _profile.ApplyArchetypeDefaults(_brawler.Definition.Archetype);
 
             _targetInfo = new AITargetInfo();
             _navAgent = new NavigationAgent(_brawler);

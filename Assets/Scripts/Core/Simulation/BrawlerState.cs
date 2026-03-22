@@ -45,14 +45,17 @@ namespace MOBA.Core.Simulation
         public AbilityCooldownState SuperCooldown { get; private set; }
         public AbilityCooldownState GadgetCooldown { get; private set; }
 
+        public int CurrentPowerLevel { get; private set; }
+
         public BrawlerState(BrawlerDefinition definition, TeamType team)
         {
             Definition = definition;
             Team = team;
+            CurrentPowerLevel = 1;
 
-            MaxHealth = new ModifiableStat(definition.BaseHealth);
-            MoveSpeed = new ModifiableStat(definition.BaseMoveSpeed);
-            Damage = new ModifiableStat(definition.BaseDamage);
+            MaxHealth = new ModifiableStat(0f);
+            MoveSpeed = new ModifiableStat(0f);
+            Damage = new ModifiableStat(0f);
 
             Ammo = new ResourceStorage(3, 0.5f);
             Hypercharge = new HyperchargeTracker();
@@ -66,11 +69,48 @@ namespace MOBA.Core.Simulation
             ActiveStatusEffects = new List<IStatusEffectInstance>(8);
 
             RemainingGadgets = definition.Gadget != null ? definition.Gadget.MaxCharges : 0;
+
+            RebuildProgressionStats(false);
             CurrentHealth = MaxHealth.Value;
+
             ClearActionState();
             ResetAbilityCooldowns();
-
         }
+
+        public void SetPowerLevel(int powerLevel, bool preserveHealthRatio = true)
+        {
+            if (powerLevel < 1)
+                powerLevel = 1;
+
+            CurrentPowerLevel = powerLevel;
+            RebuildProgressionStats(preserveHealthRatio);
+        }
+
+        private void RebuildProgressionStats(bool preserveHealthRatio)
+        {
+            float oldMaxHealth = MaxHealth.Value;
+            float oldHealth = CurrentHealth;
+
+            var progression = Definition.GetProgressionBonus(CurrentPowerLevel);
+
+            MaxHealth.SetBaseValue(Definition.BaseHealth + progression.BonusHealth);
+            MoveSpeed.SetBaseValue(Definition.BaseMoveSpeed + progression.BonusMoveSpeed);
+            Damage.SetBaseValue(Definition.BaseDamage + progression.BonusDamage);
+
+            float newMaxHealth = MaxHealth.Value;
+
+            if (preserveHealthRatio && oldMaxHealth > 0f)
+            {
+                float healthRatio = oldHealth / oldMaxHealth;
+                CurrentHealth = newMaxHealth * healthRatio;
+            }
+            else
+            {
+                if (CurrentHealth > newMaxHealth)
+                    CurrentHealth = newMaxHealth;
+            }
+        }
+
         public void AddIncomingMovementModifier(MovementModifier modifier)
         {
             IncomingMovementModifiers.Add(modifier);
@@ -139,6 +179,7 @@ namespace MOBA.Core.Simulation
 
         public void Reset()
         {
+            RebuildProgressionStats(false);
             CurrentHealth = MaxHealth.Value;
             Ammo.Refill();
 
@@ -150,6 +191,7 @@ namespace MOBA.Core.Simulation
             IsInBush = false;
             IsRevealed = false;
             LastAttackTick = 0;
+
             ThreatTracker.Clear();
             AssistTracker.Clear();
             IncomingDamageModifiers.Clear();
@@ -157,6 +199,7 @@ namespace MOBA.Core.Simulation
             ShieldHealth = 0f;
             IncomingMovementModifiers.Clear();
             ActiveStatusEffects.Clear();
+
             ClearActionState();
             ResetAbilityCooldowns();
 
@@ -211,6 +254,7 @@ namespace MOBA.Core.Simulation
 
             return true;
         }
+
         public void AddShield(float amount)
         {
             if (amount <= 0f) return;
@@ -223,12 +267,12 @@ namespace MOBA.Core.Simulation
         }
 
         public void EnterActionState(
-    BrawlerActionStateType stateType,
-    uint currentTick,
-    uint durationTicks,
-    bool allowMovement,
-    bool allowActionInput,
-    bool isInterruptible)
+            BrawlerActionStateType stateType,
+            uint currentTick,
+            uint durationTicks,
+            bool allowMovement,
+            bool allowActionInput,
+            bool isInterruptible)
         {
             ActionState = new BrawlerActionStateData
             {
@@ -253,6 +297,7 @@ namespace MOBA.Core.Simulation
                 IsInterruptible = true
             };
         }
+
         public void UpdateActionState(uint currentTick)
         {
             if (ActionState.StateType != BrawlerActionStateType.None &&
@@ -267,6 +312,7 @@ namespace MOBA.Core.Simulation
             return ActionState.StateType != BrawlerActionStateType.None &&
                    ActionState.IsActive(currentTick);
         }
+
         public bool IsAbilityReady(AbilityRuntimeSlot slot, uint currentTick)
         {
             switch (slot)

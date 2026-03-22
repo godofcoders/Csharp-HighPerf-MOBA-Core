@@ -4,26 +4,46 @@ namespace MOBA.Core.Simulation
 {
     public class ModifiableStat
     {
-        public float BaseValue;
+        public float BaseValue { get; private set; }
+
         private readonly List<StatModifier> _modifiers = new List<StatModifier>();
 
         public float Value => CalculateValue();
 
-        public ModifiableStat(float baseValue) => BaseValue = baseValue;
+        public ModifiableStat(float baseValue)
+        {
+            BaseValue = baseValue;
+        }
 
-        public void AddModifier(StatModifier mod) => _modifiers.Add(mod);
-        public void RemoveModifiersFromSource(object source) => _modifiers.RemoveAll(m => m.Source == source);
+        public void SetBaseValue(float baseValue)
+        {
+            BaseValue = baseValue;
+        }
+
+        public void AddModifier(StatModifier mod)
+        {
+            _modifiers.Add(mod);
+        }
+
+        public void RemoveModifiersFromSource(object source)
+        {
+            _modifiers.RemoveAll(m => m.Source == source);
+        }
 
         private float CalculateValue()
         {
-            float totalAdd = 0;
-            float totalMult = 0;
+            float totalAdd = 0f;
+            float totalMult = 0f;
+
             for (int i = 0; i < _modifiers.Count; i++)
             {
-                if (_modifiers[i].Type == ModifierType.Additive) totalAdd += _modifiers[i].Value;
-                else totalMult += _modifiers[i].Value;
+                if (_modifiers[i].Type == ModifierType.Additive)
+                    totalAdd += _modifiers[i].Value;
+                else
+                    totalMult += _modifiers[i].Value;
             }
-            return (BaseValue + totalAdd) * (1 + totalMult);
+
+            return (BaseValue + totalAdd) * (1f + totalMult);
         }
     }
 }

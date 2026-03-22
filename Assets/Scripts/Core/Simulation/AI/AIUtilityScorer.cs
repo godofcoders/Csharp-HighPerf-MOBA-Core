@@ -15,10 +15,11 @@ namespace MOBA.Core.Simulation.AI
 
         private readonly uint _threatForgetTicks = 240;
 
-        private bool IsSniper => _profile.Archetype == AIArchetype.Sniper;
-        private bool IsTank => _profile.Archetype == AIArchetype.Tank;
-        private bool IsAssassin => _profile.Archetype == AIArchetype.Assassin;
-        private bool IsSupport => _profile.Archetype == AIArchetype.Support;
+        private bool IsSniper => _self.Definition != null && _self.Definition.Archetype == BrawlerArchetype.Sniper;
+        private bool IsTank => _self.Definition != null && _self.Definition.Archetype == BrawlerArchetype.Tank;
+        private bool IsAssassin => _self.Definition != null && _self.Definition.Archetype == BrawlerArchetype.Assassin;
+        private bool IsSupport => _self.Definition != null && _self.Definition.Archetype == BrawlerArchetype.Support;
+        private bool IsFighter => _self.Definition != null && _self.Definition.Archetype == BrawlerArchetype.Fighter;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -96,10 +97,13 @@ namespace MOBA.Core.Simulation.AI
                     score += 20f;
             }
 
-            if (IsSniper) score += 20f;
-            if (IsSupport) score += 15f;
-            if (IsAssassin) score -= 10f;
-            if (IsTank) score -= 20f;
+            float roleSurvival = _self.Definition != null ? _self.Definition.SurvivalInstinct : 1f;
+            score *= roleSurvival;
+
+            if (IsSniper) score += 10f;
+            if (IsSupport) score += 8f;
+            if (IsTank) score -= 10f;
+            if (IsAssassin) score -= 6f;
 
             return new AIActionScore(AIActionType.Retreat, score * _profile.RetreatWeight);
         }
@@ -126,10 +130,10 @@ namespace MOBA.Core.Simulation.AI
                     score += 25f;
             }
 
-            if (IsAssassin) score += 30f;
-            if (IsTank) score += 20f;
-            if (IsSniper) score += 10f;
-            if (IsSupport) score += 15f;
+            if (IsAssassin) score += 15f;
+            if (IsTank) score += 10f;
+            if (IsSupport) score += 6f;
+            if (IsSniper) score += 4f;
 
             return new AIActionScore(AIActionType.UseSuper, score * _profile.SuperWeight);
         }
@@ -155,10 +159,10 @@ namespace MOBA.Core.Simulation.AI
                     score += 25f;
             }
 
-            if (IsSniper) score += 40f;
-            if (IsSupport) score += 20f;
-            if (IsTank) score -= 20f;
-            if (IsAssassin) score -= 10f;
+            if (IsSniper) score += 20f;
+            if (IsSupport) score += 10f;
+            if (IsTank) score -= 12f;
+            if (IsAssassin) score -= 6f;
 
             return new AIActionScore(AIActionType.HoldRange, score * _profile.HoldRangeWeight);
         }
@@ -176,10 +180,10 @@ namespace MOBA.Core.Simulation.AI
             if (dist < tooClose)
                 score += 60f;
 
-            if (IsSniper) score += 25f;
-            if (IsSupport) score += 20f;
-            if (IsAssassin) score += 10f;
-            if (IsTank) score -= 10f;
+            if (IsSniper) score += 15f;
+            if (IsSupport) score += 10f;
+            if (IsAssassin) score += 6f;
+            if (IsTank) score -= 8f;
 
             return new AIActionScore(AIActionType.Reposition, score * _profile.RepositionWeight);
         }
@@ -213,10 +217,13 @@ namespace MOBA.Core.Simulation.AI
                 score += _profile.FocusFireWeight;
             }
 
-            if (IsTank) score += 30f;
-            if (IsAssassin) score += 20f;
-            if (IsSniper) score -= 15f;
-            if (IsSupport) score -= 10f;
+            float roleAggression = _self.Definition != null ? _self.Definition.Aggression : 1f;
+            score *= roleAggression;
+
+            if (IsTank) score += 12f;
+            if (IsAssassin) score += 10f;
+            if (IsSniper) score -= 8f;
+            if (IsSupport) score -= 6f;
 
             return new AIActionScore(AIActionType.Approach, score * _profile.ApproachWeight);
         }
@@ -259,11 +266,14 @@ namespace MOBA.Core.Simulation.AI
             if (_teamCoordinator != null && _teamCoordinator.TryGetRegroupPoint(currentTick, out _))
             {
                 score += 25f;
-
-                if (IsSupport) score += 20f;
-                if (IsSniper) score += 10f;
-                if (IsTank) score -= 10f;
             }
+
+            float teamplay = _self.Definition != null ? _self.Definition.TeamplayWeight : 1f;
+            score *= teamplay;
+
+            if (IsSupport) score += 10f;
+            if (IsSniper) score += 6f;
+            if (IsTank) score -= 6f;
 
             return new AIActionScore(AIActionType.Regroup, score * _profile.RegroupWeight);
         }
@@ -277,11 +287,14 @@ namespace MOBA.Core.Simulation.AI
                 ally != null)
             {
                 score += 40f;
-
-                if (IsSupport) score += 30f;
-                if (IsTank) score += 20f;
-                if (IsAssassin) score -= 10f;
             }
+
+            float teamplay = _self.Definition != null ? _self.Definition.TeamplayWeight : 1f;
+            score *= teamplay;
+
+            if (IsSupport) score += 20f;
+            if (IsTank) score += 12f;
+            if (IsAssassin) score -= 8f;
 
             return new AIActionScore(AIActionType.Peel, score * _profile.PeelWeight);
         }
