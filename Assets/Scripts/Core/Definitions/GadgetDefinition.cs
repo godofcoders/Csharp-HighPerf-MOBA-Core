@@ -10,6 +10,7 @@ namespace MOBA.Core.Definitions
         protected virtual void OnValidate()
         {
             SlotType = AbilitySlotType.Gadget;
+            AllowedBuildSlotTypes = new[] { BrawlerBuildSlotType.Gadget };
         }
     }
 }

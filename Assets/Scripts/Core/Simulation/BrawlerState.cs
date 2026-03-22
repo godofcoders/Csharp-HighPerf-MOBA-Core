@@ -7,10 +7,11 @@ namespace MOBA.Core.Simulation
 {
     public class BrawlerState
     {
-        private struct InstalledStarPower
+        private struct InstalledPassive
         {
-            public StarPowerDefinition Definition;
-            public StarPowerInstallContext Context;
+            public PassiveDefinition Definition;
+            public PassiveInstallContext Context;
+            public IPassiveRuntime Runtime;
         }
 
         public BrawlerDefinition Definition { get; private set; }
@@ -53,10 +54,10 @@ namespace MOBA.Core.Simulation
 
         public int CurrentPowerLevel { get; private set; }
 
-        private readonly List<StarPowerDefinition> _equippedStarPowers = new List<StarPowerDefinition>(4);
-        private readonly List<InstalledStarPower> _installedStarPowers = new List<InstalledStarPower>(4);
+        private readonly List<PassiveDefinition> _equippedPassives = new List<PassiveDefinition>(4);
+        private readonly List<InstalledPassive> _installedPassives = new List<InstalledPassive>(4);
 
-        public IReadOnlyList<StarPowerDefinition> EquippedStarPowers => _equippedStarPowers;
+        public IReadOnlyList<PassiveDefinition> EquippedPassives => _equippedPassives;
 
         public BrawlerState(BrawlerDefinition definition, TeamType team)
         {
@@ -95,74 +96,98 @@ namespace MOBA.Core.Simulation
 
             CurrentPowerLevel = powerLevel;
             RebuildProgressionStats(preserveHealthRatio);
-            RefreshStarPowerLoadout(preserveHealthRatio);
+            RefreshPassiveLoadout(preserveHealthRatio);
         }
 
-        public void SetStarPowerLoadout(IEnumerable<StarPowerDefinition> definitions, bool preserveHealthRatio = true)
+        public void SetPassiveLoadout(IEnumerable<PassiveDefinition> definitions, bool preserveHealthRatio = true)
         {
             float oldMaxHealth = MaxHealth.Value;
             float oldHealth = CurrentHealth;
 
-            UninstallAllStarPowersInternal();
-            _equippedStarPowers.Clear();
+            UninstallAllPassivesInternal();
+            _equippedPassives.Clear();
 
             if (definitions != null)
             {
-                foreach (StarPowerDefinition definition in definitions)
+                foreach (PassiveDefinition definition in definitions)
                 {
                     if (definition == null)
                         continue;
 
-                    if (!_equippedStarPowers.Contains(definition))
-                        _equippedStarPowers.Add(definition);
+                    if (!_equippedPassives.Contains(definition))
+                        _equippedPassives.Add(definition);
                 }
             }
 
-            InstallAllStarPowersInternal();
+            InstallAllPassivesInternal();
             RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
         }
 
-        public void RefreshStarPowerLoadout(bool preserveHealthRatio = true)
+        public void RefreshPassiveLoadout(bool preserveHealthRatio = true)
         {
-            if (_equippedStarPowers.Count == 0)
+            if (_equippedPassives.Count == 0)
                 return;
 
             float oldMaxHealth = MaxHealth.Value;
             float oldHealth = CurrentHealth;
 
-            UninstallAllStarPowersInternal();
-            InstallAllStarPowersInternal();
+            UninstallAllPassivesInternal();
+            InstallAllPassivesInternal();
 
             RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
         }
 
-        private void InstallAllStarPowersInternal()
+        // Compatibility wrappers while migrating older code / terminology.
+        public void SetStarPowerLoadout(IEnumerable<PassiveDefinition> definitions, bool preserveHealthRatio = true)
         {
-            for (int i = 0; i < _equippedStarPowers.Count; i++)
+            SetPassiveLoadout(definitions, preserveHealthRatio);
+        }
+
+        public void RefreshStarPowerLoadout(bool preserveHealthRatio = true)
+        {
+            RefreshPassiveLoadout(preserveHealthRatio);
+        }
+
+        private void InstallAllPassivesInternal()
+        {
+            for (int i = 0; i < _equippedPassives.Count; i++)
             {
-                StarPowerDefinition definition = _equippedStarPowers[i];
+                PassiveDefinition definition = _equippedPassives[i];
                 object sourceToken = new object();
 
-                StarPowerInstallContext context = new StarPowerInstallContext(this, Owner, sourceToken);
+                PassiveInstallContext context = new PassiveInstallContext(this, Owner, sourceToken);
                 definition.Install(context);
 
-                _installedStarPowers.Add(new InstalledStarPower
+                IPassiveRuntime runtime = definition.CreateRuntime(context);
+                runtime?.OnInstalled(this);
+
+                _installedPassives.Add(new InstalledPassive
                 {
                     Definition = definition,
-                    Context = context
+                    Context = context,
+                    Runtime = runtime
                 });
             }
         }
 
-        private void UninstallAllStarPowersInternal()
+        private void UninstallAllPassivesInternal()
         {
-            for (int i = _installedStarPowers.Count - 1; i >= 0; i--)
+            for (int i = _installedPassives.Count - 1; i >= 0; i--)
             {
-                InstalledStarPower installed = _installedStarPowers[i];
+                InstalledPassive installed = _installedPassives[i];
+                installed.Runtime?.OnUninstalled(this);
                 installed.Definition?.Uninstall(installed.Context);
             }
 
-            _installedStarPowers.Clear();
+            _installedPassives.Clear();
+        }
+
+        public void TickPassives(uint currentTick)
+        {
+            for (int i = 0; i < _installedPassives.Count; i++)
+            {
+                _installedPassives[i].Runtime?.Tick(this, currentTick);
+            }
         }
 
         private void RebuildProgressionStats(bool preserveHealthRatio)
@@ -276,7 +301,7 @@ namespace MOBA.Core.Simulation
         public void Reset()
         {
             RebuildProgressionStats(false);
-            RefreshStarPowerLoadout(false);
+            RefreshPassiveLoadout(false);
 
             CurrentHealth = MaxHealth.Value;
             Ammo.Refill();

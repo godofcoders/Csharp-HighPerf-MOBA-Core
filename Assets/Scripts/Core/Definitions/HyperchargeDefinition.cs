@@ -3,9 +3,10 @@ using UnityEngine;
 namespace MOBA.Core.Definitions
 {
     [CreateAssetMenu(fileName = "NewHypercharge", menuName = "MOBA/Hypercharge Definition")]
-    public class HyperchargeDefinition : ScriptableObject
+    public class HyperchargeDefinition : BrawlerBuildOptionDefinition
     {
-        public string Name = "Hypercharge";
+        [Header("Identity")]
+        public string OptionName = "Hypercharge";
 
         [Header("Duration")]
         public float DurationSeconds = 5.0f;
@@ -15,8 +16,12 @@ namespace MOBA.Core.Definitions
         [Range(0, 1)] public float DamageBuff = 0.15f;  // +15%
         [Range(0, 1)] public float ShieldBuff = 0.10f;  // -10% Damage Taken
 
-        // This is where you'd link a modified version of the Super logic 
-        // to change how the ultimate behaves.
+        [Header("Enhanced Super")]
         public AbilityDefinition EnhancedSuper;
+
+        private void OnValidate()
+        {
+            AllowedBuildSlotTypes = new[] { BrawlerBuildSlotType.Hypercharge };
+        }
     }
 }

@@ -10,7 +10,13 @@ namespace MOBA.Core.Definitions
         public float SpeedMultiplier = 0.1f;
         public float DamageMultiplier = 0.05f;
 
-        public override void Install(StarPowerInstallContext context)
+        private void OnValidate()
+        {
+            Category = PassiveCategory.StarPower;
+            AllowedSlotTypes = new[] { PassiveSlotType.StarPower };
+        }
+
+        public override void Install(PassiveInstallContext context)
         {
             BrawlerState state = context.State;
             object source = context.SourceToken;
@@ -19,22 +25,16 @@ namespace MOBA.Core.Definitions
                 return;
 
             if (BonusHealth != 0f)
-            {
                 state.MaxHealth.AddModifier(new StatModifier(BonusHealth, ModifierType.Additive, source));
-            }
 
             if (SpeedMultiplier != 0f)
-            {
                 state.MoveSpeed.AddModifier(new StatModifier(SpeedMultiplier, ModifierType.Multiplicative, source));
-            }
 
             if (DamageMultiplier != 0f)
-            {
                 state.Damage.AddModifier(new StatModifier(DamageMultiplier, ModifierType.Multiplicative, source));
-            }
         }
 
-        public override void Uninstall(StarPowerInstallContext context)
+        public override void Uninstall(PassiveInstallContext context)
         {
             base.Uninstall(context);
         }

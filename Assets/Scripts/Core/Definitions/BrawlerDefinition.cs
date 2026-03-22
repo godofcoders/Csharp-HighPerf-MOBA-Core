@@ -26,11 +26,14 @@ namespace MOBA.Core.Definitions
         [Header("Supplemental Systems")]
         public GadgetDefinition Gadget;
 
-        [Tooltip("Legacy single passive slot. Kept for compatibility.")]
+        [Tooltip("Legacy single star power slot. Kept for compatibility.")]
         public StarPowerDefinition StarPower;
 
-        [Tooltip("Default persistent passive loadout for this brawler.")]
-        public StarPowerDefinition[] DefaultStarPowerLoadout;
+        [Tooltip("Default passive loadout asset for this brawler.")]
+        public PassiveLoadoutDefinition DefaultPassiveLoadout;
+
+        [Tooltip("Optional inline passive entries. Useful during transition.")]
+        public PassiveDefinition[] DefaultPassiveEntries;
 
         public HyperchargeDefinition Hypercharge;
 
@@ -44,6 +47,15 @@ namespace MOBA.Core.Definitions
         public float Aggression = 1f;
         public float SurvivalInstinct = 1f;
         public float TeamplayWeight = 1f;
+
+        [Header("Build Layout")]
+        public BrawlerBuildLayoutDefinition BuildLayout;
+
+        [Header("Build Options")]
+        public GadgetDefinition[] GadgetOptions;
+        public StarPowerDefinition[] StarPowerOptions;
+        public HyperchargeDefinition[] HyperchargeOptions;
+        public PassiveDefinition[] GearOptions;
 
         public BrawlerProgressionBonus GetProgressionBonus(int powerLevel)
         {
@@ -72,25 +84,49 @@ namespace MOBA.Core.Definitions
             return best;
         }
 
-        public List<StarPowerDefinition> BuildDefaultStarPowerLoadout()
+        public List<PassiveDefinition> BuildDefaultPassiveLoadout()
         {
-            List<StarPowerDefinition> result = new List<StarPowerDefinition>(4);
+            List<PassiveDefinition> result = new List<PassiveDefinition>(4);
 
             if (StarPower != null)
                 result.Add(StarPower);
 
-            if (DefaultStarPowerLoadout == null)
-                return result;
-
-            for (int i = 0; i < DefaultStarPowerLoadout.Length; i++)
+            if (DefaultPassiveLoadout != null)
             {
-                StarPowerDefinition entry = DefaultStarPowerLoadout[i];
+                PassiveLoadoutValidationResult validation = DefaultPassiveLoadout.Validate();
 
-                if (entry == null)
-                    continue;
+                if (!validation.IsValid)
+                {
+                    Debug.LogWarning(
+                        $"[BrawlerDefinition] Loadout '{DefaultPassiveLoadout.name}' on brawler '{name}' is invalid. {validation.Message}");
+                }
 
-                if (!result.Contains(entry))
-                    result.Add(entry);
+                List<PassiveDefinition> loadoutPassives = DefaultPassiveLoadout.BuildValidatedList(true);
+
+                for (int i = 0; i < loadoutPassives.Count; i++)
+                {
+                    PassiveDefinition entry = loadoutPassives[i];
+
+                    if (entry == null)
+                        continue;
+
+                    if (!result.Contains(entry))
+                        result.Add(entry);
+                }
+            }
+
+            if (DefaultPassiveEntries != null)
+            {
+                for (int i = 0; i < DefaultPassiveEntries.Length; i++)
+                {
+                    PassiveDefinition entry = DefaultPassiveEntries[i];
+
+                    if (entry == null)
+                        continue;
+
+                    if (!result.Contains(entry))
+                        result.Add(entry);
+                }
             }
 
             return result;

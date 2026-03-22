@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace MOBA.Core.Definitions
 {
-    public abstract class AbilityDefinition : ScriptableObject
+    public abstract class AbilityDefinition : BrawlerBuildOptionDefinition
     {
         [Header("Identity")]
         public string AbilityName;
@@ -31,6 +31,7 @@ namespace MOBA.Core.Definitions
 
         [Tooltip("Whether this cast can be interrupted by stronger states like stun.")]
         public bool IsInterruptible = true;
+
         [Header("AI Intent")]
         public AbilityIntentType Intent;
 

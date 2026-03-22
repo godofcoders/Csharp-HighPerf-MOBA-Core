@@ -82,7 +82,7 @@ namespace MOBA.Core.Infrastructure
             _superAbility = _definition.SuperAbility?.CreateLogic();
             _gadgetLogic = _definition.Gadget?.CreateLogic();
 
-            State.SetStarPowerLoadout(_definition.BuildDefaultStarPowerLoadout(), false);
+            State.SetPassiveLoadout(_definition.BuildDefaultPassiveLoadout(), false);
 
             _lastTickPosition = transform.position;
             _isInitialized = true;
@@ -116,6 +116,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             State.TickEffects(currentTick);
+            State.TickPassives(currentTick);
             State.UpdateActionState(currentTick);
             State.UpdateResources(SimulationClock.TickDeltaTime);
 
