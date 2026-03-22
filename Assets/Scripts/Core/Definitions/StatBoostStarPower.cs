@@ -6,18 +6,37 @@ namespace MOBA.Core.Definitions
     [CreateAssetMenu(fileName = "NewStatStarPower", menuName = "MOBA/Star Power/Stat Boost")]
     public class StatBoostStarPower : StarPowerDefinition
     {
-        public float SpeedMultiplier = 0.1f; // +10%
-        public float DamageMultiplier = 0.05f; // +5%
+        public float BonusHealth;
+        public float SpeedMultiplier = 0.1f;
+        public float DamageMultiplier = 0.05f;
 
-        public override void Apply(BrawlerState state)
+        public override void Install(StarPowerInstallContext context)
         {
-            if (SpeedMultiplier != 0)
-                state.MoveSpeed.AddModifier(new StatModifier(SpeedMultiplier, ModifierType.Multiplicative, this));
+            BrawlerState state = context.State;
+            object source = context.SourceToken;
 
-            if (DamageMultiplier != 0)
-                state.Damage.AddModifier(new StatModifier(DamageMultiplier, ModifierType.Multiplicative, this));
+            if (state == null)
+                return;
 
-            //Debug.Log($"[SIM] Star Power Applied: {AbilityName}");
+            if (BonusHealth != 0f)
+            {
+                state.MaxHealth.AddModifier(new StatModifier(BonusHealth, ModifierType.Additive, source));
+            }
+
+            if (SpeedMultiplier != 0f)
+            {
+                state.MoveSpeed.AddModifier(new StatModifier(SpeedMultiplier, ModifierType.Multiplicative, source));
+            }
+
+            if (DamageMultiplier != 0f)
+            {
+                state.Damage.AddModifier(new StatModifier(DamageMultiplier, ModifierType.Multiplicative, source));
+            }
+        }
+
+        public override void Uninstall(StarPowerInstallContext context)
+        {
+            base.Uninstall(context);
         }
     }
 }

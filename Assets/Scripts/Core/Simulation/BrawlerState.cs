@@ -7,6 +7,12 @@ namespace MOBA.Core.Simulation
 {
     public class BrawlerState
     {
+        private struct InstalledStarPower
+        {
+            public StarPowerDefinition Definition;
+            public StarPowerInstallContext Context;
+        }
+
         public BrawlerDefinition Definition { get; private set; }
         public TeamType Team { get; private set; }
         public MOBA.Core.Simulation.AI.ThreatTracker ThreatTracker { get; private set; }
@@ -47,6 +53,11 @@ namespace MOBA.Core.Simulation
 
         public int CurrentPowerLevel { get; private set; }
 
+        private readonly List<StarPowerDefinition> _equippedStarPowers = new List<StarPowerDefinition>(4);
+        private readonly List<InstalledStarPower> _installedStarPowers = new List<InstalledStarPower>(4);
+
+        public IReadOnlyList<StarPowerDefinition> EquippedStarPowers => _equippedStarPowers;
+
         public BrawlerState(BrawlerDefinition definition, TeamType team)
         {
             Definition = definition;
@@ -84,6 +95,74 @@ namespace MOBA.Core.Simulation
 
             CurrentPowerLevel = powerLevel;
             RebuildProgressionStats(preserveHealthRatio);
+            RefreshStarPowerLoadout(preserveHealthRatio);
+        }
+
+        public void SetStarPowerLoadout(IEnumerable<StarPowerDefinition> definitions, bool preserveHealthRatio = true)
+        {
+            float oldMaxHealth = MaxHealth.Value;
+            float oldHealth = CurrentHealth;
+
+            UninstallAllStarPowersInternal();
+            _equippedStarPowers.Clear();
+
+            if (definitions != null)
+            {
+                foreach (StarPowerDefinition definition in definitions)
+                {
+                    if (definition == null)
+                        continue;
+
+                    if (!_equippedStarPowers.Contains(definition))
+                        _equippedStarPowers.Add(definition);
+                }
+            }
+
+            InstallAllStarPowersInternal();
+            RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
+        }
+
+        public void RefreshStarPowerLoadout(bool preserveHealthRatio = true)
+        {
+            if (_equippedStarPowers.Count == 0)
+                return;
+
+            float oldMaxHealth = MaxHealth.Value;
+            float oldHealth = CurrentHealth;
+
+            UninstallAllStarPowersInternal();
+            InstallAllStarPowersInternal();
+
+            RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
+        }
+
+        private void InstallAllStarPowersInternal()
+        {
+            for (int i = 0; i < _equippedStarPowers.Count; i++)
+            {
+                StarPowerDefinition definition = _equippedStarPowers[i];
+                object sourceToken = new object();
+
+                StarPowerInstallContext context = new StarPowerInstallContext(this, Owner, sourceToken);
+                definition.Install(context);
+
+                _installedStarPowers.Add(new InstalledStarPower
+                {
+                    Definition = definition,
+                    Context = context
+                });
+            }
+        }
+
+        private void UninstallAllStarPowersInternal()
+        {
+            for (int i = _installedStarPowers.Count - 1; i >= 0; i--)
+            {
+                InstalledStarPower installed = _installedStarPowers[i];
+                installed.Definition?.Uninstall(installed.Context);
+            }
+
+            _installedStarPowers.Clear();
         }
 
         private void RebuildProgressionStats(bool preserveHealthRatio)
@@ -97,6 +176,11 @@ namespace MOBA.Core.Simulation
             MoveSpeed.SetBaseValue(Definition.BaseMoveSpeed + progression.BonusMoveSpeed);
             Damage.SetBaseValue(Definition.BaseDamage + progression.BonusDamage);
 
+            RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
+        }
+
+        private void RestoreHealthAfterStatRefresh(float oldMaxHealth, float oldHealth, bool preserveHealthRatio)
+        {
             float newMaxHealth = MaxHealth.Value;
 
             if (preserveHealthRatio && oldMaxHealth > 0f)
@@ -109,6 +193,18 @@ namespace MOBA.Core.Simulation
                 if (CurrentHealth > newMaxHealth)
                     CurrentHealth = newMaxHealth;
             }
+
+            if (CurrentHealth < 0f)
+                CurrentHealth = 0f;
+
+            OnHealthChanged?.Invoke(CurrentHealth);
+        }
+
+        public void RemoveAllStatModifiersFromSource(object source)
+        {
+            MaxHealth.RemoveModifiersFromSource(source);
+            MoveSpeed.RemoveModifiersFromSource(source);
+            Damage.RemoveModifiersFromSource(source);
         }
 
         public void AddIncomingMovementModifier(MovementModifier modifier)
@@ -180,6 +276,8 @@ namespace MOBA.Core.Simulation
         public void Reset()
         {
             RebuildProgressionStats(false);
+            RefreshStarPowerLoadout(false);
+
             CurrentHealth = MaxHealth.Value;
             Ammo.Refill();
 
@@ -257,7 +355,9 @@ namespace MOBA.Core.Simulation
 
         public void AddShield(float amount)
         {
-            if (amount <= 0f) return;
+            if (amount <= 0f)
+                return;
+
             ShieldHealth += amount;
         }
 

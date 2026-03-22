@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using MOBA.Core.Simulation.AI;
 using UnityEngine;
 
@@ -24,7 +25,13 @@ namespace MOBA.Core.Definitions
 
         [Header("Supplemental Systems")]
         public GadgetDefinition Gadget;
+
+        [Tooltip("Legacy single passive slot. Kept for compatibility.")]
         public StarPowerDefinition StarPower;
+
+        [Tooltip("Default persistent passive loadout for this brawler.")]
+        public StarPowerDefinition[] DefaultStarPowerLoadout;
+
         public HyperchargeDefinition Hypercharge;
 
         [Header("AI")]
@@ -63,6 +70,30 @@ namespace MOBA.Core.Definitions
             }
 
             return best;
+        }
+
+        public List<StarPowerDefinition> BuildDefaultStarPowerLoadout()
+        {
+            List<StarPowerDefinition> result = new List<StarPowerDefinition>(4);
+
+            if (StarPower != null)
+                result.Add(StarPower);
+
+            if (DefaultStarPowerLoadout == null)
+                return result;
+
+            for (int i = 0; i < DefaultStarPowerLoadout.Length; i++)
+            {
+                StarPowerDefinition entry = DefaultStarPowerLoadout[i];
+
+                if (entry == null)
+                    continue;
+
+                if (!result.Contains(entry))
+                    result.Add(entry);
+            }
+
+            return result;
         }
     }
 }

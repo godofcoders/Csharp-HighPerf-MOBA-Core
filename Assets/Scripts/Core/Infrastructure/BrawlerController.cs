@@ -82,7 +82,7 @@ namespace MOBA.Core.Infrastructure
             _superAbility = _definition.SuperAbility?.CreateLogic();
             _gadgetLogic = _definition.Gadget?.CreateLogic();
 
-            _definition.StarPower?.Apply(State);
+            State.SetStarPowerLoadout(_definition.BuildDefaultStarPowerLoadout(), false);
 
             _lastTickPosition = transform.position;
             _isInitialized = true;
