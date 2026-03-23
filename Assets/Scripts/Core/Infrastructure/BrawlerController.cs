@@ -30,6 +30,47 @@ namespace MOBA.Core.Infrastructure
         public float CollisionRadius => 0.5f;
         public int EntityID => gameObject.GetInstanceID();
 
+        private readonly System.Collections.Generic.List<GadgetDefinition> _equippedGadgets = new System.Collections.Generic.List<GadgetDefinition>(2);
+        private HyperchargeDefinition _equippedHypercharge;
+        private BrawlerBuildDefinition _resolvedBuildSource;
+
+
+        private BrawlerBuildDefinition GetBuildToUse()
+        {
+            if (_definition == null)
+                return null;
+
+            return _definition.DefaultBuild;
+        }
+
+        private void ApplyResolvedBuild(ResolvedBrawlerBuild resolved)
+        {
+            _equippedGadgets.Clear();
+            _equippedHypercharge = null;
+
+            if (resolved == null)
+            {
+                State.SetPassiveLoadout(null, false);
+                _gadgetLogic = _definition.Gadget?.CreateLogic();
+                return;
+            }
+
+            for (int i = 0; i < resolved.Gadgets.Count; i++)
+            {
+                GadgetDefinition gadget = resolved.Gadgets[i];
+                if (gadget != null && !_equippedGadgets.Contains(gadget))
+                    _equippedGadgets.Add(gadget);
+            }
+
+            _equippedHypercharge = resolved.Hypercharge;
+
+            // Current runtime supports one active gadget logic cleanly.
+            // Use first equipped gadget now; second slot is stored for future extension.
+            GadgetDefinition activeGadget = _equippedGadgets.Count > 0 ? _equippedGadgets[0] : _definition.Gadget;
+            _gadgetLogic = activeGadget?.CreateLogic();
+
+            State.SetPassiveLoadout(resolved.PassiveOptions, false);
+        }
         public void SetMoveInput(Vector3 direction)
         {
             _currentMoveInput = direction;
@@ -76,13 +117,35 @@ namespace MOBA.Core.Infrastructure
             _team = team;
 
             State = new BrawlerState(_definition, _team);
-
             State.Owner = this;
+
             _mainAttack = _definition.MainAttack?.CreateLogic();
             _superAbility = _definition.SuperAbility?.CreateLogic();
-            _gadgetLogic = _definition.Gadget?.CreateLogic();
 
-            State.SetPassiveLoadout(_definition.BuildDefaultPassiveLoadout(), false);
+            BrawlerBuildDefinition buildToUse = GetBuildToUse();
+            if (buildToUse != null)
+            {
+                if (BrawlerBuildResolver.TryResolve(_definition, buildToUse, State.CurrentPowerLevel, out ResolvedBrawlerBuild resolved, out string error))
+                {
+                    _resolvedBuildSource = buildToUse;
+                    ApplyResolvedBuild(resolved);
+                }
+                else
+                {
+                    Debug.LogWarning($"[Build] Failed to resolve build '{buildToUse.name}' for '{_definition.name}': {error}");
+                    _resolvedBuildSource = null;
+
+                    // Fallback to legacy defaults
+                    _gadgetLogic = _definition.Gadget?.CreateLogic();
+                    State.SetPassiveLoadout(_definition.BuildDefaultPassiveLoadout(), false);
+                }
+            }
+            else
+            {
+                _resolvedBuildSource = null;
+                _gadgetLogic = _definition.Gadget?.CreateLogic();
+                State.SetPassiveLoadout(_definition.BuildDefaultPassiveLoadout(), false);
+            }
 
             _lastTickPosition = transform.position;
             _isInitialized = true;

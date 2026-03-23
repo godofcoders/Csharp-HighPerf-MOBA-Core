@@ -56,6 +56,8 @@ namespace MOBA.Core.Definitions
         public StarPowerDefinition[] StarPowerOptions;
         public HyperchargeDefinition[] HyperchargeOptions;
         public PassiveDefinition[] GearOptions;
+        [Header("Default Build")]
+        public BrawlerBuildDefinition DefaultBuild;
 
         public BrawlerProgressionBonus GetProgressionBonus(int powerLevel)
         {

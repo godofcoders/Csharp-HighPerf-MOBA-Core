@@ -7,10 +7,6 @@ namespace MOBA.Core.Definitions
     public struct BrawlerBuildSlotSelection
     {
         public string SlotId;
-
-        public GadgetDefinition Gadget;
-        public StarPowerDefinition StarPower;
-        public HyperchargeDefinition Hypercharge;
-        public PassiveDefinition Gear;
+        public BrawlerBuildOptionDefinition SelectedOption;
     }
 }
