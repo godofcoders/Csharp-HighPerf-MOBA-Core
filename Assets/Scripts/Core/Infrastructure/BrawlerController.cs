@@ -1,7 +1,7 @@
+using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Simulation;
 using MOBA.Core.Definitions;
-using System;
 
 namespace MOBA.Core.Infrastructure
 {
@@ -21,6 +21,10 @@ namespace MOBA.Core.Infrastructure
 
         private bool _isInitialized;
 
+        private readonly List<GadgetDefinition> _equippedGadgets = new List<GadgetDefinition>(2);
+        private HyperchargeDefinition _equippedHypercharge;
+        private BrawlerBuildDefinition _resolvedBuildSource;
+
         public BrawlerDefinition Definition => _definition;
         public BrawlerState State { get; private set; }
 
@@ -29,57 +33,6 @@ namespace MOBA.Core.Infrastructure
         public Vector3 CurrentPosition => transform.position;
         public float CollisionRadius => 0.5f;
         public int EntityID => gameObject.GetInstanceID();
-
-        private readonly System.Collections.Generic.List<GadgetDefinition> _equippedGadgets = new System.Collections.Generic.List<GadgetDefinition>(2);
-        private HyperchargeDefinition _equippedHypercharge;
-        private BrawlerBuildDefinition _resolvedBuildSource;
-
-
-        private BrawlerBuildDefinition GetBuildToUse()
-        {
-            if (_definition == null)
-                return null;
-
-            return _definition.DefaultBuild;
-        }
-
-        private void ApplyResolvedBuild(ResolvedBrawlerBuild resolved)
-        {
-            _equippedGadgets.Clear();
-            _equippedHypercharge = null;
-
-            if (resolved == null)
-            {
-                State.SetPassiveLoadout(null, false);
-                _gadgetLogic = _definition.Gadget?.CreateLogic();
-                return;
-            }
-
-            for (int i = 0; i < resolved.Gadgets.Count; i++)
-            {
-                GadgetDefinition gadget = resolved.Gadgets[i];
-                if (gadget != null && !_equippedGadgets.Contains(gadget))
-                    _equippedGadgets.Add(gadget);
-            }
-
-            _equippedHypercharge = resolved.Hypercharge;
-
-            // Current runtime supports one active gadget logic cleanly.
-            // Use first equipped gadget now; second slot is stored for future extension.
-            GadgetDefinition activeGadget = _equippedGadgets.Count > 0 ? _equippedGadgets[0] : _definition.Gadget;
-            _gadgetLogic = activeGadget?.CreateLogic();
-
-            State.SetPassiveLoadout(resolved.PassiveOptions, false);
-        }
-        public void SetMoveInput(Vector3 direction)
-        {
-            _currentMoveInput = direction;
-        }
-
-        public void BufferAttack(InputCommandType type, Vector3 direction)
-        {
-            _inputBuffer.Enqueue(type, direction);
-        }
 
         protected override void Awake()
         {
@@ -92,9 +45,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             if (!_isInitialized)
-            {
                 InternalInitialize(_definition, _team);
-            }
         }
 
         public void InitializeFromMatchmaking(BrawlerDefinition def, TeamType team)
@@ -134,17 +85,13 @@ namespace MOBA.Core.Infrastructure
                 {
                     Debug.LogWarning($"[Build] Failed to resolve build '{buildToUse.name}' for '{_definition.name}': {error}");
                     _resolvedBuildSource = null;
-
-                    // Fallback to legacy defaults
-                    _gadgetLogic = _definition.Gadget?.CreateLogic();
-                    State.SetPassiveLoadout(_definition.BuildDefaultPassiveLoadout(), false);
+                    ApplyLegacyFallbackBuild();
                 }
             }
             else
             {
                 _resolvedBuildSource = null;
-                _gadgetLogic = _definition.Gadget?.CreateLogic();
-                State.SetPassiveLoadout(_definition.BuildDefaultPassiveLoadout(), false);
+                ApplyLegacyFallbackBuild();
             }
 
             _lastTickPosition = transform.position;
@@ -156,15 +103,86 @@ namespace MOBA.Core.Infrastructure
             Debug.Log($"[SIM] {gameObject.name} initialized as {_definition.BrawlerName} on Team {_team}");
         }
 
-        private void HandleDeath()
+        private void ApplyLegacyFallbackBuild()
         {
-            TeamType enemyTeam = (_team == TeamType.Blue) ? TeamType.Red : TeamType.Blue;
-            MatchManager.Instance.AddScore(enemyTeam, 1);
+            _equippedGadgets.Clear();
 
-            gameObject.SetActive(false);
-            SimulationClock.Grid?.Remove(this, transform.position);
+            if (_definition.Gadget != null)
+                _equippedGadgets.Add(_definition.Gadget);
 
-            SpawnManager.Instance.RequestRespawn(this, _team);
+            _gadgetLogic = _definition.Gadget?.CreateLogic();
+
+            _equippedHypercharge = _definition.Hypercharge;
+            State.SetEquippedHypercharge(_equippedHypercharge);
+
+            State.SetPassiveLoadout(_definition.BuildDefaultPassiveLoadout(), false);
+        }
+
+        private BrawlerBuildDefinition GetBuildToUse()
+        {
+            if (_definition == null)
+                return null;
+
+            return _definition.DefaultBuild;
+        }
+
+        private void ApplyResolvedBuild(ResolvedBrawlerBuild resolved)
+        {
+            _equippedGadgets.Clear();
+            _equippedHypercharge = null;
+
+            if (resolved == null)
+            {
+                State.SetPassiveLoadout(null, false);
+                State.SetEquippedHypercharge(null);
+                _gadgetLogic = _definition.Gadget?.CreateLogic();
+                return;
+            }
+
+            for (int i = 0; i < resolved.Gadgets.Count; i++)
+            {
+                GadgetDefinition gadget = resolved.Gadgets[i];
+                if (gadget != null && !_equippedGadgets.Contains(gadget))
+                    _equippedGadgets.Add(gadget);
+            }
+
+            _equippedHypercharge = resolved.Hypercharge;
+            State.SetEquippedHypercharge(_equippedHypercharge);
+
+            GadgetDefinition activeGadget = GetActiveGadgetDefinition();
+            _gadgetLogic = activeGadget?.CreateLogic();
+
+            State.SetPassiveLoadout(resolved.PassiveOptions, false);
+        }
+
+        private GadgetDefinition GetActiveGadgetDefinition()
+        {
+            if (_equippedGadgets.Count > 0 && _equippedGadgets[0] != null)
+                return _equippedGadgets[0];
+
+            return _definition != null ? _definition.Gadget : null;
+        }
+
+        private IAbilityLogic GetCurrentSuperLogic()
+        {
+            AbilityDefinition currentSuperDef = State?.GetCurrentSuperDefinition();
+            if (currentSuperDef == null)
+                return null;
+
+            if (_definition != null && currentSuperDef == _definition.SuperAbility)
+                return _superAbility;
+
+            return currentSuperDef.CreateLogic();
+        }
+
+        public void SetMoveInput(Vector3 direction)
+        {
+            _currentMoveInput = direction;
+        }
+
+        public void BufferAttack(InputCommandType type, Vector3 direction)
+        {
+            _inputBuffer.Enqueue(type, direction);
         }
 
         public override void Tick(uint currentTick)
@@ -190,7 +208,7 @@ namespace MOBA.Core.Infrastructure
 
             State.Hypercharge.Tick(currentTick, () =>
             {
-                State.MoveSpeed.RemoveModifiersFromSource(State.Hypercharge);
+                State.ClearHyperchargeRuntimeModifiers();
                 Debug.Log("[SIM] Hypercharge Ended");
             });
 
@@ -243,15 +261,15 @@ namespace MOBA.Core.Infrastructure
         }
 
         public void FireProjectile(
-      Vector3 origin,
-      Vector3 direction,
-      float speed,
-      float range,
-      float damage,
-      AbilityDefinition sourceAbility,
-      AbilitySlotType slotType,
-      bool isSuper,
-      bool isGadget)
+            Vector3 origin,
+            Vector3 direction,
+            float speed,
+            float range,
+            float damage,
+            AbilityDefinition sourceAbility,
+            AbilitySlotType slotType,
+            bool isSuper,
+            bool isGadget)
         {
             var projectileService = ServiceProvider.Get<IProjectileService>();
 
@@ -281,86 +299,48 @@ namespace MOBA.Core.Infrastructure
             switch (cmd.Type)
             {
                 case InputCommandType.MainAttack:
-                    if (_definition.MainAttack != null &&
-                        State.IsAbilityReady(AbilityRuntimeSlot.MainAttack, currentTick) &&
-                        State.Ammo.Consume(1))
                     {
-                        State.EnterActionState(
-                            BrawlerActionStateType.CastingMainAttack,
-                            currentTick,
-                            _definition.MainAttack.GetCastDurationTicks(),
-                            _definition.MainAttack.AllowMovementDuringCast,
-                            _definition.MainAttack.AllowActionInputDuringCast,
-                            _definition.MainAttack.IsInterruptible);
-
-                        var executionContext = new AbilityExecutionContext
+                        if (_definition.MainAttack != null &&
+                            State.IsAbilityReady(AbilityRuntimeSlot.MainAttack, currentTick) &&
+                            State.Ammo.Consume(1))
                         {
-                            Source = this,
-                            AbilityDefinition = _definition.MainAttack,
-                            SlotType = AbilitySlotType.MainAttack,
-                            Origin = transform.position,
-                            Direction = cmd.Direction,
-                            StartTick = currentTick,
-                            IsSuper = false,
-                            IsGadget = false
-                        };
-
-                        State.LastAttackTick = currentTick;
-
-                        AbilityEventBus.Raise(new AbilityExecutionEvent
-                        {
-                            EventType = AbilityEventType.CastStarted,
-                            Source = this,
-                            AbilityDefinition = _definition.MainAttack,
-                            SlotType = AbilitySlotType.MainAttack,
-                            Origin = executionContext.Origin,
-                            Direction = executionContext.Direction,
-                            Tick = currentTick,
-                            Result = default
-                        });
-
-                        CombatPresentationEventBus.Raise(new CombatPresentationEvent
-                        {
-                            EventType = CombatPresentationEventType.AbilityCastStarted,
-                            Source = this,
-                            Target = null,
-                            AbilityDefinition = _definition.MainAttack,
-                            SlotType = AbilitySlotType.MainAttack,
-                            Position = executionContext.Origin,
-                            Direction = executionContext.Direction,
-                            Value = 0f,
-                            IsSuper = false
-                        });
-
-                        var result = _mainAttack != null
-                            ? _mainAttack.Execute(this, executionContext)
-                            : AbilityExecutionResult.Failed(_definition.MainAttack, AbilitySlotType.MainAttack);
-
-                        if (result.Success)
-                        {
-                            State.StartAbilityCooldown(
-                                AbilityRuntimeSlot.MainAttack,
+                            State.EnterActionState(
+                                BrawlerActionStateType.CastingMainAttack,
                                 currentTick,
-                                _definition.MainAttack.Cooldown);
-                        }
+                                _definition.MainAttack.GetCastDurationTicks(),
+                                _definition.MainAttack.AllowMovementDuringCast,
+                                _definition.MainAttack.AllowActionInputDuringCast,
+                                _definition.MainAttack.IsInterruptible);
 
-                        AbilityEventBus.Raise(new AbilityExecutionEvent
-                        {
-                            EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
-                            Source = this,
-                            AbilityDefinition = _definition.MainAttack,
-                            SlotType = AbilitySlotType.MainAttack,
-                            Origin = executionContext.Origin,
-                            Direction = executionContext.Direction,
-                            Tick = currentTick,
-                            Result = result
-                        });
+                            var executionContext = new AbilityExecutionContext
+                            {
+                                Source = this,
+                                AbilityDefinition = _definition.MainAttack,
+                                SlotType = AbilitySlotType.MainAttack,
+                                Origin = transform.position,
+                                Direction = cmd.Direction,
+                                StartTick = currentTick,
+                                IsSuper = false,
+                                IsGadget = false
+                            };
 
-                        if (result.Success)
-                        {
+                            State.LastAttackTick = currentTick;
+
+                            AbilityEventBus.Raise(new AbilityExecutionEvent
+                            {
+                                EventType = AbilityEventType.CastStarted,
+                                Source = this,
+                                AbilityDefinition = _definition.MainAttack,
+                                SlotType = AbilitySlotType.MainAttack,
+                                Origin = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Tick = currentTick,
+                                Result = default
+                            });
+
                             CombatPresentationEventBus.Raise(new CombatPresentationEvent
                             {
-                                EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                EventType = CombatPresentationEventType.AbilityCastStarted,
                                 Source = this,
                                 Target = null,
                                 AbilityDefinition = _definition.MainAttack,
@@ -370,226 +350,316 @@ namespace MOBA.Core.Infrastructure
                                 Value = 0f,
                                 IsSuper = false
                             });
+
+                            var result = _mainAttack != null
+                                ? _mainAttack.Execute(this, executionContext)
+                                : AbilityExecutionResult.Failed(_definition.MainAttack, AbilitySlotType.MainAttack);
+
+                            if (result.Success)
+                            {
+                                State.StartAbilityCooldown(
+                                    AbilityRuntimeSlot.MainAttack,
+                                    currentTick,
+                                    _definition.MainAttack.Cooldown);
+                            }
+
+                            AbilityEventBus.Raise(new AbilityExecutionEvent
+                            {
+                                EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
+                                Source = this,
+                                AbilityDefinition = _definition.MainAttack,
+                                SlotType = AbilitySlotType.MainAttack,
+                                Origin = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Tick = currentTick,
+                                Result = result
+                            });
+
+                            if (result.Success)
+                            {
+                                CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                                {
+                                    EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                    Source = this,
+                                    Target = null,
+                                    AbilityDefinition = _definition.MainAttack,
+                                    SlotType = AbilitySlotType.MainAttack,
+                                    Position = executionContext.Origin,
+                                    Direction = executionContext.Direction,
+                                    Value = 0f,
+                                    IsSuper = false
+                                });
+                            }
                         }
+
+                        break;
                     }
-                    break;
 
                 case InputCommandType.Gadget:
-                    if (_definition.Gadget != null &&
-                        State.RemainingGadgets > 0 &&
-                        State.IsAbilityReady(AbilityRuntimeSlot.Gadget, currentTick))
                     {
-                        State.EnterActionState(
-                            BrawlerActionStateType.CastingGadget,
-                            currentTick,
-                            _definition.Gadget.GetCastDurationTicks(),
-                            _definition.Gadget.AllowMovementDuringCast,
-                            _definition.Gadget.AllowActionInputDuringCast,
-                            _definition.Gadget.IsInterruptible);
+                        GadgetDefinition currentGadgetDef = GetActiveGadgetDefinition();
 
-                        var executionContext = new AbilityExecutionContext
+                        if (currentGadgetDef != null &&
+                            State.RemainingGadgets > 0 &&
+                            State.IsAbilityReady(AbilityRuntimeSlot.Gadget, currentTick))
                         {
-                            Source = this,
-                            AbilityDefinition = _definition.Gadget,
-                            SlotType = AbilitySlotType.Gadget,
-                            Origin = transform.position,
-                            Direction = cmd.Direction,
-                            StartTick = currentTick,
-                            IsSuper = false,
-                            IsGadget = true
-                        };
-
-                        AbilityEventBus.Raise(new AbilityExecutionEvent
-                        {
-                            EventType = AbilityEventType.CastStarted,
-                            Source = this,
-                            AbilityDefinition = _definition.Gadget,
-                            SlotType = AbilitySlotType.Gadget,
-                            Origin = executionContext.Origin,
-                            Direction = executionContext.Direction,
-                            Tick = currentTick,
-                            Result = default
-                        });
-
-                        CombatPresentationEventBus.Raise(new CombatPresentationEvent
-                        {
-                            EventType = CombatPresentationEventType.AbilityCastStarted,
-                            Source = this,
-                            Target = null,
-                            AbilityDefinition = _definition.Gadget,
-                            SlotType = AbilitySlotType.Gadget,
-                            Position = executionContext.Origin,
-                            Direction = executionContext.Direction,
-                            Value = 0f,
-                            IsSuper = false
-                        });
-
-                        var result = _gadgetLogic != null
-                            ? _gadgetLogic.Execute(this, executionContext)
-                            : AbilityExecutionResult.Failed(_definition.Gadget, AbilitySlotType.Gadget);
-
-                        if (result.Success)
-                        {
-                            State.UseGadgetCharge();
-                            State.StartAbilityCooldown(
-                                AbilityRuntimeSlot.Gadget,
+                            State.EnterActionState(
+                                BrawlerActionStateType.CastingGadget,
                                 currentTick,
-                                _definition.Gadget.Cooldown);
+                                currentGadgetDef.GetCastDurationTicks(),
+                                currentGadgetDef.AllowMovementDuringCast,
+                                currentGadgetDef.AllowActionInputDuringCast,
+                                currentGadgetDef.IsInterruptible);
 
-                            Debug.Log($"[SIM] Gadget used! Remaining: {State.RemainingGadgets}");
-                        }
+                            var executionContext = new AbilityExecutionContext
+                            {
+                                Source = this,
+                                AbilityDefinition = currentGadgetDef,
+                                SlotType = AbilitySlotType.Gadget,
+                                Origin = transform.position,
+                                Direction = cmd.Direction,
+                                StartTick = currentTick,
+                                IsSuper = false,
+                                IsGadget = true
+                            };
 
-                        AbilityEventBus.Raise(new AbilityExecutionEvent
-                        {
-                            EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
-                            Source = this,
-                            AbilityDefinition = _definition.Gadget,
-                            SlotType = AbilitySlotType.Gadget,
-                            Origin = executionContext.Origin,
-                            Direction = executionContext.Direction,
-                            Tick = currentTick,
-                            Result = result
-                        });
+                            AbilityEventBus.Raise(new AbilityExecutionEvent
+                            {
+                                EventType = AbilityEventType.CastStarted,
+                                Source = this,
+                                AbilityDefinition = currentGadgetDef,
+                                SlotType = AbilitySlotType.Gadget,
+                                Origin = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Tick = currentTick,
+                                Result = default
+                            });
 
-                        if (result.Success)
-                        {
                             CombatPresentationEventBus.Raise(new CombatPresentationEvent
                             {
-                                EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                EventType = CombatPresentationEventType.AbilityCastStarted,
                                 Source = this,
                                 Target = null,
-                                AbilityDefinition = _definition.Gadget,
+                                AbilityDefinition = currentGadgetDef,
                                 SlotType = AbilitySlotType.Gadget,
                                 Position = executionContext.Origin,
                                 Direction = executionContext.Direction,
                                 Value = 0f,
                                 IsSuper = false
                             });
-                        }
-                    }
-                    break;
 
-                case InputCommandType.Super:
-                    if (_definition.SuperAbility != null &&
-                        State.SuperCharge.IsReady &&
-                        State.IsAbilityReady(AbilityRuntimeSlot.Super, currentTick))
-                    {
-                        State.EnterActionState(
-                            BrawlerActionStateType.CastingSuper,
-                            currentTick,
-                            _definition.SuperAbility.GetCastDurationTicks(),
-                            _definition.SuperAbility.AllowMovementDuringCast,
-                            _definition.SuperAbility.AllowActionInputDuringCast,
-                            _definition.SuperAbility.IsInterruptible);
+                            var result = _gadgetLogic != null
+                                ? _gadgetLogic.Execute(this, executionContext)
+                                : AbilityExecutionResult.Failed(currentGadgetDef, AbilitySlotType.Gadget);
 
-                        var executionContext = new AbilityExecutionContext
-                        {
-                            Source = this,
-                            AbilityDefinition = _definition.SuperAbility,
-                            SlotType = AbilitySlotType.Super,
-                            Origin = transform.position,
-                            Direction = cmd.Direction,
-                            StartTick = currentTick,
-                            IsSuper = true,
-                            IsGadget = false
-                        };
-
-                        State.LastAttackTick = currentTick;
-
-                        AbilityEventBus.Raise(new AbilityExecutionEvent
-                        {
-                            EventType = AbilityEventType.CastStarted,
-                            Source = this,
-                            AbilityDefinition = _definition.SuperAbility,
-                            SlotType = AbilitySlotType.Super,
-                            Origin = executionContext.Origin,
-                            Direction = executionContext.Direction,
-                            Tick = currentTick,
-                            Result = default
-                        });
-
-                        CombatPresentationEventBus.Raise(new CombatPresentationEvent
-                        {
-                            EventType = CombatPresentationEventType.AbilityCastStarted,
-                            Source = this,
-                            Target = null,
-                            AbilityDefinition = _definition.SuperAbility,
-                            SlotType = AbilitySlotType.Super,
-                            Position = executionContext.Origin,
-                            Direction = executionContext.Direction,
-                            Value = 0f,
-                            IsSuper = true
-                        });
-
-                        var result = _superAbility != null
-                            ? _superAbility.Execute(this, executionContext)
-                            : AbilityExecutionResult.Failed(_definition.SuperAbility, AbilitySlotType.Super);
-
-                        if (result.Success)
-                        {
-                            State.TryConsumeSuper();
-                            State.StartAbilityCooldown(
-                                AbilityRuntimeSlot.Super,
-                                currentTick,
-                                _definition.SuperAbility.Cooldown);
-                        }
-                        else
-                        {
-                            if (State.ActionState.StateType == BrawlerActionStateType.CastingSuper)
+                            if (result.Success)
                             {
-                                State.ClearActionState();
+                                State.UseGadgetCharge();
+                                State.StartAbilityCooldown(
+                                    AbilityRuntimeSlot.Gadget,
+                                    currentTick,
+                                    currentGadgetDef.Cooldown);
+
+                                Debug.Log($"[SIM] Gadget used! Remaining: {State.RemainingGadgets}");
+                            }
+
+                            AbilityEventBus.Raise(new AbilityExecutionEvent
+                            {
+                                EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
+                                Source = this,
+                                AbilityDefinition = currentGadgetDef,
+                                SlotType = AbilitySlotType.Gadget,
+                                Origin = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Tick = currentTick,
+                                Result = result
+                            });
+
+                            if (result.Success)
+                            {
+                                CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                                {
+                                    EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                    Source = this,
+                                    Target = null,
+                                    AbilityDefinition = currentGadgetDef,
+                                    SlotType = AbilitySlotType.Gadget,
+                                    Position = executionContext.Origin,
+                                    Direction = executionContext.Direction,
+                                    Value = 0f,
+                                    IsSuper = false
+                                });
                             }
                         }
 
-                        AbilityEventBus.Raise(new AbilityExecutionEvent
-                        {
-                            EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
-                            Source = this,
-                            AbilityDefinition = _definition.SuperAbility,
-                            SlotType = AbilitySlotType.Super,
-                            Origin = executionContext.Origin,
-                            Direction = executionContext.Direction,
-                            Tick = currentTick,
-                            Result = result
-                        });
+                        break;
+                    }
 
-                        if (result.Success)
+                case InputCommandType.Super:
+                    {
+                        AbilityDefinition currentSuperDef = State.GetCurrentSuperDefinition();
+
+                        if (currentSuperDef != null &&
+                            State.SuperCharge.IsReady &&
+                            State.IsAbilityReady(AbilityRuntimeSlot.Super, currentTick))
                         {
+                            State.EnterActionState(
+                                BrawlerActionStateType.CastingSuper,
+                                currentTick,
+                                currentSuperDef.GetCastDurationTicks(),
+                                currentSuperDef.AllowMovementDuringCast,
+                                currentSuperDef.AllowActionInputDuringCast,
+                                currentSuperDef.IsInterruptible);
+
+                            var executionContext = new AbilityExecutionContext
+                            {
+                                Source = this,
+                                AbilityDefinition = currentSuperDef,
+                                SlotType = AbilitySlotType.Super,
+                                Origin = transform.position,
+                                Direction = cmd.Direction,
+                                StartTick = currentTick,
+                                IsSuper = true,
+                                IsGadget = false
+                            };
+
+                            State.LastAttackTick = currentTick;
+
+                            AbilityEventBus.Raise(new AbilityExecutionEvent
+                            {
+                                EventType = AbilityEventType.CastStarted,
+                                Source = this,
+                                AbilityDefinition = currentSuperDef,
+                                SlotType = AbilitySlotType.Super,
+                                Origin = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Tick = currentTick,
+                                Result = default
+                            });
+
                             CombatPresentationEventBus.Raise(new CombatPresentationEvent
                             {
-                                EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                EventType = CombatPresentationEventType.AbilityCastStarted,
                                 Source = this,
                                 Target = null,
-                                AbilityDefinition = _definition.SuperAbility,
+                                AbilityDefinition = currentSuperDef,
                                 SlotType = AbilitySlotType.Super,
                                 Position = executionContext.Origin,
                                 Direction = executionContext.Direction,
                                 Value = 0f,
                                 IsSuper = true
                             });
+
+                            IAbilityLogic currentSuperLogic = GetCurrentSuperLogic();
+
+                            var result = currentSuperLogic != null
+                                ? currentSuperLogic.Execute(this, executionContext)
+                                : AbilityExecutionResult.Failed(currentSuperDef, AbilitySlotType.Super);
+
+                            if (result.Success)
+                            {
+                                State.TryConsumeSuper();
+                                State.StartAbilityCooldown(
+                                    AbilityRuntimeSlot.Super,
+                                    currentTick,
+                                    currentSuperDef.Cooldown);
+                            }
+                            else
+                            {
+                                if (State.ActionState.StateType == BrawlerActionStateType.CastingSuper)
+                                    State.ClearActionState();
+                            }
+
+                            AbilityEventBus.Raise(new AbilityExecutionEvent
+                            {
+                                EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
+                                Source = this,
+                                AbilityDefinition = currentSuperDef,
+                                SlotType = AbilitySlotType.Super,
+                                Origin = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Tick = currentTick,
+                                Result = result
+                            });
+
+                            if (result.Success)
+                            {
+                                CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                                {
+                                    EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                    Source = this,
+                                    Target = null,
+                                    AbilityDefinition = currentSuperDef,
+                                    SlotType = AbilitySlotType.Super,
+                                    Position = executionContext.Origin,
+                                    Direction = executionContext.Direction,
+                                    Value = 0f,
+                                    IsSuper = true
+                                });
+                            }
                         }
+
+                        break;
                     }
-                    break;
             }
         }
+
         public void ActivateHypercharge()
         {
-            var def = _definition.Hypercharge;
+            HyperchargeDefinition def = State.EquippedHypercharge ?? _definition.Hypercharge;
             if (def == null)
                 return;
 
-            if (State.Hypercharge.ChargePercent >= 1.0f)
-            {
-                State.Hypercharge.Activate(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            if (State.Hypercharge.ChargePercent < 1.0f)
+                return;
 
-                var speedMod = new StatModifier(0.25f, ModifierType.Multiplicative, State.Hypercharge);
-                var dmgMod = new StatModifier(0.15f, ModifierType.Multiplicative, State.Hypercharge);
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+
+            State.ClearHyperchargeRuntimeModifiers();
+            State.Hypercharge.Activate(currentTick, def.DurationSeconds);
+
+            if (def.SpeedBuff != 0f)
+            {
+                var speedMod = new StatModifier(
+                    def.SpeedBuff,
+                    ModifierType.Multiplicative,
+                    State.HyperchargeModifierSource);
 
                 State.MoveSpeed.AddModifier(speedMod);
-                State.Damage.AddModifier(dmgMod);
-
-                Debug.Log("[SIM] Hypercharge Activated! Brawler is now buffed.");
             }
+
+            if (def.DamageBuff != 0f)
+            {
+                var damageMod = new StatModifier(
+                    def.DamageBuff,
+                    ModifierType.Multiplicative,
+                    State.HyperchargeModifierSource);
+
+                State.Damage.AddModifier(damageMod);
+            }
+
+            if (def.ShieldBuff != 0f)
+            {
+                var reductionMod = new DamageModifier(
+                    DamageModifierType.PercentReduction,
+                    def.ShieldBuff,
+                    State.HyperchargeModifierSource);
+
+                State.AddIncomingDamageModifier(reductionMod);
+            }
+
+            Debug.Log($"[SIM] Hypercharge Activated! {def.name} is now active.");
+        }
+
+        private void HandleDeath()
+        {
+            TeamType enemyTeam = (_team == TeamType.Blue) ? TeamType.Red : TeamType.Blue;
+            MatchManager.Instance.AddScore(enemyTeam, 1);
+
+            gameObject.SetActive(false);
+            SimulationClock.Grid?.Remove(this, transform.position);
+
+            SpawnManager.Instance.RequestRespawn(this, _team);
         }
 
         public void Respawn(Vector3 position)
@@ -598,6 +668,7 @@ namespace MOBA.Core.Infrastructure
             _lastTickPosition = position;
 
             State.Reset();
+            State.SetEquippedHypercharge(_equippedHypercharge ?? _definition.Hypercharge);
 
             gameObject.SetActive(true);
             CombatRegistry.Register(this);

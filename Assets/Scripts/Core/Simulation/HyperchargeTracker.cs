@@ -8,21 +8,28 @@ namespace MOBA.Core.Simulation
         public float ChargePercent { get; private set; } // 0 to 1
 
         private uint _endTick;
-        private readonly float _durationTicks = 5f * 30f; // 5 seconds at 30Hz
 
         public void AddCharge(float amount)
         {
-            if (IsActive) return;
+            if (IsActive)
+                return;
+
             ChargePercent = Math.Min(1f, ChargePercent + amount);
         }
 
-        public void Activate(uint startTick)
+        public void Activate(uint startTick, float durationSeconds)
         {
-            if (ChargePercent < 1f) return;
+            if (ChargePercent < 1f)
+                return;
+
+            if (durationSeconds <= 0f)
+                durationSeconds = 5f;
 
             IsActive = true;
             ChargePercent = 0f;
-            _endTick = startTick + (uint)_durationTicks;
+
+            uint durationTicks = (uint)(durationSeconds * 30f);
+            _endTick = startTick + durationTicks;
         }
 
         public void Tick(uint currentTick, Action onDeactivate)

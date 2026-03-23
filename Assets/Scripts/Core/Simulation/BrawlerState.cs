@@ -59,6 +59,33 @@ namespace MOBA.Core.Simulation
 
         public IReadOnlyList<PassiveDefinition> EquippedPassives => _equippedPassives;
 
+        public HyperchargeDefinition EquippedHypercharge { get; private set; }
+        public object HyperchargeModifierSource { get; } = new object();
+
+        public void SetEquippedHypercharge(HyperchargeDefinition definition)
+        {
+            EquippedHypercharge = definition;
+        }
+
+        public AbilityDefinition GetCurrentSuperDefinition()
+        {
+            if (Hypercharge.IsActive &&
+                EquippedHypercharge != null &&
+                EquippedHypercharge.EnhancedSuper != null)
+            {
+                return EquippedHypercharge.EnhancedSuper;
+            }
+
+            return Definition.SuperAbility;
+        }
+
+        public void ClearHyperchargeRuntimeModifiers()
+        {
+            MoveSpeed.RemoveModifiersFromSource(HyperchargeModifierSource);
+            Damage.RemoveModifiersFromSource(HyperchargeModifierSource);
+            RemoveIncomingDamageModifiersFromSource(HyperchargeModifierSource);
+        }
+
         public BrawlerState(BrawlerDefinition definition, TeamType team)
         {
             Definition = definition;
@@ -325,6 +352,7 @@ namespace MOBA.Core.Simulation
 
             ClearActionState();
             ResetAbilityCooldowns();
+            ClearHyperchargeRuntimeModifiers();
 
             OnHealthChanged?.Invoke(CurrentHealth);
         }
