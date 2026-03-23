@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace MOBA.Core.Definitions
 {
@@ -57,6 +58,7 @@ namespace MOBA.Core.Definitions
                     slotMap.Add(slot.SlotId, slot);
             }
 
+            HashSet<BrawlerBuildOptionDefinition> selectedOptions = new HashSet<BrawlerBuildOptionDefinition>();
             HashSet<GadgetDefinition> selectedGadgets = new HashSet<GadgetDefinition>();
             HashSet<StarPowerDefinition> selectedStarPowers = new HashSet<StarPowerDefinition>();
             HashSet<HyperchargeDefinition> selectedHypercharges = new HashSet<HyperchargeDefinition>();
@@ -80,82 +82,102 @@ namespace MOBA.Core.Definitions
                     return BrawlerBuildValidationResult.Invalid(
                         $"Slot '{slot.DisplayName}' is locked until power level {slot.UnlockPowerLevel}.");
 
+                BrawlerBuildOptionDefinition selected = selection.SelectedOption;
+                if (selected == null)
+                    continue;
+
+                if (!selected.CanEquipInBuildSlot(slot.SlotType))
+                    return BrawlerBuildValidationResult.Invalid(
+                        $"Option '{selected.name}' cannot be equipped in slot '{slot.DisplayName}'.");
+
                 switch (slot.SlotType)
                 {
                     case BrawlerBuildSlotType.Gadget:
                         {
-                            if (selection.Gadget == null)
-                                break;
-
-                            if (!ContainsReference(brawler.GadgetOptions, selection.Gadget))
+                            if (!(selected is GadgetDefinition gadget))
                                 return BrawlerBuildValidationResult.Invalid(
-                                    $"Gadget '{selection.Gadget.name}' is not available for brawler '{brawler.name}'.");
+                                    $"Option '{selected.name}' is not a GadgetDefinition for slot '{slot.DisplayName}'.");
 
-                            if (!slot.AllowDuplicateSelectionInSameTypeGroup && selectedGadgets.Contains(selection.Gadget))
+                            if (!ContainsReference(brawler.GadgetOptions, gadget))
                                 return BrawlerBuildValidationResult.Invalid(
-                                    $"Gadget '{selection.Gadget.name}' cannot be equipped more than once.");
+                                    $"Gadget '{gadget.name}' is not available for brawler '{brawler.name}'.");
 
-                            selectedGadgets.Add(selection.Gadget);
+                            if (!slot.AllowDuplicateSelectionInSameTypeGroup && selectedGadgets.Contains(gadget))
+                                return BrawlerBuildValidationResult.Invalid(
+                                    $"Gadget '{gadget.name}' cannot be equipped more than once.");
+
+                            selectedGadgets.Add(gadget);
                             break;
                         }
 
                     case BrawlerBuildSlotType.StarPower:
                         {
-                            if (selection.StarPower == null)
-                                break;
-
-                            if (!ContainsReference(brawler.StarPowerOptions, selection.StarPower))
+                            if (!(selected is StarPowerDefinition starPower))
                                 return BrawlerBuildValidationResult.Invalid(
-                                    $"Star Power '{selection.StarPower.name}' is not available for brawler '{brawler.name}'.");
+                                    $"Option '{selected.name}' is not a StarPowerDefinition for slot '{slot.DisplayName}'.");
 
-                            if (!slot.AllowDuplicateSelectionInSameTypeGroup && selectedStarPowers.Contains(selection.StarPower))
+                            if (!ContainsReference(brawler.StarPowerOptions, starPower))
                                 return BrawlerBuildValidationResult.Invalid(
-                                    $"Star Power '{selection.StarPower.name}' cannot be equipped more than once.");
+                                    $"Star Power '{starPower.name}' is not available for brawler '{brawler.name}'.");
 
-                            selectedStarPowers.Add(selection.StarPower);
+                            if (!slot.AllowDuplicateSelectionInSameTypeGroup && selectedStarPowers.Contains(starPower))
+                                return BrawlerBuildValidationResult.Invalid(
+                                    $"Star Power '{starPower.name}' cannot be equipped more than once.");
+
+                            selectedStarPowers.Add(starPower);
                             break;
                         }
 
                     case BrawlerBuildSlotType.Hypercharge:
                         {
-                            if (selection.Hypercharge == null)
-                                break;
-
-                            if (!ContainsReference(brawler.HyperchargeOptions, selection.Hypercharge))
+                            if (!(selected is HyperchargeDefinition hypercharge))
                                 return BrawlerBuildValidationResult.Invalid(
-                                    $"Hypercharge '{selection.Hypercharge.name}' is not available for brawler '{brawler.name}'.");
+                                    $"Option '{selected.name}' is not a HyperchargeDefinition for slot '{slot.DisplayName}'.");
 
-                            if (!slot.AllowDuplicateSelectionInSameTypeGroup && selectedHypercharges.Contains(selection.Hypercharge))
+                            if (!ContainsReference(brawler.HyperchargeOptions, hypercharge))
                                 return BrawlerBuildValidationResult.Invalid(
-                                    $"Hypercharge '{selection.Hypercharge.name}' cannot be equipped more than once.");
+                                    $"Hypercharge '{hypercharge.name}' is not available for brawler '{brawler.name}'.");
 
-                            selectedHypercharges.Add(selection.Hypercharge);
+                            if (!slot.AllowDuplicateSelectionInSameTypeGroup && selectedHypercharges.Contains(hypercharge))
+                                return BrawlerBuildValidationResult.Invalid(
+                                    $"Hypercharge '{hypercharge.name}' cannot be equipped more than once.");
+
+                            selectedHypercharges.Add(hypercharge);
                             break;
                         }
 
                     case BrawlerBuildSlotType.Gear:
                         {
-                            if (selection.Gear == null)
-                                break;
-
-                            if (!ContainsReference(brawler.GearOptions, selection.Gear))
+                            if (!(selected is PassiveDefinition gear))
                                 return BrawlerBuildValidationResult.Invalid(
-                                    $"Gear '{selection.Gear.name}' is not available for brawler '{brawler.name}'.");
+                                    $"Option '{selected.name}' is not a PassiveDefinition for slot '{slot.DisplayName}'.");
 
-                            if (!slot.AllowDuplicateSelectionInSameTypeGroup && selectedGears.Contains(selection.Gear))
+                            if (!ContainsReference(brawler.GearOptions, gear))
                                 return BrawlerBuildValidationResult.Invalid(
-                                    $"Gear '{selection.Gear.name}' cannot be equipped more than once.");
+                                    $"Gear '{gear.name}' is not available for brawler '{brawler.name}'.");
 
-                            selectedGears.Add(selection.Gear);
+                            if (!slot.AllowDuplicateSelectionInSameTypeGroup && selectedGears.Contains(gear))
+                                return BrawlerBuildValidationResult.Invalid(
+                                    $"Gear '{gear.name}' cannot be equipped more than once.");
+
+                            selectedGears.Add(gear);
                             break;
                         }
                 }
+
+                if (!slot.AllowDuplicateSelectionInSameTypeGroup && selectedOptions.Contains(selected))
+                {
+                    return BrawlerBuildValidationResult.Invalid(
+                        $"Option '{selected.name}' cannot be equipped more than once.");
+                }
+
+                selectedOptions.Add(selected);
             }
 
             return BrawlerBuildValidationResult.Valid();
         }
 
-        private static bool ContainsReference<T>(T[] array, T target) where T : UnityEngine.Object
+        private static bool ContainsReference<T>(T[] array, T target) where T : Object
         {
             if (array == null || target == null)
                 return false;
