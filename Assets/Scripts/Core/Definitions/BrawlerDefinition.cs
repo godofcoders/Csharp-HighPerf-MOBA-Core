@@ -55,9 +55,64 @@ namespace MOBA.Core.Definitions
         public GadgetDefinition[] GadgetOptions;
         public StarPowerDefinition[] StarPowerOptions;
         public HyperchargeDefinition[] HyperchargeOptions;
-        public PassiveDefinition[] GearOptions;
+
         [Header("Default Build")]
         public BrawlerBuildDefinition DefaultBuild;
+
+        [Header("Shared Build Catalogs")]
+        public GearCatalogDefinition SharedGearCatalog;
+
+        [Header("Gear Options")]
+
+        public GearDefinition[] GearOptions;
+        public GearDefinition[] ExtraGearOptions;
+
+        public List<GearDefinition> BuildAvailableGearOptions()
+        {
+            List<GearDefinition> result = new List<GearDefinition>(8);
+
+            if (SharedGearCatalog != null)
+            {
+                List<GearDefinition> shared = SharedGearCatalog.BuildList();
+                for (int i = 0; i < shared.Count; i++)
+                {
+                    GearDefinition gear = shared[i];
+                    if (gear == null)
+                        continue;
+
+                    if (!result.Contains(gear))
+                        result.Add(gear);
+                }
+            }
+
+            if (GearOptions != null)
+            {
+                for (int i = 0; i < GearOptions.Length; i++)
+                {
+                    GearDefinition gear = GearOptions[i];
+                    if (gear == null)
+                        continue;
+
+                    if (!result.Contains(gear))
+                        result.Add(gear);
+                }
+            }
+
+            if (ExtraGearOptions != null)
+            {
+                for (int i = 0; i < ExtraGearOptions.Length; i++)
+                {
+                    GearDefinition gear = ExtraGearOptions[i];
+                    if (gear == null)
+                        continue;
+
+                    if (!result.Contains(gear))
+                        result.Add(gear);
+                }
+            }
+
+            return result;
+        }
 
         public BrawlerProgressionBonus GetProgressionBonus(int powerLevel)
         {

@@ -62,7 +62,7 @@ namespace MOBA.Core.Definitions
             HashSet<GadgetDefinition> selectedGadgets = new HashSet<GadgetDefinition>();
             HashSet<StarPowerDefinition> selectedStarPowers = new HashSet<StarPowerDefinition>();
             HashSet<HyperchargeDefinition> selectedHypercharges = new HashSet<HyperchargeDefinition>();
-            HashSet<PassiveDefinition> selectedGears = new HashSet<PassiveDefinition>();
+            HashSet<GearDefinition> selectedGears = new HashSet<GearDefinition>();
 
             if (selections == null)
                 return BrawlerBuildValidationResult.Valid();
@@ -148,11 +148,12 @@ namespace MOBA.Core.Definitions
 
                     case BrawlerBuildSlotType.Gear:
                         {
-                            if (!(selected is PassiveDefinition gear))
+                            if (!(selected is GearDefinition gear))
                                 return BrawlerBuildValidationResult.Invalid(
-                                    $"Option '{selected.name}' is not a PassiveDefinition for slot '{slot.DisplayName}'.");
+                                    $"Option '{selected.name}' is not a GearDefinition for slot '{slot.DisplayName}'.");
 
-                            if (!ContainsReference(brawler.GearOptions, gear))
+                            List<GearDefinition> availableGears = brawler.BuildAvailableGearOptions();
+                            if (!ContainsReference(availableGears, gear))
                                 return BrawlerBuildValidationResult.Invalid(
                                     $"Gear '{gear.name}' is not available for brawler '{brawler.name}'.");
 
@@ -175,6 +176,20 @@ namespace MOBA.Core.Definitions
             }
 
             return BrawlerBuildValidationResult.Valid();
+        }
+
+        private static bool ContainsReference<T>(List<T> list, T target) where T : Object
+        {
+            if (list == null || target == null)
+                return false;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (list[i] == target)
+                    return true;
+            }
+
+            return false;
         }
 
         private static bool ContainsReference<T>(T[] array, T target) where T : Object
