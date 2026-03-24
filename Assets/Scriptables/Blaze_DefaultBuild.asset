@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10ecdce0d9d4a4c8286178176b3bc569, type: 3}
+  m_Name: Blaze_DefaultBuild
+  m_EditorClassIdentifier: 
+  Selections:
+  - SlotId: gear_1
+    SelectedOption: {fileID: 11400000, guid: e0cae1037afcd41e59ded384a76e6fdd, type: 2}
+  - SlotId: gear_2
+    SelectedOption: {fileID: 11400000, guid: 4cee480e239b749f1a350f97944c35fb, type: 2}
+  - SlotId: gadget_1
+    SelectedOption: {fileID: 11400000, guid: 86083beb14f174705a5ca52a0ad73e48, type: 2}
+  - SlotId: starpower_1
+    SelectedOption: {fileID: 11400000, guid: f944b8dbd54404575adafebf082532ad, type: 2}
+  - SlotId: hypercharge_1
+    SelectedOption: {fileID: 11400000, guid: d8c760d3a1cb34942acff1c756775a9c, type: 2}
