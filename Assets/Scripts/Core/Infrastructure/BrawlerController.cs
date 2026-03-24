@@ -120,10 +120,10 @@ namespace MOBA.Core.Infrastructure
 
         private BrawlerBuildDefinition GetBuildToUse()
         {
-            if (_definition == null)
+            if (_definition == null || State == null)
                 return null;
 
-            return _definition.DefaultBuild;
+            return _definition.GetUsableDefaultBuild(State.CurrentPowerLevel);
         }
 
         private void ApplyResolvedBuild(ResolvedBrawlerBuild resolved)
@@ -688,5 +688,6 @@ namespace MOBA.Core.Infrastructure
         {
             State?.AddSuperCharge(amount);
         }
+
     }
 }

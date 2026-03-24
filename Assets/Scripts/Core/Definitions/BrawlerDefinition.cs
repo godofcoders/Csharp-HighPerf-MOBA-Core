@@ -188,5 +188,70 @@ namespace MOBA.Core.Definitions
 
             return result;
         }
+
+        private void OnValidate()
+        {
+            if (BuildLayout == null)
+            {
+                Debug.LogWarning($"[BrawlerDefinition] '{name}' has no BuildLayout assigned.");
+                return;
+            }
+
+            int gearSlots = BuildLayout.CountSlots(BrawlerBuildSlotType.Gear);
+            int gadgetSlots = BuildLayout.CountSlots(BrawlerBuildSlotType.Gadget);
+            int starPowerSlots = BuildLayout.CountSlots(BrawlerBuildSlotType.StarPower);
+            int hyperchargeSlots = BuildLayout.CountSlots(BrawlerBuildSlotType.Hypercharge);
+
+            if (gearSlots != 2)
+            {
+                Debug.LogWarning($"[BrawlerDefinition] '{name}' expected 2 Gear slots but found {gearSlots}.");
+            }
+
+            if (gadgetSlots != 1)
+            {
+                Debug.LogWarning($"[BrawlerDefinition] '{name}' expected 1 Gadget slot but found {gadgetSlots}.");
+            }
+
+            if (starPowerSlots != 1)
+            {
+                Debug.LogWarning($"[BrawlerDefinition] '{name}' expected 1 Star Power slot but found {starPowerSlots}.");
+            }
+
+            if (hyperchargeSlots != 1)
+            {
+                Debug.LogWarning($"[BrawlerDefinition] '{name}' expected 1 Hypercharge slot but found {hyperchargeSlots}.");
+            }
+
+            if (GadgetOptions == null || GadgetOptions.Length == 0)
+            {
+                Debug.LogWarning($"[BrawlerDefinition] '{name}' has no GadgetOptions configured.");
+            }
+
+            if (StarPowerOptions == null || StarPowerOptions.Length == 0)
+            {
+                Debug.LogWarning($"[BrawlerDefinition] '{name}' has no StarPowerOptions configured.");
+            }
+
+            if (DefaultBuild != null)
+            {
+                BrawlerBuildValidationResult result = BrawlerBuildValidator.Validate(this, DefaultBuild, 11);
+                if (!result.IsValid)
+                {
+                    Debug.LogWarning($"[BrawlerDefinition] DefaultBuild '{DefaultBuild.name}' is invalid for '{name}'. {result.Message}");
+                }
+            }
+        }
+
+        public BrawlerBuildDefinition GetUsableDefaultBuild(int powerLevel)
+        {
+            if (DefaultBuild == null)
+                return null;
+
+            BrawlerBuildValidationResult result = BrawlerBuildValidator.Validate(this, DefaultBuild, powerLevel);
+            if (!result.IsValid)
+                return null;
+
+            return DefaultBuild;
+        }
     }
 }
