@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1dff68a748b5e49748535ff9563e62b4, type: 3}
   m_Name: Blaze_Gadget_HealBurst
   m_EditorClassIdentifier: 
-  OptionName: 
+  OptionName: Heal Burst Gadget if visible
   Description: 
-  AllowedBuildSlotTypes: 
-  AbilityName: 
+  AllowedBuildSlotTypes: 01000000
+  AbilityName: Heal Burst Gadget
   Icon: {fileID: 0}
-  SlotType: 0
+  SlotType: 2
   TargetingType: 1
   DeliveryType: 0
-  Cooldown: 1
+  Cooldown: 12
   Tags: 
   CastDurationSeconds: 0.2
   AllowMovementDuringCast: 1

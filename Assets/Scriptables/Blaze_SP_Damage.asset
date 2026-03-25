@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bcaae8e2e0e88477b95d6bd68b0d0387, type: 3}
   m_Name: Blaze_SP_Damage
   m_EditorClassIdentifier: 
-  OptionName: 
+  OptionName: Damage Star Power
   Description: 
-  AllowedBuildSlotTypes: 
+  AllowedBuildSlotTypes: 02000000
   PassiveName: 
   Description: 
   Category: 0

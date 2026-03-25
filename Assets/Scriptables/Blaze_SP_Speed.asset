@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecbe6173b9804432fb3aa60bbff6227c, type: 3}
   m_Name: Blaze_SP_Speed
   m_EditorClassIdentifier: 
-  OptionName: 
+  OptionName: Speed Star Power
   Description: 
-  AllowedBuildSlotTypes: 
+  AllowedBuildSlotTypes: 02000000
   PassiveName: 
   Description: 
   Category: 0

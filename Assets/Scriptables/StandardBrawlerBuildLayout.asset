@@ -12,4 +12,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b1958eda413c4508bfd037bfc40b5be, type: 3}
   m_Name: StandardBrawlerBuildLayout
   m_EditorClassIdentifier: 
-  Slots: []
+  Slots:
+  - SlotId: gear_1
+    DisplayName: Gear Slot 1
+    SlotType: 4
+    UnlockPowerLevel: 8
+    AllowDuplicateSelectionInSameTypeGroup: 0
+  - SlotId: gear_2
+    DisplayName: Gear Slot 2
+    SlotType: 4
+    UnlockPowerLevel: 10
+    AllowDuplicateSelectionInSameTypeGroup: 0
+  - SlotId: gadget_1
+    DisplayName: Gadget slot
+    SlotType: 1
+    UnlockPowerLevel: 7
+    AllowDuplicateSelectionInSameTypeGroup: 0
+  - SlotId: starpower_1
+    DisplayName: Star Power Slot
+    SlotType: 2
+    UnlockPowerLevel: 9
+    AllowDuplicateSelectionInSameTypeGroup: 0
+  - SlotId: hypercharge_1
+    DisplayName: Hypercharge Slot
+    SlotType: 3
+    UnlockPowerLevel: 11
+    AllowDuplicateSelectionInSameTypeGroup: 0

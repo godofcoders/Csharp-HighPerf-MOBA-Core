@@ -12,14 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Blaze_BrawlerDefinition
   m_EditorClassIdentifier: 
-  BrawlerName: 
+  BrawlerName: Blaze
   ModelPrefab: {fileID: 0}
   BaseHealth: 3000
   BaseMoveSpeed: 5
   BaseDamage: 500
   ProgressionBonuses: []
-  MainAttack: {fileID: 0}
-  SuperAbility: {fileID: 0}
+  MainAttack: {fileID: 11400000, guid: 72a39ab85a18946efa5c8be5ece6f094, type: 2}
+  SuperAbility: {fileID: 11400000, guid: 2a4485a56e90d4a5496d5295f5181b4e, type: 2}
   Gadget: {fileID: 0}
   StarPower: {fileID: 0}
   DefaultPassiveLoadout: {fileID: 0}
@@ -30,11 +30,17 @@ MonoBehaviour:
   Aggression: 1
   SurvivalInstinct: 1
   TeamplayWeight: 1
-  BuildLayout: {fileID: 0}
-  GadgetOptions: []
-  StarPowerOptions: []
-  HyperchargeOptions: []
-  DefaultBuild: {fileID: 0}
-  SharedGearCatalog: {fileID: 0}
-  GearOptions: []
+  BuildLayout: {fileID: 11400000, guid: e7eb581d16fba44e382042c75204d09c, type: 2}
+  GadgetOptions:
+  - {fileID: 11400000, guid: 86083beb14f174705a5ca52a0ad73e48, type: 2}
+  - {fileID: 11400000, guid: 3321562ade4154c49a55bdfc3f53bf38, type: 2}
+  StarPowerOptions:
+  - {fileID: 11400000, guid: f944b8dbd54404575adafebf082532ad, type: 2}
+  - {fileID: 11400000, guid: 1a1502ee65da349179bbb904e266c2bf, type: 2}
+  HyperchargeOptions:
+  - {fileID: 11400000, guid: d8c760d3a1cb34942acff1c756775a9c, type: 2}
+  DefaultBuild: {fileID: 11400000, guid: ae640173b0f2c461a94416c98050ddf6, type: 2}
+  SharedGearCatalog: {fileID: 11400000, guid: 7f9a7730557864b77bb0ca97e22ea9e6, type: 2}
+  GearOptions:
+  - {fileID: 0}
   ExtraGearOptions: []

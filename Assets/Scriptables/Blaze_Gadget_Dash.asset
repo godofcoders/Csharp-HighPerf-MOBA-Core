@@ -12,15 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e07f34de81a12488c9838050dc9426ab, type: 3}
   m_Name: Blaze_Gadget_Dash
   m_EditorClassIdentifier: 
-  OptionName: 
+  OptionName: Dash Gadget if that field is visible from base
   Description: 
-  AllowedBuildSlotTypes: 
-  AbilityName: 
+  AllowedBuildSlotTypes: 01000000
+  AbilityName: Dash Gadget
   Icon: {fileID: 0}
-  SlotType: 0
+  SlotType: 2
   TargetingType: 1
   DeliveryType: 0
-  Cooldown: 1
+  Cooldown: 10
   Tags: 
   CastDurationSeconds: 0.2
   AllowMovementDuringCast: 1

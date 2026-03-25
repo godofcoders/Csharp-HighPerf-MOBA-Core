@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   OptionName: 
   Description: 
-  AllowedBuildSlotTypes: 
+  AllowedBuildSlotTypes: 04000000
   PassiveName: 
   Description: 
-  Category: 0
+  Category: 1
   AllowedSlotTypes: 
   Family: {fileID: 0}
   IsUniqueInFamily: 0

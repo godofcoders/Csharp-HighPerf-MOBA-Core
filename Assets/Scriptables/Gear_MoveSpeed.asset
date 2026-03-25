@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6cd15febe589141ec9e3d66bddd3451d, type: 3}
   m_Name: Gear_MoveSpeed
   m_EditorClassIdentifier: 
-  OptionName: 
+  OptionName: Move Speed Gear
   Description: 
-  AllowedBuildSlotTypes: 
+  AllowedBuildSlotTypes: 04000000
   PassiveName: 
   Description: 
-  Category: 0
+  Category: 1
   AllowedSlotTypes: 
   Family: {fileID: 0}
   IsUniqueInFamily: 0
