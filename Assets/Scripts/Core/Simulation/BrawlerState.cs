@@ -62,6 +62,8 @@ namespace MOBA.Core.Simulation
         public HyperchargeDefinition EquippedHypercharge { get; private set; }
         public object HyperchargeModifierSource { get; } = new object();
 
+        public BrawlerRuntimeBuildState RuntimeBuild { get; private set; }
+
         public void SetEquippedHypercharge(HyperchargeDefinition definition)
         {
             EquippedHypercharge = definition;
@@ -106,6 +108,8 @@ namespace MOBA.Core.Simulation
             ShieldHealth = 0f;
             IncomingMovementModifiers = new MovementModifierCollection();
             ActiveStatusEffects = new List<IStatusEffectInstance>(8);
+            RuntimeBuild = new BrawlerRuntimeBuildState();
+            RefreshRuntimeBuildUnlockState();
 
             RemainingGadgets = definition.Gadget != null ? definition.Gadget.MaxCharges : 0;
 
@@ -122,6 +126,7 @@ namespace MOBA.Core.Simulation
                 powerLevel = 1;
 
             CurrentPowerLevel = powerLevel;
+            RefreshRuntimeBuildUnlockState();
             RebuildProgressionStats(preserveHealthRatio);
             RefreshPassiveLoadout(preserveHealthRatio);
         }
@@ -295,6 +300,20 @@ namespace MOBA.Core.Simulation
 
             OnHealthChanged?.Invoke(CurrentHealth);
 
+            if (Owner != null)
+            {
+                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                {
+                    EventType = BrawlerPresentationEventType.DamageTaken,
+                    Source = Owner,
+                    AbilityDefinition = null,
+                    Position = Owner.transform.position,
+                    Direction = Owner.transform.forward,
+                    Value = amount,
+                    Tick = ServiceProvider.Get<ISimulationClock>().CurrentTick
+                });
+            }
+
             if (IsDead)
             {
                 uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
@@ -305,6 +324,19 @@ namespace MOBA.Core.Simulation
                     false,
                     false,
                     false);
+                if (Owner != null)
+                {
+                    BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                    {
+                        EventType = BrawlerPresentationEventType.Died,
+                        Source = Owner,
+                        AbilityDefinition = null,
+                        Position = Owner.transform.position,
+                        Direction = Owner.transform.forward,
+                        Value = 0f,
+                        Tick = currentTick
+                    });
+                }
                 OnDeath?.Invoke();
             }
         }
@@ -318,6 +350,19 @@ namespace MOBA.Core.Simulation
             CurrentHealth = Math.Min(CurrentHealth, MaxHealth.Value);
 
             OnHealthChanged?.Invoke(CurrentHealth);
+            if (Owner != null)
+            {
+                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                {
+                    EventType = BrawlerPresentationEventType.Healed,
+                    Source = Owner,
+                    AbilityDefinition = null,
+                    Position = Owner.transform.position,
+                    Direction = Owner.transform.forward,
+                    Value = amount,
+                    Tick = ServiceProvider.Get<ISimulationClock>().CurrentTick
+                });
+            }
         }
 
         public void UpdateResources(float deltaTime)
@@ -349,6 +394,8 @@ namespace MOBA.Core.Simulation
             ShieldHealth = 0f;
             IncomingMovementModifiers.Clear();
             ActiveStatusEffects.Clear();
+            RuntimeBuild.Clear();
+            RefreshRuntimeBuildUnlockState();
 
             ClearActionState();
             ResetAbilityCooldowns();
@@ -573,6 +620,40 @@ namespace MOBA.Core.Simulation
         public bool IsInActionState(BrawlerActionStateType type, uint currentTick)
         {
             return ActionState.StateType == type && ActionState.IsActive(currentTick);
+        }
+
+        public void RefreshRuntimeBuildUnlockState()
+        {
+            if (Definition == null || Definition.BuildLayout == null || RuntimeBuild == null)
+                return;
+
+            RuntimeBuild.SetUnlockedState(
+                Definition.BuildLayout.IsSlotUnlocked("gear_1", CurrentPowerLevel),
+                Definition.BuildLayout.IsSlotUnlocked("gear_2", CurrentPowerLevel),
+                Definition.BuildLayout.IsSlotUnlocked("gadget_1", CurrentPowerLevel),
+                Definition.BuildLayout.IsSlotUnlocked("starpower_1", CurrentPowerLevel),
+                Definition.BuildLayout.IsSlotUnlocked("hypercharge_1", CurrentPowerLevel)
+            );
+        }
+
+        public bool HasUnlockedGadgetSlot()
+        {
+            return RuntimeBuild != null && RuntimeBuild.IsGadgetSlotUnlocked;
+        }
+
+        public bool HasUnlockedStarPowerSlot()
+        {
+            return RuntimeBuild != null && RuntimeBuild.IsStarPowerSlotUnlocked;
+        }
+
+        public bool HasUnlockedHyperchargeSlot()
+        {
+            return RuntimeBuild != null && RuntimeBuild.IsHyperchargeSlotUnlocked;
+        }
+
+        public bool HasAnyUnlockedGearSlot()
+        {
+            return RuntimeBuild != null && (RuntimeBuild.IsGearSlot1Unlocked || RuntimeBuild.IsGearSlot2Unlocked);
         }
     }
 }

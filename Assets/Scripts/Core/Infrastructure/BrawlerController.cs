@@ -115,7 +115,38 @@ namespace MOBA.Core.Infrastructure
             _equippedHypercharge = _definition.Hypercharge;
             State.SetEquippedHypercharge(_equippedHypercharge);
 
-            State.SetPassiveLoadout(_definition.BuildDefaultPassiveLoadout(), false);
+            List<PassiveDefinition> fallbackPassives = _definition.BuildDefaultPassiveLoadout();
+            State.SetPassiveLoadout(fallbackPassives, false);
+
+            StarPowerDefinition equippedStarPower = null;
+            List<GearDefinition> equippedGears = new List<GearDefinition>(2);
+
+            for (int i = 0; i < fallbackPassives.Count; i++)
+            {
+                PassiveDefinition passive = fallbackPassives[i];
+                if (passive == null)
+                    continue;
+
+                if (passive is StarPowerDefinition starPower)
+                {
+                    equippedStarPower = starPower;
+                }
+                else if (passive is GearDefinition gear)
+                {
+                    if (!equippedGears.Contains(gear))
+                        equippedGears.Add(gear);
+                }
+            }
+
+            if (State.RuntimeBuild != null)
+            {
+                State.RuntimeBuild.Clear();
+                State.RefreshRuntimeBuildUnlockState();
+                State.RuntimeBuild.SetEquippedGadget(GetActiveGadgetDefinition());
+                State.RuntimeBuild.SetEquippedStarPower(equippedStarPower);
+                State.RuntimeBuild.SetEquippedHypercharge(_equippedHypercharge);
+                State.RuntimeBuild.SetEquippedGears(equippedGears);
+            }
         }
 
         private BrawlerBuildDefinition GetBuildToUse()
@@ -135,6 +166,8 @@ namespace MOBA.Core.Infrastructure
             {
                 State.SetPassiveLoadout(null, false);
                 State.SetEquippedHypercharge(null);
+                State.RuntimeBuild?.Clear();
+                State.RefreshRuntimeBuildUnlockState();
                 _gadgetLogic = _definition.Gadget?.CreateLogic();
                 return;
             }
@@ -153,6 +186,36 @@ namespace MOBA.Core.Infrastructure
             _gadgetLogic = activeGadget?.CreateLogic();
 
             State.SetPassiveLoadout(resolved.PassiveOptions, false);
+
+            StarPowerDefinition equippedStarPower = null;
+            List<GearDefinition> equippedGears = new List<GearDefinition>(2);
+
+            for (int i = 0; i < resolved.PassiveOptions.Count; i++)
+            {
+                PassiveDefinition passive = resolved.PassiveOptions[i];
+                if (passive == null)
+                    continue;
+
+                if (passive is StarPowerDefinition starPower)
+                {
+                    equippedStarPower = starPower;
+                }
+                else if (passive is GearDefinition gear)
+                {
+                    if (!equippedGears.Contains(gear))
+                        equippedGears.Add(gear);
+                }
+            }
+
+            if (State.RuntimeBuild != null)
+            {
+                State.RuntimeBuild.Clear();
+                State.RefreshRuntimeBuildUnlockState();
+                State.RuntimeBuild.SetEquippedGadget(activeGadget);
+                State.RuntimeBuild.SetEquippedStarPower(equippedStarPower);
+                State.RuntimeBuild.SetEquippedHypercharge(_equippedHypercharge);
+                State.RuntimeBuild.SetEquippedGears(equippedGears);
+            }
         }
 
         private GadgetDefinition GetActiveGadgetDefinition()
@@ -207,10 +270,22 @@ namespace MOBA.Core.Infrastructure
                 SetMoveInput(Vector3.zero);
 
             State.Hypercharge.Tick(currentTick, () =>
-            {
-                State.ClearHyperchargeRuntimeModifiers();
-                Debug.Log("[SIM] Hypercharge Ended");
-            });
+   {
+       State.ClearHyperchargeRuntimeModifiers();
+
+       BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+       {
+           EventType = BrawlerPresentationEventType.HyperchargeEnded,
+           Source = this,
+           AbilityDefinition = State.GetCurrentSuperDefinition(),
+           Position = transform.position,
+           Direction = transform.forward,
+           Value = 0f,
+           Tick = currentTick
+       });
+
+       Debug.Log("[SIM] Hypercharge Ended");
+   });
 
             if (_inputBuffer.HasPending && State.CanUseActionInput(currentTick) && CanPerformAction())
             {
@@ -350,6 +425,16 @@ namespace MOBA.Core.Infrastructure
                                 Value = 0f,
                                 IsSuper = false
                             });
+                            BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                            {
+                                EventType = BrawlerPresentationEventType.MainAttackStarted,
+                                Source = this,
+                                AbilityDefinition = _definition.MainAttack,
+                                Position = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Value = 0f,
+                                Tick = currentTick
+                            });
 
                             var result = _mainAttack != null
                                 ? _mainAttack.Execute(this, executionContext)
@@ -388,6 +473,30 @@ namespace MOBA.Core.Infrastructure
                                     Direction = executionContext.Direction,
                                     Value = 0f,
                                     IsSuper = false
+                                });
+
+                                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                                {
+                                    EventType = BrawlerPresentationEventType.MainAttackSucceeded,
+                                    Source = this,
+                                    AbilityDefinition = _definition.MainAttack,
+                                    Position = executionContext.Origin,
+                                    Direction = executionContext.Direction,
+                                    Value = 0f,
+                                    Tick = currentTick
+                                });
+                            }
+                            else
+                            {
+                                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                                {
+                                    EventType = BrawlerPresentationEventType.MainAttackFailed,
+                                    Source = this,
+                                    AbilityDefinition = _definition.MainAttack,
+                                    Position = executionContext.Origin,
+                                    Direction = executionContext.Direction,
+                                    Value = 0f,
+                                    Tick = currentTick
                                 });
                             }
                         }
@@ -448,6 +557,17 @@ namespace MOBA.Core.Infrastructure
                                 IsSuper = false
                             });
 
+                            BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                            {
+                                EventType = BrawlerPresentationEventType.GadgetStarted,
+                                Source = this,
+                                AbilityDefinition = currentGadgetDef,
+                                Position = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Value = 0f,
+                                Tick = currentTick
+                            });
+
                             var result = _gadgetLogic != null
                                 ? _gadgetLogic.Execute(this, executionContext)
                                 : AbilityExecutionResult.Failed(currentGadgetDef, AbilitySlotType.Gadget);
@@ -488,6 +608,30 @@ namespace MOBA.Core.Infrastructure
                                     Direction = executionContext.Direction,
                                     Value = 0f,
                                     IsSuper = false
+                                });
+
+                                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                                {
+                                    EventType = BrawlerPresentationEventType.GadgetSucceeded,
+                                    Source = this,
+                                    AbilityDefinition = currentGadgetDef,
+                                    Position = executionContext.Origin,
+                                    Direction = executionContext.Direction,
+                                    Value = 0f,
+                                    Tick = currentTick
+                                });
+                            }
+                            else
+                            {
+                                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                                {
+                                    EventType = BrawlerPresentationEventType.GadgetFailed,
+                                    Source = this,
+                                    AbilityDefinition = currentGadgetDef,
+                                    Position = executionContext.Origin,
+                                    Direction = executionContext.Direction,
+                                    Value = 0f,
+                                    Tick = currentTick
                                 });
                             }
                         }
@@ -550,6 +694,17 @@ namespace MOBA.Core.Infrastructure
                                 IsSuper = true
                             });
 
+                            BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                            {
+                                EventType = BrawlerPresentationEventType.SuperStarted,
+                                Source = this,
+                                AbilityDefinition = currentSuperDef,
+                                Position = executionContext.Origin,
+                                Direction = executionContext.Direction,
+                                Value = 0f,
+                                Tick = currentTick
+                            });
+
                             IAbilityLogic currentSuperLogic = GetCurrentSuperLogic();
 
                             var result = currentSuperLogic != null
@@ -595,6 +750,29 @@ namespace MOBA.Core.Infrastructure
                                     Direction = executionContext.Direction,
                                     Value = 0f,
                                     IsSuper = true
+                                });
+                                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                                {
+                                    EventType = BrawlerPresentationEventType.SuperSucceeded,
+                                    Source = this,
+                                    AbilityDefinition = currentSuperDef,
+                                    Position = executionContext.Origin,
+                                    Direction = executionContext.Direction,
+                                    Value = 0f,
+                                    Tick = currentTick
+                                });
+                            }
+                            else
+                            {
+                                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                                {
+                                    EventType = BrawlerPresentationEventType.SuperFailed,
+                                    Source = this,
+                                    AbilityDefinition = currentSuperDef,
+                                    Position = executionContext.Origin,
+                                    Direction = executionContext.Direction,
+                                    Value = 0f,
+                                    Tick = currentTick
                                 });
                             }
                         }
@@ -647,6 +825,17 @@ namespace MOBA.Core.Infrastructure
 
                 State.AddIncomingDamageModifier(reductionMod);
             }
+
+            BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+            {
+                EventType = BrawlerPresentationEventType.HyperchargeStarted,
+                Source = this,
+                AbilityDefinition = def.EnhancedSuper != null ? def.EnhancedSuper : _definition.SuperAbility,
+                Position = transform.position,
+                Direction = transform.forward,
+                Value = 0f,
+                Tick = currentTick
+            });
 
             Debug.Log($"[SIM] Hypercharge Activated! {def.name} is now active.");
         }
