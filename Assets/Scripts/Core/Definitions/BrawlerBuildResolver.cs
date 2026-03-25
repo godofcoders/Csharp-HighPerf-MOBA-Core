@@ -74,6 +74,89 @@ namespace MOBA.Core.Definitions
             return true;
         }
 
+        public static bool TryResolveUnlockedOnly(
+            BrawlerDefinition brawler,
+            BrawlerBuildDefinition build,
+            int powerLevel,
+            out ResolvedBrawlerBuild resolved,
+            out string error)
+        {
+            resolved = null;
+            error = string.Empty;
+
+            if (brawler == null)
+            {
+                error = "BrawlerDefinition is null.";
+                return false;
+            }
+
+            if (build == null)
+            {
+                resolved = new ResolvedBrawlerBuild();
+                return true;
+            }
+
+            BrawlerBuildValidationResult fullValidation = BrawlerBuildValidator.Validate(brawler, build, 999);
+            if (!fullValidation.IsValid)
+            {
+                error = fullValidation.Message;
+                return false;
+            }
+
+            resolved = new ResolvedBrawlerBuild();
+
+            if (build.Selections == null || brawler.BuildLayout == null)
+                return true;
+
+            Dictionary<string, BrawlerBuildSlotDefinition> slotMap = BuildSlotMap(brawler);
+            List<BrawlerBuildSlotSelection> unlockedSelections = brawler.BuildUnlockedSelections(build, powerLevel);
+
+            for (int i = 0; i < unlockedSelections.Count; i++)
+            {
+                BrawlerBuildSlotSelection selection = unlockedSelections[i];
+                if (selection.SelectedOption == null)
+                    continue;
+
+                if (!slotMap.TryGetValue(selection.SlotId, out BrawlerBuildSlotDefinition slot))
+                    continue;
+
+                switch (slot.SlotType)
+                {
+                    case BrawlerBuildSlotType.Gadget:
+                        {
+                            if (selection.SelectedOption is GadgetDefinition gadget &&
+                                !resolved.Gadgets.Contains(gadget))
+                            {
+                                resolved.Gadgets.Add(gadget);
+                            }
+                            break;
+                        }
+
+                    case BrawlerBuildSlotType.StarPower:
+                    case BrawlerBuildSlotType.Gear:
+                        {
+                            if (selection.SelectedOption is PassiveDefinition passive &&
+                                !resolved.PassiveOptions.Contains(passive))
+                            {
+                                resolved.PassiveOptions.Add(passive);
+                            }
+                            break;
+                        }
+
+                    case BrawlerBuildSlotType.Hypercharge:
+                        {
+                            if (selection.SelectedOption is HyperchargeDefinition hypercharge)
+                            {
+                                resolved.Hypercharge = hypercharge;
+                            }
+                            break;
+                        }
+                }
+            }
+
+            return true;
+        }
+
         private static Dictionary<string, BrawlerBuildSlotDefinition> BuildSlotMap(BrawlerDefinition brawler)
         {
             Dictionary<string, BrawlerBuildSlotDefinition> map = new Dictionary<string, BrawlerBuildSlotDefinition>();

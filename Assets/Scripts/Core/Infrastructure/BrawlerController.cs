@@ -76,7 +76,7 @@ namespace MOBA.Core.Infrastructure
             BrawlerBuildDefinition buildToUse = GetBuildToUse();
             if (buildToUse != null)
             {
-                if (BrawlerBuildResolver.TryResolve(_definition, buildToUse, State.CurrentPowerLevel, out ResolvedBrawlerBuild resolved, out string error))
+                if (BrawlerBuildResolver.TryResolveUnlockedOnly(_definition, buildToUse, State.CurrentPowerLevel, out ResolvedBrawlerBuild resolved, out string error))
                 {
                     _resolvedBuildSource = buildToUse;
                     ApplyResolvedBuild(resolved);

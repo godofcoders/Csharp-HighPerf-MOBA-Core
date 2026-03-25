@@ -234,7 +234,7 @@ namespace MOBA.Core.Definitions
 
             if (DefaultBuild != null)
             {
-                BrawlerBuildValidationResult result = BrawlerBuildValidator.Validate(this, DefaultBuild, 11);
+                BrawlerBuildValidationResult result = BrawlerBuildValidator.Validate(this, DefaultBuild, 999);
                 if (!result.IsValid)
                 {
                     Debug.LogWarning($"[BrawlerDefinition] DefaultBuild '{DefaultBuild.name}' is invalid for '{name}'. {result.Message}");
@@ -247,7 +247,7 @@ namespace MOBA.Core.Definitions
             if (DefaultBuild == null)
                 return null;
 
-            BrawlerBuildValidationResult result = BrawlerBuildValidator.Validate(this, DefaultBuild, powerLevel);
+            BrawlerBuildValidationResult result = BrawlerBuildValidator.Validate(this, DefaultBuild, 999);
             if (!result.IsValid)
                 return null;
 
