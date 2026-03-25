@@ -253,5 +253,28 @@ namespace MOBA.Core.Definitions
 
             return DefaultBuild;
         }
+
+        public List<BrawlerBuildSlotSelection> BuildUnlockedSelections(BrawlerBuildDefinition build, int powerLevel)
+        {
+            List<BrawlerBuildSlotSelection> result = new List<BrawlerBuildSlotSelection>(8);
+
+            if (build == null || build.Selections == null || BuildLayout == null)
+                return result;
+
+            for (int i = 0; i < build.Selections.Length; i++)
+            {
+                BrawlerBuildSlotSelection selection = build.Selections[i];
+
+                if (string.IsNullOrWhiteSpace(selection.SlotId))
+                    continue;
+
+                if (!BuildLayout.IsSlotUnlocked(selection.SlotId, powerLevel))
+                    continue;
+
+                result.Add(selection);
+            }
+
+            return result;
+        }
     }
 }
