@@ -115,8 +115,7 @@ namespace MOBA.Core.Simulation
             RuntimeKit = new BrawlerRuntimeKit();
             RefreshRuntimeBuildUnlockState();
 
-            RemainingGadgets = definition.Gadget != null ? definition.Gadget.MaxCharges : 0;
-
+            RefreshGadgetChargesFromRuntimeKit();
             RebuildProgressionStats(false);
             CurrentHealth = MaxHealth.Value;
 
@@ -679,6 +678,114 @@ namespace MOBA.Core.Simulation
         public HyperchargeDefinition GetCurrentHyperchargeDefinition()
         {
             return RuntimeKit?.HyperchargeDefinition ?? EquippedHypercharge;
+        }
+
+        public BrawlerActionBlockReason GetMainAttackBlockReason(uint currentTick)
+        {
+            if (IsDead)
+                return BrawlerActionBlockReason.Dead;
+
+            if (!CanUseActionInput(currentTick))
+                return BrawlerActionBlockReason.ActionLocked;
+
+            if (!IsAbilityReady(AbilityRuntimeSlot.MainAttack, currentTick))
+                return BrawlerActionBlockReason.AbilityCooldown;
+
+            if (Ammo == null || Ammo.AvailableBars < 1)
+                return BrawlerActionBlockReason.NoAmmo;
+
+            return BrawlerActionBlockReason.None;
+        }
+
+        public BrawlerActionBlockReason GetGadgetBlockReason(uint currentTick)
+        {
+            if (IsDead)
+                return BrawlerActionBlockReason.Dead;
+
+            if (!CanUseActionInput(currentTick))
+                return BrawlerActionBlockReason.ActionLocked;
+
+            if (!IsAbilityReady(AbilityRuntimeSlot.Gadget, currentTick))
+                return BrawlerActionBlockReason.AbilityCooldown;
+
+            if (RemainingGadgets <= 0)
+                return BrawlerActionBlockReason.NoGadgetCharges;
+
+            return BrawlerActionBlockReason.None;
+        }
+
+        public BrawlerActionBlockReason GetSuperBlockReason(uint currentTick)
+        {
+            if (IsDead)
+                return BrawlerActionBlockReason.Dead;
+
+            if (!CanUseActionInput(currentTick))
+                return BrawlerActionBlockReason.ActionLocked;
+
+            if (!IsAbilityReady(AbilityRuntimeSlot.Super, currentTick))
+                return BrawlerActionBlockReason.AbilityCooldown;
+
+            if (SuperCharge == null || !SuperCharge.IsReady)
+                return BrawlerActionBlockReason.SuperNotReady;
+
+            return BrawlerActionBlockReason.None;
+        }
+
+        public BrawlerActionBlockReason GetHyperchargeBlockReason(uint currentTick)
+        {
+            if (IsDead)
+                return BrawlerActionBlockReason.Dead;
+
+            if (!CanUseActionInput(currentTick))
+                return BrawlerActionBlockReason.ActionLocked;
+
+            if (Hypercharge == null || Hypercharge.ChargePercent < 1f)
+                return BrawlerActionBlockReason.HyperchargeNotReady;
+
+            return BrawlerActionBlockReason.None;
+        }
+
+        public bool CanUseHypercharge(uint currentTick)
+        {
+            return GetHyperchargeBlockReason(currentTick) == BrawlerActionBlockReason.None;
+        }
+
+        public bool CanUseMainAttack(uint currentTick)
+        {
+            return GetMainAttackBlockReason(currentTick) == BrawlerActionBlockReason.None;
+        }
+
+        public bool CanUseGadget(uint currentTick)
+        {
+            return GetGadgetBlockReason(currentTick) == BrawlerActionBlockReason.None;
+        }
+
+        public bool CanUseSuper(uint currentTick)
+        {
+            return GetSuperBlockReason(currentTick) == BrawlerActionBlockReason.None;
+        }
+
+        public string GetActionBlockReasonText(BrawlerActionBlockReason reason)
+        {
+            switch (reason)
+            {
+                case BrawlerActionBlockReason.None: return "Ready";
+                case BrawlerActionBlockReason.MissingDefinition: return "Missing Definition";
+                case BrawlerActionBlockReason.Dead: return "Dead";
+                case BrawlerActionBlockReason.ActionLocked: return "Action Locked";
+                case BrawlerActionBlockReason.AbilityCooldown: return "Cooldown Active";
+                case BrawlerActionBlockReason.NoAmmo: return "No Ammo";
+                case BrawlerActionBlockReason.NoGadgetCharges: return "No Gadget Charges";
+                case BrawlerActionBlockReason.SuperNotReady: return "Super Not Ready";
+                case BrawlerActionBlockReason.HyperchargeNotReady: return "Hypercharge Not Ready";
+                default: return "Unknown";
+            }
+        }
+
+        public void RefreshGadgetChargesFromRuntimeKit()
+        {
+            GadgetDefinition gadget = RuntimeKit?.GadgetDefinition ?? Definition?.Gadget;
+            RemainingGadgets = gadget != null ? gadget.MaxCharges : 0;
         }
     }
 }

@@ -25,6 +25,9 @@ namespace MOBA.Core.Infrastructure
         private HyperchargeDefinition _equippedHypercharge;
         private BrawlerBuildDefinition _resolvedBuildSource;
 
+        private readonly List<BrawlerCommand> _commandBuffer = new List<BrawlerCommand>(8);
+        private IBrawlerCommandSource _commandSource;
+
         public BrawlerDefinition Definition => _definition;
         public BrawlerState State { get; private set; }
 
@@ -33,8 +36,6 @@ namespace MOBA.Core.Infrastructure
         public Vector3 CurrentPosition => transform.position;
         public float CollisionRadius => 0.5f;
         public int EntityID => gameObject.GetInstanceID();
-        private readonly List<BrawlerCommand> _commandBuffer = new List<BrawlerCommand>(8);
-        private IBrawlerCommandSource _commandSource;
 
         protected override void Awake()
         {
@@ -49,6 +50,7 @@ namespace MOBA.Core.Infrastructure
             if (!_isInitialized)
                 InternalInitialize(_definition, _team);
         }
+
         public void SetCommandSource(IBrawlerCommandSource source)
         {
             _commandSource = source;
@@ -89,18 +91,21 @@ namespace MOBA.Core.Infrastructure
                 {
                     _resolvedBuildSource = buildToUse;
                     ApplyResolvedBuild(resolved);
+                    State.RefreshGadgetChargesFromRuntimeKit();
                 }
                 else
                 {
                     Debug.LogWarning($"[Build] Failed to resolve build '{buildToUse.name}' for '{_definition.name}': {error}");
                     _resolvedBuildSource = null;
                     ApplyLegacyFallbackBuild();
+                    State.RefreshGadgetChargesFromRuntimeKit();
                 }
             }
             else
             {
                 _resolvedBuildSource = null;
                 ApplyLegacyFallbackBuild();
+                State.RefreshGadgetChargesFromRuntimeKit();
             }
 
             _lastTickPosition = transform.position;
@@ -121,13 +126,13 @@ namespace MOBA.Core.Infrastructure
 
             _gadgetLogic = _definition.Gadget?.CreateLogic();
 
+            _equippedHypercharge = _definition.Hypercharge;
+            State.SetEquippedHypercharge(_equippedHypercharge);
+
             State.RuntimeKit.SetMainAttack(_definition.MainAttack, _mainAttack);
             State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
             State.RuntimeKit.SetGadget(_definition.Gadget, _gadgetLogic);
             State.RuntimeKit.SetHypercharge(_equippedHypercharge);
-
-            _equippedHypercharge = _definition.Hypercharge;
-            State.SetEquippedHypercharge(_equippedHypercharge);
 
             List<PassiveDefinition> fallbackPassives = _definition.BuildDefaultPassiveLoadout();
             State.SetPassiveLoadout(fallbackPassives, false);
@@ -328,7 +333,7 @@ namespace MOBA.Core.Infrastructure
                 Debug.Log("[SIM] Hypercharge Ended");
             });
 
-            if (_inputBuffer.HasPending && State.CanUseActionInput(currentTick) && CanPerformAction())
+            if (_inputBuffer.HasPending && State.CanUseActionInput(currentTick))
             {
                 var cmd = _inputBuffer.Consume();
                 ExecuteCommand(cmd);
@@ -346,7 +351,9 @@ namespace MOBA.Core.Infrastructure
 
         private bool CanPerformAction()
         {
-            return State.Ammo.AvailableBars >= 1;
+            return State != null &&
+                   State.Ammo != null &&
+                   State.Ammo.AvailableBars >= 1;
         }
 
         private void ProcessCommand(BrawlerCommand cmd)
@@ -442,22 +449,25 @@ namespace MOBA.Core.Infrastructure
             {
                 case InputCommandType.MainAttack:
                     {
-                        if (_definition.MainAttack != null &&
-                            State.IsAbilityReady(AbilityRuntimeSlot.MainAttack, currentTick) &&
+                        AbilityDefinition currentMainAttackDef = State.GetCurrentMainAttackDefinition();
+                        IAbilityLogic mainAttackLogic = State?.RuntimeKit?.MainAttackLogic ?? _mainAttack;
+
+                        if (currentMainAttackDef != null &&
+                            State.CanUseMainAttack(currentTick) &&
                             State.Ammo.Consume(1))
                         {
                             State.EnterActionState(
                                 BrawlerActionStateType.CastingMainAttack,
                                 currentTick,
-                                _definition.MainAttack.GetCastDurationTicks(),
-                                _definition.MainAttack.AllowMovementDuringCast,
-                                _definition.MainAttack.AllowActionInputDuringCast,
-                                _definition.MainAttack.IsInterruptible);
+                                currentMainAttackDef.GetCastDurationTicks(),
+                                currentMainAttackDef.AllowMovementDuringCast,
+                                currentMainAttackDef.AllowActionInputDuringCast,
+                                currentMainAttackDef.IsInterruptible);
 
                             var executionContext = new AbilityExecutionContext
                             {
                                 Source = this,
-                                AbilityDefinition = _definition.MainAttack,
+                                AbilityDefinition = currentMainAttackDef,
                                 SlotType = AbilitySlotType.MainAttack,
                                 Origin = transform.position,
                                 Direction = cmd.Direction,
@@ -472,7 +482,7 @@ namespace MOBA.Core.Infrastructure
                             {
                                 EventType = AbilityEventType.CastStarted,
                                 Source = this,
-                                AbilityDefinition = _definition.MainAttack,
+                                AbilityDefinition = currentMainAttackDef,
                                 SlotType = AbilitySlotType.MainAttack,
                                 Origin = executionContext.Origin,
                                 Direction = executionContext.Direction,
@@ -485,41 +495,42 @@ namespace MOBA.Core.Infrastructure
                                 EventType = CombatPresentationEventType.AbilityCastStarted,
                                 Source = this,
                                 Target = null,
-                                AbilityDefinition = _definition.MainAttack,
+                                AbilityDefinition = currentMainAttackDef,
                                 SlotType = AbilitySlotType.MainAttack,
                                 Position = executionContext.Origin,
                                 Direction = executionContext.Direction,
                                 Value = 0f,
                                 IsSuper = false
                             });
+
                             BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
                             {
                                 EventType = BrawlerPresentationEventType.MainAttackStarted,
                                 Source = this,
-                                AbilityDefinition = _definition.MainAttack,
+                                AbilityDefinition = currentMainAttackDef,
                                 Position = executionContext.Origin,
                                 Direction = executionContext.Direction,
                                 Value = 0f,
                                 Tick = currentTick
                             });
 
-                            var result = _mainAttack != null
-                                ? _mainAttack.Execute(this, executionContext)
-                                : AbilityExecutionResult.Failed(_definition.MainAttack, AbilitySlotType.MainAttack);
+                            var result = mainAttackLogic != null
+                                ? mainAttackLogic.Execute(this, executionContext)
+                                : AbilityExecutionResult.Failed(currentMainAttackDef, AbilitySlotType.MainAttack);
 
                             if (result.Success)
                             {
                                 State.StartAbilityCooldown(
                                     AbilityRuntimeSlot.MainAttack,
                                     currentTick,
-                                    _definition.MainAttack.Cooldown);
+                                    currentMainAttackDef.Cooldown);
                             }
 
                             AbilityEventBus.Raise(new AbilityExecutionEvent
                             {
                                 EventType = result.Success ? AbilityEventType.CastSucceeded : AbilityEventType.CastFailed,
                                 Source = this,
-                                AbilityDefinition = _definition.MainAttack,
+                                AbilityDefinition = currentMainAttackDef,
                                 SlotType = AbilitySlotType.MainAttack,
                                 Origin = executionContext.Origin,
                                 Direction = executionContext.Direction,
@@ -534,7 +545,7 @@ namespace MOBA.Core.Infrastructure
                                     EventType = CombatPresentationEventType.AbilityCastSucceeded,
                                     Source = this,
                                     Target = null,
-                                    AbilityDefinition = _definition.MainAttack,
+                                    AbilityDefinition = currentMainAttackDef,
                                     SlotType = AbilitySlotType.MainAttack,
                                     Position = executionContext.Origin,
                                     Direction = executionContext.Direction,
@@ -546,7 +557,7 @@ namespace MOBA.Core.Infrastructure
                                 {
                                     EventType = BrawlerPresentationEventType.MainAttackSucceeded,
                                     Source = this,
-                                    AbilityDefinition = _definition.MainAttack,
+                                    AbilityDefinition = currentMainAttackDef,
                                     Position = executionContext.Origin,
                                     Direction = executionContext.Direction,
                                     Value = 0f,
@@ -559,7 +570,7 @@ namespace MOBA.Core.Infrastructure
                                 {
                                     EventType = BrawlerPresentationEventType.MainAttackFailed,
                                     Source = this,
-                                    AbilityDefinition = _definition.MainAttack,
+                                    AbilityDefinition = currentMainAttackDef,
                                     Position = executionContext.Origin,
                                     Direction = executionContext.Direction,
                                     Value = 0f,
@@ -576,8 +587,7 @@ namespace MOBA.Core.Infrastructure
                         GadgetDefinition currentGadgetDef = GetActiveGadgetDefinition();
 
                         if (currentGadgetDef != null &&
-                            State.RemainingGadgets > 0 &&
-                            State.IsAbilityReady(AbilityRuntimeSlot.Gadget, currentTick))
+                            State.CanUseGadget(currentTick))
                         {
                             State.EnterActionState(
                                 BrawlerActionStateType.CastingGadget,
@@ -711,8 +721,7 @@ namespace MOBA.Core.Infrastructure
                         AbilityDefinition currentSuperDef = State.GetCurrentSuperDefinition();
 
                         if (currentSuperDef != null &&
-                            State.SuperCharge.IsReady &&
-                            State.IsAbilityReady(AbilityRuntimeSlot.Super, currentTick))
+                            State.CanUseSuper(currentTick))
                         {
                             State.EnterActionState(
                                 BrawlerActionStateType.CastingSuper,
@@ -818,6 +827,7 @@ namespace MOBA.Core.Infrastructure
                                     Value = 0f,
                                     IsSuper = true
                                 });
+
                                 BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
                                 {
                                     EventType = BrawlerPresentationEventType.SuperSucceeded,
@@ -855,10 +865,10 @@ namespace MOBA.Core.Infrastructure
             if (def == null)
                 return;
 
-            if (State.Hypercharge.ChargePercent < 1.0f)
-                return;
-
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+
+            if (!State.CanUseHypercharge(currentTick))
+                return;
 
             State.ClearHyperchargeRuntimeModifiers();
             State.Hypercharge.Activate(currentTick, def.DurationSeconds);
@@ -917,7 +927,6 @@ namespace MOBA.Core.Infrastructure
 
             SpawnManager.Instance.RequestRespawn(this, _team);
         }
-
         public void Respawn(Vector3 position)
         {
             transform.position = position;
@@ -925,6 +934,7 @@ namespace MOBA.Core.Infrastructure
 
             State.Reset();
             State.SetEquippedHypercharge(_equippedHypercharge ?? _definition.Hypercharge);
+            State.RefreshGadgetChargesFromRuntimeKit();
 
             gameObject.SetActive(true);
             CombatRegistry.Register(this);
@@ -944,6 +954,5 @@ namespace MOBA.Core.Infrastructure
         {
             State?.AddSuperCharge(amount);
         }
-
     }
 }
