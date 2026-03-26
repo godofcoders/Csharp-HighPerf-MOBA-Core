@@ -79,6 +79,9 @@ namespace MOBA.Core.Infrastructure
             _mainAttack = _definition.MainAttack?.CreateLogic();
             _superAbility = _definition.SuperAbility?.CreateLogic();
 
+            State.RuntimeKit.SetMainAttack(_definition.MainAttack, _mainAttack);
+            State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
+
             BrawlerBuildDefinition buildToUse = GetBuildToUse();
             if (buildToUse != null)
             {
@@ -117,6 +120,11 @@ namespace MOBA.Core.Infrastructure
                 _equippedGadgets.Add(_definition.Gadget);
 
             _gadgetLogic = _definition.Gadget?.CreateLogic();
+
+            State.RuntimeKit.SetMainAttack(_definition.MainAttack, _mainAttack);
+            State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
+            State.RuntimeKit.SetGadget(_definition.Gadget, _gadgetLogic);
+            State.RuntimeKit.SetHypercharge(_equippedHypercharge);
 
             _equippedHypercharge = _definition.Hypercharge;
             State.SetEquippedHypercharge(_equippedHypercharge);
@@ -193,6 +201,11 @@ namespace MOBA.Core.Infrastructure
 
             State.SetPassiveLoadout(resolved.PassiveOptions, false);
 
+            State.RuntimeKit.SetMainAttack(_definition.MainAttack, _mainAttack);
+            State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
+            State.RuntimeKit.SetGadget(activeGadget, _gadgetLogic);
+            State.RuntimeKit.SetHypercharge(_equippedHypercharge);
+
             StarPowerDefinition equippedStarPower = null;
             List<GearDefinition> equippedGears = new List<GearDefinition>(2);
 
@@ -226,6 +239,9 @@ namespace MOBA.Core.Infrastructure
 
         private GadgetDefinition GetActiveGadgetDefinition()
         {
+            if (State?.RuntimeKit?.GadgetDefinition != null)
+                return State.RuntimeKit.GadgetDefinition;
+
             if (_equippedGadgets.Count > 0 && _equippedGadgets[0] != null)
                 return _equippedGadgets[0];
 
@@ -238,8 +254,11 @@ namespace MOBA.Core.Infrastructure
             if (currentSuperDef == null)
                 return null;
 
-            if (_definition != null && currentSuperDef == _definition.SuperAbility)
-                return _superAbility;
+            AbilityDefinition baseSuperDef = State?.RuntimeKit?.SuperDefinition ?? _definition?.SuperAbility;
+            IAbilityLogic baseSuperLogic = State?.RuntimeKit?.SuperLogic ?? _superAbility;
+
+            if (currentSuperDef == baseSuperDef)
+                return baseSuperLogic;
 
             return currentSuperDef.CreateLogic();
         }

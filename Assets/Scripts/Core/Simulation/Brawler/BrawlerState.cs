@@ -63,6 +63,7 @@ namespace MOBA.Core.Simulation
         public object HyperchargeModifierSource { get; } = new object();
 
         public BrawlerRuntimeBuildState RuntimeBuild { get; private set; }
+        public BrawlerRuntimeKit RuntimeKit { get; private set; }
 
         public void SetEquippedHypercharge(HyperchargeDefinition definition)
         {
@@ -71,6 +72,8 @@ namespace MOBA.Core.Simulation
 
         public AbilityDefinition GetCurrentSuperDefinition()
         {
+            AbilityDefinition baseSuper = RuntimeKit?.SuperDefinition ?? Definition?.SuperAbility;
+
             if (Hypercharge.IsActive &&
                 EquippedHypercharge != null &&
                 EquippedHypercharge.EnhancedSuper != null)
@@ -78,7 +81,7 @@ namespace MOBA.Core.Simulation
                 return EquippedHypercharge.EnhancedSuper;
             }
 
-            return Definition.SuperAbility;
+            return baseSuper;
         }
 
         public void ClearHyperchargeRuntimeModifiers()
@@ -109,6 +112,7 @@ namespace MOBA.Core.Simulation
             IncomingMovementModifiers = new MovementModifierCollection();
             ActiveStatusEffects = new List<IStatusEffectInstance>(8);
             RuntimeBuild = new BrawlerRuntimeBuildState();
+            RuntimeKit = new BrawlerRuntimeKit();
             RefreshRuntimeBuildUnlockState();
 
             RemainingGadgets = definition.Gadget != null ? definition.Gadget.MaxCharges : 0;
@@ -395,6 +399,7 @@ namespace MOBA.Core.Simulation
             IncomingMovementModifiers.Clear();
             ActiveStatusEffects.Clear();
             RuntimeBuild.Clear();
+            RuntimeKit.Clear();
             RefreshRuntimeBuildUnlockState();
 
             ClearActionState();
@@ -654,6 +659,26 @@ namespace MOBA.Core.Simulation
         public bool HasAnyUnlockedGearSlot()
         {
             return RuntimeBuild != null && (RuntimeBuild.IsGearSlot1Unlocked || RuntimeBuild.IsGearSlot2Unlocked);
+        }
+
+        public AbilityDefinition GetCurrentMainAttackDefinition()
+        {
+            return RuntimeKit?.MainAttackDefinition ?? Definition?.MainAttack;
+        }
+
+        public AbilityDefinition GetBaseSuperDefinition()
+        {
+            return RuntimeKit?.SuperDefinition ?? Definition?.SuperAbility;
+        }
+
+        public GadgetDefinition GetCurrentGadgetDefinition()
+        {
+            return RuntimeKit?.GadgetDefinition;
+        }
+
+        public HyperchargeDefinition GetCurrentHyperchargeDefinition()
+        {
+            return RuntimeKit?.HyperchargeDefinition ?? EquippedHypercharge;
         }
     }
 }
