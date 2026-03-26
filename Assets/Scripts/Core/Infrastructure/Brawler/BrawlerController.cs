@@ -36,6 +36,7 @@ namespace MOBA.Core.Infrastructure
         public Vector3 CurrentPosition => transform.position;
         public float CollisionRadius => 0.5f;
         public int EntityID => gameObject.GetInstanceID();
+        private readonly BrawlerDebugSnapshot _debugSnapshot = new BrawlerDebugSnapshot();
 
         protected override void Awake()
         {
@@ -347,6 +348,7 @@ namespace MOBA.Core.Infrastructure
             _gadgetLogic?.Tick(currentTick);
 
             UpdateVisualStealth();
+            UpdateDebugSnapshot(currentTick);
         }
 
         private void ProcessCommand(BrawlerCommand cmd)
@@ -400,6 +402,7 @@ namespace MOBA.Core.Infrastructure
             base.OnDisable();
             SimulationClock.Grid?.Remove(this, transform.position);
             CombatRegistry.Unregister(this);
+            BrawlerDebugTracker.Remove(this);
         }
 
         public void FireProjectile(
@@ -1086,6 +1089,68 @@ namespace MOBA.Core.Infrastructure
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
             blockReason = State.GetHyperchargeBlockReason(currentTick);
             return blockReason == BrawlerActionBlockReason.None;
+        }
+
+        private void UpdateDebugSnapshot(uint currentTick)
+        {
+            if (State == null)
+                return;
+
+            _debugSnapshot.ClearLists();
+
+            _debugSnapshot.BrawlerName = Definition != null ? Definition.BrawlerName : name;
+            _debugSnapshot.EntityId = EntityID;
+
+            _debugSnapshot.CurrentHealth = State.CurrentHealth;
+            _debugSnapshot.MaxHealth = State.MaxHealth.Value;
+            _debugSnapshot.CurrentPowerLevel = State.CurrentPowerLevel;
+
+            _debugSnapshot.ActionState = State.ActionState.StateType.ToString();
+            _debugSnapshot.CanMove = State.CanMove(currentTick);
+            _debugSnapshot.CanUseActionInput = State.CanUseActionInput(currentTick);
+
+            _debugSnapshot.MainAttackReady = State.CanUseMainAttack(currentTick);
+            _debugSnapshot.GadgetReady = State.CanUseGadget(currentTick);
+            _debugSnapshot.SuperReady = State.CanUseSuper(currentTick);
+            _debugSnapshot.HyperchargeReady = State.CanUseHypercharge(currentTick);
+
+            _debugSnapshot.MainAttackBlockReason = State.GetActionBlockReasonText(State.GetMainAttackBlockReason(currentTick));
+            _debugSnapshot.GadgetBlockReason = State.GetActionBlockReasonText(State.GetGadgetBlockReason(currentTick));
+            _debugSnapshot.SuperBlockReason = State.GetActionBlockReasonText(State.GetSuperBlockReason(currentTick));
+            _debugSnapshot.HyperchargeBlockReason = State.GetActionBlockReasonText(State.GetHyperchargeBlockReason(currentTick));
+
+            _debugSnapshot.EquippedGadget = State.RuntimeBuild?.EquippedGadget != null ? State.RuntimeBuild.EquippedGadget.name : "None";
+            _debugSnapshot.EquippedStarPower = State.RuntimeBuild?.EquippedStarPower != null ? State.RuntimeBuild.EquippedStarPower.name : "None";
+            _debugSnapshot.EquippedHypercharge = State.RuntimeBuild?.EquippedHypercharge != null ? State.RuntimeBuild.EquippedHypercharge.name : "None";
+
+            if (State.RuntimeBuild != null)
+            {
+                for (int i = 0; i < State.RuntimeBuild.EquippedGears.Count; i++)
+                {
+                    var gear = State.RuntimeBuild.EquippedGears[i];
+                    _debugSnapshot.EquippedGears.Add(gear != null ? gear.name : "None");
+                }
+
+                _debugSnapshot.Gear1Unlocked = State.RuntimeBuild.IsGearSlot1Unlocked;
+                _debugSnapshot.Gear2Unlocked = State.RuntimeBuild.IsGearSlot2Unlocked;
+                _debugSnapshot.GadgetUnlocked = State.RuntimeBuild.IsGadgetSlotUnlocked;
+                _debugSnapshot.StarPowerUnlocked = State.RuntimeBuild.IsStarPowerSlotUnlocked;
+                _debugSnapshot.HyperchargeUnlocked = State.RuntimeBuild.IsHyperchargeSlotUnlocked;
+            }
+
+            for (int i = 0; i < State.EquippedPassives.Count; i++)
+            {
+                PassiveDefinition passive = State.EquippedPassives[i];
+                _debugSnapshot.EquippedPassives.Add(passive != null ? passive.name : "None");
+            }
+
+            _debugSnapshot.HyperchargeActive = State.Hypercharge.IsActive;
+            _debugSnapshot.HyperchargeChargePercent = State.Hypercharge.ChargePercent;
+            _debugSnapshot.SuperCharged = State.SuperCharge.IsReady;
+
+            _debugSnapshot.Position = Position;
+
+            BrawlerDebugTracker.UpdateSnapshot(this, _debugSnapshot);
         }
     }
 }
