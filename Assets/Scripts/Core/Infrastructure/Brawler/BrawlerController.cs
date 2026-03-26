@@ -33,6 +33,8 @@ namespace MOBA.Core.Infrastructure
         public Vector3 CurrentPosition => transform.position;
         public float CollisionRadius => 0.5f;
         public int EntityID => gameObject.GetInstanceID();
+        private readonly List<BrawlerCommand> _commandBuffer = new List<BrawlerCommand>(8);
+        private IBrawlerCommandSource _commandSource;
 
         protected override void Awake()
         {
@@ -46,6 +48,10 @@ namespace MOBA.Core.Infrastructure
 
             if (!_isInitialized)
                 InternalInitialize(_definition, _team);
+        }
+        public void SetCommandSource(IBrawlerCommandSource source)
+        {
+            _commandSource = source;
         }
 
         public void InitializeFromMatchmaking(BrawlerDefinition def, TeamType team)
@@ -259,6 +265,22 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
+            _commandBuffer.Clear();
+            _commandSource?.CollectCommands(_commandBuffer, currentTick);
+
+            bool receivedMoveCommand = false;
+
+            for (int i = 0; i < _commandBuffer.Count; i++)
+            {
+                if (_commandBuffer[i].Type == BrawlerCommandType.Move)
+                    receivedMoveCommand = true;
+
+                ProcessCommand(_commandBuffer[i]);
+            }
+
+            if (!receivedMoveCommand)
+                SetMoveInput(Vector3.zero);
+
             State.TickEffects(currentTick);
             State.TickPassives(currentTick);
             State.UpdateActionState(currentTick);
@@ -270,22 +292,22 @@ namespace MOBA.Core.Infrastructure
                 SetMoveInput(Vector3.zero);
 
             State.Hypercharge.Tick(currentTick, () =>
-   {
-       State.ClearHyperchargeRuntimeModifiers();
+            {
+                State.ClearHyperchargeRuntimeModifiers();
 
-       BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
-       {
-           EventType = BrawlerPresentationEventType.HyperchargeEnded,
-           Source = this,
-           AbilityDefinition = State.GetCurrentSuperDefinition(),
-           Position = transform.position,
-           Direction = transform.forward,
-           Value = 0f,
-           Tick = currentTick
-       });
+                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                {
+                    EventType = BrawlerPresentationEventType.HyperchargeEnded,
+                    Source = this,
+                    AbilityDefinition = State.GetCurrentSuperDefinition(),
+                    Position = transform.position,
+                    Direction = transform.forward,
+                    Value = 0f,
+                    Tick = currentTick
+                });
 
-       Debug.Log("[SIM] Hypercharge Ended");
-   });
+                Debug.Log("[SIM] Hypercharge Ended");
+            });
 
             if (_inputBuffer.HasPending && State.CanUseActionInput(currentTick) && CanPerformAction())
             {
@@ -306,6 +328,32 @@ namespace MOBA.Core.Infrastructure
         private bool CanPerformAction()
         {
             return State.Ammo.AvailableBars >= 1;
+        }
+
+        private void ProcessCommand(BrawlerCommand cmd)
+        {
+            switch (cmd.Type)
+            {
+                case BrawlerCommandType.Move:
+                    SetMoveInput(cmd.Direction);
+                    break;
+
+                case BrawlerCommandType.MainAttack:
+                    BufferAttack(InputCommandType.MainAttack, cmd.Direction);
+                    break;
+
+                case BrawlerCommandType.Gadget:
+                    BufferAttack(InputCommandType.Gadget, cmd.Direction);
+                    break;
+
+                case BrawlerCommandType.Super:
+                    BufferAttack(InputCommandType.Super, cmd.Direction);
+                    break;
+
+                case BrawlerCommandType.Hypercharge:
+                    ActivateHypercharge();
+                    break;
+            }
         }
 
         private void ProcessMovement()

@@ -81,11 +81,12 @@ namespace MOBA.Core.Infrastructure
                 }
                 else
                 {
-                    var mobileInput = FindObjectOfType<MobileInputBridge>();
-                    if (mobileInput != null)
-                        mobileInput.SetTarget(controller);
+                    var playerSource = go.GetComponent<PlayerCommandSource>();
+                    if (playerSource == null)
+                        playerSource = go.AddComponent<PlayerCommandSource>();
 
-                    // camera follow fix
+                    controller.SetCommandSource(playerSource);
+
                     SetPlayerTarget(controller.transform);
                 }
             }
