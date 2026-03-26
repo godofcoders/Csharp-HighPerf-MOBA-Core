@@ -14,6 +14,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly AIObjectiveMemory _objectiveMemory;
         private readonly AITeamCoordinator _teamCoordinator;
         private readonly AISpacingUtility _spacingUtility;
+        private readonly AICommandSource _commandSource;
 
         private uint _nextFallbackWanderTick;
         private uint _nextStrafeTick;
@@ -26,7 +27,8 @@ namespace MOBA.Core.Simulation.AI
             AIAbilityDecider abilityDecider,
             AISuperDecider superDecider,
             AIObjectiveMemory objectiveMemory,
-            AITeamCoordinator teamCoordinator)
+            AITeamCoordinator teamCoordinator,
+            AICommandSource commandSource)
         {
             _brawler = brawler;
             _profile = profile;
@@ -36,6 +38,7 @@ namespace MOBA.Core.Simulation.AI
             _objectiveMemory = objectiveMemory;
             _teamCoordinator = teamCoordinator;
             _spacingUtility = new AISpacingUtility(brawler);
+            _commandSource = commandSource;
         }
 
         public void Execute(

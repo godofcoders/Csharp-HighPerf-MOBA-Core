@@ -10,14 +10,16 @@ namespace MOBA.Core.Simulation.AI
     {
         private readonly BrawlerController _self;
         private readonly BrawlerAIProfile _profile;
+        private readonly AICommandSource _commandSource;
         private readonly List<ISpatialEntity> _clusterBuffer;
 
         private uint _nextSuperDecisionTick;
 
-        public AISuperDecider(BrawlerController self, BrawlerAIProfile profile, int bufferCapacity = 16)
+        public AISuperDecider(BrawlerController self, BrawlerAIProfile profile, AICommandSource commandSource, int bufferCapacity = 16)
         {
             _self = self;
             _profile = profile;
+            _commandSource = commandSource;
             _clusterBuffer = new List<ISpatialEntity>(bufferCapacity);
         }
 
@@ -49,7 +51,7 @@ namespace MOBA.Core.Simulation.AI
             if (!shouldUse)
                 return;
 
-            _self.BufferAttack(InputCommandType.Super, toTarget.normalized);
+            _commandSource?.QueueSuper(toTarget.normalized);
             _nextSuperDecisionTick = currentTick + _profile.SuperDecisionCooldownTicks;
         }
 
@@ -65,18 +67,12 @@ namespace MOBA.Core.Simulation.AI
             float healthRatio = targetBrawler.State.CurrentHealth /
                                 Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
 
-            // EASY STATUS OPPORTUNITIES
             if (targetBrawler.State.HasStatus(StatusEffectType.Stun))
-            {
                 return true;
-            }
 
             if (targetBrawler.State.HasStatus(StatusEffectType.Slow))
-            {
                 return true;
-            }
 
-            // TAG-DRIVEN LOGIC
             if (AIAbilityIntentUtility.IsFinisher(super) &&
                 healthRatio <= _profile.SuperLowHealthTargetThreshold)
             {
@@ -87,9 +83,7 @@ namespace MOBA.Core.Simulation.AI
             {
                 float selfHealthRatio = _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value);
                 if (selfHealthRatio <= _profile.LowHealthRetreatRatio)
-                {
                     return true;
-                }
 
                 if (_self.State.ThreatTracker != null)
                 {
@@ -99,16 +93,12 @@ namespace MOBA.Core.Simulation.AI
                         240);
 
                     if (threat > 0f)
-                    {
                         return true;
-                    }
                 }
             }
 
             if (AIAbilityIntentUtility.IsEngage(super))
-            {
                 return true;
-            }
 
             if (super is AoEAbilityDefinition aoe)
             {
@@ -118,9 +108,7 @@ namespace MOBA.Core.Simulation.AI
             }
 
             if (super is ProjectileAbilityDefinition)
-            {
                 return true;
-            }
 
             return superRange >= 6f;
         }

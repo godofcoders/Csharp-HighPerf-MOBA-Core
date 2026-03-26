@@ -19,6 +19,7 @@ namespace MOBA.Core.Infrastructure
         private AIActionExecutor _actionExecutor;
         private AIObjectiveMemory _objectiveMemory;
         private AITeamCoordinator _teamCoordinator;
+        private AICommandSource _commandSource;
 
         private BrawlerAIProfile _profile;
 
@@ -51,7 +52,7 @@ namespace MOBA.Core.Infrastructure
 
             if (_brawler.State.HasStatus(StatusEffectType.Stun))
             {
-                _brawler.SetMoveInput(Vector3.zero);
+                _commandSource?.QueueMove(Vector3.zero);
                 return;
             }
 
@@ -60,6 +61,7 @@ namespace MOBA.Core.Infrastructure
                 _perception.UpdateTarget(_brawler, _targetInfo, currentTick);
                 ScheduleNextSense(currentTick);
             }
+
             _teamCoordinator.UpdateTeamSignals(_targetInfo, currentTick);
 
             _utilityScorer.CollectActionScores(_targetInfo, currentTick, _debugScores);
@@ -162,16 +164,21 @@ namespace MOBA.Core.Infrastructure
             _profile.ApplyArchetypeDefaults(_brawler.Definition.Archetype);
 
             _targetInfo = new AITargetInfo();
-            _navAgent = new NavigationAgent(_brawler);
+
+            _commandSource = new AICommandSource();
+            _brawler.SetCommandSource(_commandSource);
+
+            _navAgent = new NavigationAgent(_brawler, _commandSource);
             _targetScorer = new AITargetScorer(_brawler, _profile);
             _objectiveMemory = new AIObjectiveMemory();
             _teamCoordinator = new AITeamCoordinator(_brawler);
 
             _perception = new AIPerception(_profile.DetectionRadius, _profile.MemoryDurationTicks, _targetScorer);
-            _abilityDecider = new AIAbilityDecider(_brawler, _profile);
-            _superDecider = new AISuperDecider(_brawler, _profile);
+            _abilityDecider = new AIAbilityDecider(_brawler, _profile, _commandSource);
+            _superDecider = new AISuperDecider(_brawler, _profile, _commandSource);
+
             _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory, _teamCoordinator);
-            _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory, _teamCoordinator);
+            _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory, _teamCoordinator, _commandSource);
 
             var objectivePoints = FindObjectsOfType<AIObjectivePoint>();
             for (int i = 0; i < objectivePoints.Length; i++)
@@ -226,6 +233,7 @@ namespace MOBA.Core.Infrastructure
             var super = _brawler.Definition?.SuperAbility;
             return super != null ? super.GetAIMaxRange() : 6f;
         }
+
         protected override void OnDisable()
         {
             base.OnDisable();

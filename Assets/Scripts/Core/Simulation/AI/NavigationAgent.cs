@@ -8,6 +8,7 @@ namespace MOBA.Core.Simulation.AI
     {
         private readonly BrawlerController _brawler;
         private readonly ISimulationClock _clock;
+        private readonly AICommandSource _commandSource;
 
         private List<PathNode> _path;
         private int _pathIndex;
@@ -28,9 +29,10 @@ namespace MOBA.Core.Simulation.AI
         public Vector3 Position => _brawler.Position;
         public bool HasDestination => _hasDestination;
 
-        public NavigationAgent(BrawlerController brawler)
+        public NavigationAgent(BrawlerController brawler, AICommandSource commandSource)
         {
             _brawler = brawler;
+            _commandSource = commandSource;
             _clock = ServiceProvider.Get<ISimulationClock>();
             _lastSamplePosition = brawler.Position;
             _lastSampleTick = _clock.CurrentTick;
@@ -84,14 +86,14 @@ namespace MOBA.Core.Simulation.AI
             _hasDestination = false;
             _path = null;
             _pathIndex = 0;
-            _brawler.SetMoveInput(Vector3.zero);
+            _commandSource?.QueueMove(Vector3.zero);
         }
 
         public void Tick()
         {
             if (!_hasDestination)
             {
-                _brawler.SetMoveInput(Vector3.zero);
+                _commandSource?.QueueMove(Vector3.zero);
                 return;
             }
 
@@ -108,13 +110,10 @@ namespace MOBA.Core.Simulation.AI
             {
                 Vector3 directDir = _destination - _brawler.Position;
                 if (directDir.sqrMagnitude > 0.0001f)
-                {
-                    _brawler.SetMoveInput(directDir.normalized);
-                }
+                    _commandSource?.QueueMove(directDir.normalized);
                 else
-                {
-                    _brawler.SetMoveInput(Vector3.zero);
-                }
+                    _commandSource?.QueueMove(Vector3.zero);
+
                 return;
             }
 
@@ -127,7 +126,7 @@ namespace MOBA.Core.Simulation.AI
                 if (_pathIndex >= _path.Count)
                 {
                     Vector3 finalDir = _destination - _brawler.Position;
-                    _brawler.SetMoveInput(finalDir.sqrMagnitude > 0.0001f ? finalDir.normalized : Vector3.zero);
+                    _commandSource?.QueueMove(finalDir.sqrMagnitude > 0.0001f ? finalDir.normalized : Vector3.zero);
                     return;
                 }
 
@@ -135,7 +134,7 @@ namespace MOBA.Core.Simulation.AI
             }
 
             Vector3 dir = nodeWorld - _brawler.Position;
-            _brawler.SetMoveInput(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero);
+            _commandSource?.QueueMove(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero);
         }
 
         private void UpdateStuckCheck()

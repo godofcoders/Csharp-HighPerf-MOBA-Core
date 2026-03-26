@@ -9,14 +9,16 @@ namespace MOBA.Core.Simulation.AI
     {
         private readonly BrawlerController _self;
         private readonly BrawlerAIProfile _profile;
+        private readonly AICommandSource _commandSource;
 
         private uint _nextPrimaryAttackTick;
         private uint _nextGadgetTick;
 
-        public AIAbilityDecider(BrawlerController self, BrawlerAIProfile profile)
+        public AIAbilityDecider(BrawlerController self, BrawlerAIProfile profile, AICommandSource commandSource)
         {
             _self = self;
             _profile = profile;
+            _commandSource = commandSource;
         }
 
         public void TryUseMainAttack(ISpatialEntity target, uint currentTick, float maxRange)
@@ -31,7 +33,7 @@ namespace MOBA.Core.Simulation.AI
             if (toTarget.sqrMagnitude > (maxRange * maxRange))
                 return;
 
-            _self.BufferAttack(InputCommandType.MainAttack, toTarget.normalized);
+            _commandSource?.QueueMainAttack(toTarget.normalized);
             _nextPrimaryAttackTick = currentTick + _profile.AttackCadenceTicks;
         }
 
@@ -59,7 +61,7 @@ namespace MOBA.Core.Simulation.AI
                 return;
 
             Vector3 dir = (target.Position - _self.Position).normalized;
-            _self.BufferAttack(InputCommandType.Gadget, dir);
+            _commandSource?.QueueGadget(dir);
             _nextGadgetTick = currentTick + _profile.GadgetCooldownTicks;
         }
 

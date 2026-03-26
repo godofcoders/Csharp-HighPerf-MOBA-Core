@@ -16,6 +16,9 @@ namespace MOBA.Core.Infrastructure
         private bool _superQueued;
         private bool _hyperchargeQueued;
 
+        private Vector3 _lastMoveDirection = Vector3.forward;
+        private Vector3 _lastAimDirection = Vector3.forward;
+
         private void Awake()
         {
             _input = new GameInput();
@@ -42,10 +45,13 @@ namespace MOBA.Core.Infrastructure
         {
             if (_moveInput.sqrMagnitude > 0.01f)
             {
+                Vector3 moveDirection = new Vector3(_moveInput.x, 0f, _moveInput.y).normalized;
+                _lastMoveDirection = moveDirection;
+
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.Move,
-                    Direction = new Vector3(_moveInput.x, 0f, _moveInput.y).normalized,
+                    Direction = moveDirection,
                     Tick = currentTick
                 });
             }
@@ -100,10 +106,16 @@ namespace MOBA.Core.Infrastructure
         private Vector3 ResolveAimDirection()
         {
             if (_aimInput.sqrMagnitude > 0.01f)
-                return new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
+            {
+                _lastAimDirection = new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
+                return _lastAimDirection;
+            }
 
-            if (_moveInput.sqrMagnitude > 0.01f)
-                return new Vector3(_moveInput.x, 0f, _moveInput.y).normalized;
+            if (_lastAimDirection.sqrMagnitude > 0.01f)
+                return _lastAimDirection;
+
+            if (_lastMoveDirection.sqrMagnitude > 0.01f)
+                return _lastMoveDirection;
 
             return transform.forward;
         }
