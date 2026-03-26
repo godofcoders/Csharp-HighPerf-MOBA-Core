@@ -273,7 +273,7 @@ namespace MOBA.Core.Infrastructure
             _currentMoveInput = direction;
         }
 
-        public void BufferAttack(InputCommandType type, Vector3 direction)
+        private void BufferAttack(InputCommandType type, Vector3 direction)
         {
             _inputBuffer.Enqueue(type, direction);
         }
@@ -349,35 +349,28 @@ namespace MOBA.Core.Infrastructure
             UpdateVisualStealth();
         }
 
-        private bool CanPerformAction()
-        {
-            return State != null &&
-                   State.Ammo != null &&
-                   State.Ammo.AvailableBars >= 1;
-        }
-
         private void ProcessCommand(BrawlerCommand cmd)
         {
             switch (cmd.Type)
             {
                 case BrawlerCommandType.Move:
-                    SetMoveInput(cmd.Direction);
+                    TrySetMove(cmd.Direction);
                     break;
 
                 case BrawlerCommandType.MainAttack:
-                    BufferAttack(InputCommandType.MainAttack, cmd.Direction);
+                    TryUseMainAttack(cmd.Direction, out _);
                     break;
 
                 case BrawlerCommandType.Gadget:
-                    BufferAttack(InputCommandType.Gadget, cmd.Direction);
+                    TryUseGadget(cmd.Direction, out _);
                     break;
 
                 case BrawlerCommandType.Super:
-                    BufferAttack(InputCommandType.Super, cmd.Direction);
+                    TryUseSuper(cmd.Direction, out _);
                     break;
 
                 case BrawlerCommandType.Hypercharge:
-                    ActivateHypercharge();
+                    TryActivateHypercharge(out _);
                     break;
             }
         }
@@ -859,7 +852,7 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
-        public void ActivateHypercharge()
+        private void ActivateHypercharge()
         {
             HyperchargeDefinition def = State.EquippedHypercharge ?? _definition.Hypercharge;
             if (def == null)
@@ -953,6 +946,146 @@ namespace MOBA.Core.Infrastructure
         public void GrantSuperCharge(float amount)
         {
             State?.AddSuperCharge(amount);
+        }
+
+        private void TrySetMove(Vector3 direction)
+        {
+            SetMoveInput(direction);
+        }
+
+        public bool TryUseMainAttack(Vector3 direction, out BrawlerActionBlockReason blockReason)
+        {
+            if (State == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            AbilityDefinition currentMainAttackDef = State.GetCurrentMainAttackDefinition();
+            if (currentMainAttackDef == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            blockReason = State.GetMainAttackBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            if (blockReason != BrawlerActionBlockReason.None)
+                return false;
+
+            BufferAttack(InputCommandType.MainAttack, direction);
+            return true;
+        }
+
+        public bool TryUseGadget(Vector3 direction, out BrawlerActionBlockReason blockReason)
+        {
+            if (State == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            GadgetDefinition currentGadgetDef = GetActiveGadgetDefinition();
+            if (currentGadgetDef == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            blockReason = State.GetGadgetBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            if (blockReason != BrawlerActionBlockReason.None)
+                return false;
+
+            BufferAttack(InputCommandType.Gadget, direction);
+            return true;
+        }
+
+        public bool TryUseSuper(Vector3 direction, out BrawlerActionBlockReason blockReason)
+        {
+            if (State == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            AbilityDefinition currentSuperDef = State.GetCurrentSuperDefinition();
+            if (currentSuperDef == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            blockReason = State.GetSuperBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            if (blockReason != BrawlerActionBlockReason.None)
+                return false;
+
+            BufferAttack(InputCommandType.Super, direction);
+            return true;
+        }
+
+        public bool TryActivateHypercharge(out BrawlerActionBlockReason blockReason)
+        {
+            if (State == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            blockReason = State.GetHyperchargeBlockReason(currentTick);
+            if (blockReason != BrawlerActionBlockReason.None)
+                return false;
+
+            ActivateHypercharge();
+            return true;
+        }
+
+        public bool CanUseMainAttackNow(out BrawlerActionBlockReason blockReason)
+        {
+            if (State == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            blockReason = State.GetMainAttackBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            return blockReason == BrawlerActionBlockReason.None;
+        }
+
+        public bool CanUseGadgetNow(out BrawlerActionBlockReason blockReason)
+        {
+            if (State == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            blockReason = State.GetGadgetBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            return blockReason == BrawlerActionBlockReason.None;
+        }
+
+        public bool CanUseSuperNow(out BrawlerActionBlockReason blockReason)
+        {
+            if (State == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            blockReason = State.GetSuperBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            return blockReason == BrawlerActionBlockReason.None;
+        }
+
+        public bool CanUseHyperchargeNow(out BrawlerActionBlockReason blockReason)
+        {
+            if (State == null)
+            {
+                blockReason = BrawlerActionBlockReason.MissingDefinition;
+                return false;
+            }
+
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            blockReason = State.GetHyperchargeBlockReason(currentTick);
+            return blockReason == BrawlerActionBlockReason.None;
         }
     }
 }
