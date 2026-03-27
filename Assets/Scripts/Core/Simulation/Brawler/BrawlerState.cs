@@ -65,6 +65,38 @@ namespace MOBA.Core.Simulation
         public BrawlerRuntimeBuildState RuntimeBuild { get; private set; }
         public BrawlerRuntimeKit RuntimeKit { get; private set; }
 
+        public BrawlerState(BrawlerDefinition definition, TeamType team)
+        {
+            Definition = definition;
+            Team = team;
+            CurrentPowerLevel = 1;
+
+            MaxHealth = new ModifiableStat(0f);
+            MoveSpeed = new ModifiableStat(0f);
+            Damage = new ModifiableStat(0f);
+
+            Ammo = new ResourceStorage(3, 0.5f);
+            Hypercharge = new HyperchargeTracker();
+            SuperCharge = new SuperChargeTracker();
+            ThreatTracker = new MOBA.Core.Simulation.AI.ThreatTracker();
+            AssistTracker = new MOBA.Core.Simulation.AI.AssistTracker();
+            IncomingDamageModifiers = new DamageModifierCollection();
+            OutgoingDamageModifiers = new DamageModifierCollection();
+            ShieldHealth = 0f;
+            IncomingMovementModifiers = new MovementModifierCollection();
+            ActiveStatusEffects = new List<IStatusEffectInstance>(8);
+            RuntimeBuild = new BrawlerRuntimeBuildState();
+            RuntimeKit = new BrawlerRuntimeKit();
+
+            RefreshRuntimeBuildUnlockState();
+            RefreshGadgetChargesFromRuntimeKit();
+            RebuildProgressionStats(false);
+            CurrentHealth = MaxHealth.Value;
+
+            ClearActionState();
+            ResetAbilityCooldowns();
+        }
+
         public void SetEquippedHypercharge(HyperchargeDefinition definition)
         {
             EquippedHypercharge = definition;
@@ -89,38 +121,6 @@ namespace MOBA.Core.Simulation
             MoveSpeed.RemoveModifiersFromSource(HyperchargeModifierSource);
             Damage.RemoveModifiersFromSource(HyperchargeModifierSource);
             RemoveIncomingDamageModifiersFromSource(HyperchargeModifierSource);
-        }
-
-        public BrawlerState(BrawlerDefinition definition, TeamType team)
-        {
-            Definition = definition;
-            Team = team;
-            CurrentPowerLevel = 1;
-
-            MaxHealth = new ModifiableStat(0f);
-            MoveSpeed = new ModifiableStat(0f);
-            Damage = new ModifiableStat(0f);
-
-            Ammo = new ResourceStorage(3, 0.5f);
-            Hypercharge = new HyperchargeTracker();
-            SuperCharge = new SuperChargeTracker();
-            ThreatTracker = new MOBA.Core.Simulation.AI.ThreatTracker();
-            AssistTracker = new MOBA.Core.Simulation.AI.AssistTracker();
-            IncomingDamageModifiers = new DamageModifierCollection();
-            OutgoingDamageModifiers = new DamageModifierCollection();
-            ShieldHealth = 0f;
-            IncomingMovementModifiers = new MovementModifierCollection();
-            ActiveStatusEffects = new List<IStatusEffectInstance>(8);
-            RuntimeBuild = new BrawlerRuntimeBuildState();
-            RuntimeKit = new BrawlerRuntimeKit();
-            RefreshRuntimeBuildUnlockState();
-
-            RefreshGadgetChargesFromRuntimeKit();
-            RebuildProgressionStats(false);
-            CurrentHealth = MaxHealth.Value;
-
-            ClearActionState();
-            ResetAbilityCooldowns();
         }
 
         public void SetPowerLevel(int powerLevel, bool preserveHealthRatio = true)
@@ -172,7 +172,6 @@ namespace MOBA.Core.Simulation
             RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
         }
 
-        // Compatibility wrappers while migrating older code / terminology.
         public void SetStarPowerLoadout(IEnumerable<PassiveDefinition> definitions, bool preserveHealthRatio = true)
         {
             SetPassiveLoadout(definitions, preserveHealthRatio);
@@ -327,6 +326,7 @@ namespace MOBA.Core.Simulation
                     false,
                     false,
                     false);
+
                 if (Owner != null)
                 {
                     BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
@@ -340,6 +340,7 @@ namespace MOBA.Core.Simulation
                         Tick = currentTick
                     });
                 }
+
                 OnDeath?.Invoke();
             }
         }
@@ -353,6 +354,7 @@ namespace MOBA.Core.Simulation
             CurrentHealth = Math.Min(CurrentHealth, MaxHealth.Value);
 
             OnHealthChanged?.Invoke(CurrentHealth);
+
             if (Owner != null)
             {
                 BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
@@ -406,6 +408,79 @@ namespace MOBA.Core.Simulation
             ClearHyperchargeRuntimeModifiers();
 
             OnHealthChanged?.Invoke(CurrentHealth);
+        }
+
+        public bool DoesActionRequireResource(BrawlerActionRequestType actionType)
+        {
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack:
+                case BrawlerActionRequestType.Gadget:
+                case BrawlerActionRequestType.Super:
+                case BrawlerActionRequestType.Hypercharge:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public bool CanPayActionCost(BrawlerActionRequestType actionType)
+        {
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack:
+                    return Ammo != null && Ammo.AvailableBars >= 1;
+
+                case BrawlerActionRequestType.Gadget:
+                    return RemainingGadgets > 0;
+
+                case BrawlerActionRequestType.Super:
+                    return SuperCharge != null && SuperCharge.IsReady;
+
+                case BrawlerActionRequestType.Hypercharge:
+                    return Hypercharge != null && Hypercharge.ChargePercent >= 1f;
+
+                default:
+                    return false;
+            }
+        }
+
+        public bool TryConsumeActionCost(BrawlerActionRequestType actionType)
+        {
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack:
+                    return Ammo != null && Ammo.Consume(1);
+
+                case BrawlerActionRequestType.Gadget:
+                    if (RemainingGadgets <= 0)
+                        return false;
+
+                    UseGadgetCharge();
+                    return true;
+
+                case BrawlerActionRequestType.Super:
+                    return TryConsumeSuper();
+
+                case BrawlerActionRequestType.Hypercharge:
+                    return Hypercharge != null && Hypercharge.ChargePercent >= 1f;
+
+                default:
+                    return false;
+            }
+        }
+
+        public string GetActionResourceName(BrawlerActionRequestType actionType)
+        {
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack: return "Ammo";
+                case BrawlerActionRequestType.Gadget: return "Gadget Charges";
+                case BrawlerActionRequestType.Super: return "Super Charge";
+                case BrawlerActionRequestType.Hypercharge: return "Hypercharge Charge";
+                default: return "None";
+            }
         }
 
         public void TickEffects(uint currentTick)
@@ -758,6 +833,7 @@ namespace MOBA.Core.Simulation
             blockReason = GetBlockReasonForAction(actionType, currentTick);
             return blockReason == BrawlerActionBlockReason.None;
         }
+
         public bool CanUseAction(BrawlerActionRequestType actionType, uint currentTick)
         {
             return GetBlockReasonForAction(actionType, currentTick) == BrawlerActionBlockReason.None;
@@ -819,6 +895,7 @@ namespace MOBA.Core.Simulation
             GadgetDefinition gadget = RuntimeKit?.GadgetDefinition ?? Definition?.Gadget;
             RemainingGadgets = gadget != null ? gadget.MaxCharges : 0;
         }
+
         public bool DoesActionConsumePrimaryAmmo(BrawlerActionRequestType actionType)
         {
             return actionType == BrawlerActionRequestType.MainAttack;
