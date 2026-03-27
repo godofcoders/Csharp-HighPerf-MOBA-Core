@@ -381,7 +381,7 @@ namespace MOBA.Core.Simulation
             CurrentHealth = MaxHealth.Value;
             Ammo.Refill();
 
-            RemainingGadgets = Definition.Gadget != null ? Definition.Gadget.MaxCharges : 0;
+            RefreshGadgetChargesFromRuntimeKit();
             Hypercharge = new HyperchargeTracker();
             SuperCharge.Reset(false);
 
@@ -731,6 +731,38 @@ namespace MOBA.Core.Simulation
             return BrawlerActionBlockReason.None;
         }
 
+        public BrawlerActionBlockReason GetBlockReasonForAction(BrawlerActionRequestType actionType, uint currentTick)
+        {
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack:
+                    return GetMainAttackBlockReason(currentTick);
+
+                case BrawlerActionRequestType.Gadget:
+                    return GetGadgetBlockReason(currentTick);
+
+                case BrawlerActionRequestType.Super:
+                    return GetSuperBlockReason(currentTick);
+
+                case BrawlerActionRequestType.Hypercharge:
+                    return GetHyperchargeBlockReason(currentTick);
+
+                default:
+                    return BrawlerActionBlockReason.MissingDefinition;
+            }
+        }
+
+        public bool CanUseActionNow(BrawlerActionRequestType actionType, out BrawlerActionBlockReason blockReason)
+        {
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            blockReason = GetBlockReasonForAction(actionType, currentTick);
+            return blockReason == BrawlerActionBlockReason.None;
+        }
+        public bool CanUseAction(BrawlerActionRequestType actionType, uint currentTick)
+        {
+            return GetBlockReasonForAction(actionType, currentTick) == BrawlerActionBlockReason.None;
+        }
+
         public BrawlerActionBlockReason GetHyperchargeBlockReason(uint currentTick)
         {
             if (IsDead)
@@ -786,6 +818,10 @@ namespace MOBA.Core.Simulation
         {
             GadgetDefinition gadget = RuntimeKit?.GadgetDefinition ?? Definition?.Gadget;
             RemainingGadgets = gadget != null ? gadget.MaxCharges : 0;
+        }
+        public bool DoesActionConsumePrimaryAmmo(BrawlerActionRequestType actionType)
+        {
+            return actionType == BrawlerActionRequestType.MainAttack;
         }
     }
 }

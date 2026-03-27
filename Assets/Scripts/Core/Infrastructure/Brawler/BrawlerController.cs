@@ -269,7 +269,7 @@ namespace MOBA.Core.Infrastructure
             return currentSuperDef.CreateLogic();
         }
 
-        public void SetMoveInput(Vector3 direction)
+        private void SetMoveInput(Vector3 direction)
         {
             _currentMoveInput = direction;
         }
@@ -971,7 +971,10 @@ namespace MOBA.Core.Infrastructure
                 return false;
             }
 
-            blockReason = State.GetMainAttackBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            blockReason = State.GetBlockReasonForAction(
+                BrawlerActionRequestType.MainAttack,
+                ServiceProvider.Get<ISimulationClock>().CurrentTick);
+
             if (blockReason != BrawlerActionBlockReason.None)
                 return false;
 
@@ -994,14 +997,16 @@ namespace MOBA.Core.Infrastructure
                 return false;
             }
 
-            blockReason = State.GetGadgetBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            blockReason = State.GetBlockReasonForAction(
+                BrawlerActionRequestType.Gadget,
+                ServiceProvider.Get<ISimulationClock>().CurrentTick);
+
             if (blockReason != BrawlerActionBlockReason.None)
                 return false;
 
             BufferAttack(InputCommandType.Gadget, direction);
             return true;
         }
-
         public bool TryUseSuper(Vector3 direction, out BrawlerActionBlockReason blockReason)
         {
             if (State == null)
@@ -1017,7 +1022,10 @@ namespace MOBA.Core.Infrastructure
                 return false;
             }
 
-            blockReason = State.GetSuperBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            blockReason = State.GetBlockReasonForAction(
+                BrawlerActionRequestType.Super,
+                ServiceProvider.Get<ISimulationClock>().CurrentTick);
+
             if (blockReason != BrawlerActionBlockReason.None)
                 return false;
 
@@ -1034,61 +1042,13 @@ namespace MOBA.Core.Infrastructure
             }
 
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
-            blockReason = State.GetHyperchargeBlockReason(currentTick);
+            blockReason = State.GetBlockReasonForAction(BrawlerActionRequestType.Hypercharge, currentTick);
+
             if (blockReason != BrawlerActionBlockReason.None)
                 return false;
 
             ActivateHypercharge();
             return true;
-        }
-
-        public bool CanUseMainAttackNow(out BrawlerActionBlockReason blockReason)
-        {
-            if (State == null)
-            {
-                blockReason = BrawlerActionBlockReason.MissingDefinition;
-                return false;
-            }
-
-            blockReason = State.GetMainAttackBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
-            return blockReason == BrawlerActionBlockReason.None;
-        }
-
-        public bool CanUseGadgetNow(out BrawlerActionBlockReason blockReason)
-        {
-            if (State == null)
-            {
-                blockReason = BrawlerActionBlockReason.MissingDefinition;
-                return false;
-            }
-
-            blockReason = State.GetGadgetBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
-            return blockReason == BrawlerActionBlockReason.None;
-        }
-
-        public bool CanUseSuperNow(out BrawlerActionBlockReason blockReason)
-        {
-            if (State == null)
-            {
-                blockReason = BrawlerActionBlockReason.MissingDefinition;
-                return false;
-            }
-
-            blockReason = State.GetSuperBlockReason(ServiceProvider.Get<ISimulationClock>().CurrentTick);
-            return blockReason == BrawlerActionBlockReason.None;
-        }
-
-        public bool CanUseHyperchargeNow(out BrawlerActionBlockReason blockReason)
-        {
-            if (State == null)
-            {
-                blockReason = BrawlerActionBlockReason.MissingDefinition;
-                return false;
-            }
-
-            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
-            blockReason = State.GetHyperchargeBlockReason(currentTick);
-            return blockReason == BrawlerActionBlockReason.None;
         }
 
         private void UpdateDebugSnapshot(uint currentTick)
