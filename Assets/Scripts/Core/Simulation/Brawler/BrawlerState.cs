@@ -900,5 +900,90 @@ namespace MOBA.Core.Simulation
         {
             return actionType == BrawlerActionRequestType.MainAttack;
         }
+
+        public AbilityRuntimeSlot GetCooldownSlotForAction(BrawlerActionRequestType actionType)
+        {
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack:
+                    return AbilityRuntimeSlot.MainAttack;
+
+                case BrawlerActionRequestType.Gadget:
+                    return AbilityRuntimeSlot.Gadget;
+
+                case BrawlerActionRequestType.Super:
+                    return AbilityRuntimeSlot.Super;
+
+                default:
+                    return AbilityRuntimeSlot.MainAttack;
+            }
+        }
+
+        public float GetCooldownSecondsForAction(BrawlerActionRequestType actionType)
+        {
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack:
+                    return GetCurrentMainAttackDefinition()?.Cooldown ?? 0f;
+
+                case BrawlerActionRequestType.Gadget:
+                    return GetCurrentGadgetDefinition()?.Cooldown ?? 0f;
+
+                case BrawlerActionRequestType.Super:
+                    return GetCurrentSuperDefinition()?.Cooldown ?? 0f;
+
+                case BrawlerActionRequestType.Hypercharge:
+                    return 0f;
+
+                default:
+                    return 0f;
+            }
+        }
+
+        public bool DoesActionUseCooldown(BrawlerActionRequestType actionType)
+        {
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack:
+                case BrawlerActionRequestType.Gadget:
+                case BrawlerActionRequestType.Super:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        public void StartCooldownForAction(BrawlerActionRequestType actionType, uint currentTick)
+        {
+            if (!DoesActionUseCooldown(actionType))
+                return;
+
+            float cooldownSeconds = GetCooldownSecondsForAction(actionType);
+            if (cooldownSeconds <= 0f)
+                return;
+
+            AbilityRuntimeSlot slot = GetCooldownSlotForAction(actionType);
+            StartAbilityCooldown(slot, currentTick, cooldownSeconds);
+        }
+
+        public bool IsActionOnCooldown(BrawlerActionRequestType actionType, uint currentTick)
+        {
+            if (!DoesActionUseCooldown(actionType))
+                return false;
+
+            AbilityRuntimeSlot slot = GetCooldownSlotForAction(actionType);
+            return !IsAbilityReady(slot, currentTick);
+        }
+        public string GetCooldownSlotName(BrawlerActionRequestType actionType)
+        {
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack: return "MainAttack";
+                case BrawlerActionRequestType.Gadget: return "Gadget";
+                case BrawlerActionRequestType.Super: return "Super";
+                default: return "None";
+            }
+        }
     }
 }

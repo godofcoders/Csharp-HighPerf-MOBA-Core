@@ -521,10 +521,7 @@ namespace MOBA.Core.Infrastructure
 
                         if (result.Success)
                         {
-                            State.StartAbilityCooldown(
-                                AbilityRuntimeSlot.MainAttack,
-                                currentTick,
-                                currentMainAttackDef.Cooldown);
+                            State.StartCooldownForAction(actionType, currentTick);
                         }
 
                         AbilityEventBus.Raise(new AbilityExecutionEvent
@@ -655,11 +652,7 @@ namespace MOBA.Core.Infrastructure
 
                         if (result.Success)
                         {
-                            State.StartAbilityCooldown(
-                                AbilityRuntimeSlot.Gadget,
-                                currentTick,
-                                currentGadgetDef.Cooldown);
-
+                            State.StartCooldownForAction(actionType, currentTick);
                             Debug.Log($"[SIM] Gadget used! Remaining: {State.RemainingGadgets}");
                         }
 
@@ -795,10 +788,7 @@ namespace MOBA.Core.Infrastructure
 
                         if (result.Success)
                         {
-                            State.StartAbilityCooldown(
-                                AbilityRuntimeSlot.Super,
-                                currentTick,
-                                currentSuperDef.Cooldown);
+                            State.StartCooldownForAction(actionType, currentTick);
                         }
                         else
                         {
