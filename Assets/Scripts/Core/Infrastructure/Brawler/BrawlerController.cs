@@ -854,11 +854,11 @@ namespace MOBA.Core.Infrastructure
         }
 
         public BrawlerController ResolveTarget(
-    AbilityTargetTeamRule teamRule,
-    AbilityTargetSelectionRule selectionRule,
-    float range,
-    bool includeSelf = false,
-    bool requireAlive = true)
+        AbilityTargetTeamRule teamRule,
+        AbilityTargetSelectionRule selectionRule,
+        float range,
+        bool includeSelf = false,
+        bool requireAlive = true)
         {
             AbilityTargetRequest request = new AbilityTargetRequest
             {
@@ -868,6 +868,7 @@ namespace MOBA.Core.Infrastructure
                 Range = range,
                 TeamRule = teamRule,
                 SelectionRule = selectionRule,
+                CountRule = AbilityTargetCountRule.Single,
                 IncludeSelf = includeSelf,
                 RequireAlive = requireAlive
             };
@@ -875,12 +876,13 @@ namespace MOBA.Core.Infrastructure
             return AbilityTargetResolver.ResolveSingleTarget(request);
         }
 
-        public void ResolveTargetsInRadius(
-    AbilityTargetTeamRule teamRule,
-    float range,
-    List<BrawlerController> results,
-    bool includeSelf = false,
-    bool requireAlive = true)
+        public void ResolveTargets(
+            AbilityTargetTeamRule teamRule,
+            AbilityTargetSelectionRule selectionRule,
+            float range,
+            List<BrawlerController> results,
+            bool includeSelf = false,
+            bool requireAlive = true)
         {
             AbilityTargetRequest request = new AbilityTargetRequest
             {
@@ -889,12 +891,13 @@ namespace MOBA.Core.Infrastructure
                 Direction = transform.forward,
                 Range = range,
                 TeamRule = teamRule,
-                SelectionRule = AbilityTargetSelectionRule.Nearest,
+                SelectionRule = selectionRule,
+                CountRule = AbilityTargetCountRule.Multiple,
                 IncludeSelf = includeSelf,
                 RequireAlive = requireAlive
             };
 
-            AbilityTargetResolver.ResolveTargetsInRadius(request, results);
+            AbilityTargetResolver.ResolveTargets(request, results);
         }
 
         private void ActivateHypercharge()

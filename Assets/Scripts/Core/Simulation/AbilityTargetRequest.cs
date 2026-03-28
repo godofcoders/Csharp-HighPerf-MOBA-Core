@@ -9,8 +9,11 @@ namespace MOBA.Core.Simulation
         public Vector3 Origin;
         public Vector3 Direction;
         public float Range;
+
         public AbilityTargetTeamRule TeamRule;
         public AbilityTargetSelectionRule SelectionRule;
+        public AbilityTargetCountRule CountRule;
+
         public bool IncludeSelf;
         public bool RequireAlive;
     }

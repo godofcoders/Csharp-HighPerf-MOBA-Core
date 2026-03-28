@@ -6,23 +6,22 @@ namespace MOBA.Core.Simulation
 {
     public static class AbilityTargetResolver
     {
-        private static readonly List<ISpatialEntity> _buffer = new List<ISpatialEntity>(32);
+        private static readonly List<ISpatialEntity> _spatialBuffer = new List<ISpatialEntity>(32);
 
         public static BrawlerController ResolveSingleTarget(AbilityTargetRequest request)
         {
             if (request.Source == null || SimulationClock.Grid == null)
                 return null;
 
-            _buffer.Clear();
-            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(request.Origin, request.Range, _buffer);
+            _spatialBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(request.Origin, request.Range, _spatialBuffer);
 
             BrawlerController bestTarget = null;
             float bestScore = float.MaxValue;
 
-            for (int i = 0; i < _buffer.Count; i++)
+            for (int i = 0; i < _spatialBuffer.Count; i++)
             {
-                ISpatialEntity entity = _buffer[i];
-                if (entity is not BrawlerController candidate)
+                if (_spatialBuffer[i] is not BrawlerController candidate)
                     continue;
 
                 if (!IsValidTarget(candidate, request))
@@ -39,26 +38,43 @@ namespace MOBA.Core.Simulation
             return bestTarget;
         }
 
-        public static void ResolveTargetsInRadius(AbilityTargetRequest request, List<BrawlerController> results)
+        public static void ResolveTargets(AbilityTargetRequest request, List<BrawlerController> results)
         {
             results.Clear();
 
             if (request.Source == null || SimulationClock.Grid == null)
                 return;
 
-            _buffer.Clear();
-            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(request.Origin, request.Range, _buffer);
+            _spatialBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(request.Origin, request.Range, _spatialBuffer);
 
-            for (int i = 0; i < _buffer.Count; i++)
+            for (int i = 0; i < _spatialBuffer.Count; i++)
             {
-                ISpatialEntity entity = _buffer[i];
-                if (entity is not BrawlerController candidate)
+                if (_spatialBuffer[i] is not BrawlerController candidate)
                     continue;
 
                 if (!IsValidTarget(candidate, request))
                     continue;
 
                 results.Add(candidate);
+            }
+
+            if (request.SelectionRule == AbilityTargetSelectionRule.LowestHealth)
+            {
+                results.Sort((a, b) => a.State.CurrentHealth.CompareTo(b.State.CurrentHealth));
+            }
+            else if (request.SelectionRule == AbilityTargetSelectionRule.HighestHealth)
+            {
+                results.Sort((a, b) => b.State.CurrentHealth.CompareTo(a.State.CurrentHealth));
+            }
+            else
+            {
+                results.Sort((a, b) =>
+                {
+                    float da = (a.Position - request.Origin).sqrMagnitude;
+                    float db = (b.Position - request.Origin).sqrMagnitude;
+                    return da.CompareTo(db);
+                });
             }
         }
 
