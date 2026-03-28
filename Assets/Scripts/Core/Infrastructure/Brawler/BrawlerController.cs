@@ -853,6 +853,50 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        public BrawlerController ResolveTarget(
+    AbilityTargetTeamRule teamRule,
+    AbilityTargetSelectionRule selectionRule,
+    float range,
+    bool includeSelf = false,
+    bool requireAlive = true)
+        {
+            AbilityTargetRequest request = new AbilityTargetRequest
+            {
+                Source = this,
+                Origin = Position,
+                Direction = transform.forward,
+                Range = range,
+                TeamRule = teamRule,
+                SelectionRule = selectionRule,
+                IncludeSelf = includeSelf,
+                RequireAlive = requireAlive
+            };
+
+            return AbilityTargetResolver.ResolveSingleTarget(request);
+        }
+
+        public void ResolveTargetsInRadius(
+    AbilityTargetTeamRule teamRule,
+    float range,
+    List<BrawlerController> results,
+    bool includeSelf = false,
+    bool requireAlive = true)
+        {
+            AbilityTargetRequest request = new AbilityTargetRequest
+            {
+                Source = this,
+                Origin = Position,
+                Direction = transform.forward,
+                Range = range,
+                TeamRule = teamRule,
+                SelectionRule = AbilityTargetSelectionRule.Nearest,
+                IncludeSelf = includeSelf,
+                RequireAlive = requireAlive
+            };
+
+            AbilityTargetResolver.ResolveTargetsInRadius(request, results);
+        }
+
         private void ActivateHypercharge()
         {
             HyperchargeDefinition def = State.EquippedHypercharge ?? _definition.Hypercharge;
