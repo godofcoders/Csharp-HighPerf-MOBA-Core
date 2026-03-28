@@ -4,7 +4,7 @@ using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation
 {
-    public sealed class AllyHealPulseGadgetLogic : IAbilityLogic
+    public sealed class AreaHealSupportLogic : IAbilityLogic
     {
         private readonly List<BrawlerController> _targets = new List<BrawlerController>(16);
 
@@ -18,8 +18,8 @@ namespace MOBA.Core.Simulation
             if (caster == null || caster.State == null || context.AbilityDefinition == null)
                 return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
 
+            float radius = 5f;
             float healAmount = 800f;
-            float radius = 6f;
 
             if (context.AbilityDefinition is AoEAbilityDefinition aoe)
                 radius = aoe.Radius;

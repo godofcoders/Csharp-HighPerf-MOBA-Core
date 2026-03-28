@@ -4,7 +4,7 @@ using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation
 {
-    public sealed class AllyHealPulseGadgetLogic : IAbilityLogic
+    public sealed class AreaMoveSpeedBuffSupportLogic : IAbilityLogic
     {
         private readonly List<BrawlerController> _targets = new List<BrawlerController>(16);
 
@@ -18,15 +18,16 @@ namespace MOBA.Core.Simulation
             if (caster == null || caster.State == null || context.AbilityDefinition == null)
                 return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
 
-            float healAmount = 800f;
-            float radius = 6f;
+            float radius = 5f;
+            float buffAmount = 1.5f;
+            float durationSeconds = 4f;
 
             if (context.AbilityDefinition is AoEAbilityDefinition aoe)
                 radius = aoe.Radius;
 
             caster.ResolveTargets(
                 AbilityTargetTeamRule.Ally,
-                AbilityTargetSelectionRule.LowestHealth,
+                AbilityTargetSelectionRule.Nearest,
                 radius,
                 _targets,
                 includeSelf: true,
@@ -45,9 +46,9 @@ namespace MOBA.Core.Simulation
                 {
                     Source = caster,
                     Target = target,
-                    EffectType = SupportEffectType.Heal,
-                    Magnitude = healAmount,
-                    DurationSeconds = 0f,
+                    EffectType = SupportEffectType.MoveSpeedBuff,
+                    Magnitude = buffAmount,
+                    DurationSeconds = durationSeconds,
                     SourceToken = sourceToken,
                     Origin = caster.Position
                 };
