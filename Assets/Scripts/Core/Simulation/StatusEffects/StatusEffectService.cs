@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation
@@ -62,6 +61,9 @@ namespace MOBA.Core.Simulation
 
         private IStatusEffectInstance CreateInstance(StatusEffectContext context, uint currentTick)
         {
+            uint durationTicks = (uint)(context.Duration * 30f);
+            uint endTick = currentTick + durationTicks;
+
             switch (context.Type)
             {
                 case StatusEffectType.Slow:
@@ -75,6 +77,21 @@ namespace MOBA.Core.Simulation
 
                 case StatusEffectType.Reveal:
                     return new RevealEffect(context.Duration, currentTick);
+
+                case StatusEffectType.Silence:
+                    return new SilenceStatusEffect(currentTick, endTick, context.SourceToken);
+
+                case StatusEffectType.AttackLock:
+                    return new AttackLockStatusEffect(currentTick, endTick, context.SourceToken);
+
+                case StatusEffectType.GadgetLock:
+                    return new GadgetLockStatusEffect(currentTick, endTick, context.SourceToken);
+
+                case StatusEffectType.SuperLock:
+                    return new SuperLockStatusEffect(currentTick, endTick, context.SourceToken);
+
+                case StatusEffectType.MovementLock:
+                    return new MovementLockStatusEffect(currentTick, endTick, context.SourceToken);
             }
 
             return null;
