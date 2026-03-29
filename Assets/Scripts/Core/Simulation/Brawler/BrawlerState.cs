@@ -636,9 +636,11 @@ namespace MOBA.Core.Simulation
             SuperCooldown.Reset();
             GadgetCooldown.Reset();
         }
-
         public bool CanMove(uint currentTick)
         {
+            if (IsMovementLocked())
+                return false;
+
             if (!HasActiveActionState(currentTick))
                 return !IsDead;
 
@@ -760,6 +762,12 @@ namespace MOBA.Core.Simulation
             if (IsDead)
                 return BrawlerActionBlockReason.Dead;
 
+            if (HasSilence())
+                return BrawlerActionBlockReason.Silenced;
+
+            if (IsMainAttackLocked())
+                return BrawlerActionBlockReason.AttackLocked;
+
             if (!CanUseActionInput(currentTick))
                 return BrawlerActionBlockReason.ActionLocked;
 
@@ -777,6 +785,12 @@ namespace MOBA.Core.Simulation
             if (IsDead)
                 return BrawlerActionBlockReason.Dead;
 
+            if (HasSilence())
+                return BrawlerActionBlockReason.Silenced;
+
+            if (IsGadgetLocked())
+                return BrawlerActionBlockReason.GadgetLocked;
+
             if (!CanUseActionInput(currentTick))
                 return BrawlerActionBlockReason.ActionLocked;
 
@@ -793,6 +807,12 @@ namespace MOBA.Core.Simulation
         {
             if (IsDead)
                 return BrawlerActionBlockReason.Dead;
+
+            if (HasSilence())
+                return BrawlerActionBlockReason.Silenced;
+
+            if (IsSuperLocked())
+                return BrawlerActionBlockReason.SuperLocked;
 
             if (!CanUseActionInput(currentTick))
                 return BrawlerActionBlockReason.ActionLocked;
@@ -844,6 +864,9 @@ namespace MOBA.Core.Simulation
             if (IsDead)
                 return BrawlerActionBlockReason.Dead;
 
+            if (HasSilence())
+                return BrawlerActionBlockReason.Silenced;
+
             if (!CanUseActionInput(currentTick))
                 return BrawlerActionBlockReason.ActionLocked;
 
@@ -886,8 +909,27 @@ namespace MOBA.Core.Simulation
                 case BrawlerActionBlockReason.NoGadgetCharges: return "No Gadget Charges";
                 case BrawlerActionBlockReason.SuperNotReady: return "Super Not Ready";
                 case BrawlerActionBlockReason.HyperchargeNotReady: return "Hypercharge Not Ready";
+                case BrawlerActionBlockReason.Silenced: return "Silenced";
+                case BrawlerActionBlockReason.AttackLocked: return "Attack Locked";
+                case BrawlerActionBlockReason.GadgetLocked: return "Gadget Locked";
+                case BrawlerActionBlockReason.SuperLocked: return "Super Locked";
+                case BrawlerActionBlockReason.MovementLocked: return "Movement Locked";
                 default: return "Unknown";
             }
+        }
+
+        public BrawlerActionBlockReason GetMovementBlockReason(uint currentTick)
+        {
+            if (IsDead)
+                return BrawlerActionBlockReason.Dead;
+
+            if (IsMovementLocked())
+                return BrawlerActionBlockReason.MovementLocked;
+
+            if (HasActiveActionState(currentTick) && !ActionState.AllowMovement)
+                return BrawlerActionBlockReason.ActionLocked;
+
+            return BrawlerActionBlockReason.None;
         }
 
         public void RefreshGadgetChargesFromRuntimeKit()
@@ -984,6 +1026,30 @@ namespace MOBA.Core.Simulation
                 case BrawlerActionRequestType.Super: return "Super";
                 default: return "None";
             }
+        }
+        public bool HasSilence()
+        {
+            return HasStatus(StatusEffectType.Silence);
+        }
+
+        public bool IsMainAttackLocked()
+        {
+            return HasStatus(StatusEffectType.AttackLock);
+        }
+
+        public bool IsGadgetLocked()
+        {
+            return HasStatus(StatusEffectType.GadgetLock);
+        }
+
+        public bool IsSuperLocked()
+        {
+            return HasStatus(StatusEffectType.SuperLock);
+        }
+
+        public bool IsMovementLocked()
+        {
+            return HasStatus(StatusEffectType.MovementLock) || IsStunned;
         }
     }
 }

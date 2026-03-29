@@ -10,6 +10,11 @@ namespace MOBA.Core.Simulation
         NoAmmo = 5,
         NoGadgetCharges = 6,
         SuperNotReady = 7,
-        HyperchargeNotReady = 8
+        HyperchargeNotReady = 8,
+        Silenced = 9,
+        AttackLocked = 10,
+        GadgetLocked = 11,
+        SuperLocked = 12,
+        MovementLocked = 13
     }
 }

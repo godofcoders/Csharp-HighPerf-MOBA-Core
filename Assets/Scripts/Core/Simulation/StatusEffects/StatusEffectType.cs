@@ -5,6 +5,11 @@ namespace MOBA.Core.Simulation
         Slow,
         Stun,
         Burn,
-        Reveal
+        Reveal,
+        Silence,
+        AttackLock,
+        GadgetLock,
+        SuperLock,
+        MovementLock
     }
 }
