@@ -20,5 +20,9 @@ namespace MOBA.Core.Definitions
 
         [Header("Offense/Support")]
         public AbilityDefinition AbilityDefinition;
+
+        [Header("Pulse / Zone")]
+        public float PulseIntervalSeconds = 1f;
+        public float PulseRadius = 5f;
     }
 }

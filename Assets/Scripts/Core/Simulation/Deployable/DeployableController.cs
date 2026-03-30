@@ -13,6 +13,8 @@ namespace MOBA.Core.Simulation
         private uint _expiryTick;
         private float _currentHealth;
         private IDeployableBehavior _behavior;
+        private DeployableState _state;
+        public DeployableState State => _state;
 
         public DeployableDefinition Definition => _definition;
         public BrawlerController Owner => _owner;
@@ -42,6 +44,8 @@ namespace MOBA.Core.Simulation
             _abilityLogic = _definition.AbilityDefinition != null
                 ? _definition.AbilityDefinition.CreateLogic()
                 : null;
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            _state = new DeployableState(_definition, _owner, _team, currentTick);
 
             transform.position = request.Position;
 
@@ -57,7 +61,10 @@ namespace MOBA.Core.Simulation
             if (_definition == null)
                 return;
 
-            if (IsDead || IsExpired(currentTick))
+            if (_state == null)
+                return;
+
+            if (_state.IsDead || _state.IsExpired(currentTick))
             {
                 Despawn();
                 return;
@@ -68,11 +75,12 @@ namespace MOBA.Core.Simulation
 
         public void TakeDamage(float amount)
         {
-            if (amount <= 0f || IsDead)
+            if (_state == null)
                 return;
 
-            _currentHealth -= amount;
-            if (_currentHealth <= 0f)
+            _state.TakeDamage(amount);
+
+            if (_state.IsDead)
                 Despawn();
         }
 
@@ -89,6 +97,15 @@ namespace MOBA.Core.Simulation
             {
                 case DeployableType.Turret:
                     return new TurretDeployableBehavior();
+
+                case DeployableType.BuffZone:
+                    return new BuffZoneDeployableBehavior();
+
+                case DeployableType.HealingStation:
+                    return new HealingStationDeployableBehavior();
+
+                case DeployableType.SummonUnit:
+                    return new SummonUnitDeployableBehavior();
 
                 default:
                     return null;
