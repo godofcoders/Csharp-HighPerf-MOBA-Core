@@ -49,15 +49,16 @@ namespace MOBA.Core.Simulation
 
         private void FireAt(BrawlerController target, uint currentTick)
         {
+            if (_controller == null || _controller.Definition == null)
+                return;
+
             AbilityDefinition ability = _controller.Definition.AbilityDefinition;
-            if (ability == null)
+            IAbilityLogic logic = _controller.AbilityLogic;
+
+            if (ability == null || logic == null || _controller.AbilityUser == null)
                 return;
 
-            IAbilityLogic logic = ability.CreateLogic();
-            if (logic == null)
-                return;
-
-            var context = new AbilityExecutionContext
+            AbilityExecutionContext context = new AbilityExecutionContext
             {
                 Source = _controller.Owner,
                 AbilityDefinition = ability,
@@ -69,7 +70,7 @@ namespace MOBA.Core.Simulation
                 IsGadget = false
             };
 
-            logic.Execute(_controller.Owner, context);
+            logic.Execute(_controller.AbilityUser, context);
             _nextActionTick = currentTick + (uint)(_controller.Definition.ActionIntervalSeconds * 30f);
         }
     }

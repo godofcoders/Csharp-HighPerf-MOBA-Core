@@ -24,6 +24,12 @@ namespace MOBA.Core.Simulation
         public bool IsExpired(uint currentTick) => currentTick >= _expiryTick;
         public bool IsDead => _currentHealth <= 0f;
 
+        private DeployableAbilityUser _abilityUser;
+        private IAbilityLogic _abilityLogic;
+
+        public DeployableAbilityUser AbilityUser => _abilityUser;
+        public IAbilityLogic AbilityLogic => _abilityLogic;
+
         public void Initialize(DeployableSpawnRequest request)
         {
             _definition = request.Definition;
@@ -32,6 +38,10 @@ namespace MOBA.Core.Simulation
             _spawnTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
             _expiryTick = _spawnTick + (uint)(_definition.LifetimeSeconds * 30f);
             _currentHealth = _definition.MaxHealth;
+            _abilityUser = new DeployableAbilityUser(this);
+            _abilityLogic = _definition.AbilityDefinition != null
+                ? _definition.AbilityDefinition.CreateLogic()
+                : null;
 
             transform.position = request.Position;
 
