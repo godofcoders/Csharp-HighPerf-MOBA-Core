@@ -86,6 +86,9 @@ namespace MOBA.Core.Simulation
 
         public void Despawn()
         {
+            IDeployableRegistry registry = ServiceProvider.Get<IDeployableRegistry>();
+            registry?.Unregister(this);
+
             SimulationClock.Grid?.Remove(this, transform.position);
             CombatRegistry.Unregister(this);
             Destroy(gameObject);

@@ -24,5 +24,14 @@ namespace MOBA.Core.Definitions
         [Header("Pulse / Zone")]
         public float PulseIntervalSeconds = 1f;
         public float PulseRadius = 5f;
+
+        [Header("Capabilities")]
+        public bool CanReceiveHealing = true;
+        public bool CanReceiveShield = true;
+        public bool CanReceiveStatusEffects = true;
+
+        [Header("Ownership Rules")]
+        public bool UniquePerOwner = false;
+        public bool ReplaceOlderOwnedDeployable = true;
     }
 }
