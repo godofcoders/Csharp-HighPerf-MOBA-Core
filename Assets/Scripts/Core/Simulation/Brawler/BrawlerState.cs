@@ -5,7 +5,7 @@ using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation
 {
-    public class BrawlerState
+    public class BrawlerState : IStatusTarget
     {
         private struct InstalledPassive
         {
@@ -64,6 +64,8 @@ namespace MOBA.Core.Simulation
 
         public BrawlerRuntimeBuildState RuntimeBuild { get; private set; }
         public BrawlerRuntimeKit RuntimeKit { get; private set; }
+
+        public int EntityID => Owner != null ? Owner.EntityID : 0;
 
         public BrawlerState(BrawlerDefinition definition, TeamType team)
         {
@@ -497,7 +499,7 @@ namespace MOBA.Core.Simulation
                         Context = new StatusEffectContext
                         {
                             Source = null,
-                            Target = Owner,
+                            Target = this,
                             Type = effect.Type,
                             Duration = 0f,
                             Magnitude = 0f,
@@ -1050,6 +1052,10 @@ namespace MOBA.Core.Simulation
         public bool IsMovementLocked()
         {
             return HasStatus(StatusEffectType.MovementLock) || IsStunned;
+        }
+        public bool CanReceiveStatusEffects()
+        {
+            return !IsDead;
         }
     }
 }

@@ -6,9 +6,9 @@ namespace MOBA.Core.Simulation
         uint StartTick { get; }
         uint EndTick { get; }
 
-        void Apply(BrawlerState state, uint currentTick);
-        void Tick(BrawlerState state, uint currentTick);
-        void Remove(BrawlerState state, uint currentTick);
+        void Apply(IStatusTarget target, uint currentTick);
+        void Tick(IStatusTarget target, uint currentTick);
+        void Remove(IStatusTarget target, uint currentTick);
 
         bool CanMerge(StatusEffectContext context);
         void Merge(StatusEffectContext context, uint currentTick);

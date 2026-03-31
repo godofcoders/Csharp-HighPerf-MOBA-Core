@@ -9,46 +9,23 @@ namespace MOBA.Core.Simulation
         public StunEffect(float durationSeconds, uint currentTick)
         {
             StartTick = currentTick;
-            EndTick = currentTick + SecondsToTicks(durationSeconds);
+            EndTick = currentTick + (uint)(durationSeconds * 30f);
         }
 
-        public void Apply(BrawlerState state, uint currentTick)
+        public void Apply(IStatusTarget target, uint currentTick)
         {
-            state.IsStunned = true;
-
-            state.EnterActionState(
-                BrawlerActionStateType.Stunned,
-                currentTick,
-                EndTick - currentTick,
-                false,
-                false,
-                false);
+            if (target is BrawlerState brawlerState)
+                brawlerState.IsStunned = true;
         }
 
-        public void Tick(BrawlerState state, uint currentTick)
+        public void Tick(IStatusTarget target, uint currentTick)
         {
-            if (state.ActionState.StateType == BrawlerActionStateType.Stunned)
-            {
-                uint remaining = EndTick > currentTick ? EndTick - currentTick : 0;
-
-                state.EnterActionState(
-                    BrawlerActionStateType.Stunned,
-                    currentTick,
-                    remaining,
-                    false,
-                    false,
-                    false);
-            }
         }
 
-        public void Remove(BrawlerState state, uint currentTick)
+        public void Remove(IStatusTarget target, uint currentTick)
         {
-            state.IsStunned = false;
-
-            if (state.ActionState.StateType == BrawlerActionStateType.Stunned)
-            {
-                state.ClearActionState();
-            }
+            if (target is BrawlerState brawlerState)
+                brawlerState.IsStunned = false;
         }
 
         public bool CanMerge(StatusEffectContext context)
@@ -58,19 +35,16 @@ namespace MOBA.Core.Simulation
 
         public void Merge(StatusEffectContext context, uint currentTick)
         {
-            uint newEnd = currentTick + SecondsToTicks(context.Duration);
-            if (newEnd > EndTick)
-                EndTick = newEnd;
+            uint durationTicks = (uint)(context.Duration * 30f);
+            uint newEndTick = currentTick + durationTicks;
+
+            if (newEndTick > EndTick)
+                EndTick = newEndTick;
         }
 
         public bool IsExpired(uint currentTick)
         {
             return currentTick >= EndTick;
-        }
-
-        private static uint SecondsToTicks(float seconds)
-        {
-            return (uint)(seconds * 30f);
         }
     }
 }

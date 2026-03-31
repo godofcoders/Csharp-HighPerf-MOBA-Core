@@ -2,31 +2,40 @@ namespace MOBA.Core.Simulation
 {
     public sealed class SlowEffect : IStatusEffectInstance
     {
-        private readonly object _sourceToken;
-        private float _magnitude;
-
         public StatusEffectType Type => StatusEffectType.Slow;
         public uint StartTick { get; private set; }
         public uint EndTick { get; private set; }
 
+        private readonly float _magnitude;
+        private readonly float _durationSeconds;
+        private readonly object _sourceToken;
+
         public SlowEffect(float magnitude, float durationSeconds, object sourceToken, uint currentTick)
         {
             _magnitude = magnitude;
-            _sourceToken = sourceToken ?? this;
+            _durationSeconds = durationSeconds;
+            _sourceToken = sourceToken;
             StartTick = currentTick;
-            EndTick = currentTick + SecondsToTicks(durationSeconds);
+            EndTick = currentTick + (uint)(durationSeconds * 30f);
         }
 
-        public void Apply(BrawlerState state, uint currentTick)
+        public void Apply(IStatusTarget target, uint currentTick)
         {
-            state.AddIncomingMovementModifier(new MovementModifier(MovementModifierType.SpeedMultiplier, 1f - _magnitude, _sourceToken));
+            MovementModifier modifier = new MovementModifier(
+                MovementModifierType.SpeedMultiplier,
+                _magnitude,
+                _sourceToken);
+
+            target.AddIncomingMovementModifier(modifier);
         }
 
-        public void Tick(BrawlerState state, uint currentTick) { }
-
-        public void Remove(BrawlerState state, uint currentTick)
+        public void Tick(IStatusTarget target, uint currentTick)
         {
-            state.RemoveIncomingMovementModifiersFromSource(_sourceToken);
+        }
+
+        public void Remove(IStatusTarget target, uint currentTick)
+        {
+            target.RemoveIncomingMovementModifiersFromSource(_sourceToken);
         }
 
         public bool CanMerge(StatusEffectContext context)
@@ -36,19 +45,16 @@ namespace MOBA.Core.Simulation
 
         public void Merge(StatusEffectContext context, uint currentTick)
         {
-            uint newEnd = currentTick + SecondsToTicks(context.Duration);
-            if (newEnd > EndTick)
-                EndTick = newEnd;
+            uint durationTicks = (uint)(context.Duration * 30f);
+            uint newEndTick = currentTick + durationTicks;
+
+            if (newEndTick > EndTick)
+                EndTick = newEndTick;
         }
 
         public bool IsExpired(uint currentTick)
         {
             return currentTick >= EndTick;
-        }
-
-        private static uint SecondsToTicks(float seconds)
-        {
-            return (uint)(seconds * 30f);
         }
     }
 }

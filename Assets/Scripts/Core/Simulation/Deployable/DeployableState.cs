@@ -4,7 +4,7 @@ using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation
 {
-    public sealed class DeployableState
+    public sealed class DeployableState : IStatusTarget
     {
         public DeployableDefinition Definition { get; private set; }
         public BrawlerController Owner { get; private set; }
@@ -21,7 +21,9 @@ namespace MOBA.Core.Simulation
 
         public List<IStatusEffectInstance> ActiveStatusEffects { get; private set; }
         public DamageModifierCollection IncomingDamageModifiers { get; private set; }
+        public MovementModifierCollection IncomingMovementModifiers { get; private set; }
 
+        public int EntityID => Owner != null ? Owner.EntityID : 0;
         public DeployableState(
             DeployableDefinition definition,
             BrawlerController owner,
@@ -42,6 +44,7 @@ namespace MOBA.Core.Simulation
 
             ActiveStatusEffects = new List<IStatusEffectInstance>(8);
             IncomingDamageModifiers = new DamageModifierCollection();
+            IncomingMovementModifiers = new MovementModifierCollection();
         }
 
         public bool IsExpired(uint currentTick)
@@ -69,14 +72,9 @@ namespace MOBA.Core.Simulation
             if (amount <= 0f || IsDead)
                 return;
 
-            amount = IncomingDamageModifiers.Apply(amount);
-
-            if (ShieldHealth > 0f)
-            {
-                float absorbed = amount <= ShieldHealth ? amount : ShieldHealth;
-                ShieldHealth -= absorbed;
-                amount -= absorbed;
-            }
+            float remainingShield = ShieldHealth;
+            amount = IncomingDamageModifiers.ApplyIncoming(amount, ref remainingShield);
+            ShieldHealth = remainingShield;
 
             if (amount <= 0f)
                 return;
@@ -120,11 +118,11 @@ namespace MOBA.Core.Simulation
             for (int i = ActiveStatusEffects.Count - 1; i >= 0; i--)
             {
                 IStatusEffectInstance effect = ActiveStatusEffects[i];
-                effect.Tick(null, currentTick);
+                effect.Tick(this, currentTick);
 
                 if (effect.IsExpired(currentTick))
                 {
-                    effect.Remove(null, currentTick);
+                    effect.Remove(this, currentTick);
                     ActiveStatusEffects.RemoveAt(i);
                 }
             }
@@ -138,6 +136,16 @@ namespace MOBA.Core.Simulation
         public void RemoveIncomingDamageModifiersFromSource(object source)
         {
             IncomingDamageModifiers.RemoveBySource(source);
+        }
+
+        public void AddIncomingMovementModifier(MovementModifier modifier)
+        {
+            IncomingMovementModifiers.Add(modifier);
+        }
+
+        public void RemoveIncomingMovementModifiersFromSource(object source)
+        {
+            IncomingMovementModifiers.RemoveBySource(source);
         }
     }
 }

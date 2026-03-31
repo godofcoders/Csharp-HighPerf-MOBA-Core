@@ -16,15 +16,15 @@ namespace MOBA.Core.Simulation
             SourceToken = sourceToken;
         }
 
-        public virtual void Apply(BrawlerState state, uint currentTick)
+        public virtual void Apply(IStatusTarget target, uint currentTick)
         {
         }
 
-        public virtual void Tick(BrawlerState state, uint currentTick)
+        public virtual void Tick(IStatusTarget target, uint currentTick)
         {
         }
 
-        public virtual void Remove(BrawlerState state, uint currentTick)
+        public virtual void Remove(IStatusTarget target, uint currentTick)
         {
         }
 

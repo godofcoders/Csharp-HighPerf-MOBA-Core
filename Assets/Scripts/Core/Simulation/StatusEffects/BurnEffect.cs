@@ -4,50 +4,50 @@ namespace MOBA.Core.Simulation
 {
     public sealed class BurnEffect : IStatusEffectInstance
     {
-        private readonly float _damagePerTick;
-        private readonly BrawlerController _source;
-        private uint _nextTick;
-
         public StatusEffectType Type => StatusEffectType.Burn;
         public uint StartTick { get; private set; }
         public uint EndTick { get; private set; }
 
-        public BurnEffect(BrawlerController source, float dps, float durationSeconds, uint currentTick)
+        private readonly BrawlerController _source;
+        private readonly float _magnitude;
+        private readonly float _durationSeconds;
+        private uint _nextTickDamageTick;
+
+        public BurnEffect(BrawlerController source, float magnitude, float durationSeconds, uint currentTick)
         {
             _source = source;
-            _damagePerTick = dps / 2f; // tick every 0.5 sec
+            _magnitude = magnitude;
+            _durationSeconds = durationSeconds;
+
             StartTick = currentTick;
-            EndTick = currentTick + SecondsToTicks(durationSeconds);
-            _nextTick = currentTick + 15;
+            EndTick = currentTick + (uint)(durationSeconds * 30f);
+            _nextTickDamageTick = currentTick;
         }
 
-        public void Apply(BrawlerState state, uint currentTick) { }
-
-        public void Tick(BrawlerState state, uint currentTick)
+        public void Apply(IStatusTarget target, uint currentTick)
         {
-            if (currentTick < _nextTick)
-                return;
-
-            _nextTick = currentTick + 15;
-
-            var damageService = ServiceProvider.Get<IDamageService>();
-            if (damageService == null || state.Owner == null)
-                return;
-
-            damageService.ApplyDamage(new DamageContext
-            {
-                Attacker = _source,
-                Target = state.Owner,
-                Damage = _damagePerTick,
-                Type = DamageType.Ability,
-                HitPosition = state.Owner.Position,
-                Direction = default,
-                SourceAbility = null,
-                IsSuper = false
-            });
         }
 
-        public void Remove(BrawlerState state, uint currentTick) { }
+        public void Tick(IStatusTarget target, uint currentTick)
+        {
+            if (currentTick < _nextTickDamageTick)
+                return;
+
+            _nextTickDamageTick = currentTick + 30;
+
+            if (target is BrawlerState brawlerState)
+            {
+                brawlerState.TakeDamage(_magnitude);
+            }
+            else if (target is DeployableState deployableState)
+            {
+                deployableState.TakeDamage(_magnitude);
+            }
+        }
+
+        public void Remove(IStatusTarget target, uint currentTick)
+        {
+        }
 
         public bool CanMerge(StatusEffectContext context)
         {
@@ -56,19 +56,16 @@ namespace MOBA.Core.Simulation
 
         public void Merge(StatusEffectContext context, uint currentTick)
         {
-            uint newEnd = currentTick + SecondsToTicks(context.Duration);
-            if (newEnd > EndTick)
-                EndTick = newEnd;
+            uint durationTicks = (uint)(context.Duration * 30f);
+            uint newEndTick = currentTick + durationTicks;
+
+            if (newEndTick > EndTick)
+                EndTick = newEndTick;
         }
 
         public bool IsExpired(uint currentTick)
         {
             return currentTick >= EndTick;
-        }
-
-        private static uint SecondsToTicks(float seconds)
-        {
-            return (uint)(seconds * 30f);
         }
     }
 }

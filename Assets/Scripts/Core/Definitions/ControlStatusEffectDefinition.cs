@@ -22,7 +22,7 @@ namespace MOBA.Core.Definitions
             StatusEffectContext statusContext = new StatusEffectContext
             {
                 Source = caster,
-                Target = target,
+                Target = target.State,
                 Type = StatusType,
                 Duration = DurationSeconds,
                 Magnitude = 0f,

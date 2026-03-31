@@ -11,12 +11,12 @@ namespace MOBA.Core.Simulation
     {
         public void ApplyStatus(in StatusEffectContext context)
         {
-            if (context.Target == null || context.Target.State == null)
+            if (context.Target == null || !context.Target.CanReceiveStatusEffects())
                 return;
 
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
-            var state = context.Target.State;
-            var effects = state.ActiveStatusEffects;
+            IStatusTarget target = context.Target;
+            var effects = target.ActiveStatusEffects;
 
             for (int i = 0; i < effects.Count; i++)
             {
@@ -43,7 +43,7 @@ namespace MOBA.Core.Simulation
             if (instance == null)
                 return;
 
-            instance.Apply(state, currentTick);
+            instance.Apply(target, currentTick);
             effects.Add(instance);
 
             var applyResult = new StatusEffectResult
