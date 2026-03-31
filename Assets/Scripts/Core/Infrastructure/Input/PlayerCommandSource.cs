@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -7,6 +8,8 @@ namespace MOBA.Core.Infrastructure
 {
     public class PlayerCommandSource : MonoBehaviour, IBrawlerCommandSource, GameInput.IPlayerActions
     {
+        [SerializeField] private BrawlerController _controlledBrawler;
+
         private GameInput _input;
         private Vector2 _moveInput;
         private Vector2 _aimInput;
@@ -16,13 +19,18 @@ namespace MOBA.Core.Infrastructure
         private bool _superQueued;
         private bool _hyperchargeQueued;
 
-        private Vector3 _lastMoveDirection = Vector3.forward;
         private Vector3 _lastAimDirection = Vector3.forward;
+
+        private const float ManualAimThreshold = 0.20f;
+        private const float MoveFallbackThreshold = 0.20f;
 
         private void Awake()
         {
             _input = new GameInput();
             _input.Player.AddCallbacks(this);
+
+            if (_controlledBrawler == null)
+                _controlledBrawler = GetComponent<BrawlerController>();
         }
 
         private void OnEnable()
@@ -41,31 +49,32 @@ namespace MOBA.Core.Infrastructure
             _input.Dispose();
         }
 
+        public void SetControlledBrawler(BrawlerController controller)
+        {
+            _controlledBrawler = controller;
+        }
+
         public void CollectCommands(List<BrawlerCommand> output, uint currentTick)
         {
             if (_moveInput.sqrMagnitude > 0.01f)
             {
-                Vector3 moveDirection = new Vector3(_moveInput.x, 0f, _moveInput.y).normalized;
-                _lastMoveDirection = moveDirection;
-
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.Move,
-                    Direction = moveDirection,
+                    Direction = new Vector3(_moveInput.x, 0f, _moveInput.y).normalized,
                     Tick = currentTick
                 });
             }
-
-            Vector3 aimDirection = ResolveAimDirection();
 
             if (_mainAttackQueued)
             {
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.MainAttack,
-                    Direction = aimDirection,
+                    Direction = ResolveActionDirection(BrawlerActionRequestType.MainAttack),
                     Tick = currentTick
                 });
+
                 _mainAttackQueued = false;
             }
 
@@ -74,9 +83,10 @@ namespace MOBA.Core.Infrastructure
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.Gadget,
-                    Direction = aimDirection,
+                    Direction = ResolveActionDirection(BrawlerActionRequestType.Gadget),
                     Tick = currentTick
                 });
+
                 _gadgetQueued = false;
             }
 
@@ -85,9 +95,10 @@ namespace MOBA.Core.Infrastructure
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.Super,
-                    Direction = aimDirection,
+                    Direction = ResolveActionDirection(BrawlerActionRequestType.Super),
                     Tick = currentTick
                 });
+
                 _superQueued = false;
             }
 
@@ -96,26 +107,159 @@ namespace MOBA.Core.Infrastructure
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.Hypercharge,
-                    Direction = aimDirection,
+                    Direction = ResolveActionDirection(BrawlerActionRequestType.Hypercharge),
                     Tick = currentTick
                 });
+
                 _hyperchargeQueued = false;
             }
         }
 
-        private Vector3 ResolveAimDirection()
+        private Vector3 ResolveActionDirection(BrawlerActionRequestType actionType)
         {
-            if (_aimInput.sqrMagnitude > 0.01f)
+            if (_controlledBrawler == null)
+                return ResolveRawFallbackDirection();
+
+            Vector3 manualDirection = ResolveManualAimDirection();
+            if (manualDirection.sqrMagnitude > 0.001f)
             {
-                _lastAimDirection = new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
+                _lastAimDirection = manualDirection;
                 return _lastAimDirection;
             }
 
-            if (_lastAimDirection.sqrMagnitude > 0.01f)
+            AimAssistRequest request = BuildAimAssistRequest(actionType);
+            AimAssistResult result = AimAssistResolver.Resolve(request);
+
+            if (result.HasResult && result.AimDirection.sqrMagnitude > 0.001f)
+            {
+                _lastAimDirection = result.AimDirection.normalized;
+                return _lastAimDirection;
+            }
+
+            Vector3 fallbackDirection = ResolveRawFallbackDirection();
+            if (fallbackDirection.sqrMagnitude > 0.001f)
+            {
+                _lastAimDirection = fallbackDirection;
+                return _lastAimDirection;
+            }
+
+            return _controlledBrawler.transform.forward;
+        }
+
+        private AimAssistRequest BuildAimAssistRequest(BrawlerActionRequestType actionType)
+        {
+            AbilityDefinition abilityDefinition = GetAbilityDefinition(actionType);
+
+            return new AimAssistRequest
+            {
+                Source = _controlledBrawler,
+                AbilityDefinition = abilityDefinition,
+                Mode = ResolveAimAssistMode(actionType, abilityDefinition),
+                Origin = _controlledBrawler.Position,
+                Forward = ResolveRawFallbackDirection(),
+                Range = ResolveAimRange(abilityDefinition),
+                IncludeSelf = ShouldIncludeSelf(actionType, abilityDefinition),
+                RequireAlive = true
+            };
+        }
+
+        private AbilityDefinition GetAbilityDefinition(BrawlerActionRequestType actionType)
+        {
+            if (_controlledBrawler == null || _controlledBrawler.State == null)
+                return null;
+
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack:
+                    return _controlledBrawler.State.GetCurrentMainAttackDefinition();
+
+                case BrawlerActionRequestType.Gadget:
+                    return _controlledBrawler.State.GetCurrentGadgetDefinition();
+
+                case BrawlerActionRequestType.Super:
+                case BrawlerActionRequestType.Hypercharge:
+                    return _controlledBrawler.State.GetCurrentSuperDefinition();
+
+                default:
+                    return null;
+            }
+        }
+
+        private AimAssistMode ResolveAimAssistMode(BrawlerActionRequestType actionType, AbilityDefinition abilityDefinition)
+        {
+            if (actionType == BrawlerActionRequestType.Hypercharge)
+                return AimAssistMode.SelfCentered;
+
+            if (abilityDefinition == null)
+                return AimAssistMode.NearestEnemy;
+
+            if (abilityDefinition is EffectAoEAbilityDefinition effectAoE)
+            {
+                switch (effectAoE.TargetTeamRule)
+                {
+                    case AbilityTargetTeamRule.Ally:
+                        if (effectAoE.TargetSelectionRule == AbilityTargetSelectionRule.LowestHealth)
+                            return AimAssistMode.LowestHealthAlly;
+
+                        return AimAssistMode.NearestAlly;
+
+                    case AbilityTargetTeamRule.Enemy:
+                        return AimAssistMode.NearestEnemy;
+
+                    case AbilityTargetTeamRule.Self:
+                        return AimAssistMode.SelfCentered;
+                }
+            }
+
+            return AimAssistMode.NearestEnemy;
+        }
+
+        private float ResolveAimRange(AbilityDefinition abilityDefinition)
+        {
+            if (abilityDefinition == null)
+                return 8f;
+
+            if (abilityDefinition is ProjectileAbilityDefinition projectile)
+                return projectile.Range;
+
+            if (abilityDefinition is AoEAbilityDefinition aoe)
+                return aoe.Radius;
+
+            return 8f;
+        }
+
+        private bool ShouldIncludeSelf(BrawlerActionRequestType actionType, AbilityDefinition abilityDefinition)
+        {
+            if (actionType == BrawlerActionRequestType.Hypercharge)
+                return true;
+
+            if (abilityDefinition is EffectAoEAbilityDefinition effectAoE)
+                return effectAoE.IncludeSelf;
+
+            return false;
+        }
+
+        private Vector3 ResolveManualAimDirection()
+        {
+            if (_aimInput.sqrMagnitude >= (ManualAimThreshold * ManualAimThreshold))
+                return new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
+
+            return Vector3.zero;
+        }
+
+        private Vector3 ResolveRawFallbackDirection()
+        {
+            if (_aimInput.sqrMagnitude >= (ManualAimThreshold * ManualAimThreshold))
+                return new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
+
+            if (_moveInput.sqrMagnitude >= (MoveFallbackThreshold * MoveFallbackThreshold))
+                return new Vector3(_moveInput.x, 0f, _moveInput.y).normalized;
+
+            if (_lastAimDirection.sqrMagnitude > 0.001f)
                 return _lastAimDirection;
 
-            if (_lastMoveDirection.sqrMagnitude > 0.01f)
-                return _lastMoveDirection;
+            if (_controlledBrawler != null)
+                return _controlledBrawler.transform.forward;
 
             return transform.forward;
         }
