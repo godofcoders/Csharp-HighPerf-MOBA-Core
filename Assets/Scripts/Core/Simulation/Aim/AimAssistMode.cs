@@ -12,6 +12,9 @@ namespace MOBA.Core.Simulation
         SelfCentered = 5,
 
         SmartOffense = 6,
-        SmartSupport = 7
+        SmartSupport = 7,
+
+        FrontBiasedEnemy = 8,
+        SmartDeployablePlacement = 9
     }
 }

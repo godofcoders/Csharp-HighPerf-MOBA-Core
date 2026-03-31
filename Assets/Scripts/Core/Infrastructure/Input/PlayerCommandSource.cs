@@ -120,14 +120,17 @@ namespace MOBA.Core.Infrastructure
             if (_controlledBrawler == null)
                 return ResolveRawFallbackDirection();
 
+            AbilityDefinition abilityDefinition = GetAbilityDefinition(actionType);
+            bool preferManualAim = abilityDefinition == null || abilityDefinition.PreferManualAim;
+
             Vector3 manualDirection = ResolveManualAimDirection();
-            if (manualDirection.sqrMagnitude > 0.001f)
+            if (preferManualAim && manualDirection.sqrMagnitude > 0.001f)
             {
                 _lastAimDirection = manualDirection;
                 return _lastAimDirection;
             }
 
-            AimAssistRequest request = BuildAimAssistRequest(actionType);
+            AimAssistRequest request = BuildAimAssistRequest(actionType, abilityDefinition);
             AimAssistResult result = AimAssistResolver.Resolve(request);
 
             if (result.HasResult && result.AimDirection.sqrMagnitude > 0.001f)
@@ -146,10 +149,8 @@ namespace MOBA.Core.Infrastructure
             return _controlledBrawler.transform.forward;
         }
 
-        private AimAssistRequest BuildAimAssistRequest(BrawlerActionRequestType actionType)
+        private AimAssistRequest BuildAimAssistRequest(BrawlerActionRequestType actionType, AbilityDefinition abilityDefinition)
         {
-            AbilityDefinition abilityDefinition = GetAbilityDefinition(actionType);
-
             return new AimAssistRequest
             {
                 Source = _controlledBrawler,
@@ -187,35 +188,20 @@ namespace MOBA.Core.Infrastructure
 
         private AimAssistMode ResolveAimAssistMode(BrawlerActionRequestType actionType, AbilityDefinition abilityDefinition)
         {
+            if (abilityDefinition != null && abilityDefinition.AllowAimAssist)
+                return abilityDefinition.AimAssistMode;
+
             if (actionType == BrawlerActionRequestType.Hypercharge)
                 return AimAssistMode.SelfCentered;
 
-            if (abilityDefinition == null)
-                return AimAssistMode.NearestEnemy;
-
-            if (abilityDefinition is EffectAoEAbilityDefinition effectAoE)
-            {
-                switch (effectAoE.TargetTeamRule)
-                {
-                    case AbilityTargetTeamRule.Ally:
-                        if (effectAoE.TargetSelectionRule == AbilityTargetSelectionRule.LowestHealth)
-                            return AimAssistMode.LowestHealthAlly;
-
-                        return AimAssistMode.NearestAlly;
-
-                    case AbilityTargetTeamRule.Enemy:
-                        return AimAssistMode.NearestEnemy;
-
-                    case AbilityTargetTeamRule.Self:
-                        return AimAssistMode.SelfCentered;
-                }
-            }
-
-            return AimAssistMode.NearestEnemy;
+            return AimAssistMode.None;
         }
 
         private float ResolveAimRange(AbilityDefinition abilityDefinition)
         {
+            if (abilityDefinition != null && abilityDefinition.AimAssistRangeOverride > 0f)
+                return abilityDefinition.AimAssistRangeOverride;
+
             if (abilityDefinition == null)
                 return 8f;
 
@@ -230,13 +216,10 @@ namespace MOBA.Core.Infrastructure
 
         private bool ShouldIncludeSelf(BrawlerActionRequestType actionType, AbilityDefinition abilityDefinition)
         {
-            if (actionType == BrawlerActionRequestType.Hypercharge)
-                return true;
+            if (abilityDefinition != null)
+                return abilityDefinition.AimAssistIncludeSelf;
 
-            if (abilityDefinition is EffectAoEAbilityDefinition effectAoE)
-                return effectAoE.IncludeSelf;
-
-            return false;
+            return actionType == BrawlerActionRequestType.Hypercharge;
         }
 
         private Vector3 ResolveManualAimDirection()

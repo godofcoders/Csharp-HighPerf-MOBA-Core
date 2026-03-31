@@ -35,6 +35,13 @@ namespace MOBA.Core.Definitions
         [Header("AI Intent")]
         public AbilityIntentType Intent;
 
+        [Header("Aim Assist")]
+        public bool AllowAimAssist = true;
+        public MOBA.Core.Simulation.AimAssistMode AimAssistMode = MOBA.Core.Simulation.AimAssistMode.NearestEnemy;
+        public bool AimAssistIncludeSelf = false;
+        public bool PreferManualAim = true;
+        public float AimAssistRangeOverride = -1f;
+
         public abstract MOBA.Core.Simulation.IAbilityLogic CreateLogic();
 
         public virtual float GetAIIdealRange()
