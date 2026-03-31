@@ -42,6 +42,12 @@ namespace MOBA.Core.Definitions
         public bool PreferManualAim = true;
         public float AimAssistRangeOverride = -1f;
 
+        [Header("Aim Assist Tuning")]
+        public float AimAssistForwardBias = 2f;
+        public float AimAssistDistanceBias = 1f;
+        public float AimAssistIdealRange = -1f;
+        public float AimAssistPlacementDistance = 3f;
+
         public abstract MOBA.Core.Simulation.IAbilityLogic CreateLogic();
 
         public virtual float GetAIIdealRange()

@@ -113,6 +113,10 @@ namespace MOBA.Core.Simulation
                 ? request.Forward.normalized
                 : request.Source.transform.forward;
 
+            float forwardBias = request.AbilityDefinition != null ? request.AbilityDefinition.AimAssistForwardBias : 2f;
+            float distanceBias = request.AbilityDefinition != null ? request.AbilityDefinition.AimAssistDistanceBias : 1f;
+            float idealRange = request.AbilityDefinition != null ? request.AbilityDefinition.AimAssistIdealRange : -1f;
+
             for (int i = 0; i < _buffer.Count; i++)
             {
                 BrawlerController target = _buffer[i];
@@ -125,9 +129,20 @@ namespace MOBA.Core.Simulation
                     continue;
 
                 Vector3 dir = toTarget / dist;
-                float facingScore = Vector3.Dot(forward, dir);
-                float distanceScore = 1f / Mathf.Max(1f, dist);
-                float score = facingScore * 2f + distanceScore;
+                float facingScore = Mathf.Max(0f, Vector3.Dot(forward, dir));
+
+                float distanceScore;
+                if (idealRange > 0f)
+                {
+                    float idealDelta = Mathf.Abs(dist - idealRange);
+                    distanceScore = 1f / Mathf.Max(1f, idealDelta + 1f);
+                }
+                else
+                {
+                    distanceScore = 1f / Mathf.Max(1f, dist);
+                }
+
+                float score = facingScore * forwardBias + distanceScore * distanceBias;
 
                 if (score > bestScore)
                 {
@@ -141,7 +156,41 @@ namespace MOBA.Core.Simulation
 
         private static AimAssistResult ResolveSmartSupport(in AimAssistRequest request)
         {
-            return ResolveTargetByRule(request, AbilityTargetTeamRule.Ally, AbilityTargetSelectionRule.LowestHealth);
+            AimAssistResult result = BuildDefaultResult(request);
+
+            _buffer.Clear();
+
+            request.Source.ResolveTargets(
+                AbilityTargetTeamRule.Ally,
+                AbilityTargetSelectionRule.LowestHealth,
+                request.Range,
+                _buffer,
+                request.IncludeSelf,
+                request.RequireAlive);
+
+            if (_buffer.Count == 0)
+                return result;
+
+            BrawlerController best = null;
+            float lowestRatio = float.MaxValue;
+
+            for (int i = 0; i < _buffer.Count; i++)
+            {
+                BrawlerController target = _buffer[i];
+                if (target == null || target.State == null)
+                    continue;
+
+                float maxHealth = Mathf.Max(1f, target.State.MaxHealth.Value);
+                float ratio = target.State.CurrentHealth / maxHealth;
+
+                if (ratio < lowestRatio)
+                {
+                    lowestRatio = ratio;
+                    best = target;
+                }
+            }
+
+            return best != null ? BuildTargetResult(request, best) : result;
         }
 
         private static AimAssistResult ResolveFrontBiasedEnemy(in AimAssistRequest request)
@@ -152,6 +201,10 @@ namespace MOBA.Core.Simulation
         private static AimAssistResult ResolveSmartDeployablePlacement(in AimAssistRequest request)
         {
             AimAssistResult result = BuildDefaultResult(request);
+
+            float placementDistance = 3f;
+            if (request.AbilityDefinition != null && request.AbilityDefinition.AimAssistPlacementDistance > 0f)
+                placementDistance = request.AbilityDefinition.AimAssistPlacementDistance;
 
             AimAssistResult targetResult = ResolveSmartOffense(request);
 
@@ -164,7 +217,7 @@ namespace MOBA.Core.Simulation
                 result.HasResult = true;
                 result.Target = targetResult.Target;
                 result.AimDirection = dir;
-                result.AimPoint = request.Origin + dir * Mathf.Min(request.Range, 3f);
+                result.AimPoint = request.Origin + dir * Mathf.Min(request.Range, placementDistance);
                 return result;
             }
 
@@ -174,7 +227,7 @@ namespace MOBA.Core.Simulation
 
             result.HasResult = true;
             result.AimDirection = fallbackDir;
-            result.AimPoint = request.Origin + fallbackDir * Mathf.Min(request.Range, 3f);
+            result.AimPoint = request.Origin + fallbackDir * Mathf.Min(request.Range, placementDistance);
             return result;
         }
 
