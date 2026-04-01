@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eec2076c6e34b4e098ae66622451deb6, type: 3}
+  m_Name: Colt_Super
+  m_EditorClassIdentifier: 
+  OptionName: Colt Super
+  Description: Strong straight projectile baseline super
+  AllowedBuildSlotTypes: 
+  AbilityName: Bullet Storm
+  Icon: {fileID: 0}
+  SlotType: 1
+  TargetingType: 1
+  DeliveryType: 1
+  Cooldown: 6
+  Tags: 
+  CastDurationSeconds: 0.15
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 5
+  AllowAimAssist: 1
+  AimAssistMode: 6
+  AimAssistIncludeSelf: 0
+  PreferManualAim: 1
+  AimAssistRangeOverride: -1
+  AimAssistForwardBias: 2
+  AimAssistDistanceBias: 1
+  AimAssistIdealRange: 10
+  AimAssistPlacementDistance: 3
+  Damage: 700
+  Range: 12
+  Speed: 22
+  ProjectileCount: 1
