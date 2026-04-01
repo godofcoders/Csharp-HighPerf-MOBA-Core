@@ -49,8 +49,10 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            if (!_isInitialized)
+            if (_definition != null && !_isInitialized)
+            {
                 InternalInitialize(_definition, _team);
+            }
         }
 
         public void SetCommandSource(IBrawlerCommandSource source)
