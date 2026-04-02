@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 38a49263d082c4cef8a8eaea583f3295, type: 3}
+  m_Script: {fileID: 11500000, guid: 220a6073541ca4246b3d7c5ee0a2ba54, type: 3}
   m_Name: Colt_MainAttack
   m_EditorClassIdentifier: 
   OptionName: Colt Main Attack
@@ -31,14 +31,14 @@ MonoBehaviour:
   AimAssistMode: 6
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: 8
+  AimAssistRangeOverride: -1
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 1
-  AimAssistIdealRange: -1
+  AimAssistIdealRange: 8
   AimAssistPlacementDistance: 3
-  Damage: 120
+  Damage: 90
   Range: 9
-  Speed: 100
+  Speed: 5
   ProjectileCount: 6
-  SpreadAngle: 10
-  DelayBetweenShots: 0
+  ForwardSpacing: 0.25
+  RandomSpreadAngle: 0.15
