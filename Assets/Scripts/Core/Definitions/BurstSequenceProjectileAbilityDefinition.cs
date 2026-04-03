@@ -13,12 +13,9 @@ namespace MOBA.Core.Definitions
 
         [Header("Burst")]
         [Min(1)] public int ProjectileCount = 6;
-
-        [Tooltip("Spacing between bullets along the forward firing lane.")]
-        [Min(0f)] public float ForwardSpacing = 0.25f;
-
-        [Tooltip("Optional slight random spread in degrees. Keep very low for Colt.")]
-        [Min(0f)] public float RandomSpreadAngle = 0.25f;
+        [Min(0f)] public float DelayBetweenShots = 0.05f;
+        [Min(0f)] public float RandomSpreadAngle = 0.15f;
+        public bool AlternateMuzzles = true;
 
         public override IAbilityLogic CreateLogic()
         {

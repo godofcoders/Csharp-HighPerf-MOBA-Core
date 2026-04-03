@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
@@ -25,24 +26,23 @@ namespace MOBA.Core.Simulation
                 ? context.Direction.normalized
                 : brawler.transform.forward;
 
-            Vector3 origin = brawler.transform.position;
+            brawler.RunTimedBurst(FireBurstRoutine(brawler, baseDirection, context));
+
+            return AbilityExecutionResult.Succeeded(_definition, context.SlotType);
+        }
+
+        public void Tick(uint currentTick)
+        {
+        }
+
+        private IEnumerator FireBurstRoutine(BrawlerController brawler, Vector3 baseDirection, AbilityExecutionContext context)
+        {
             int count = Mathf.Max(1, _definition.ProjectileCount);
 
             for (int i = 0; i < count; i++)
             {
-                float forwardOffset = _definition.ForwardSpacing * i;
-
-                // Spawn bullets one behind another in the firing lane.
-                Vector3 shotOrigin = origin - (baseDirection * forwardOffset);
-
-                Vector3 shotDirection = baseDirection;
-
-                if (_definition.RandomSpreadAngle > 0f)
-                {
-                    float randomYaw = Random.Range(-_definition.RandomSpreadAngle, _definition.RandomSpreadAngle);
-                    shotDirection = Quaternion.Euler(0f, randomYaw, 0f) * shotDirection;
-                    shotDirection.Normalize();
-                }
+                Vector3 shotOrigin = ResolveShotOrigin(brawler, i);
+                Vector3 shotDirection = ApplySpread(baseDirection);
 
                 brawler.FireProjectile(
                     shotOrigin,
@@ -55,13 +55,31 @@ namespace MOBA.Core.Simulation
                     context.IsSuper,
                     context.IsGadget
                 );
-            }
 
-            return AbilityExecutionResult.Succeeded(_definition, context.SlotType);
+                if (i < count - 1 && _definition.DelayBetweenShots > 0f)
+                    yield return new WaitForSeconds(_definition.DelayBetweenShots);
+            }
         }
 
-        public void Tick(uint currentTick)
+        private Vector3 ResolveShotOrigin(BrawlerController brawler, int shotIndex)
         {
+            if (!_definition.AlternateMuzzles)
+                return brawler.transform.position;
+
+            bool useLeft = (shotIndex % 2 == 0);
+            return useLeft
+                ? brawler.GetLeftMuzzlePosition()
+                : brawler.GetRightMuzzlePosition();
+        }
+
+        private Vector3 ApplySpread(Vector3 baseDirection)
+        {
+            if (_definition.RandomSpreadAngle <= 0f)
+                return baseDirection;
+
+            float randomYaw = Random.Range(-_definition.RandomSpreadAngle, _definition.RandomSpreadAngle);
+            Vector3 dir = Quaternion.Euler(0f, randomYaw, 0f) * baseDirection;
+            return dir.normalized;
         }
     }
 }

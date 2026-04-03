@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Simulation;
 using MOBA.Core.Definitions;
+using System.Collections;
 
 namespace MOBA.Core.Infrastructure
 {
@@ -10,6 +11,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerDefinition _definition;
         [SerializeField] private TeamType _team;
         [SerializeField] private GameObject _visualModel;
+
+        [SerializeField] private Transform _leftMuzzle;
+        [SerializeField] private Transform _rightMuzzle;
 
         private Vector3 _lastTickPosition;
         private readonly InputBuffer _inputBuffer = new InputBuffer();
@@ -1159,6 +1163,21 @@ namespace MOBA.Core.Infrastructure
             _debugSnapshot.Position = Position;
 
             BrawlerDebugTracker.UpdateSnapshot(this, _debugSnapshot);
+        }
+
+        public Vector3 GetLeftMuzzlePosition()
+        {
+            return _leftMuzzle != null ? _leftMuzzle.position : transform.position;
+        }
+
+        public Vector3 GetRightMuzzlePosition()
+        {
+            return _rightMuzzle != null ? _rightMuzzle.position : transform.position;
+        }
+
+        public Coroutine RunTimedBurst(IEnumerator routine)
+        {
+            return StartCoroutine(routine);
         }
     }
 }
