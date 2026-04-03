@@ -272,6 +272,7 @@ namespace MOBA.Core.Infrastructure
 
         public void OnSuper(InputAction.CallbackContext context)
         {
+            Debug.Log($"OnSuper called. performed={context.performed}");
             if (context.performed)
                 _superQueued = true;
         }

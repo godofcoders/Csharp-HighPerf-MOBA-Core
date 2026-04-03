@@ -97,6 +97,7 @@ namespace MOBA.Core.Simulation
 
             ClearActionState();
             ResetAbilityCooldowns();
+            SuperCharge.Reset(true);
         }
 
         public void SetEquippedHypercharge(HyperchargeDefinition definition)
@@ -387,7 +388,7 @@ namespace MOBA.Core.Simulation
 
             RefreshGadgetChargesFromRuntimeKit();
             Hypercharge = new HyperchargeTracker();
-            SuperCharge.Reset(false);
+            SuperCharge.Reset(true); // For testing purposes, start with a full super charge on reset. Adjust as needed.
 
             IsStunned = false;
             IsInBush = false;

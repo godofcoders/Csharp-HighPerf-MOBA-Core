@@ -719,6 +719,7 @@ namespace MOBA.Core.Infrastructure
 
                 case InputCommandType.Super:
                     {
+                        Debug.Log("Executing Super");
                         AbilityDefinition currentSuperDef = State.GetCurrentSuperDefinition();
                         BrawlerActionRequestType actionType = BrawlerActionRequestType.Super;
 

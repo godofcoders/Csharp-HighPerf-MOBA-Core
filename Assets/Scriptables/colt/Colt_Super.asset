@@ -9,34 +9,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eec2076c6e34b4e098ae66622451deb6, type: 3}
+  m_Script: {fileID: 11500000, guid: 220a6073541ca4246b3d7c5ee0a2ba54, type: 3}
   m_Name: Colt_Super
   m_EditorClassIdentifier: 
-  OptionName: Colt Super
-  Description: Strong straight projectile baseline super
+  OptionName: 
+  Description: 
   AllowedBuildSlotTypes: 
-  AbilityName: Bullet Storm
+  AbilityName: Bullet storm
   Icon: {fileID: 0}
   SlotType: 1
   TargetingType: 1
   DeliveryType: 1
-  Cooldown: 6
+  Cooldown: 1
   Tags: 
   CastDurationSeconds: 0.15
   AllowMovementDuringCast: 1
   AllowActionInputDuringCast: 0
   IsInterruptible: 1
-  Intent: 5
+  Intent: 0
   AllowAimAssist: 1
   AimAssistMode: 6
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: -1
+  AimAssistRangeOverride: 10
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 1
-  AimAssistIdealRange: 10
+  AimAssistIdealRange: -1
   AimAssistPlacementDistance: 3
-  Damage: 700
+  Damage: 140
   Range: 12
-  Speed: 22
-  ProjectileCount: 1
+  Speed: 40
+  ProjectileCount: 10
+  DelayBetweenShots: 0.04
+  RandomSpreadAngle: 0.05
+  AlternateMuzzles: 1

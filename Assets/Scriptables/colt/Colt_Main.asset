@@ -31,14 +31,14 @@ MonoBehaviour:
   AimAssistMode: 6
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: -1
+  AimAssistRangeOverride: 10
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 1
   AimAssistIdealRange: 8
   AimAssistPlacementDistance: 3
   Damage: 90
-  Range: 15
-  Speed: 50
+  Range: 10
+  Speed: 30
   ProjectileCount: 6
   DelayBetweenShots: 0.045
   RandomSpreadAngle: 0.1
