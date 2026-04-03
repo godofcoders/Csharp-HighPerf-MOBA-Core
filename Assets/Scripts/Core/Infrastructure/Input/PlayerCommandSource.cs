@@ -238,11 +238,11 @@ namespace MOBA.Core.Infrastructure
             if (_moveInput.sqrMagnitude >= (MoveFallbackThreshold * MoveFallbackThreshold))
                 return new Vector3(_moveInput.x, 0f, _moveInput.y).normalized;
 
-            if (_lastAimDirection.sqrMagnitude > 0.001f)
-                return _lastAimDirection;
-
             if (_controlledBrawler != null)
                 return _controlledBrawler.transform.forward;
+
+            if (_lastAimDirection.sqrMagnitude > 0.001f)
+                return _lastAimDirection;
 
             return transform.forward;
         }
