@@ -92,6 +92,7 @@ namespace MOBA.Core.Infrastructure
 
                         if (isAlly)
                         {
+                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner?.name} healed ally {targetBrawler.name} for {p.AllyHealAmount}");
                             targetBrawler.State.Heal(p.AllyHealAmount);
 
                             CombatPresentationEventBus.Raise(new CombatPresentationEvent
@@ -109,6 +110,7 @@ namespace MOBA.Core.Infrastructure
                         }
                         else
                         {
+                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner?.name} damaged enemy {targetBrawler.name} for {p.EnemyDamageAmount}");
                             var damageService = ServiceProvider.Get<IDamageService>();
 
                             damageService.ApplyDamage(new DamageContext

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
+using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
@@ -300,8 +301,12 @@ namespace MOBA.Core.Simulation
             if (IsDead)
                 return;
 
+            float beforeHealth = CurrentHealth;
+
             CurrentHealth -= amount;
             CurrentHealth = Math.Max(0, CurrentHealth);
+
+            Debug.Log($"[DAMAGE] Target={Owner?.name ?? "Unknown"} Team={Team} Damage={amount} Health: {beforeHealth} -> {CurrentHealth}");
 
             OnHealthChanged?.Invoke(CurrentHealth);
 
@@ -353,8 +358,12 @@ namespace MOBA.Core.Simulation
             if (IsDead)
                 return;
 
+            float beforeHealth = CurrentHealth;
+
             CurrentHealth += amount;
             CurrentHealth = Math.Min(CurrentHealth, MaxHealth.Value);
+
+            Debug.Log($"[HEAL] Target={Owner?.name ?? "Unknown"} Team={Team} Heal={amount} Health: {beforeHealth} -> {CurrentHealth}");
 
             OnHealthChanged?.Invoke(CurrentHealth);
 

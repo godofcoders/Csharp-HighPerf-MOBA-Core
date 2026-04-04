@@ -283,7 +283,7 @@ Transform:
   m_GameObject: {fileID: 106007756}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.18, y: 2, z: -3.83}
+  m_LocalPosition: {x: 3.5, y: 2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -500,7 +500,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6168ac9ff681b47758b5d4bd95f5ae64, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _playerBrawler: {fileID: 11400000, guid: c6cbcf818157b45e0b07a58637e4cc5d, type: 2}
+  _playerBrawler: {fileID: 11400000, guid: 4af276c14755a4edfb269cdac13b8f80, type: 2}
+  _allyBrawler: {fileID: 11400000, guid: 4af276c14755a4edfb269cdac13b8f80, type: 2}
   _enemyBrawler: {fileID: 11400000, guid: c6cbcf818157b45e0b07a58637e4cc5d, type: 2}
 --- !u!1 &330585543
 GameObject:
@@ -1024,7 +1025,7 @@ Transform:
   m_GameObject: {fileID: 630287534}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 4.18, y: 2, z: 0}
+  m_LocalPosition: {x: 4, y: 2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1673,7 +1674,7 @@ Transform:
   m_GameObject: {fileID: 1035219714}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -4.23, y: 2, z: 0}
+  m_LocalPosition: {x: 3, y: 2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

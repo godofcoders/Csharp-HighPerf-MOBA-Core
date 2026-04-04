@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Byron_definition
   m_EditorClassIdentifier: 
-  BrawlerName: 
+  BrawlerName: Byron
   ModelPrefab: {fileID: 3855221367005763782, guid: 125e4aafd29024f1a94ecc08ff37749f, type: 3}
   BaseHealth: 3000
   BaseMoveSpeed: 5
