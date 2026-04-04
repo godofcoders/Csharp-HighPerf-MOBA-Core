@@ -64,12 +64,12 @@ namespace MOBA.Core.Simulation
         private Vector3 ResolveShotOrigin(BrawlerController brawler, int shotIndex)
         {
             if (!_definition.AlternateMuzzles)
-                return brawler.transform.position;
+                return brawler.GetCastPosition();
 
-            bool useLeft = (shotIndex % 2 == 0);
-            return useLeft
-                ? brawler.GetLeftMuzzlePosition()
-                : brawler.GetRightMuzzlePosition();
+            bool usePrimary = (shotIndex % 2 == 0);
+            return usePrimary
+                ? brawler.GetPrimaryFirePosition()
+                : brawler.GetSecondaryFirePosition();
         }
 
         private Vector3 ApplySpread(Vector3 baseDirection)

@@ -12,8 +12,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private TeamType _team;
         [SerializeField] private GameObject _visualModel;
 
-        [SerializeField] private Transform _leftMuzzle;
-        [SerializeField] private Transform _rightMuzzle;
+        [SerializeField] private BrawlerPresentationAnchors _presentationAnchors;
 
         private Vector3 _lastTickPosition;
         private readonly InputBuffer _inputBuffer = new InputBuffer();
@@ -1166,14 +1165,25 @@ namespace MOBA.Core.Infrastructure
             BrawlerDebugTracker.UpdateSnapshot(this, _debugSnapshot);
         }
 
-        public Vector3 GetLeftMuzzlePosition()
+        public Vector3 GetPrimaryFirePosition()
         {
-            return _leftMuzzle != null ? _leftMuzzle.position : transform.position;
+            return _presentationAnchors != null
+                ? _presentationAnchors.GetPrimaryFirePosition(transform)
+                : transform.position;
         }
 
-        public Vector3 GetRightMuzzlePosition()
+        public Vector3 GetSecondaryFirePosition()
         {
-            return _rightMuzzle != null ? _rightMuzzle.position : transform.position;
+            return _presentationAnchors != null
+                ? _presentationAnchors.GetSecondaryFirePosition(transform)
+                : transform.position;
+        }
+
+        public Vector3 GetCastPosition()
+        {
+            return _presentationAnchors != null
+                ? _presentationAnchors.GetCastPosition(transform)
+                : transform.position;
         }
 
         public Coroutine RunTimedBurst(IEnumerator routine)
