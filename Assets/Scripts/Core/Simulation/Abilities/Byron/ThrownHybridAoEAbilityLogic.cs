@@ -59,6 +59,9 @@ namespace MOBA.Core.Simulation.Abilities
                 ImpactRadius = _definition.ImpactRadius,
                 ImpactEnemyDamage = _definition.EnemyDamage,
                 ImpactAllyHeal = _definition.AllyHeal,
+                UseArcMotion = true,
+                ArcHeight = 1.75f,
+                TravelDistance = Vector3.Distance(origin, targetPoint),
             };
 
             projectileService.FireProjectile(spawnContext);

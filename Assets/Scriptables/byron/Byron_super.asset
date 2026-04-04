@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 31e3572c1a64d4e298ca1777a5c03cd8, type: 3}
+  m_Script: {fileID: 11500000, guid: 5285e47cd8eb44869814b719ecdbe52a, type: 3}
   m_Name: Byron_super
   m_EditorClassIdentifier: 
   OptionName: 
@@ -18,7 +18,7 @@ MonoBehaviour:
   AbilityName: Full Treatment
   Icon: {fileID: 0}
   SlotType: 0
-  TargetingType: 3
+  TargetingType: 1
   DeliveryType: 2
   Cooldown: 1
   Tags: 
@@ -29,14 +29,15 @@ MonoBehaviour:
   Intent: 0
   AllowAimAssist: 1
   AimAssistMode: 5
-  AimAssistIncludeSelf: 0
-  PreferManualAim: 1
-  AimAssistRangeOverride: 12
+  AimAssistIncludeSelf: 1
+  PreferManualAim: 0
+  AimAssistRangeOverride: 6
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 1
-  AimAssistIdealRange: 12
+  AimAssistIdealRange: 6
   AimAssistPlacementDistance: 3
-  Damage: 1500
-  Radius: 6
+  ThrowRange: 7
+  ThrowSpeed: 16
+  ImpactRadius: 10
   EnemyDamage: 350
   AllyHeal: 350

@@ -452,6 +452,9 @@ namespace MOBA.Core.Infrastructure
                 ImpactRadius = 0f,
                 ImpactEnemyDamage = 0f,
                 ImpactAllyHeal = 0f,
+                UseArcMotion = false,
+                ArcHeight = 0f,
+                TravelDistance = 0f,
             };
 
             projectileService.FireProjectile(spawnContext);

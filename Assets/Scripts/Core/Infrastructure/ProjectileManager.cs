@@ -51,7 +51,11 @@ namespace MOBA.Core.Infrastructure
                 HasHybridAoEImpact = context.HasHybridAoEImpact,
                 ImpactRadius = context.ImpactRadius,
                 ImpactEnemyDamage = context.ImpactEnemyDamage,
-                ImpactAllyHeal = context.ImpactAllyHeal
+                ImpactAllyHeal = context.ImpactAllyHeal,
+                UseArcMotion = context.UseArcMotion,
+                ArcHeight = context.ArcHeight,
+                TravelDistance = context.TravelDistance,
+                TravelProgress = 0f,
             });
 
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
@@ -74,21 +78,49 @@ namespace MOBA.Core.Infrastructure
             {
                 var p = _activeProjectiles[i];
 
-                Vector3 movement = p.Direction * (p.Speed * SimulationClock.TickDeltaTime);
-                p.GameObject.transform.position += movement;
-
-                if ((p.GameObject.transform.position - p.Origin).sqrMagnitude >= p.MaxRangeSq)
+                if (p.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE && p.UseArcMotion)
                 {
-                    Despawn(i);
-                    continue;
+                    float totalDistance = Mathf.Max(0.01f, p.TravelDistance);
+                    float distanceStep = p.Speed * SimulationClock.TickDeltaTime;
+
+                    p.TravelProgress += distanceStep / totalDistance;
+                    p.TravelProgress = Mathf.Clamp01(p.TravelProgress);
+
+                    Vector3 basePos = Vector3.Lerp(p.Origin, p.TargetPoint, p.TravelProgress);
+
+                    float arcOffset = 4f * p.ArcHeight * p.TravelProgress * (1f - p.TravelProgress);
+
+                    p.GameObject.transform.position = basePos + (Vector3.up * arcOffset);
+
+                    Vector3 flatDirection = (p.TargetPoint - p.Origin);
+                    flatDirection.y = 0f;
+                    if (flatDirection.sqrMagnitude > 0.001f)
+                        p.GameObject.transform.rotation = Quaternion.LookRotation(flatDirection.normalized);
+                }
+                else
+                {
+                    Vector3 movement = p.Direction * (p.Speed * SimulationClock.TickDeltaTime);
+                    p.GameObject.transform.position += movement;
+                }
+
+                if (p.DeliveryType != ProjectileDeliveryType.ThrownImpactAoE)
+                {
+                    if ((p.GameObject.transform.position - p.Origin).sqrMagnitude >= p.MaxRangeSq)
+                    {
+                        Despawn(i);
+                        continue;
+                    }
                 }
 
                 // Thrown bottle / grenade / impact-at-point delivery
                 if (p.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE)
                 {
-                    float impactThresholdSq = 0.2f * 0.2f;
+                    bool reachedImpact =
+                        p.UseArcMotion
+                            ? p.TravelProgress >= 1f
+                            : (p.GameObject.transform.position - p.TargetPoint).sqrMagnitude <= (0.2f * 0.2f);
 
-                    if ((p.GameObject.transform.position - p.TargetPoint).sqrMagnitude <= impactThresholdSq)
+                    if (reachedImpact)
                     {
                         ResolveHybridAoEImpact(p, p.TargetPoint);
                         Despawn(i);
@@ -292,6 +324,10 @@ namespace MOBA.Core.Infrastructure
             public float ImpactRadius;
             public float ImpactEnemyDamage;
             public float ImpactAllyHeal;
+            public bool UseArcMotion;
+            public float ArcHeight;
+            public float TravelDistance;
+            public float TravelProgress;
         }
     }
 }

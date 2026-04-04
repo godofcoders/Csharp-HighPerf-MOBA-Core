@@ -37,5 +37,9 @@ namespace MOBA.Core.Simulation
         public float ImpactRadius;
         public float ImpactEnemyDamage;
         public float ImpactAllyHeal;
+
+        public bool UseArcMotion;
+        public float ArcHeight;
+        public float TravelDistance;
     }
 }
