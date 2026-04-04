@@ -444,7 +444,14 @@ namespace MOBA.Core.Infrastructure
                 IsHybrid = false,
                 AllyHealAmount = 0f,
                 EnemyDamageAmount = 0f,
-                HitTeamRule = ProjectileHitTeamRule.EnemiesOnly
+                HitTeamRule = ProjectileHitTeamRule.EnemiesOnly,
+                DeliveryType = ProjectileDeliveryType.DirectHit,
+                TargetPoint = Vector3.zero,
+
+                HasHybridAoEImpact = false,
+                ImpactRadius = 0f,
+                ImpactEnemyDamage = 0f,
+                ImpactAllyHeal = 0f,
             };
 
             projectileService.FireProjectile(spawnContext);

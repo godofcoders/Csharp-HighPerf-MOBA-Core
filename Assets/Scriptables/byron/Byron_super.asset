@@ -37,6 +37,6 @@ MonoBehaviour:
   AimAssistIdealRange: 12
   AimAssistPlacementDistance: 3
   Damage: 1500
-  Radius: 3
+  Radius: 6
   EnemyDamage: 350
   AllyHeal: 350

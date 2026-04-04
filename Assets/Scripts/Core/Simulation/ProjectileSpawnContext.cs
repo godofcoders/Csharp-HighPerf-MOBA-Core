@@ -28,5 +28,14 @@ namespace MOBA.Core.Simulation
         public float EnemyDamageAmount;
 
         public ProjectileHitTeamRule HitTeamRule;
+
+        public ProjectileDeliveryType DeliveryType;
+
+        public Vector3 TargetPoint;
+
+        public bool HasHybridAoEImpact;
+        public float ImpactRadius;
+        public float ImpactEnemyDamage;
+        public float ImpactAllyHeal;
     }
 }

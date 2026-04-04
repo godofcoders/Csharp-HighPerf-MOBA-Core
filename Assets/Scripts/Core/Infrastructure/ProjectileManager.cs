@@ -43,7 +43,15 @@ namespace MOBA.Core.Infrastructure
                 IsHybrid = context.IsHybrid,
                 AllyHealAmount = context.AllyHealAmount,
                 EnemyDamageAmount = context.EnemyDamageAmount,
-                HitTeamRule = context.HitTeamRule
+                HitTeamRule = context.HitTeamRule,
+
+                DeliveryType = context.DeliveryType,
+                TargetPoint = context.TargetPoint,
+
+                HasHybridAoEImpact = context.HasHybridAoEImpact,
+                ImpactRadius = context.ImpactRadius,
+                ImpactEnemyDamage = context.ImpactEnemyDamage,
+                ImpactAllyHeal = context.ImpactAllyHeal
             });
 
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
@@ -75,6 +83,20 @@ namespace MOBA.Core.Infrastructure
                     continue;
                 }
 
+                // Thrown bottle / grenade / impact-at-point delivery
+                if (p.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE)
+                {
+                    float impactThresholdSq = 0.2f * 0.2f;
+
+                    if ((p.GameObject.transform.position - p.TargetPoint).sqrMagnitude <= impactThresholdSq)
+                    {
+                        ResolveHybridAoEImpact(p, p.TargetPoint);
+                        Despawn(i);
+                    }
+
+                    continue;
+                }
+
                 var hit = SimulationClock.Grid?.CheckCollision(
                     p.GameObject.transform.position,
                     0.5f,
@@ -92,7 +114,7 @@ namespace MOBA.Core.Infrastructure
 
                         if (isAlly)
                         {
-                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner?.name} healed ally {targetBrawler.name} for {p.AllyHealAmount}");
+                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner.name} healed ally {targetBrawler.name} for {p.AllyHealAmount}");
                             targetBrawler.State.Heal(p.AllyHealAmount);
 
                             CombatPresentationEventBus.Raise(new CombatPresentationEvent
@@ -110,9 +132,9 @@ namespace MOBA.Core.Infrastructure
                         }
                         else
                         {
-                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner?.name} damaged enemy {targetBrawler.name} for {p.EnemyDamageAmount}");
-                            var damageService = ServiceProvider.Get<IDamageService>();
+                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner.name} damaged enemy {targetBrawler.name} for {p.EnemyDamageAmount}");
 
+                            var damageService = ServiceProvider.Get<IDamageService>();
                             damageService.ApplyDamage(new DamageContext
                             {
                                 Attacker = p.Owner,
@@ -174,6 +196,66 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        private void ResolveHybridAoEImpact(ActiveProjectile p, Vector3 impactPosition)
+        {
+            if (!p.HasHybridAoEImpact || SimulationClock.Grid == null || p.Owner == null)
+                return;
+
+            List<ISpatialEntity> targets = new List<ISpatialEntity>(16);
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(impactPosition, p.ImpactRadius, targets);
+
+            var damageService = ServiceProvider.Get<IDamageService>();
+            float sqrRadius = p.ImpactRadius * p.ImpactRadius;
+
+            for (int i = 0; i < targets.Count; i++)
+            {
+                BrawlerController targetBrawler = targets[i] as BrawlerController;
+                if (targetBrawler == null)
+                    continue;
+
+                float distSq = (targetBrawler.Position - impactPosition).sqrMagnitude;
+                if (distSq > sqrRadius)
+                    continue;
+
+                bool isAlly = targetBrawler.Team == p.Owner.Team;
+
+                if (isAlly)
+                {
+                    targetBrawler.State.Heal(p.ImpactAllyHeal);
+                    Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} healed ally {targetBrawler.name} for {p.ImpactAllyHeal}");
+                }
+                else
+                {
+                    damageService.ApplyDamage(new DamageContext
+                    {
+                        Attacker = p.Owner,
+                        Target = targetBrawler,
+                        Damage = p.ImpactEnemyDamage,
+                        Type = DamageType.AoE,
+                        HitPosition = impactPosition,
+                        Direction = (targetBrawler.Position - impactPosition).normalized,
+                        SourceAbility = p.SourceAbility,
+                        IsSuper = p.IsSuper
+                    });
+
+                    Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} damaged enemy {targetBrawler.name} for {p.ImpactEnemyDamage}");
+                }
+            }
+
+            CombatPresentationEventBus.Raise(new CombatPresentationEvent
+            {
+                EventType = CombatPresentationEventType.AreaEffectResolved,
+                Source = p.Owner,
+                Target = null,
+                AbilityDefinition = p.SourceAbility,
+                SlotType = p.SlotType,
+                Position = impactPosition,
+                Direction = p.Direction,
+                Value = p.ImpactRadius,
+                IsSuper = p.IsSuper
+            });
+        }
+
         private void Despawn(int index)
         {
             var p = _activeProjectiles[index];
@@ -202,6 +284,14 @@ namespace MOBA.Core.Infrastructure
             public float AllyHealAmount;
             public float EnemyDamageAmount;
             public ProjectileHitTeamRule HitTeamRule;
+
+            public ProjectileDeliveryType DeliveryType;
+            public Vector3 TargetPoint;
+
+            public bool HasHybridAoEImpact;
+            public float ImpactRadius;
+            public float ImpactEnemyDamage;
+            public float ImpactAllyHeal;
         }
     }
 }
