@@ -12,7 +12,10 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private TeamType _team;
         [SerializeField] private GameObject _visualModel;
 
+        [SerializeField] private Transform _visualRoot;
         [SerializeField] private BrawlerPresentationAnchors _presentationAnchors;
+
+        private GameObject _spawnedVisualInstance;
 
         private Vector3 _lastTickPosition;
         private readonly InputBuffer _inputBuffer = new InputBuffer();
@@ -46,12 +49,8 @@ namespace MOBA.Core.Infrastructure
         {
             base.Awake();
 
-            if (_definition == null)
-            {
-                Debug.LogError($"BrawlerDefinition missing on {gameObject.name}");
-                return;
-            }
-
+            // Generic shell flow:
+            // definition may be injected later by InitializeFromMatchmaking.
             if (_definition != null && !_isInitialized)
             {
                 InternalInitialize(_definition, _team);
@@ -81,6 +80,8 @@ namespace MOBA.Core.Infrastructure
 
             _definition = def;
             _team = team;
+
+            BuildVisualFromDefinition();
 
             State = new BrawlerState(_definition, _team);
             State.Owner = this;
@@ -1189,6 +1190,32 @@ namespace MOBA.Core.Infrastructure
         public Coroutine RunTimedBurst(IEnumerator routine)
         {
             return StartCoroutine(routine);
+        }
+
+        private void BuildVisualFromDefinition()
+        {
+            if (_visualRoot == null)
+                return;
+
+            for (int i = _visualRoot.childCount - 1; i >= 0; i--)
+            {
+                Destroy(_visualRoot.GetChild(i).gameObject);
+            }
+
+            _spawnedVisualInstance = null;
+            _presentationAnchors = null;
+            _visualModel = null;
+
+            if (_definition == null || _definition.ModelPrefab == null)
+                return;
+
+            _spawnedVisualInstance = Instantiate(_definition.ModelPrefab, _visualRoot);
+            _spawnedVisualInstance.transform.localPosition = Vector3.zero;
+            _spawnedVisualInstance.transform.localRotation = Quaternion.identity;
+            _spawnedVisualInstance.transform.localScale = Vector3.one;
+
+            _presentationAnchors = _spawnedVisualInstance.GetComponentInChildren<BrawlerPresentationAnchors>();
+            _visualModel = _spawnedVisualInstance;
         }
     }
 }

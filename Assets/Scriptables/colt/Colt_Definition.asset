@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Colt_Definition
   m_EditorClassIdentifier: 
   BrawlerName: Colt
-  ModelPrefab: {fileID: 0}
+  ModelPrefab: {fileID: 3855221367005763782, guid: a76577bae713344a784c8935ec7cc346, type: 3}
   BaseHealth: 3000
   BaseMoveSpeed: 5
   BaseDamage: 500
