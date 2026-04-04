@@ -26,7 +26,7 @@ MonoBehaviour:
   AllowMovementDuringCast: 1
   AllowActionInputDuringCast: 0
   IsInterruptible: 1
-  Intent: 0
+  Intent: 3
   AllowAimAssist: 1
   AimAssistMode: 6
   AimAssistIncludeSelf: 0

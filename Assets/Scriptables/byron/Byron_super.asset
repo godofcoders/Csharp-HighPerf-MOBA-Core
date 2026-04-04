@@ -9,37 +9,34 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 220a6073541ca4246b3d7c5ee0a2ba54, type: 3}
-  m_Name: Colt_Main
+  m_Script: {fileID: 11500000, guid: 31e3572c1a64d4e298ca1777a5c03cd8, type: 3}
+  m_Name: Byron_super
   m_EditorClassIdentifier: 
-  OptionName: Colt Main Attack
-  Description: Straight projectile baseline for Colt
+  OptionName: 
+  Description: 
   AllowedBuildSlotTypes: 
-  AbilityName: Dual Pistols
+  AbilityName: Full Treatment
   Icon: {fileID: 0}
   SlotType: 0
-  TargetingType: 1
-  DeliveryType: 1
-  Cooldown: 0.5
+  TargetingType: 3
+  DeliveryType: 2
+  Cooldown: 1
   Tags: 
-  CastDurationSeconds: 0.1
+  CastDurationSeconds: 0.15
   AllowMovementDuringCast: 1
   AllowActionInputDuringCast: 0
   IsInterruptible: 1
-  Intent: 3
+  Intent: 0
   AllowAimAssist: 1
-  AimAssistMode: 6
+  AimAssistMode: 5
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: 10
+  AimAssistRangeOverride: 12
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 1
-  AimAssistIdealRange: 8
+  AimAssistIdealRange: 12
   AimAssistPlacementDistance: 3
-  Damage: 90
-  Range: 10
-  Speed: 30
-  ProjectileCount: 6
-  DelayBetweenShots: 0.045
-  RandomSpreadAngle: 0.1
-  AlternateMuzzles: 1
+  Damage: 1500
+  Radius: 3
+  EnemyDamage: 350
+  AllyHeal: 350
