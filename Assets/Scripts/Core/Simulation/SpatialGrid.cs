@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using MOBA.Core.Infrastructure;
 using UnityEngine;
 
 namespace MOBA.Core.Simulation
@@ -8,7 +9,6 @@ namespace MOBA.Core.Simulation
         private readonly float _cellSize;
         // Map: Cell Coordinate -> List of Entities in that cell
         private readonly Dictionary<Vector2Int, List<ISpatialEntity>> _cells = new Dictionary<Vector2Int, List<ISpatialEntity>>();
-
         public SpatialGrid(float cellSize) => _cellSize = cellSize;
 
         // Converts a 3D world position into a 2D Grid Coordinate
@@ -50,12 +50,11 @@ namespace MOBA.Core.Simulation
             return _cells.TryGetValue(GetCellCoords(position), out var list) ? list : null;
         }
 
-        public ISpatialEntity CheckCollision(Vector3 position, float radius, TeamType attackerTeam)
+        public ISpatialEntity CheckCollision(Vector3 position, float radius, TeamType attackerTeam, ProjectileHitTeamRule hitRule)
         {
             Vector2Int cell = GetCellCoords(position);
             float sqrRadius = radius * radius;
 
-            // Check current cell and immediate neighbors for high precision
             for (int x = -1; x <= 1; x++)
             {
                 for (int y = -1; y <= 1; y++)
@@ -67,14 +66,25 @@ namespace MOBA.Core.Simulation
                         {
                             var target = entities[i];
 
-                            // 1. Team Check: Don't hit teammates
-                            if (target.Team == attackerTeam) continue;
+                            bool sameTeam = target.Team == attackerTeam;
 
-                            // 2. Distance Check: circle vs point/circle
+                            switch (hitRule)
+                            {
+                                case ProjectileHitTeamRule.EnemiesOnly:
+                                    if (sameTeam) continue;
+                                    break;
+
+                                case ProjectileHitTeamRule.AlliesOnly:
+                                    if (!sameTeam) continue;
+                                    break;
+
+                                case ProjectileHitTeamRule.AlliesAndEnemies:
+                                    break;
+                            }
+
                             float distSq = (target.Position - position).sqrMagnitude;
-
-                            // We add the target's collision radius for better feel
                             float combinedRadius = radius + target.CollisionRadius;
+
                             if (distSq <= (combinedRadius * combinedRadius))
                             {
                                 return target;
@@ -83,6 +93,7 @@ namespace MOBA.Core.Simulation
                     }
                 }
             }
+
             return null;
         }
 

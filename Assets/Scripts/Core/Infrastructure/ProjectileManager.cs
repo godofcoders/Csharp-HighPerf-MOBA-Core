@@ -38,7 +38,12 @@ namespace MOBA.Core.Infrastructure
                 MaxRangeSq = context.Range * context.Range,
                 Damage = context.Damage,
                 Team = context.Team,
-                SuperChargeOnHit = context.SuperChargeOnHit
+                SuperChargeOnHit = context.SuperChargeOnHit,
+
+                IsHybrid = context.IsHybrid,
+                AllyHealAmount = context.AllyHealAmount,
+                EnemyDamageAmount = context.EnemyDamageAmount,
+                HitTeamRule = context.HitTeamRule
             });
 
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
@@ -70,36 +75,97 @@ namespace MOBA.Core.Infrastructure
                     continue;
                 }
 
-                var hit = SimulationClock.Grid?.CheckCollision(p.GameObject.transform.position, 0.5f, p.Team);
+                var hit = SimulationClock.Grid?.CheckCollision(
+                    p.GameObject.transform.position,
+                    0.5f,
+                    p.Team,
+                    p.HitTeamRule
+                );
 
                 if (hit != null)
                 {
-                    var damageService = ServiceProvider.Get<IDamageService>();
+                    BrawlerController targetBrawler = hit as BrawlerController;
 
-                    damageService.ApplyDamage(new DamageContext
+                    if (p.IsHybrid && targetBrawler != null && p.Owner != null)
                     {
-                        Attacker = p.Owner,
-                        Target = hit,
-                        Damage = p.Damage,
-                        Type = DamageType.Projectile,
-                        HitPosition = p.GameObject.transform.position,
-                        Direction = p.Direction,
-                        SourceAbility = p.SourceAbility,
-                        IsSuper = p.IsSuper
-                    });
+                        bool isAlly = targetBrawler.Team == p.Owner.Team;
 
-                    CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                        if (isAlly)
+                        {
+                            targetBrawler.State.Heal(p.AllyHealAmount);
+
+                            CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                            {
+                                EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                                Source = p.Owner,
+                                Target = targetBrawler,
+                                AbilityDefinition = p.SourceAbility,
+                                SlotType = p.SlotType,
+                                Position = p.GameObject.transform.position,
+                                Direction = p.Direction,
+                                Value = p.AllyHealAmount,
+                                IsSuper = p.IsSuper
+                            });
+                        }
+                        else
+                        {
+                            var damageService = ServiceProvider.Get<IDamageService>();
+
+                            damageService.ApplyDamage(new DamageContext
+                            {
+                                Attacker = p.Owner,
+                                Target = hit,
+                                Damage = p.EnemyDamageAmount,
+                                Type = DamageType.Projectile,
+                                HitPosition = p.GameObject.transform.position,
+                                Direction = p.Direction,
+                                SourceAbility = p.SourceAbility,
+                                IsSuper = p.IsSuper
+                            });
+
+                            CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                            {
+                                EventType = CombatPresentationEventType.DamageHit,
+                                Source = p.Owner,
+                                Target = targetBrawler,
+                                AbilityDefinition = p.SourceAbility,
+                                SlotType = p.SlotType,
+                                Position = p.GameObject.transform.position,
+                                Direction = p.Direction,
+                                Value = p.EnemyDamageAmount,
+                                IsSuper = p.IsSuper
+                            });
+                        }
+                    }
+                    else
                     {
-                        EventType = CombatPresentationEventType.DamageHit,
-                        Source = p.Owner,
-                        Target = hit as BrawlerController,
-                        AbilityDefinition = p.SourceAbility,
-                        SlotType = p.SlotType,
-                        Position = p.GameObject.transform.position,
-                        Direction = p.Direction,
-                        Value = p.Damage,
-                        IsSuper = p.IsSuper
-                    });
+                        var damageService = ServiceProvider.Get<IDamageService>();
+
+                        damageService.ApplyDamage(new DamageContext
+                        {
+                            Attacker = p.Owner,
+                            Target = hit,
+                            Damage = p.Damage,
+                            Type = DamageType.Projectile,
+                            HitPosition = p.GameObject.transform.position,
+                            Direction = p.Direction,
+                            SourceAbility = p.SourceAbility,
+                            IsSuper = p.IsSuper
+                        });
+
+                        CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                        {
+                            EventType = CombatPresentationEventType.DamageHit,
+                            Source = p.Owner,
+                            Target = hit as BrawlerController,
+                            AbilityDefinition = p.SourceAbility,
+                            SlotType = p.SlotType,
+                            Position = p.GameObject.transform.position,
+                            Direction = p.Direction,
+                            Value = p.Damage,
+                            IsSuper = p.IsSuper
+                        });
+                    }
 
                     Despawn(i);
                 }
@@ -129,6 +195,11 @@ namespace MOBA.Core.Infrastructure
             public float Damage;
             public TeamType Team;
             public float SuperChargeOnHit;
+
+            public bool IsHybrid;
+            public float AllyHealAmount;
+            public float EnemyDamageAmount;
+            public ProjectileHitTeamRule HitTeamRule;
         }
     }
 }

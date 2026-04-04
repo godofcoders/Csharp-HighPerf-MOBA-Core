@@ -439,7 +439,12 @@ namespace MOBA.Core.Infrastructure
                 Team = Team,
                 SuperChargeOnHit = 0.20f,
                 IsSuper = isSuper,
-                IsGadget = isGadget
+                IsGadget = isGadget,
+
+                IsHybrid = false,
+                AllyHealAmount = 0f,
+                EnemyDamageAmount = 0f,
+                HitTeamRule = ProjectileHitTeamRule.EnemiesOnly
             };
 
             projectileService.FireProjectile(spawnContext);

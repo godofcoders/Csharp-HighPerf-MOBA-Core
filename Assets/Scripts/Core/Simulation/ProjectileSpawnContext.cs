@@ -22,5 +22,11 @@ namespace MOBA.Core.Simulation
 
         public bool IsSuper;
         public bool IsGadget;
+
+        public bool IsHybrid;
+        public float AllyHealAmount;
+        public float EnemyDamageAmount;
+
+        public ProjectileHitTeamRule HitTeamRule;
     }
 }
