@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   VisualPrefab: {fileID: 3051474675401680512, guid: 7d290245c8ffd4dcd85a8983d649bb12, type: 3}
   LocalPosition: {x: 0, y: 0, z: 0}
-  LocalRotationEuler: {x: 0, y: 0, z: 0}
-  LocalScale: {x: 1, y: 1, z: 1}
+  LocalRotationEuler: {x: 90, y: 0, z: 0}
+  LocalScale: {x: 0.15, y: 0.15, z: 0.15}
   FaceMovementDirection: 1
   UseSpin: 0
   SpinEulerPerSecond: {x: 0, y: 0, z: 0}
