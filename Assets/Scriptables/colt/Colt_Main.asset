@@ -43,3 +43,4 @@ MonoBehaviour:
   DelayBetweenShots: 0.045
   RandomSpreadAngle: 0.1
   AlternateMuzzles: 1
+  PresentationProfile: {fileID: 11400000, guid: 5b735be8a6aa04e05a00978f19e75ebb, type: 2}

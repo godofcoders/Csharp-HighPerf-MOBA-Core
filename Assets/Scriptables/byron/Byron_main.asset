@@ -40,3 +40,4 @@ MonoBehaviour:
   Speed: 40
   EnemyDamage: 180
   AllyHeal: 180
+  PresentationProfile: {fileID: 11400000, guid: af00dcd2be6044f16bbbd5ddeb4b2878, type: 2}
