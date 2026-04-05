@@ -14,6 +14,10 @@ namespace MOBA.Core.Definitions
         public float EnemyDamage = 300f;
         public float AllyHeal = 300f;
 
+        [Header("Presentation")]
+        public ProjectilePresentationProfile PresentationProfile;
+
+
         public override IAbilityLogic CreateLogic()
         {
             return new MOBA.Core.Simulation.HybridProjectileLogic(this);

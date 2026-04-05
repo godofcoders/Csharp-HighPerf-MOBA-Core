@@ -1,23 +1,74 @@
+using System.Collections.Generic;
+using UnityEngine;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
-using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
     public sealed class DeployableAbilityUser : IAbilityUser
     {
-        private readonly DeployableController _controller;
+        private readonly DeployableController _owner;
 
-        public DeployableAbilityUser(DeployableController controller)
+        public DeployableAbilityUser(DeployableController owner)
         {
-            _controller = controller;
+            _owner = owner;
         }
 
-        public TeamType Team => _controller.Team;
+        public TeamType Team => _owner != null ? _owner.Team : TeamType.Blue;
+        public Vector3 Position => _owner != null ? _owner.Position : Vector3.zero;
 
-        public Vector3 Position => _controller.Position;
+        public BrawlerController ResolveTarget(
+            AbilityTargetTeamRule teamRule,
+            AbilityTargetSelectionRule selectionRule,
+            float range,
+            bool includeSelf = false,
+            bool requireAlive = true)
+        {
+            if (_owner == null)
+                return null;
 
-        public BrawlerState State => _controller.Owner != null ? _controller.Owner.State : null;
+            AbilityTargetRequest request = new AbilityTargetRequest
+            {
+                Source = _owner.Owner,
+                Origin = _owner.Position,
+                Direction = _owner.transform.forward,
+                Range = range,
+                TeamRule = teamRule,
+                SelectionRule = selectionRule,
+                CountRule = AbilityTargetCountRule.Single,
+                IncludeSelf = includeSelf,
+                RequireAlive = requireAlive
+            };
+
+            return AbilityTargetResolver.ResolveSingleTarget(request);
+        }
+
+        public void ResolveTargets(
+            AbilityTargetTeamRule teamRule,
+            AbilityTargetSelectionRule selectionRule,
+            float range,
+            List<BrawlerController> results,
+            bool includeSelf = false,
+            bool requireAlive = true)
+        {
+            if (_owner == null || results == null)
+                return;
+
+            AbilityTargetRequest request = new AbilityTargetRequest
+            {
+                Source = _owner.Owner,
+                Origin = _owner.Position,
+                Direction = _owner.transform.forward,
+                Range = range,
+                TeamRule = teamRule,
+                SelectionRule = selectionRule,
+                CountRule = AbilityTargetCountRule.Multiple,
+                IncludeSelf = includeSelf,
+                RequireAlive = requireAlive
+            };
+
+            AbilityTargetResolver.ResolveTargets(request, results);
+        }
 
         public void FireProjectile(
             Vector3 origin,
@@ -28,15 +79,17 @@ namespace MOBA.Core.Simulation
             AbilityDefinition sourceAbility,
             AbilitySlotType slotType,
             bool isSuper,
-            bool isGadget)
+            bool isGadget,
+            ProjectilePresentationProfile presentationProfile = null)
         {
-            var projectileService = ServiceProvider.Get<IProjectileService>();
-            if (projectileService == null)
+            if (_owner == null)
                 return;
 
-            ProjectileSpawnContext spawnContext = new ProjectileSpawnContext
+            var projectileService = ServiceProvider.Get<IProjectileService>();
+
+            var spawnContext = new ProjectileSpawnContext
             {
-                Owner = _controller.Owner,
+                Owner = _owner.Owner,
                 SourceAbility = sourceAbility,
                 SlotType = slotType,
                 Origin = origin,
@@ -44,10 +97,29 @@ namespace MOBA.Core.Simulation
                 Speed = speed,
                 Range = range,
                 Damage = damage,
-                Team = _controller.Team,
-                SuperChargeOnHit = 0f,
+                Team = Team,
+                SuperChargeOnHit = 0.20f,
                 IsSuper = isSuper,
-                IsGadget = isGadget
+                IsGadget = isGadget,
+
+                IsHybrid = false,
+                AllyHealAmount = 0f,
+                EnemyDamageAmount = 0f,
+                HitTeamRule = ProjectileHitTeamRule.EnemiesOnly,
+
+                DeliveryType = ProjectileDeliveryType.DirectHit,
+                TargetPoint = Vector3.zero,
+
+                HasHybridAoEImpact = false,
+                ImpactRadius = 0f,
+                ImpactEnemyDamage = 0f,
+                ImpactAllyHeal = 0f,
+
+                UseArcMotion = false,
+                ArcHeight = 0f,
+                TravelDistance = 0f,
+
+                PresentationProfile = presentationProfile
             };
 
             projectileService.FireProjectile(spawnContext);

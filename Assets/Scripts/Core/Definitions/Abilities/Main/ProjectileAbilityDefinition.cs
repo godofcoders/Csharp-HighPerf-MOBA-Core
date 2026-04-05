@@ -12,6 +12,8 @@ namespace MOBA.Core.Definitions
         public float Range = 10f;
         public float Speed = 15f;
         public int ProjectileCount = 1;
+        [Header("Presentation")]
+        public ProjectilePresentationProfile PresentationProfile;
 
         private void OnValidate()
         {

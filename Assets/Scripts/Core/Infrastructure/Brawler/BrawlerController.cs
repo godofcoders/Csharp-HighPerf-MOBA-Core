@@ -412,7 +412,6 @@ namespace MOBA.Core.Infrastructure
             CombatRegistry.Unregister(this);
             BrawlerDebugTracker.Remove(this);
         }
-
         public void FireProjectile(
             Vector3 origin,
             Vector3 direction,
@@ -422,7 +421,8 @@ namespace MOBA.Core.Infrastructure
             AbilityDefinition sourceAbility,
             AbilitySlotType slotType,
             bool isSuper,
-            bool isGadget)
+            bool isGadget,
+            ProjectilePresentationProfile presentationProfile = null)
         {
             var projectileService = ServiceProvider.Get<IProjectileService>();
 
@@ -445,6 +445,7 @@ namespace MOBA.Core.Infrastructure
                 AllyHealAmount = 0f,
                 EnemyDamageAmount = 0f,
                 HitTeamRule = ProjectileHitTeamRule.EnemiesOnly,
+
                 DeliveryType = ProjectileDeliveryType.DirectHit,
                 TargetPoint = Vector3.zero,
 
@@ -452,9 +453,12 @@ namespace MOBA.Core.Infrastructure
                 ImpactRadius = 0f,
                 ImpactEnemyDamage = 0f,
                 ImpactAllyHeal = 0f,
+
                 UseArcMotion = false,
                 ArcHeight = 0f,
                 TravelDistance = 0f,
+
+                PresentationProfile = presentationProfile
             };
 
             projectileService.FireProjectile(spawnContext);

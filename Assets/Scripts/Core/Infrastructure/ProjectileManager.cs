@@ -23,6 +23,12 @@ namespace MOBA.Core.Infrastructure
             go.transform.position = context.Origin;
             go.transform.rotation = Quaternion.LookRotation(context.Direction);
 
+            ProjectileVisualController visualController = go.GetComponent<ProjectileVisualController>();
+            if (visualController != null)
+            {
+                visualController.ApplyProfile(context.PresentationProfile);
+            }
+
             _activeProjectiles.Add(new ActiveProjectile
             {
                 Owner = context.Owner,
@@ -52,10 +58,13 @@ namespace MOBA.Core.Infrastructure
                 ImpactRadius = context.ImpactRadius,
                 ImpactEnemyDamage = context.ImpactEnemyDamage,
                 ImpactAllyHeal = context.ImpactAllyHeal,
+
                 UseArcMotion = context.UseArcMotion,
                 ArcHeight = context.ArcHeight,
                 TravelDistance = context.TravelDistance,
                 TravelProgress = 0f,
+
+                PresentationProfile = context.PresentationProfile
             });
 
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
@@ -87,12 +96,11 @@ namespace MOBA.Core.Infrastructure
                     p.TravelProgress = Mathf.Clamp01(p.TravelProgress);
 
                     Vector3 basePos = Vector3.Lerp(p.Origin, p.TargetPoint, p.TravelProgress);
-
                     float arcOffset = 4f * p.ArcHeight * p.TravelProgress * (1f - p.TravelProgress);
 
                     p.GameObject.transform.position = basePos + (Vector3.up * arcOffset);
 
-                    Vector3 flatDirection = (p.TargetPoint - p.Origin);
+                    Vector3 flatDirection = p.TargetPoint - p.Origin;
                     flatDirection.y = 0f;
                     if (flatDirection.sqrMagnitude > 0.001f)
                         p.GameObject.transform.rotation = Quaternion.LookRotation(flatDirection.normalized);
@@ -101,6 +109,19 @@ namespace MOBA.Core.Infrastructure
                 {
                     Vector3 movement = p.Direction * (p.Speed * SimulationClock.TickDeltaTime);
                     p.GameObject.transform.position += movement;
+
+                    ProjectileVisualController visualController = p.GameObject.GetComponent<ProjectileVisualController>();
+                    if (visualController != null)
+                    {
+                        visualController.TickVisual(SimulationClock.TickDeltaTime);
+
+                        if (visualController.ShouldFaceMovementDirection())
+                        {
+                            Vector3 lookDirection = p.Direction;
+                            if (lookDirection.sqrMagnitude > 0.001f)
+                                p.GameObject.transform.rotation = Quaternion.LookRotation(lookDirection.normalized);
+                        }
+                    }
                 }
 
                 if (p.DeliveryType != ProjectileDeliveryType.ThrownImpactAoE)
@@ -112,7 +133,6 @@ namespace MOBA.Core.Infrastructure
                     }
                 }
 
-                // Thrown bottle / grenade / impact-at-point delivery
                 if (p.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE)
                 {
                     bool reachedImpact =
@@ -324,10 +344,13 @@ namespace MOBA.Core.Infrastructure
             public float ImpactRadius;
             public float ImpactEnemyDamage;
             public float ImpactAllyHeal;
+
             public bool UseArcMotion;
             public float ArcHeight;
             public float TravelDistance;
             public float TravelProgress;
+
+            public ProjectilePresentationProfile PresentationProfile;
         }
     }
 }

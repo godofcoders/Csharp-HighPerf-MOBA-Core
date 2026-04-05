@@ -45,16 +45,17 @@ namespace MOBA.Core.Simulation
                 Vector3 shotDirection = ApplySpread(baseDirection);
 
                 brawler.FireProjectile(
-                    shotOrigin,
-                    shotDirection,
-                    _definition.Speed,
-                    _definition.Range,
-                    _definition.Damage,
-                    _definition,
-                    context.SlotType,
-                    context.IsSuper,
-                    context.IsGadget
-                );
+     shotOrigin,
+     shotDirection,
+     _definition.Speed,
+     _definition.Range,
+     _definition.Damage,
+     _definition,
+     context.SlotType,
+     context.IsSuper,
+     context.IsGadget,
+     _definition.PresentationProfile
+ );
 
                 if (i < count - 1 && _definition.DelayBetweenShots > 0f)
                     yield return new WaitForSeconds(_definition.DelayBetweenShots);

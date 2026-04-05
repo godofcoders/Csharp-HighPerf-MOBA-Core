@@ -9,6 +9,8 @@ namespace MOBA.Core.Definitions
         [Header("Hybrid Payload")]
         public float EnemyDamage = 400f;
         public float AllyHeal = 400f;
+        [Header("Presentation")]
+        public ProjectilePresentationProfile PresentationProfile;
 
         public override IAbilityLogic CreateLogic()
         {

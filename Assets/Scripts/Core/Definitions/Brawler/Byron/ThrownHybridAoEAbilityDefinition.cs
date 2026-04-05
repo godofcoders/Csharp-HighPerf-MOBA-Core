@@ -9,11 +9,12 @@ namespace MOBA.Core.Definitions
         [Header("Throw Delivery")]
         public float ThrowRange = 7f;
         public float ThrowSpeed = 16f;
-
         [Header("Impact AoE")]
         public float ImpactRadius = 3f;
         public float EnemyDamage = 350f;
         public float AllyHeal = 350f;
+        [Header("Presentation")]
+        public ProjectilePresentationProfile PresentationProfile;
 
         public override IAbilityLogic CreateLogic()
         {

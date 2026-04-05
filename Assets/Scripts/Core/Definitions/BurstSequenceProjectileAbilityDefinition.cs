@@ -17,6 +17,9 @@ namespace MOBA.Core.Definitions
         [Min(0f)] public float RandomSpreadAngle = 0.15f;
         public bool AlternateMuzzles = true;
 
+        [Header("Presentation")]
+        public ProjectilePresentationProfile PresentationProfile;
+
         public override IAbilityLogic CreateLogic()
         {
             return new MOBA.Core.Simulation.BurstSequenceProjectileLogic(this);

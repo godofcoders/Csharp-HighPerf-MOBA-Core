@@ -62,6 +62,7 @@ namespace MOBA.Core.Simulation.Abilities
                 UseArcMotion = true,
                 ArcHeight = 1.75f,
                 TravelDistance = Vector3.Distance(origin, targetPoint),
+                PresentationProfile = _definition.PresentationProfile
             };
 
             projectileService.FireProjectile(spawnContext);

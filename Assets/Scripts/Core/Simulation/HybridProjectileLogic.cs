@@ -47,7 +47,8 @@ namespace MOBA.Core.Simulation
                 IsHybrid = true,
                 AllyHealAmount = _definition.AllyHeal,
                 EnemyDamageAmount = _definition.EnemyDamage,
-                HitTeamRule = ProjectileHitTeamRule.AlliesAndEnemies
+                HitTeamRule = ProjectileHitTeamRule.AlliesAndEnemies,
+                PresentationProfile = _definition.PresentationProfile
             };
 
             projectileService.FireProjectile(spawnContext);

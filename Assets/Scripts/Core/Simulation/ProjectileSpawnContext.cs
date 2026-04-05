@@ -30,7 +30,6 @@ namespace MOBA.Core.Simulation
         public ProjectileHitTeamRule HitTeamRule;
 
         public ProjectileDeliveryType DeliveryType;
-
         public Vector3 TargetPoint;
 
         public bool HasHybridAoEImpact;
@@ -41,5 +40,7 @@ namespace MOBA.Core.Simulation
         public bool UseArcMotion;
         public float ArcHeight;
         public float TravelDistance;
+
+        public ProjectilePresentationProfile PresentationProfile;
     }
 }

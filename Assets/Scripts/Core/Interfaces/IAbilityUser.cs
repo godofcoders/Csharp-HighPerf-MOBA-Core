@@ -1,11 +1,30 @@
 using UnityEngine;
 using MOBA.Core.Definitions;
+using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation
 {
     public interface IAbilityUser
     {
-        BrawlerState State { get; }
+        TeamType Team { get; }
+        Vector3 Position { get; }
+
+        BrawlerController ResolveTarget(
+            AbilityTargetTeamRule teamRule,
+            AbilityTargetSelectionRule selectionRule,
+            float range,
+            bool includeSelf = false,
+            bool requireAlive = true
+        );
+
+        void ResolveTargets(
+            AbilityTargetTeamRule teamRule,
+            AbilityTargetSelectionRule selectionRule,
+            float range,
+            System.Collections.Generic.List<BrawlerController> results,
+            bool includeSelf = false,
+            bool requireAlive = true
+        );
 
         void FireProjectile(
             Vector3 origin,
@@ -16,7 +35,8 @@ namespace MOBA.Core.Simulation
             AbilityDefinition sourceAbility,
             AbilitySlotType slotType,
             bool isSuper,
-            bool isGadget
+            bool isGadget,
+            ProjectilePresentationProfile presentationProfile = null
         );
     }
 }
