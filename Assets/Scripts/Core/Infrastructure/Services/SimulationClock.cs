@@ -36,6 +36,9 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
         ServiceProvider.Register<IStatusEffectService>(new StatusEffectService());
         ServiceProvider.Register<ICombatLogService>(new CombatLogService());
 
+        ServiceProvider.Register<IDeployableRegistry>(new DeployableRegistry());
+        ServiceProvider.Register<IDeployableService>(new DeployableService());
+
         _processor = new TickProcessor(_ticksPerSecond);
         _registry = new SimulationRegistry();
         Registry = _registry;
