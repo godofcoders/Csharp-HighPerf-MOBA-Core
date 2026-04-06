@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Jesse_Definition
   m_EditorClassIdentifier: 
-  BrawlerName: 
-  ModelPrefab: {fileID: 0}
-  BaseHealth: 3000
+  BrawlerName: Jessie
+  ModelPrefab: {fileID: 4919742288424262853, guid: 8f96b613f2df8408a83802b375c892f1, type: 3}
+  BaseHealth: 3200
   BaseMoveSpeed: 5
-  BaseDamage: 500
+  BaseDamage: 300
   ProgressionBonuses: []
   MainAttack: {fileID: 0}
   SuperAbility: {fileID: 11400000, guid: 0069c88e896814c8bbec7e17e44e3798, type: 2}
