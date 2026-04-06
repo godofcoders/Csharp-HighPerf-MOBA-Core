@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c5208faf9dd4a40b78984371dc01cd34, type: 3}
+  m_Name: Scrappy_DeployableDefinition
+  m_EditorClassIdentifier: 
+  DeployableName: Scrappy
+  Prefab: {fileID: 1113124831696296672, guid: c9b062f3f94c041c2b1c8daf54d8b806, type: 3}
+  DeployableType: 0
+  LifetimeSeconds: 60
+  MaxHealth: 3200
+  DetectionRadius: 8
+  ActionIntervalSeconds: 0.8
+  AbilityDefinition: {fileID: 11400000, guid: 72c4b68a143a041d5a2cb9235479010a, type: 2}
+  PulseIntervalSeconds: 1
+  PulseRadius: 5
+  CanReceiveHealing: 1
+  CanReceiveShield: 0
+  CanReceiveStatusEffects: 1
+  UniquePerOwner: 1
+  ReplaceOlderOwnedDeployable: 1

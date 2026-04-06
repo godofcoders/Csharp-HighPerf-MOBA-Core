@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eec2076c6e34b4e098ae66622451deb6, type: 3}
+  m_Name: Scrappy_Attack
+  m_EditorClassIdentifier: 
+  OptionName: 
+  Description: 
+  AllowedBuildSlotTypes: 
+  AbilityName: Scrappy Shot
+  Icon: {fileID: 0}
+  SlotType: 0
+  TargetingType: 1
+  DeliveryType: 1
+  Cooldown: 0
+  Tags: 
+  CastDurationSeconds: 0
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 1
+  IsInterruptible: 1
+  Intent: 0
+  AllowAimAssist: 1
+  AimAssistMode: 1
+  AimAssistIncludeSelf: 0
+  PreferManualAim: 1
+  AimAssistRangeOverride: -1
+  AimAssistForwardBias: 2
+  AimAssistDistanceBias: 1
+  AimAssistIdealRange: -1
+  AimAssistPlacementDistance: 3
+  Damage: 260
+  Range: 8
+  Speed: 18
+  ProjectileCount: 1
+  PresentationProfile: {fileID: 0}

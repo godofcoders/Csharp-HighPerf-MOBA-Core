@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41c358fde7abc40d09fde94c6bf5b579, type: 3}
+  m_Name: Jessie_Super_SpawnScrappy_Effect
+  m_EditorClassIdentifier: 
+  EffectName: 
+  Deployable: {fileID: 11400000, guid: 119e50323b56e4fe19ce355e4f531904, type: 2}
+  SpawnLocationRule: 2
+  ForwardOffset: 2
