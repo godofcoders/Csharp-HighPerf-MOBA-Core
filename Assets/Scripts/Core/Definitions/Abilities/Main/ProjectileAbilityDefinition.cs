@@ -32,7 +32,13 @@ namespace MOBA.Core.Definitions
 
         public override IAbilityLogic CreateLogic()
         {
-            return new StraightProjectileLogic(Damage, Range, Speed, ProjectileCount);
+            return new StraightProjectileLogic(
+                Damage,
+                Range,
+                Speed,
+                ProjectileCount,
+                PresentationProfile
+            );
         }
 
         public override float GetAIIdealRange()
