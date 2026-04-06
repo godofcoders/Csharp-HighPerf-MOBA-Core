@@ -40,4 +40,4 @@ MonoBehaviour:
   Range: 8
   Speed: 18
   ProjectileCount: 1
-  PresentationProfile: {fileID: 0}
+  PresentationProfile: {fileID: 11400000, guid: dcb21891900094d8ca9c011839da71a9, type: 2}
