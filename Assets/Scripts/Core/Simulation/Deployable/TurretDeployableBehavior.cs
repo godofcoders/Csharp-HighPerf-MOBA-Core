@@ -1,5 +1,6 @@
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
+using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
@@ -27,6 +28,7 @@ namespace MOBA.Core.Simulation
                 return;
 
             FireAt(target, currentTick);
+            Debug.Log($"[SCRAPPY] Behavior tick for {_controller.name}");
         }
 
         private BrawlerController ResolveTarget()
@@ -43,7 +45,7 @@ namespace MOBA.Core.Simulation
                 IncludeSelf = false,
                 RequireAlive = true
             };
-
+            Debug.Log($"[SCRAPPY] Target resolved for {_controller.name}");
             return AbilityTargetResolver.ResolveSingleTarget(request);
         }
 
@@ -72,6 +74,7 @@ namespace MOBA.Core.Simulation
 
             logic.Execute(_controller.AbilityUser, context);
             _nextActionTick = currentTick + (uint)(_controller.Definition.ActionIntervalSeconds * 30f);
+            Debug.Log($"[SCRAPPY] Firing at {target.name}");
         }
     }
 }

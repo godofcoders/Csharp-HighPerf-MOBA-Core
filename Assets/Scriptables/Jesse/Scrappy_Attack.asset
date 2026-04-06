@@ -31,10 +31,10 @@ MonoBehaviour:
   AimAssistMode: 1
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: -1
+  AimAssistRangeOverride: 8
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 1
-  AimAssistIdealRange: -1
+  AimAssistIdealRange: 8
   AimAssistPlacementDistance: 3
   Damage: 260
   Range: 8

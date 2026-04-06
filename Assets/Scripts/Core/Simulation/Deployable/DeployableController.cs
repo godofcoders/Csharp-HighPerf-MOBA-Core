@@ -44,6 +44,7 @@ namespace MOBA.Core.Simulation
             _abilityLogic = _definition.AbilityDefinition != null
                 ? _definition.AbilityDefinition.CreateLogic()
                 : null;
+
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
             _state = new DeployableState(_definition, _owner, _team, currentTick);
 
@@ -52,8 +53,11 @@ namespace MOBA.Core.Simulation
             _behavior = CreateBehavior(_definition.DeployableType);
             _behavior?.Initialize(this);
 
+            SimulationClock.Registry?.Register(this);   // <-- add this
             CombatRegistry.Register(this);
             SimulationClock.Grid?.Add(this);
+
+            Debug.Log($"[DEPLOYABLE] Initialized {name} Owner={Owner?.name} Team={Team}");
         }
 
         public override void Tick(uint currentTick)
@@ -71,6 +75,7 @@ namespace MOBA.Core.Simulation
             }
 
             _behavior?.Tick(currentTick);
+            Debug.Log($"[DEPLOYABLE] Tick {name} tick={currentTick}");
         }
 
         public void TakeDamage(float amount)
@@ -89,6 +94,7 @@ namespace MOBA.Core.Simulation
             IDeployableRegistry registry = ServiceProvider.Get<IDeployableRegistry>();
             registry?.Unregister(this);
 
+            SimulationClock.Registry?.Unregister(this);   // <-- add this
             SimulationClock.Grid?.Remove(this, transform.position);
             CombatRegistry.Unregister(this);
             Destroy(gameObject);
