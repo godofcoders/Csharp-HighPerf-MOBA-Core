@@ -502,7 +502,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _playerBrawler: {fileID: 11400000, guid: b1f5e71c3af374589a4e5dee979f4c60, type: 2}
   _allyBrawler: {fileID: 11400000, guid: 4af276c14755a4edfb269cdac13b8f80, type: 2}
-  _enemyBrawler: {fileID: 11400000, guid: c6cbcf818157b45e0b07a58637e4cc5d, type: 2}
+  _enemyBrawler: {fileID: 11400000, guid: 4af276c14755a4edfb269cdac13b8f80, type: 2}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0

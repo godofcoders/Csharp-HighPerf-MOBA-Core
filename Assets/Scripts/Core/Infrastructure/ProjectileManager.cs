@@ -164,6 +164,11 @@ namespace MOBA.Core.Infrastructure
                 {
                     BrawlerController targetBrawler = hit as BrawlerController;
 
+                    if (p.IsChainProjectile && targetBrawler != null && p.HitEntityIds.Contains(targetBrawler.EntityID))
+                    {
+                        continue;
+                    }
+
                     if (p.IsHybrid && targetBrawler != null && p.Owner != null)
                     {
                         bool isAlly = targetBrawler.Team == p.Owner.Team;
