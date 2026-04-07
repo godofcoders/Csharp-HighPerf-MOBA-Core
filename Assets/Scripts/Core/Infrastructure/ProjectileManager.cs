@@ -64,7 +64,11 @@ namespace MOBA.Core.Infrastructure
                 TravelDistance = context.TravelDistance,
                 TravelProgress = 0f,
 
-                PresentationProfile = context.PresentationProfile
+                PresentationProfile = context.PresentationProfile,
+                IsChainProjectile = context.IsChainProjectile,
+                RemainingBounces = context.RemainingBounces,
+                BounceRadius = context.BounceRadius,
+                HitEntityIds = new System.Collections.Generic.HashSet<int>(),
             });
 
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
@@ -243,6 +247,29 @@ namespace MOBA.Core.Infrastructure
                         });
                     }
 
+                    // CHAIN PROJECTILE HANDLING
+                    if (p.IsChainProjectile && targetBrawler != null)
+                    {
+                        p.HitEntityIds.Add(targetBrawler.EntityID);
+
+                        if (p.RemainingBounces > 0)
+                        {
+                            BrawlerController nextTarget = ResolveNextChainTarget(p, targetBrawler);
+                            if (nextTarget != null)
+                            {
+                                p.RemainingBounces--;
+
+                                Vector3 nextDirection = (nextTarget.Position - p.GameObject.transform.position).normalized;
+                                p.Direction = nextDirection;
+
+                                if (nextDirection.sqrMagnitude > 0.001f)
+                                    p.GameObject.transform.rotation = Quaternion.LookRotation(nextDirection);
+
+                                continue;
+                            }
+                        }
+                    }
+
                     Despawn(i);
                 }
             }
@@ -315,6 +342,43 @@ namespace MOBA.Core.Infrastructure
             _activeProjectiles.RemoveAt(index);
         }
 
+        private BrawlerController ResolveNextChainTarget(ActiveProjectile p, BrawlerController currentTarget)
+        {
+            if (SimulationClock.Grid == null || currentTarget == null)
+                return null;
+
+            List<ISpatialEntity> candidates = new List<ISpatialEntity>(16);
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(currentTarget.Position, p.BounceRadius, candidates);
+
+            float bestDistSq = float.MaxValue;
+            BrawlerController best = null;
+
+            for (int j = 0; j < candidates.Count; j++)
+            {
+                BrawlerController candidate = candidates[j] as BrawlerController;
+                if (candidate == null)
+                    continue;
+
+                if (candidate.Team == p.Team)
+                    continue;
+
+                if (candidate.State == null || candidate.State.IsDead)
+                    continue;
+
+                if (p.HitEntityIds.Contains(candidate.EntityID))
+                    continue;
+
+                float distSq = (candidate.Position - currentTarget.Position).sqrMagnitude;
+                if (distSq < bestDistSq)
+                {
+                    bestDistSq = distSq;
+                    best = candidate;
+                }
+            }
+
+            return best;
+        }
+
         private sealed class ActiveProjectile
         {
             public BrawlerController Owner;
@@ -351,6 +415,11 @@ namespace MOBA.Core.Infrastructure
             public float TravelProgress;
 
             public ProjectilePresentationProfile PresentationProfile;
+
+            public bool IsChainProjectile;
+            public int RemainingBounces;
+            public float BounceRadius;
+            public System.Collections.Generic.HashSet<int> HitEntityIds;
         }
     }
 }

@@ -48,7 +48,10 @@ namespace MOBA.Core.Simulation
                 AllyHealAmount = _definition.AllyHeal,
                 EnemyDamageAmount = _definition.EnemyDamage,
                 HitTeamRule = ProjectileHitTeamRule.AlliesAndEnemies,
-                PresentationProfile = _definition.PresentationProfile
+                PresentationProfile = _definition.PresentationProfile,
+                IsChainProjectile = false,
+                RemainingBounces = 0,
+                BounceRadius = 0f,
             };
 
             projectileService.FireProjectile(spawnContext);

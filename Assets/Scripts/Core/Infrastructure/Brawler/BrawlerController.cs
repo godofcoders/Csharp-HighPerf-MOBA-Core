@@ -458,7 +458,10 @@ namespace MOBA.Core.Infrastructure
                 ArcHeight = 0f,
                 TravelDistance = 0f,
 
-                PresentationProfile = presentationProfile
+                PresentationProfile = presentationProfile,
+                IsChainProjectile = false,
+                RemainingBounces = 0,
+                BounceRadius = 0f,
             };
 
             projectileService.FireProjectile(spawnContext);

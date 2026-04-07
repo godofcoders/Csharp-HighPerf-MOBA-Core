@@ -42,5 +42,8 @@ namespace MOBA.Core.Simulation
         public float TravelDistance;
 
         public ProjectilePresentationProfile PresentationProfile;
+        public bool IsChainProjectile;
+        public int RemainingBounces;
+        public float BounceRadius;
     }
 }
