@@ -38,6 +38,6 @@ MonoBehaviour:
   AimAssistPlacementDistance: 3
   Damage: 260
   Range: 8
-  Speed: 18
+  Speed: 25
   ProjectileCount: 1
   PresentationProfile: {fileID: 11400000, guid: dcb21891900094d8ca9c011839da71a9, type: 2}

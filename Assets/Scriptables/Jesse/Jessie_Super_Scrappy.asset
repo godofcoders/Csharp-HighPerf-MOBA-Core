@@ -31,10 +31,10 @@ MonoBehaviour:
   AimAssistMode: 1
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: -1
+  AimAssistRangeOverride: 8
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 1
-  AimAssistIdealRange: -1
+  AimAssistIdealRange: 8
   AimAssistPlacementDistance: 3
   Effects:
   - {fileID: 11400000, guid: df317152a67934af68ba5709d1a18b34, type: 2}
