@@ -9,17 +9,17 @@ public class TestMatchStarter : MonoBehaviour
     [Header("Player")]
     [SerializeField] private BrawlerDefinition _playerBrawler;
 
-    [Header("Targets")]
-    [SerializeField] private BrawlerDefinition _allyBrawler;
-    [SerializeField] private BrawlerDefinition _enemyBrawler;
+    [Header("Enemies")]
+    [SerializeField] private BrawlerDefinition _enemyBrawler1;
+    [SerializeField] private BrawlerDefinition _enemyBrawler2;
 
     private void Start()
     {
         List<MatchParticipant> roster = new List<MatchParticipant>
         {
-            new MatchParticipant("Player_Byron", TeamType.Blue, _playerBrawler, false),
-            new MatchParticipant("Blue_Ally", TeamType.Blue, _allyBrawler, true),
-            new MatchParticipant("Red_Enemy", TeamType.Red, _enemyBrawler, true)
+            new MatchParticipant("Player_Jessie", TeamType.Blue, _playerBrawler, false),
+            new MatchParticipant("Red_Enemy_1", TeamType.Red, _enemyBrawler1, true),
+            new MatchParticipant("Red_Enemy_2", TeamType.Red, _enemyBrawler2, true)
         };
 
         SpawnManager.Instance.PrepareMatch(roster);
