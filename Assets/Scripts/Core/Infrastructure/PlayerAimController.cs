@@ -26,8 +26,14 @@ namespace MOBA.Core.Infrastructure
 
         private void Update()
         {
-            if (_commandSource == null || _brawler == null || _aimIndicatorView == null)
+            if (_brawler == null || _aimIndicatorView == null)
                 return;
+
+            if (_commandSource == null)
+            {
+                _aimIndicatorView.Hide();
+                return;
+            }
 
             if (!_showDirectionalPreview)
             {
