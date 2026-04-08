@@ -282,5 +282,21 @@ namespace MOBA.Core.Infrastructure
             if (context.performed)
                 _hyperchargeQueued = true;
         }
+
+        public Vector3 GetPreviewAimDirection()
+        {
+            Vector3 manualDirection = ResolveManualAimDirection();
+            if (manualDirection.sqrMagnitude > 0.001f)
+                return manualDirection;
+
+            Vector3 fallbackDirection = ResolveRawFallbackDirection();
+            if (fallbackDirection.sqrMagnitude > 0.001f)
+                return fallbackDirection;
+
+            if (_controlledBrawler != null)
+                return _controlledBrawler.transform.forward;
+
+            return transform.forward;
+        }
     }
 }
