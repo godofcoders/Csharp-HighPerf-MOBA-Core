@@ -17,9 +17,6 @@ namespace MOBA.Core.Infrastructure
 
         private void Awake()
         {
-            if (_commandSource == null)
-                _commandSource = GetComponent<PlayerCommandSource>();
-
             if (_brawler == null)
                 _brawler = GetComponent<BrawlerController>();
         }
@@ -28,6 +25,10 @@ namespace MOBA.Core.Infrastructure
         {
             if (_brawler == null || _aimIndicatorView == null)
                 return;
+
+            // IMPORTANT: PlayerCommandSource may be added later at runtime
+            if (_commandSource == null)
+                _commandSource = GetComponent<PlayerCommandSource>();
 
             if (_commandSource == null)
             {
