@@ -27,6 +27,11 @@ namespace MOBA.Core.Infrastructure
         private bool _hasManualAim;
         private Vector3 _manualAimDirection = Vector3.zero;
 
+        // Brawl Stars style release-to-fire state
+        private bool _isHoldingMainAttackAim;
+        private bool _wasRightMouseHeldLastFrame;
+        private bool _mainAttackAimWasValidDuringHold;
+
         private void Awake()
         {
             _input = new GameInput();
@@ -55,6 +60,7 @@ namespace MOBA.Core.Infrastructure
         private void Update()
         {
             UpdateManualAimState();
+            UpdateDesktopMainAttackAimReleaseFlow();
         }
 
         public void SetControlledBrawler(BrawlerController controller)
@@ -125,12 +131,12 @@ namespace MOBA.Core.Infrastructure
 
         public bool HasPreviewAim()
         {
-            return _hasManualAim;
+            return _isHoldingMainAttackAim && _hasManualAim;
         }
 
         public Vector3 GetPreviewAimDirection()
         {
-            return _hasManualAim ? _manualAimDirection : Vector3.zero;
+            return (_isHoldingMainAttackAim && _hasManualAim) ? _manualAimDirection : Vector3.zero;
         }
 
         public Vector3 GetFireAimDirection()
@@ -273,7 +279,7 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            // Mouse aim: hold right mouse button to aim
+            // Mouse / trackpad aim while right mouse is held
             if (Mouse.current != null && Mouse.current.rightButton.isPressed)
             {
                 Camera cam = Camera.main;
@@ -299,6 +305,49 @@ namespace MOBA.Core.Infrastructure
                     }
                 }
             }
+        }
+
+        private void UpdateDesktopMainAttackAimReleaseFlow()
+        {
+            if (_controlledBrawler == null || Mouse.current == null)
+                return;
+
+            bool rightMouseHeld = Mouse.current.rightButton.isPressed;
+
+            // Start hold
+            if (rightMouseHeld && !_wasRightMouseHeldLastFrame)
+            {
+                _isHoldingMainAttackAim = true;
+                _mainAttackAimWasValidDuringHold = false;
+            }
+
+            // During hold
+            if (_isHoldingMainAttackAim && rightMouseHeld)
+            {
+                if (_hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
+                {
+                    _mainAttackAimWasValidDuringHold = true;
+                }
+            }
+
+            // Release
+            if (!rightMouseHeld && _wasRightMouseHeldLastFrame)
+            {
+                bool shouldFire = _isHoldingMainAttackAim &&
+                                  _mainAttackAimWasValidDuringHold &&
+                                  _hasManualAim &&
+                                  _manualAimDirection.sqrMagnitude > 0.001f;
+
+                if (shouldFire)
+                {
+                    _mainAttackQueued = true;
+                }
+
+                _isHoldingMainAttackAim = false;
+                _mainAttackAimWasValidDuringHold = false;
+            }
+
+            _wasRightMouseHeldLastFrame = rightMouseHeld;
         }
 
         private Vector3 ResolveRawFallbackDirection()
@@ -327,8 +376,8 @@ namespace MOBA.Core.Infrastructure
 
         public void OnFire(InputAction.CallbackContext context)
         {
-            if (context.performed)
-                _mainAttackQueued = true;
+            // Desktop main attack now uses RMB release-to-fire flow.
+            // Keep this empty for now to avoid double-firing.
         }
 
         public void OnGadget(InputAction.CallbackContext context)
