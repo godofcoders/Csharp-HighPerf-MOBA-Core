@@ -59,7 +59,7 @@ namespace MOBA.Core.Infrastructure
             AimPreviewData data = new AimPreviewData
             {
                 IsValid = true,
-                Origin = _brawler.GetCastPosition() + Vector3.up * _originHeightOffset,
+                Origin = _brawler.transform.position + Vector3.up * _originHeightOffset,
                 Direction = aimDirection.normalized,
                 Range = range
             };
