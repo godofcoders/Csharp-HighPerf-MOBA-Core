@@ -31,6 +31,7 @@ namespace MOBA.Core.Infrastructure
         private bool _isHoldingMainAttackAim;
         private bool _wasRightMouseHeldLastFrame;
         private bool _mainAttackAimWasValidDuringHold;
+        private Vector3 _heldAimDirection = Vector3.zero;
 
         private void Awake()
         {
@@ -155,10 +156,19 @@ namespace MOBA.Core.Infrastructure
             AbilityDefinition abilityDefinition = GetAbilityDefinition(actionType);
             bool preferManualAim = abilityDefinition == null || abilityDefinition.PreferManualAim;
 
-            if (preferManualAim && _hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
+            if (preferManualAim)
             {
-                _lastAimDirection = _manualAimDirection;
-                return _lastAimDirection;
+                if (_heldAimDirection.sqrMagnitude > 0.001f)
+                {
+                    _lastAimDirection = _heldAimDirection;
+                    return _lastAimDirection;
+                }
+
+                if (_hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
+                {
+                    _lastAimDirection = _manualAimDirection;
+                    return _lastAimDirection;
+                }
             }
 
             AimAssistRequest request = BuildAimAssistRequest(actionType, abilityDefinition);
@@ -270,7 +280,6 @@ namespace MOBA.Core.Infrastructure
             if (_controlledBrawler == null)
                 return;
 
-            // Gamepad / stick aim
             if (_aimInput.sqrMagnitude >= (ManualAimThreshold * ManualAimThreshold))
             {
                 _manualAimDirection = new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
@@ -279,7 +288,6 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            // Mouse / trackpad aim while right mouse is held
             if (Mouse.current != null && Mouse.current.rightButton.isPressed)
             {
                 Camera cam = Camera.main;
@@ -314,37 +322,37 @@ namespace MOBA.Core.Infrastructure
 
             bool rightMouseHeld = Mouse.current.rightButton.isPressed;
 
-            // Start hold
             if (rightMouseHeld && !_wasRightMouseHeldLastFrame)
             {
                 _isHoldingMainAttackAim = true;
                 _mainAttackAimWasValidDuringHold = false;
+                _heldAimDirection = Vector3.zero;
             }
 
-            // During hold
             if (_isHoldingMainAttackAim && rightMouseHeld)
             {
                 if (_hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
                 {
                     _mainAttackAimWasValidDuringHold = true;
+                    _heldAimDirection = _manualAimDirection;
                 }
             }
 
-            // Release
             if (!rightMouseHeld && _wasRightMouseHeldLastFrame)
             {
                 bool shouldFire = _isHoldingMainAttackAim &&
                                   _mainAttackAimWasValidDuringHold &&
-                                  _hasManualAim &&
-                                  _manualAimDirection.sqrMagnitude > 0.001f;
+                                  _heldAimDirection.sqrMagnitude > 0.001f;
 
                 if (shouldFire)
                 {
                     _mainAttackQueued = true;
+                    _lastAimDirection = _heldAimDirection;
                 }
 
                 _isHoldingMainAttackAim = false;
                 _mainAttackAimWasValidDuringHold = false;
+                _heldAimDirection = Vector3.zero;
             }
 
             _wasRightMouseHeldLastFrame = rightMouseHeld;
@@ -376,8 +384,6 @@ namespace MOBA.Core.Infrastructure
 
         public void OnFire(InputAction.CallbackContext context)
         {
-            // Desktop main attack now uses RMB release-to-fire flow.
-            // Keep this empty for now to avoid double-firing.
         }
 
         public void OnGadget(InputAction.CallbackContext context)
