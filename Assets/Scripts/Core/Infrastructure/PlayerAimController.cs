@@ -26,7 +26,6 @@ namespace MOBA.Core.Infrastructure
             if (_brawler == null || _aimIndicatorView == null)
                 return;
 
-            // IMPORTANT: PlayerCommandSource may be added later at runtime
             if (_commandSource == null)
                 _commandSource = GetComponent<PlayerCommandSource>();
 
@@ -37,6 +36,12 @@ namespace MOBA.Core.Infrastructure
             }
 
             if (!_showDirectionalPreview)
+            {
+                _aimIndicatorView.Hide();
+                return;
+            }
+
+            if (!_commandSource.HasPreviewAim())
             {
                 _aimIndicatorView.Hide();
                 return;

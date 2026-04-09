@@ -6,11 +6,11 @@ using UnityEngine.InputSystem;
 
 namespace MOBA.Core.Infrastructure
 {
-    public class PlayerCommandSource : MonoBehaviour, IBrawlerCommandSource, InputSystem_Actions.IPlayerActions
+    public class PlayerCommandSource : MonoBehaviour, IBrawlerCommandSource, GameInput.IPlayerActions
     {
         [SerializeField] private BrawlerController _controlledBrawler;
 
-        private InputSystem_Actions _input;
+        private GameInput _input;
         private Vector2 _moveInput;
         private Vector2 _aimInput;
 
@@ -24,9 +24,12 @@ namespace MOBA.Core.Infrastructure
         private const float ManualAimThreshold = 0.20f;
         private const float MoveFallbackThreshold = 0.20f;
 
+        private bool _hasManualAim;
+        private Vector3 _manualAimDirection = Vector3.zero;
+
         private void Awake()
         {
-            _input = new InputSystem_Actions();
+            _input = new GameInput();
             _input.Player.AddCallbacks(this);
 
             if (_controlledBrawler == null)
@@ -47,6 +50,11 @@ namespace MOBA.Core.Infrastructure
         {
             _input.Player.RemoveCallbacks(this);
             _input.Dispose();
+        }
+
+        private void Update()
+        {
+            UpdateManualAimState();
         }
 
         public void SetControlledBrawler(BrawlerController controller)
@@ -115,18 +123,35 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        public bool HasPreviewAim()
+        {
+            return _hasManualAim;
+        }
+
+        public Vector3 GetPreviewAimDirection()
+        {
+            return _hasManualAim ? _manualAimDirection : Vector3.zero;
+        }
+
+        public Vector3 GetFireAimDirection()
+        {
+            if (_hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
+                return _manualAimDirection;
+
+            return ResolveRawFallbackDirection();
+        }
+
         private Vector3 ResolveActionDirection(BrawlerActionRequestType actionType)
         {
             if (_controlledBrawler == null)
-                return ResolveRawFallbackDirection();
+                return GetFireAimDirection();
 
             AbilityDefinition abilityDefinition = GetAbilityDefinition(actionType);
             bool preferManualAim = abilityDefinition == null || abilityDefinition.PreferManualAim;
 
-            Vector3 manualDirection = ResolveManualAimDirection();
-            if (preferManualAim && manualDirection.sqrMagnitude > 0.001f)
+            if (preferManualAim && _hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
             {
-                _lastAimDirection = manualDirection;
+                _lastAimDirection = _manualAimDirection;
                 return _lastAimDirection;
             }
 
@@ -139,7 +164,7 @@ namespace MOBA.Core.Infrastructure
                 return _lastAimDirection;
             }
 
-            Vector3 fallbackDirection = ResolveRawFallbackDirection();
+            Vector3 fallbackDirection = GetFireAimDirection();
             if (fallbackDirection.sqrMagnitude > 0.001f)
             {
                 _lastAimDirection = fallbackDirection;
@@ -157,7 +182,7 @@ namespace MOBA.Core.Infrastructure
                 AbilityDefinition = abilityDefinition,
                 Mode = ResolveAimAssistMode(actionType, abilityDefinition),
                 Origin = _controlledBrawler.Position,
-                Forward = ResolveRawFallbackDirection(),
+                Forward = GetFireAimDirection(),
                 Range = ResolveAimRange(abilityDefinition),
                 IncludeSelf = ShouldIncludeSelf(actionType, abilityDefinition),
                 RequireAlive = true
@@ -211,6 +236,15 @@ namespace MOBA.Core.Infrastructure
             if (abilityDefinition is AoEAbilityDefinition aoe)
                 return aoe.Radius;
 
+            if (abilityDefinition is BurstSequenceProjectileAbilityDefinition burst)
+                return burst.Range;
+
+            if (abilityDefinition is ChainProjectileAbilityDefinition chain)
+                return chain.Range;
+
+            if (abilityDefinition is ThrownHybridAoEAbilityDefinition thrown)
+                return thrown.ThrowRange;
+
             return 8f;
         }
 
@@ -222,27 +256,61 @@ namespace MOBA.Core.Infrastructure
             return actionType == BrawlerActionRequestType.Hypercharge;
         }
 
-        private Vector3 ResolveManualAimDirection()
+        private void UpdateManualAimState()
         {
-            if (_aimInput.sqrMagnitude >= (ManualAimThreshold * ManualAimThreshold))
-                return new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
+            _hasManualAim = false;
+            _manualAimDirection = Vector3.zero;
 
-            return Vector3.zero;
+            if (_controlledBrawler == null)
+                return;
+
+            // Gamepad / stick aim
+            if (_aimInput.sqrMagnitude >= (ManualAimThreshold * ManualAimThreshold))
+            {
+                _manualAimDirection = new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
+                _hasManualAim = true;
+                _lastAimDirection = _manualAimDirection;
+                return;
+            }
+
+            // Mouse aim: hold right mouse button to aim
+            if (Mouse.current != null && Mouse.current.rightButton.isPressed)
+            {
+                Camera cam = Camera.main;
+                if (cam != null)
+                {
+                    Vector2 mouseScreenPos = Mouse.current.position.ReadValue();
+                    Ray ray = cam.ScreenPointToRay(mouseScreenPos);
+
+                    Plane groundPlane = new Plane(Vector3.up, _controlledBrawler.Position);
+                    if (groundPlane.Raycast(ray, out float enter))
+                    {
+                        Vector3 worldPoint = ray.GetPoint(enter);
+                        Vector3 dir = worldPoint - _controlledBrawler.Position;
+                        dir.y = 0f;
+
+                        if (dir.sqrMagnitude > 0.001f)
+                        {
+                            _manualAimDirection = dir.normalized;
+                            _hasManualAim = true;
+                            _lastAimDirection = _manualAimDirection;
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         private Vector3 ResolveRawFallbackDirection()
         {
-            if (_aimInput.sqrMagnitude >= (ManualAimThreshold * ManualAimThreshold))
-                return new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
-
             if (_moveInput.sqrMagnitude >= (MoveFallbackThreshold * MoveFallbackThreshold))
                 return new Vector3(_moveInput.x, 0f, _moveInput.y).normalized;
 
-            if (_controlledBrawler != null)
-                return _controlledBrawler.transform.forward;
-
             if (_lastAimDirection.sqrMagnitude > 0.001f)
                 return _lastAimDirection;
+
+            if (_controlledBrawler != null)
+                return _controlledBrawler.transform.forward;
 
             return transform.forward;
         }
@@ -259,7 +327,6 @@ namespace MOBA.Core.Infrastructure
 
         public void OnFire(InputAction.CallbackContext context)
         {
-            Debug.Log($"OnFire called. performed={context.performed}");
             if (context.performed)
                 _mainAttackQueued = true;
         }
@@ -272,7 +339,6 @@ namespace MOBA.Core.Infrastructure
 
         public void OnSuper(InputAction.CallbackContext context)
         {
-            Debug.Log($"OnSuper called. performed={context.performed}");
             if (context.performed)
                 _superQueued = true;
         }
@@ -281,22 +347,6 @@ namespace MOBA.Core.Infrastructure
         {
             if (context.performed)
                 _hyperchargeQueued = true;
-        }
-
-        public Vector3 GetPreviewAimDirection()
-        {
-            Vector3 manualDirection = ResolveManualAimDirection();
-            if (manualDirection.sqrMagnitude > 0.001f)
-                return manualDirection;
-
-            Vector3 fallbackDirection = ResolveRawFallbackDirection();
-            if (fallbackDirection.sqrMagnitude > 0.001f)
-                return fallbackDirection;
-
-            if (_controlledBrawler != null)
-                return _controlledBrawler.transform.forward;
-
-            return transform.forward;
         }
     }
 }
