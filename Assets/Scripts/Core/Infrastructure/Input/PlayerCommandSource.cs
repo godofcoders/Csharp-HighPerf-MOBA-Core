@@ -38,6 +38,7 @@ namespace MOBA.Core.Infrastructure
         private bool _isHoldingSuperAim;
         private bool _superAimWasValidDuringHold;
         private Vector3 _heldSuperAimDirection = Vector3.zero;
+        private bool _wasSuperKeyHeldLastFrame;
 
         private void Awake()
         {
@@ -46,6 +47,53 @@ namespace MOBA.Core.Infrastructure
 
             if (_controlledBrawler == null)
                 _controlledBrawler = GetComponent<BrawlerController>();
+        }
+
+        private void UpdateDesktopSuperAimReleaseFlow()
+        {
+            if (_controlledBrawler == null || Keyboard.current == null)
+                return;
+
+            bool superKeyHeld = Keyboard.current.eKey.isPressed;
+
+            if (superKeyHeld && !_wasSuperKeyHeldLastFrame)
+            {
+                _isHoldingSuperAim = true;
+                _superAimWasValidDuringHold = false;
+                _heldSuperAimDirection = Vector3.zero;
+            }
+
+            if (_isHoldingSuperAim && superKeyHeld)
+            {
+                if (_hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
+                {
+                    _superAimWasValidDuringHold = true;
+                    _heldSuperAimDirection = _manualAimDirection;
+                }
+            }
+
+            if (!superKeyHeld && _wasSuperKeyHeldLastFrame)
+            {
+                float releaseAimDistance = GetCurrentReleaseAimDistance();
+                bool isOutsideFireThresholdAtRelease = releaseAimDistance >= ReleaseFireDistanceThreshold;
+
+                bool shouldFire = _isHoldingSuperAim &&
+                                  _superAimWasValidDuringHold &&
+                                  isOutsideFireThresholdAtRelease &&
+                                  _heldSuperAimDirection.sqrMagnitude > 0.001f;
+
+                if (shouldFire)
+                {
+                    _superQueued = true;
+                    _lastAimDirection = _heldSuperAimDirection;
+                }
+
+                _isHoldingSuperAim = false;
+                _superAimWasValidDuringHold = false;
+                _heldSuperAimDirection = Vector3.zero;
+            }
+
+            _wasSuperKeyHeldLastFrame = superKeyHeld;
         }
 
         private void OnEnable()
@@ -69,6 +117,7 @@ namespace MOBA.Core.Infrastructure
             UpdateManualAimState();
             UpdateHoldAimSnapshots();
             UpdateDesktopMainAttackAimReleaseFlow();
+            UpdateDesktopSuperAimReleaseFlow();
         }
 
         public void SetControlledBrawler(BrawlerController controller)
@@ -465,35 +514,40 @@ namespace MOBA.Core.Infrastructure
                 _gadgetQueued = true;
         }
 
+        // public void OnSuper(InputAction.CallbackContext context)
+        // {
+        //     if (context.started)
+        //     {
+        //         _isHoldingSuperAim = true;
+        //         _superAimWasValidDuringHold = false;
+        //         _heldSuperAimDirection = Vector3.zero;
+        //     }
+
+        //     if (context.canceled)
+        //     {
+        //         float releaseAimDistance = GetCurrentReleaseAimDistance();
+        //         bool isOutsideFireThresholdAtRelease = releaseAimDistance >= ReleaseFireDistanceThreshold;
+
+        //         bool shouldFire = _isHoldingSuperAim &&
+        //                           _superAimWasValidDuringHold &&
+        //                           isOutsideFireThresholdAtRelease &&
+        //                           _heldSuperAimDirection.sqrMagnitude > 0.001f;
+
+        //         if (shouldFire)
+        //         {
+        //             _superQueued = true;
+        //             _lastAimDirection = _heldSuperAimDirection;
+        //         }
+
+        //         _isHoldingSuperAim = false;
+        //         _superAimWasValidDuringHold = false;
+        //         _heldSuperAimDirection = Vector3.zero;
+        //     }
+        // }
+
         public void OnSuper(InputAction.CallbackContext context)
         {
-            if (context.started)
-            {
-                _isHoldingSuperAim = true;
-                _superAimWasValidDuringHold = false;
-                _heldSuperAimDirection = Vector3.zero;
-            }
-
-            if (context.canceled)
-            {
-                float releaseAimDistance = GetCurrentReleaseAimDistance();
-                bool isOutsideFireThresholdAtRelease = releaseAimDistance >= ReleaseFireDistanceThreshold;
-
-                bool shouldFire = _isHoldingSuperAim &&
-                                  _superAimWasValidDuringHold &&
-                                  isOutsideFireThresholdAtRelease &&
-                                  _heldSuperAimDirection.sqrMagnitude > 0.001f;
-
-                if (shouldFire)
-                {
-                    _superQueued = true;
-                    _lastAimDirection = _heldSuperAimDirection;
-                }
-
-                _isHoldingSuperAim = false;
-                _superAimWasValidDuringHold = false;
-                _heldSuperAimDirection = Vector3.zero;
-            }
+            // Desktop super now uses E key polling hold-release flow.
         }
 
         public void OnHypercharge(InputAction.CallbackContext context)
