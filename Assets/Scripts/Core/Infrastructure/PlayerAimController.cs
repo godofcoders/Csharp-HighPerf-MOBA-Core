@@ -10,10 +10,16 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerController _brawler;
         [SerializeField] private AimIndicatorView _aimIndicatorView;
 
-        [Header("Aim")]
-        [SerializeField] private bool _showDirectionalPreview = true;
+        [Header("Fallback")]
         [SerializeField] private float _defaultRange = 8f;
         [SerializeField] private float _originHeightOffset = 0.25f;
+
+        [Header("Throwable Preview")]
+        [SerializeField] private float _defaultThrowableArcHeight = 1.75f;
+        [SerializeField] private float _defaultThrowableRadius = 1.5f;
+
+        [Header("Placement Preview")]
+        [SerializeField] private float _defaultPlacementRadius = 0.75f;
 
         private void Awake()
         {
@@ -35,12 +41,6 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            if (!_showDirectionalPreview)
-            {
-                _aimIndicatorView.Hide();
-                return;
-            }
-
             if (!_commandSource.HasPreviewAim())
             {
                 _aimIndicatorView.Hide();
@@ -54,25 +54,98 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            float range = ResolvePreviewRange();
+            AimPreviewKind kind = _commandSource.GetPreviewKind();
+            AbilityDefinition ability = ResolvePreviewAbility(kind);
 
-            AimPreviewData data = new AimPreviewData
+            if (ability == null)
             {
-                IsValid = true,
-                Origin = _brawler.transform.position + Vector3.up * _originHeightOffset,
-                Direction = aimDirection.normalized,
-                Range = range
-            };
+                _aimIndicatorView.Hide();
+                return;
+            }
 
+            AimPreviewData data = BuildPreviewData(kind, ability, aimDirection.normalized);
             _aimIndicatorView.Show(data);
         }
 
-        private float ResolvePreviewRange()
+        private AbilityDefinition ResolvePreviewAbility(AimPreviewKind kind)
         {
             if (_brawler == null || _brawler.State == null)
-                return _defaultRange;
+                return null;
 
-            AbilityDefinition ability = _brawler.State.GetCurrentMainAttackDefinition();
+            switch (kind)
+            {
+                case AimPreviewKind.MainAttack:
+                    return _brawler.State.GetCurrentMainAttackDefinition();
+
+                case AimPreviewKind.Super:
+                    return _brawler.State.GetCurrentSuperDefinition();
+
+                default:
+                    return null;
+            }
+        }
+
+        private AimPreviewData BuildPreviewData(AimPreviewKind kind, AbilityDefinition ability, Vector3 aimDirection)
+        {
+            Vector3 playerCenter = _brawler.transform.position + Vector3.up * _originHeightOffset;
+
+            // Throwable preview
+            if (ability is ThrownHybridAoEAbilityDefinition thrown)
+            {
+                Vector3 targetPoint = _brawler.transform.position + (aimDirection * thrown.ThrowRange);
+
+                return new AimPreviewData
+                {
+                    IsValid = true,
+                    Kind = kind,
+                    Mode = AimPreviewMode.Throwable,
+                    Origin = playerCenter,
+                    Direction = aimDirection,
+                    Range = thrown.ThrowRange,
+                    TargetPoint = targetPoint,
+                    ArcHeight = _defaultThrowableArcHeight,
+                    Radius = thrown.ImpactRadius > 0f ? thrown.ImpactRadius : _defaultThrowableRadius
+                };
+            }
+            // Placement preview (Jessie super via EffectAbilityDefinition)
+            if (ability is EffectAbilityDefinition effectAbility)
+            {
+                float range = effectAbility.PreviewRange > 0f ? effectAbility.PreviewRange : _defaultRange;
+                Vector3 targetPoint = _brawler.transform.position + (aimDirection * range);
+
+                return new AimPreviewData
+                {
+                    IsValid = true,
+                    Kind = kind,
+                    Mode = AimPreviewMode.Placement,
+                    Origin = playerCenter,
+                    Direction = aimDirection,
+                    Range = range,
+                    TargetPoint = targetPoint,
+                    ArcHeight = 0f,
+                    Radius = _defaultPlacementRadius
+                };
+            }
+
+            // Directional preview
+            float directionalRange = ResolveDirectionalRange(ability);
+
+            return new AimPreviewData
+            {
+                IsValid = true,
+                Kind = kind,
+                Mode = AimPreviewMode.Directional,
+                Origin = playerCenter,
+                Direction = aimDirection,
+                Range = directionalRange,
+                TargetPoint = playerCenter + (aimDirection * directionalRange),
+                ArcHeight = 0f,
+                Radius = 0f
+            };
+        }
+
+        private float ResolveDirectionalRange(AbilityDefinition ability)
+        {
             if (ability == null)
                 return _defaultRange;
 
@@ -84,6 +157,9 @@ namespace MOBA.Core.Infrastructure
 
             if (ability is ChainProjectileAbilityDefinition chain)
                 return chain.Range;
+
+            if (ability is AoEAbilityDefinition aoe)
+                return aoe.Radius;
 
             return _defaultRange;
         }

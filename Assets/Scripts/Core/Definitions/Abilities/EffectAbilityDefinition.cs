@@ -9,6 +9,9 @@ namespace MOBA.Core.Definitions
         [Header("Effects")]
         public AbilityEffectDefinition[] Effects;
 
+        [Header("Preview")]
+        public float PreviewRange = 6f;
+
         public override IAbilityLogic CreateLogic()
         {
             return new EffectAbilityLogic(this);

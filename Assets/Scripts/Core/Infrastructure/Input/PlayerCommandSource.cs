@@ -23,16 +23,22 @@ namespace MOBA.Core.Infrastructure
 
         private const float ManualAimThreshold = 0.20f;
         private const float MoveFallbackThreshold = 0.20f;
+        private const float ReleaseFireDistanceThreshold = 1.25f;
 
         private bool _hasManualAim;
         private Vector3 _manualAimDirection = Vector3.zero;
 
-        // Brawl Stars style release-to-fire state
+        // Main attack hold-release (RMB / secondary click)
         private bool _isHoldingMainAttackAim;
         private bool _wasRightMouseHeldLastFrame;
         private bool _mainAttackAimWasValidDuringHold;
-        private Vector3 _heldAimDirection = Vector3.zero;
-        private const float ReleaseFireDistanceThreshold = 1.25f;
+        private Vector3 _heldMainAttackAimDirection = Vector3.zero;
+
+        // Super hold-release (E key via InputAction started/canceled)
+        private bool _isHoldingSuperAim;
+        private bool _superAimWasValidDuringHold;
+        private Vector3 _heldSuperAimDirection = Vector3.zero;
+
         private void Awake()
         {
             _input = new GameInput();
@@ -61,6 +67,7 @@ namespace MOBA.Core.Infrastructure
         private void Update()
         {
             UpdateManualAimState();
+            UpdateHoldAimSnapshots();
             UpdateDesktopMainAttackAimReleaseFlow();
         }
 
@@ -132,12 +139,23 @@ namespace MOBA.Core.Infrastructure
 
         public bool HasPreviewAim()
         {
-            return _isHoldingMainAttackAim && _hasManualAim;
+            return GetPreviewKind() != AimPreviewKind.None && _hasManualAim;
+        }
+
+        public AimPreviewKind GetPreviewKind()
+        {
+            if (_isHoldingSuperAim)
+                return AimPreviewKind.Super;
+
+            if (_isHoldingMainAttackAim)
+                return AimPreviewKind.MainAttack;
+
+            return AimPreviewKind.None;
         }
 
         public Vector3 GetPreviewAimDirection()
         {
-            return (_isHoldingMainAttackAim && _hasManualAim) ? _manualAimDirection : Vector3.zero;
+            return HasPreviewAim() ? _manualAimDirection : Vector3.zero;
         }
 
         public Vector3 GetFireAimDirection()
@@ -158,9 +176,17 @@ namespace MOBA.Core.Infrastructure
 
             if (preferManualAim)
             {
-                if (_heldAimDirection.sqrMagnitude > 0.001f)
+                if (actionType == BrawlerActionRequestType.MainAttack &&
+                    _heldMainAttackAimDirection.sqrMagnitude > 0.001f)
                 {
-                    _lastAimDirection = _heldAimDirection;
+                    _lastAimDirection = _heldMainAttackAimDirection;
+                    return _lastAimDirection;
+                }
+
+                if (actionType == BrawlerActionRequestType.Super &&
+                    _heldSuperAimDirection.sqrMagnitude > 0.001f)
+                {
+                    _lastAimDirection = _heldSuperAimDirection;
                     return _lastAimDirection;
                 }
 
@@ -261,6 +287,9 @@ namespace MOBA.Core.Infrastructure
             if (abilityDefinition is ThrownHybridAoEAbilityDefinition thrown)
                 return thrown.ThrowRange;
 
+            if (abilityDefinition is EffectAbilityDefinition effectAbility)
+                return effectAbility.PreviewRange;
+
             return 8f;
         }
 
@@ -280,6 +309,7 @@ namespace MOBA.Core.Infrastructure
             if (_controlledBrawler == null)
                 return;
 
+            // Gamepad / stick aim
             if (_aimInput.sqrMagnitude >= (ManualAimThreshold * ManualAimThreshold))
             {
                 _manualAimDirection = new Vector3(_aimInput.x, 0f, _aimInput.y).normalized;
@@ -288,7 +318,12 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            if (Mouse.current != null && Mouse.current.rightButton.isPressed)
+            bool allowMouseAim =
+                _isHoldingMainAttackAim ||
+                _isHoldingSuperAim ||
+                (Mouse.current != null && Mouse.current.rightButton.isPressed);
+
+            if (allowMouseAim && Mouse.current != null)
             {
                 Camera cam = Camera.main;
                 if (cam != null)
@@ -315,6 +350,21 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        private void UpdateHoldAimSnapshots()
+        {
+            if (_isHoldingMainAttackAim && _hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
+            {
+                _mainAttackAimWasValidDuringHold = true;
+                _heldMainAttackAimDirection = _manualAimDirection;
+            }
+
+            if (_isHoldingSuperAim && _hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
+            {
+                _superAimWasValidDuringHold = true;
+                _heldSuperAimDirection = _manualAimDirection;
+            }
+        }
+
         private void UpdateDesktopMainAttackAimReleaseFlow()
         {
             if (_controlledBrawler == null || Mouse.current == null)
@@ -326,16 +376,7 @@ namespace MOBA.Core.Infrastructure
             {
                 _isHoldingMainAttackAim = true;
                 _mainAttackAimWasValidDuringHold = false;
-                _heldAimDirection = Vector3.zero;
-            }
-
-            if (_isHoldingMainAttackAim && rightMouseHeld)
-            {
-                if (_hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
-                {
-                    _mainAttackAimWasValidDuringHold = true;
-                    _heldAimDirection = _manualAimDirection;
-                }
+                _heldMainAttackAimDirection = Vector3.zero;
             }
 
             if (!rightMouseHeld && _wasRightMouseHeldLastFrame)
@@ -346,20 +387,47 @@ namespace MOBA.Core.Infrastructure
                 bool shouldFire = _isHoldingMainAttackAim &&
                                   _mainAttackAimWasValidDuringHold &&
                                   isOutsideFireThresholdAtRelease &&
-                                  _heldAimDirection.sqrMagnitude > 0.001f;
+                                  _heldMainAttackAimDirection.sqrMagnitude > 0.001f;
 
                 if (shouldFire)
                 {
                     _mainAttackQueued = true;
-                    _lastAimDirection = _heldAimDirection;
+                    _lastAimDirection = _heldMainAttackAimDirection;
                 }
 
                 _isHoldingMainAttackAim = false;
                 _mainAttackAimWasValidDuringHold = false;
-                _heldAimDirection = Vector3.zero;
+                _heldMainAttackAimDirection = Vector3.zero;
             }
 
             _wasRightMouseHeldLastFrame = rightMouseHeld;
+        }
+
+        private float GetCurrentReleaseAimDistance()
+        {
+            if (_controlledBrawler == null)
+                return 0f;
+
+            if (Mouse.current != null)
+            {
+                Camera cam = Camera.main;
+                if (cam != null)
+                {
+                    Vector2 mouseScreenPos = Mouse.current.position.ReadValue();
+                    Ray ray = cam.ScreenPointToRay(mouseScreenPos);
+
+                    Plane groundPlane = new Plane(Vector3.up, _controlledBrawler.Position);
+                    if (groundPlane.Raycast(ray, out float enter))
+                    {
+                        Vector3 worldPoint = ray.GetPoint(enter);
+                        Vector3 flatOffset = worldPoint - _controlledBrawler.Position;
+                        flatOffset.y = 0f;
+                        return flatOffset.magnitude;
+                    }
+                }
+            }
+
+            return 0f;
         }
 
         private Vector3 ResolveRawFallbackDirection()
@@ -388,6 +456,7 @@ namespace MOBA.Core.Infrastructure
 
         public void OnFire(InputAction.CallbackContext context)
         {
+            // Main attack uses RMB / secondary click release-to-fire flow
         }
 
         public void OnGadget(InputAction.CallbackContext context)
@@ -398,41 +467,39 @@ namespace MOBA.Core.Infrastructure
 
         public void OnSuper(InputAction.CallbackContext context)
         {
-            if (context.performed)
-                _superQueued = true;
+            if (context.started)
+            {
+                _isHoldingSuperAim = true;
+                _superAimWasValidDuringHold = false;
+                _heldSuperAimDirection = Vector3.zero;
+            }
+
+            if (context.canceled)
+            {
+                float releaseAimDistance = GetCurrentReleaseAimDistance();
+                bool isOutsideFireThresholdAtRelease = releaseAimDistance >= ReleaseFireDistanceThreshold;
+
+                bool shouldFire = _isHoldingSuperAim &&
+                                  _superAimWasValidDuringHold &&
+                                  isOutsideFireThresholdAtRelease &&
+                                  _heldSuperAimDirection.sqrMagnitude > 0.001f;
+
+                if (shouldFire)
+                {
+                    _superQueued = true;
+                    _lastAimDirection = _heldSuperAimDirection;
+                }
+
+                _isHoldingSuperAim = false;
+                _superAimWasValidDuringHold = false;
+                _heldSuperAimDirection = Vector3.zero;
+            }
         }
 
         public void OnHypercharge(InputAction.CallbackContext context)
         {
             if (context.performed)
                 _hyperchargeQueued = true;
-        }
-
-        private float GetCurrentReleaseAimDistance()
-        {
-            if (_controlledBrawler == null)
-                return 0f;
-
-            if (Mouse.current != null)
-            {
-                Camera cam = Camera.main;
-                if (cam != null)
-                {
-                    Vector2 mouseScreenPos = Mouse.current.position.ReadValue();
-                    Ray ray = cam.ScreenPointToRay(mouseScreenPos);
-
-                    Plane groundPlane = new Plane(Vector3.up, _controlledBrawler.Position);
-                    if (groundPlane.Raycast(ray, out float enter))
-                    {
-                        Vector3 worldPoint = ray.GetPoint(enter);
-                        Vector3 flatOffset = worldPoint - _controlledBrawler.Position;
-                        flatOffset.y = 0f;
-                        return flatOffset.magnitude;
-                    }
-                }
-            }
-
-            return 0f;
         }
     }
 }
