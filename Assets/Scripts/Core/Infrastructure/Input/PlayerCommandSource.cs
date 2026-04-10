@@ -33,8 +33,6 @@ namespace MOBA.Core.Infrastructure
         private bool _mainAttackAimWasValidDuringHold;
         private Vector3 _heldAimDirection = Vector3.zero;
         private const float ReleaseFireDistanceThreshold = 1.25f;
-        private bool _mainAttackAimReachedFireDistance;
-
         private void Awake()
         {
             _input = new GameInput();
@@ -328,7 +326,6 @@ namespace MOBA.Core.Infrastructure
             {
                 _isHoldingMainAttackAim = true;
                 _mainAttackAimWasValidDuringHold = false;
-                _mainAttackAimReachedFireDistance = false;
                 _heldAimDirection = Vector3.zero;
             }
 
@@ -338,20 +335,17 @@ namespace MOBA.Core.Infrastructure
                 {
                     _mainAttackAimWasValidDuringHold = true;
                     _heldAimDirection = _manualAimDirection;
-
-                    float aimDistance = GetCurrentManualAimDistance();
-                    if (aimDistance >= ReleaseFireDistanceThreshold)
-                    {
-                        _mainAttackAimReachedFireDistance = true;
-                    }
                 }
             }
 
             if (!rightMouseHeld && _wasRightMouseHeldLastFrame)
             {
+                float releaseAimDistance = GetCurrentReleaseAimDistance();
+                bool isOutsideFireThresholdAtRelease = releaseAimDistance >= ReleaseFireDistanceThreshold;
+
                 bool shouldFire = _isHoldingMainAttackAim &&
                                   _mainAttackAimWasValidDuringHold &&
-                                  _mainAttackAimReachedFireDistance &&
+                                  isOutsideFireThresholdAtRelease &&
                                   _heldAimDirection.sqrMagnitude > 0.001f;
 
                 if (shouldFire)
@@ -362,7 +356,6 @@ namespace MOBA.Core.Infrastructure
 
                 _isHoldingMainAttackAim = false;
                 _mainAttackAimWasValidDuringHold = false;
-                _mainAttackAimReachedFireDistance = false;
                 _heldAimDirection = Vector3.zero;
             }
 
@@ -415,12 +408,12 @@ namespace MOBA.Core.Infrastructure
                 _hyperchargeQueued = true;
         }
 
-        private float GetCurrentManualAimDistance()
+        private float GetCurrentReleaseAimDistance()
         {
             if (_controlledBrawler == null)
                 return 0f;
 
-            if (Mouse.current != null && Mouse.current.rightButton.isPressed)
+            if (Mouse.current != null)
             {
                 Camera cam = Camera.main;
                 if (cam != null)
@@ -438,9 +431,6 @@ namespace MOBA.Core.Infrastructure
                     }
                 }
             }
-
-            if (_aimInput.sqrMagnitude > 0.001f)
-                return _aimInput.magnitude;
 
             return 0f;
         }
