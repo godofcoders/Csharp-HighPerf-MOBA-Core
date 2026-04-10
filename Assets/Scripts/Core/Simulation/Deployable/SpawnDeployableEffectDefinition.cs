@@ -16,52 +16,42 @@ namespace MOBA.Core.Definitions
 
         public override bool Apply(IAbilityUser source, BrawlerController target, AbilityExecutionContext context)
         {
-            BrawlerController caster = source as BrawlerController;
-            if (caster == null || Deployable == null)
+            if (source == null || Deployable == null)
                 return false;
 
             IDeployableService deployableService = ServiceProvider.Get<IDeployableService>();
             if (deployableService == null)
                 return false;
 
-            Vector3 spawnPosition = ResolveSpawnPosition(caster, context);
-            Vector3 direction = context.Direction.sqrMagnitude > 0.001f
-                ? context.Direction.normalized
-                : caster.transform.forward;
+            BrawlerController owner = source as BrawlerController;
+            if (owner == null)
+                return false;
+
+            Vector3 spawnPosition;
+
+            if (context.HasTargetPoint)
+            {
+                spawnPosition = context.TargetPoint;
+            }
+            else
+            {
+                Vector3 fallbackDirection = context.Direction.sqrMagnitude > 0.001f
+                    ? context.Direction.normalized
+                    : owner.transform.forward;
+
+                spawnPosition = context.Origin + fallbackDirection * 2f;
+            }
 
             DeployableSpawnRequest request = new DeployableSpawnRequest
             {
-                Owner = caster,
-                Team = caster.Team,
+                Owner = owner,
                 Definition = Deployable,
                 Position = spawnPosition,
-                Direction = direction
+                Team = owner.Team
             };
 
-            DeployableController spawned = deployableService.Spawn(request);
-            return spawned != null;
-        }
-
-        private Vector3 ResolveSpawnPosition(BrawlerController caster, AbilityExecutionContext context)
-        {
-            switch (SpawnLocationRule)
-            {
-                case DeployableSpawnLocationRule.AtCaster:
-                    return caster.Position;
-
-                case DeployableSpawnLocationRule.AtTargetPoint:
-                    return context.Origin;
-
-                case DeployableSpawnLocationRule.InFrontOfCaster:
-                default:
-                    {
-                        Vector3 forward = context.Direction.sqrMagnitude > 0.001f
-                            ? context.Direction.normalized
-                            : caster.transform.forward;
-
-                        return caster.Position + (forward * ForwardOffset);
-                    }
-            }
+            deployableService.Spawn(request);
+            return true;
         }
     }
 }

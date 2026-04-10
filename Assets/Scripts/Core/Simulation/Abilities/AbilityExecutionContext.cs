@@ -16,5 +16,8 @@ namespace MOBA.Core.Simulation
 
         public bool IsSuper;
         public bool IsGadget;
+
+        public Vector3 TargetPoint;
+        public bool HasTargetPoint;
     }
 }

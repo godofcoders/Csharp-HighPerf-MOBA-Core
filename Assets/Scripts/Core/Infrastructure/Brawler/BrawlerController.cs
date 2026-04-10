@@ -282,11 +282,10 @@ namespace MOBA.Core.Infrastructure
             _currentMoveInput = direction;
         }
 
-        private void BufferAttack(InputCommandType type, Vector3 direction)
+        private void BufferAttack(InputCommandType type, Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
         {
-            _inputBuffer.Enqueue(type, direction);
+            _inputBuffer.Enqueue(type, direction, targetPoint, hasTargetPoint);
         }
-
         public override void Tick(uint currentTick)
         {
             if (!_isInitialized || State == null || State.IsDead)
@@ -376,7 +375,7 @@ namespace MOBA.Core.Infrastructure
                     break;
 
                 case BrawlerCommandType.Super:
-                    TryUseSuper(cmd.Direction, out _);
+                    TryUseSuper(cmd.Direction, cmd.TargetPoint, cmd.HasTargetPoint, out _);
                     break;
 
                 case BrawlerCommandType.Hypercharge:
@@ -766,6 +765,8 @@ namespace MOBA.Core.Infrastructure
                             SlotType = AbilitySlotType.Super,
                             Origin = transform.position,
                             Direction = cmd.Direction,
+                            TargetPoint = cmd.TargetPoint,
+                            HasTargetPoint = cmd.HasTargetPoint,
                             StartTick = currentTick,
                             IsSuper = true,
                             IsGadget = false
@@ -1053,7 +1054,7 @@ namespace MOBA.Core.Infrastructure
             if (blockReason != BrawlerActionBlockReason.None)
                 return false;
 
-            BufferAttack(InputCommandType.MainAttack, direction);
+            BufferAttack(InputCommandType.MainAttack, direction, Vector3.zero, false);
             return true;
         }
 
@@ -1079,11 +1080,11 @@ namespace MOBA.Core.Infrastructure
             if (blockReason != BrawlerActionBlockReason.None)
                 return false;
 
-            BufferAttack(InputCommandType.Gadget, direction);
+            BufferAttack(InputCommandType.Gadget, direction, Vector3.zero, false);
             return true;
         }
 
-        public bool TryUseSuper(Vector3 direction, out BrawlerActionBlockReason blockReason)
+        public bool TryUseSuper(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint, out BrawlerActionBlockReason blockReason)
         {
             if (State == null)
             {
@@ -1105,7 +1106,7 @@ namespace MOBA.Core.Infrastructure
             if (blockReason != BrawlerActionBlockReason.None)
                 return false;
 
-            BufferAttack(InputCommandType.Super, direction);
+            BufferAttack(InputCommandType.Super, direction, targetPoint, hasTargetPoint);
             return true;
         }
 

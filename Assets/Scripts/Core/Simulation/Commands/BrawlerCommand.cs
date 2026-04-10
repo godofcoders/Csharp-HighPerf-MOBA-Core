@@ -16,6 +16,8 @@ namespace MOBA.Core.Simulation
     {
         public BrawlerCommandType Type;
         public Vector3 Direction;
+        public Vector3 TargetPoint;
+        public bool HasTargetPoint;
         public uint Tick;
     }
 }

@@ -15,18 +15,42 @@ namespace MOBA.Core.Simulation.Abilities
 
         public AbilityExecutionResult Execute(IAbilityUser user, AbilityExecutionContext context)
         {
-            if (_definition == null || context.Source == null)
-                return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
+            if (_definition == null || user == null)
+                return AbilityExecutionResult.Failed(_definition, context.SlotType);
 
-            if (!(context.Source is BrawlerController brawler))
-                return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
+            if (user is not BrawlerController brawler)
+                return AbilityExecutionResult.Failed(_definition, context.SlotType);
 
-            Vector3 direction = context.Direction.sqrMagnitude > 0.001f
-                ? context.Direction.normalized
+            Vector3 origin = context.Origin;
+            Vector3 targetPoint;
+
+            if (context.HasTargetPoint)
+            {
+                targetPoint = context.TargetPoint;
+            }
+            else
+            {
+                Vector3 dir = context.Direction.sqrMagnitude > 0.001f
+                    ? context.Direction.normalized
+                    : brawler.transform.forward;
+
+                targetPoint = origin + dir * _definition.ThrowRange;
+            }
+
+            Vector3 flatOffset = targetPoint - origin;
+            flatOffset.y = 0f;
+
+            float throwDistance = flatOffset.magnitude;
+            if (throwDistance > _definition.ThrowRange && throwDistance > 0.001f)
+            {
+                flatOffset = flatOffset.normalized * _definition.ThrowRange;
+                targetPoint = origin + flatOffset;
+                throwDistance = flatOffset.magnitude;
+            }
+
+            Vector3 direction = throwDistance > 0.001f
+                ? flatOffset.normalized
                 : brawler.transform.forward;
-
-            Vector3 origin = brawler.GetCastPosition();
-            Vector3 targetPoint = origin + (direction * _definition.ThrowRange);
 
             var projectileService = ServiceProvider.Get<IProjectileService>();
 
@@ -35,22 +59,20 @@ namespace MOBA.Core.Simulation.Abilities
                 Owner = brawler,
                 SourceAbility = _definition,
                 SlotType = context.SlotType,
-
                 Origin = origin,
                 Direction = direction,
                 Speed = _definition.ThrowSpeed,
                 Range = _definition.ThrowRange,
                 Damage = 0f,
-
                 Team = brawler.Team,
-                SuperChargeOnHit = 0f,
+                SuperChargeOnHit = 0.20f,
                 IsSuper = context.IsSuper,
                 IsGadget = context.IsGadget,
 
                 IsHybrid = false,
                 AllyHealAmount = 0f,
                 EnemyDamageAmount = 0f,
-                HitTeamRule = ProjectileHitTeamRule.EnemiesOnly,
+                HitTeamRule = ProjectileHitTeamRule.AlliesAndEnemies,
 
                 DeliveryType = ProjectileDeliveryType.ThrownImpactAoE,
                 TargetPoint = targetPoint,
@@ -59,18 +81,25 @@ namespace MOBA.Core.Simulation.Abilities
                 ImpactRadius = _definition.ImpactRadius,
                 ImpactEnemyDamage = _definition.EnemyDamage,
                 ImpactAllyHeal = _definition.AllyHeal,
+
                 UseArcMotion = true,
                 ArcHeight = 1.75f,
-                TravelDistance = Vector3.Distance(origin, targetPoint),
+                TravelDistance = throwDistance,
+
                 PresentationProfile = _definition.PresentationProfile,
+
                 IsChainProjectile = false,
                 RemainingBounces = 0,
-                BounceRadius = 0f,
+                BounceRadius = 0f
             };
 
             projectileService.FireProjectile(spawnContext);
 
-            return AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);
+            var result = AbilityExecutionResult.Succeeded(_definition, context.SlotType);
+            result.SpawnedProjectile = true;
+            result.ProjectileCount = 1;
+            result.ConsumedResource = true;
+            return result;
         }
 
         public void Tick(uint currentTick)

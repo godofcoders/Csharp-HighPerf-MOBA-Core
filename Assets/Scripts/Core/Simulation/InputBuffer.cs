@@ -15,7 +15,9 @@ namespace MOBA.Core.Simulation
     {
         public InputCommandType Type;
         public Vector3 Direction;
-        public float Timestamp; // When was this pressed?
+        public float Timestamp;
+        public Vector3 TargetPoint;
+        public bool HasTargetPoint;
     }
 
     public class InputBuffer
@@ -23,13 +25,15 @@ namespace MOBA.Core.Simulation
         private float _bufferWindow = 0.2f; // Command stays valid for 200ms
         private BufferedCommand _pendingCommand;
 
-        public void Enqueue(InputCommandType type, Vector3 direction)
+        public void Enqueue(InputCommandType type, Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
         {
             _pendingCommand = new BufferedCommand
             {
                 Type = type,
                 Direction = direction,
-                Timestamp = Time.time
+                Timestamp = Time.time,
+                TargetPoint = targetPoint,
+                HasTargetPoint = hasTargetPoint
             };
         }
 

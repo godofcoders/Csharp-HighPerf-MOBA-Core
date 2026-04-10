@@ -88,11 +88,14 @@ namespace MOBA.Core.Infrastructure
         private AimPreviewData BuildPreviewData(AimPreviewKind kind, AbilityDefinition ability, Vector3 aimDirection)
         {
             Vector3 playerCenter = _brawler.transform.position + Vector3.up * _originHeightOffset;
+            Vector3 previewTargetPoint = _commandSource != null
+                ? _commandSource.GetPreviewTargetPoint()
+                : _brawler.transform.position + (aimDirection * _defaultRange);
 
             // Throwable preview
             if (ability is ThrownHybridAoEAbilityDefinition thrown)
             {
-                Vector3 targetPoint = _brawler.transform.position + (aimDirection * thrown.ThrowRange);
+                float actualRange = (previewTargetPoint - _brawler.transform.position).magnitude;
 
                 return new AimPreviewData
                 {
@@ -101,17 +104,17 @@ namespace MOBA.Core.Infrastructure
                     Mode = AimPreviewMode.Throwable,
                     Origin = playerCenter,
                     Direction = aimDirection,
-                    Range = thrown.ThrowRange,
-                    TargetPoint = targetPoint,
+                    Range = actualRange,
+                    TargetPoint = previewTargetPoint,
                     ArcHeight = _defaultThrowableArcHeight,
                     Radius = thrown.ImpactRadius > 0f ? thrown.ImpactRadius : _defaultThrowableRadius
                 };
             }
-            // Placement preview (Jessie super via EffectAbilityDefinition)
+
+            // Placement preview
             if (ability is EffectAbilityDefinition effectAbility)
             {
-                float range = effectAbility.PreviewRange > 0f ? effectAbility.PreviewRange : _defaultRange;
-                Vector3 targetPoint = _brawler.transform.position + (aimDirection * range);
+                float actualRange = (previewTargetPoint - _brawler.transform.position).magnitude;
 
                 return new AimPreviewData
                 {
@@ -120,8 +123,8 @@ namespace MOBA.Core.Infrastructure
                     Mode = AimPreviewMode.Placement,
                     Origin = playerCenter,
                     Direction = aimDirection,
-                    Range = range,
-                    TargetPoint = targetPoint,
+                    Range = actualRange,
+                    TargetPoint = previewTargetPoint,
                     ArcHeight = 0f,
                     Radius = _defaultPlacementRadius
                 };
