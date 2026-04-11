@@ -127,7 +127,7 @@ namespace MOBA.Core.Infrastructure
                 _isHoldingSuperAim = false;
                 _superAimWasValidDuringHold = false;
                 _heldSuperAimDirection = Vector3.zero;
-                _heldSuperTargetPoint = Vector3.zero;
+                // DO NOT clear _heldSuperTargetPoint here
             }
 
             _wasSuperKeyHeldLastFrame = superKeyHeld;
@@ -216,6 +216,7 @@ namespace MOBA.Core.Infrastructure
                 });
 
                 _superQueued = false;
+                _heldSuperTargetPoint = Vector3.zero;
             }
 
             if (_hyperchargeQueued)
