@@ -36,5 +36,7 @@ MonoBehaviour:
   AimAssistDistanceBias: 1
   AimAssistIdealRange: 8
   AimAssistPlacementDistance: 3
+  PreviewMode: 3
   Effects:
   - {fileID: 11400000, guid: df317152a67934af68ba5709d1a18b34, type: 2}
+  PreviewRange: 6

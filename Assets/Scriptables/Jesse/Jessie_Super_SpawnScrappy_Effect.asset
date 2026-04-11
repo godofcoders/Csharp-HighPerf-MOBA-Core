@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: Jessie_Super_SpawnScrappy_Effect
   m_EditorClassIdentifier: 
   EffectName: Jessie_Super_SpawnScrappy_Effect
-  Deployable: {fileID: 11400000, guid: 119e50323b56e4fe19ce355e4f531904, type: 2}
-  SpawnLocationRule: 2
-  ForwardOffset: 2
+  _definition: {fileID: 11400000, guid: 119e50323b56e4fe19ce355e4f531904, type: 2}
+  _useThrownDelivery: 1
+  _deliveryVisualPrefab: {fileID: 1113124831696296672, guid: c9b062f3f94c041c2b1c8daf54d8b806, type: 3}
+  _deliveryArcHeight: 2.5
+  _deliveryTravelDuration: 0.35
