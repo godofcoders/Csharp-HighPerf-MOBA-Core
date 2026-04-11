@@ -1,3 +1,4 @@
+using MOBA.Core.Infrastructure;
 using UnityEngine;
 
 namespace MOBA.Core.Definitions
@@ -47,6 +48,8 @@ namespace MOBA.Core.Definitions
         public float AimAssistDistanceBias = 1f;
         public float AimAssistIdealRange = -1f;
         public float AimAssistPlacementDistance = 3f;
+        [Header("Aim Preview")]
+        public AimPreviewMode PreviewMode = AimPreviewMode.Directional;
 
         public abstract MOBA.Core.Simulation.IAbilityLogic CreateLogic();
 

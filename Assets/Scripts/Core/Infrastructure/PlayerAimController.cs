@@ -92,59 +92,67 @@ namespace MOBA.Core.Infrastructure
                 ? _commandSource.GetPreviewTargetPoint()
                 : _brawler.transform.position + (aimDirection * _defaultRange);
 
-            // Throwable preview
-            if (ability is ThrownHybridAoEAbilityDefinition thrown)
+            switch (ability.PreviewMode)
             {
-                float actualRange = (previewTargetPoint - _brawler.transform.position).magnitude;
+                case AimPreviewMode.Throwable:
+                    {
+                        float actualRange = (previewTargetPoint - _brawler.transform.position).magnitude;
+                        float radius = _defaultThrowableRadius;
 
-                return new AimPreviewData
-                {
-                    IsValid = true,
-                    Kind = kind,
-                    Mode = AimPreviewMode.Throwable,
-                    Origin = playerCenter,
-                    Direction = aimDirection,
-                    Range = actualRange,
-                    TargetPoint = previewTargetPoint,
-                    ArcHeight = _defaultThrowableArcHeight,
-                    Radius = thrown.ImpactRadius > 0f ? thrown.ImpactRadius : _defaultThrowableRadius
-                };
+                        if (ability is ThrownHybridAoEAbilityDefinition thrown)
+                            radius = thrown.ImpactRadius > 0f ? thrown.ImpactRadius : _defaultThrowableRadius;
+
+                        return new AimPreviewData
+                        {
+                            IsValid = true,
+                            Kind = kind,
+                            Mode = AimPreviewMode.Throwable,
+                            Origin = playerCenter,
+                            Direction = aimDirection,
+                            Range = actualRange,
+                            TargetPoint = previewTargetPoint,
+                            ArcHeight = _defaultThrowableArcHeight,
+                            Radius = radius
+                        };
+                    }
+
+                case AimPreviewMode.Placement:
+                    {
+                        float actualRange = (previewTargetPoint - _brawler.transform.position).magnitude;
+
+                        return new AimPreviewData
+                        {
+                            IsValid = true,
+                            Kind = kind,
+                            Mode = AimPreviewMode.Placement,
+                            Origin = playerCenter,
+                            Direction = aimDirection,
+                            Range = actualRange,
+                            TargetPoint = previewTargetPoint,
+                            ArcHeight = 0f,
+                            Radius = _defaultPlacementRadius
+                        };
+                    }
+
+                case AimPreviewMode.Directional:
+                default:
+                    {
+                        float directionalRange = ResolveDirectionalRange(ability);
+
+                        return new AimPreviewData
+                        {
+                            IsValid = true,
+                            Kind = kind,
+                            Mode = AimPreviewMode.Directional,
+                            Origin = playerCenter,
+                            Direction = aimDirection,
+                            Range = directionalRange,
+                            TargetPoint = playerCenter + (aimDirection * directionalRange),
+                            ArcHeight = 0f,
+                            Radius = 0f
+                        };
+                    }
             }
-
-            // Placement preview
-            if (ability is EffectAbilityDefinition effectAbility)
-            {
-                float actualRange = (previewTargetPoint - _brawler.transform.position).magnitude;
-
-                return new AimPreviewData
-                {
-                    IsValid = true,
-                    Kind = kind,
-                    Mode = AimPreviewMode.Placement,
-                    Origin = playerCenter,
-                    Direction = aimDirection,
-                    Range = actualRange,
-                    TargetPoint = previewTargetPoint,
-                    ArcHeight = 0f,
-                    Radius = _defaultPlacementRadius
-                };
-            }
-
-            // Directional preview
-            float directionalRange = ResolveDirectionalRange(ability);
-
-            return new AimPreviewData
-            {
-                IsValid = true,
-                Kind = kind,
-                Mode = AimPreviewMode.Directional,
-                Origin = playerCenter,
-                Direction = aimDirection,
-                Range = directionalRange,
-                TargetPoint = playerCenter + (aimDirection * directionalRange),
-                ArcHeight = 0f,
-                Radius = 0f
-            };
         }
 
         private float ResolveDirectionalRange(AbilityDefinition ability)
