@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5285e47cd8eb44869814b719ecdbe52a, type: 3}
+  m_Name: Barley_main
+  m_EditorClassIdentifier: 
+  OptionName: 
+  Description: 
+  AllowedBuildSlotTypes: 
+  AbilityName: ' Bottle Toss'
+  Icon: {fileID: 0}
+  SlotType: 0
+  TargetingType: 1
+  DeliveryType: 2
+  Cooldown: 0.9
+  Tags: 
+  CastDurationSeconds: 0.15
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 0
+  AllowAimAssist: 1
+  AimAssistMode: 1
+  AimAssistIncludeSelf: 0
+  PreferManualAim: 1
+  AimAssistRangeOverride: -1
+  AimAssistForwardBias: 2
+  AimAssistDistanceBias: 1
+  AimAssistIdealRange: -1
+  AimAssistPlacementDistance: 3
+  PreviewMode: 1
+  ThrowRange: 7
+  ThrowSpeed: 16
+  ImpactRadius: 2.25
+  EnemyDamage: 500
+  AllyHeal: 0
+  PresentationProfile: {fileID: 11400000, guid: b5e9e8d6ae56e4d50bc4fc597a8c9745, type: 2}

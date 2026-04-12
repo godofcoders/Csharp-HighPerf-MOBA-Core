@@ -39,7 +39,7 @@ namespace MOBA.Core.Infrastructure
         private bool _superAimWasValidDuringHold;
         private Vector3 _heldSuperAimDirection = Vector3.zero;
         private bool _wasSuperKeyHeldLastFrame;
-
+        private Vector3 _heldMainAttackTargetPoint = Vector3.zero;
         private Vector3 _heldSuperTargetPoint = Vector3.zero;
 
         private void Awake()
@@ -178,16 +178,20 @@ namespace MOBA.Core.Infrastructure
 
             if (_mainAttackQueued)
             {
+                AbilityDefinition mainAttackAbility = GetAbilityDefinition(BrawlerActionRequestType.MainAttack);
+                bool hasTargetPoint = AbilityUsesPointTarget(mainAttackAbility);
+
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.MainAttack,
                     Direction = ResolveActionDirection(BrawlerActionRequestType.MainAttack),
-                    TargetPoint = Vector3.zero,
-                    HasTargetPoint = false,
+                    TargetPoint = hasTargetPoint ? _heldMainAttackTargetPoint : Vector3.zero,
+                    HasTargetPoint = hasTargetPoint,
                     Tick = currentTick
                 });
 
                 _mainAttackQueued = false;
+                _heldMainAttackTargetPoint = Vector3.zero;
             }
 
             if (_gadgetQueued)
@@ -375,6 +379,15 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        private bool AbilityUsesPointTarget(AbilityDefinition abilityDefinition)
+        {
+            if (abilityDefinition == null)
+                return false;
+
+            return abilityDefinition.PreviewMode == AimPreviewMode.Throwable ||
+                   abilityDefinition.PreviewMode == AimPreviewMode.Placement;
+        }
+
         private AimAssistMode ResolveAimAssistMode(BrawlerActionRequestType actionType, AbilityDefinition abilityDefinition)
         {
             if (abilityDefinition != null && abilityDefinition.AllowAimAssist)
@@ -478,6 +491,12 @@ namespace MOBA.Core.Infrastructure
             {
                 _mainAttackAimWasValidDuringHold = true;
                 _heldMainAttackAimDirection = _manualAimDirection;
+
+                AbilityDefinition mainAttackAbility = GetAbilityDefinition(BrawlerActionRequestType.MainAttack);
+                if (AbilityUsesPointTarget(mainAttackAbility))
+                {
+                    _heldMainAttackTargetPoint = GetClampedTargetPointForAbility(mainAttackAbility);
+                }
             }
 
             if (_isHoldingSuperAim && _hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
@@ -505,8 +524,8 @@ namespace MOBA.Core.Infrastructure
                 _isHoldingMainAttackAim = true;
                 _mainAttackAimWasValidDuringHold = false;
                 _heldMainAttackAimDirection = Vector3.zero;
+                _heldMainAttackTargetPoint = Vector3.zero;
             }
-
             if (!rightMouseHeld && _wasRightMouseHeldLastFrame)
             {
                 float releaseAimDistance = GetCurrentReleaseAimDistance();

@@ -367,7 +367,7 @@ namespace MOBA.Core.Infrastructure
                     break;
 
                 case BrawlerCommandType.MainAttack:
-                    TryUseMainAttack(cmd.Direction, out _);
+                    TryUseMainAttack(cmd.Direction, cmd.TargetPoint, cmd.HasTargetPoint, out _);
                     break;
 
                 case BrawlerCommandType.Gadget:
@@ -499,6 +499,8 @@ namespace MOBA.Core.Infrastructure
                             SlotType = AbilitySlotType.MainAttack,
                             Origin = transform.position,
                             Direction = cmd.Direction,
+                            TargetPoint = cmd.TargetPoint,
+                            HasTargetPoint = cmd.HasTargetPoint,
                             StartTick = currentTick,
                             IsSuper = false,
                             IsGadget = false
@@ -1032,7 +1034,7 @@ namespace MOBA.Core.Infrastructure
             SetMoveInput(direction);
         }
 
-        public bool TryUseMainAttack(Vector3 direction, out BrawlerActionBlockReason blockReason)
+        public bool TryUseMainAttack(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint, out BrawlerActionBlockReason blockReason)
         {
             if (State == null)
             {
@@ -1054,7 +1056,7 @@ namespace MOBA.Core.Infrastructure
             if (blockReason != BrawlerActionBlockReason.None)
                 return false;
 
-            BufferAttack(InputCommandType.MainAttack, direction, Vector3.zero, false);
+            BufferAttack(InputCommandType.MainAttack, direction, targetPoint, hasTargetPoint);
             return true;
         }
 
