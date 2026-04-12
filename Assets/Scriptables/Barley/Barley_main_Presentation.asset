@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d4d7476af0334c89ba9613aa4565986, type: 3}
   m_Name: Barley_main_Presentation
   m_EditorClassIdentifier: 
-  VisualPrefab: {fileID: 0}
+  VisualPrefab: {fileID: 3925879102416851084, guid: 9c96cc8886c0144f99b88de40dc34a3b, type: 3}
   LocalPosition: {x: 0, y: 0, z: 0}
   LocalRotationEuler: {x: 0, y: 0, z: 0}
   LocalScale: {x: 1, y: 1, z: 1}

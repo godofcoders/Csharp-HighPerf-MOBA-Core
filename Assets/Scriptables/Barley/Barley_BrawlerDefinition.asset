@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Barley_BrawlerDefinition
   m_EditorClassIdentifier: 
-  BrawlerName: 
-  ModelPrefab: {fileID: 0}
-  BaseHealth: 3000
-  BaseMoveSpeed: 5
+  BrawlerName: Barley
+  ModelPrefab: {fileID: 8926854043389324680, guid: 1cd504dd4f3da45a58af5317f36e0967, type: 3}
+  BaseHealth: 3600
+  BaseMoveSpeed: 7
   BaseDamage: 500
   ProgressionBonuses: []
-  MainAttack: {fileID: 0}
+  MainAttack: {fileID: 11400000, guid: 0ff2602fafb2b4279b84db42c61f252d, type: 2}
   SuperAbility: {fileID: 0}
   Gadget: {fileID: 0}
   StarPower: {fileID: 0}
@@ -26,7 +26,7 @@ MonoBehaviour:
   DefaultPassiveEntries: []
   Hypercharge: {fileID: 0}
   AIProfile: {fileID: 0}
-  Archetype: 0
+  Archetype: 3
   Aggression: 1
   SurvivalInstinct: 1
   TeamplayWeight: 1
