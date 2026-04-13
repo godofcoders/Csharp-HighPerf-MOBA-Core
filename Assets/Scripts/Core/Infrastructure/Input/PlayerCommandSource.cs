@@ -6,11 +6,11 @@ using UnityEngine.InputSystem;
 
 namespace MOBA.Core.Infrastructure
 {
-    public class PlayerCommandSource : MonoBehaviour, IBrawlerCommandSource, GameInput.IPlayerActions
+    public class PlayerCommandSource : MonoBehaviour, IBrawlerCommandSource, InputSystem_Actions.IPlayerActions
     {
         [SerializeField] private BrawlerController _controlledBrawler;
 
-        private GameInput _input;
+        private InputSystem_Actions _input;
         private Vector2 _moveInput;
         private Vector2 _aimInput;
 
@@ -47,7 +47,7 @@ namespace MOBA.Core.Infrastructure
 
         private void Awake()
         {
-            _input = new GameInput();
+            _input = new InputSystem_Actions();
             _input.Player.AddCallbacks(this);
 
             if (_controlledBrawler == null)
@@ -620,15 +620,18 @@ namespace MOBA.Core.Infrastructure
 
         public void OnFire(InputAction.CallbackContext context)
         {
+            Debug.Log($"[PLAYER INPUT] OnFire called. performed={context.performed}");
+
             if (!context.performed)
                 return;
 
-            // Ignore quick-fire if player is currently in manual aim hold mode
             if (_isHoldingMainAttackAim)
                 return;
 
             _mainAttackQueued = true;
             _queuedMainAttackUsesHeldAim = false;
+
+            Debug.Log("[PLAYER INPUT] Quick fire queued using auto-aim path.");
         }
 
         public void OnGadget(InputAction.CallbackContext context)
