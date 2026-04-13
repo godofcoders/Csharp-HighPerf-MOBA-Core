@@ -200,9 +200,9 @@ namespace MOBA.Core.Infrastructure
 
                 _mainAttackQueued = false;
                 _queuedMainAttackUsesHeldAim = false;
+                _heldMainAttackAimDirection = Vector3.zero;
                 _heldMainAttackTargetPoint = Vector3.zero;
             }
-
             if (_gadgetQueued)
             {
                 output.Add(new BrawlerCommand
@@ -560,7 +560,8 @@ namespace MOBA.Core.Infrastructure
 
                 _isHoldingMainAttackAim = false;
                 _mainAttackAimWasValidDuringHold = false;
-                _heldMainAttackAimDirection = Vector3.zero;
+                // DO NOT clear _heldMainAttackAimDirection here
+                // DO NOT clear _heldMainAttackTargetPoint here
             }
 
             _wasRightMouseHeldLastFrame = rightMouseHeld;
