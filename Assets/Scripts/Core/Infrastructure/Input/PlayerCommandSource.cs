@@ -620,7 +620,15 @@ namespace MOBA.Core.Infrastructure
 
         public void OnFire(InputAction.CallbackContext context)
         {
-            // Main attack uses RMB / secondary click release-to-fire flow
+            if (!context.performed)
+                return;
+
+            // Ignore quick-fire if player is currently in manual aim hold mode
+            if (_isHoldingMainAttackAim)
+                return;
+
+            _mainAttackQueued = true;
+            _queuedMainAttackUsesHeldAim = false;
         }
 
         public void OnGadget(InputAction.CallbackContext context)
