@@ -17,5 +17,5 @@ MonoBehaviour:
   LocalRotationEuler: {x: 0, y: 0, z: 0}
   LocalScale: {x: 0.15, y: 0.15, z: 0.15}
   FaceMovementDirection: 1
-  UseSpin: 1
+  UseSpin: 0
   SpinEulerPerSecond: {x: 0.15, y: 0.15, z: 0.15}

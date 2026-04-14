@@ -137,14 +137,20 @@ namespace MOBA.Core.Simulation
                 return;
 
             _visualInstance = Instantiate(_definition.VisualPrefab, transform);
-            _visualInstance.transform.localPosition = Vector3.zero;
-            _visualInstance.transform.localRotation = Quaternion.identity;
 
-            // Simple low-work scaling for flat quad / decal style visuals
+            // Keep it centered on the hazard origin
+            _visualInstance.transform.localPosition = Vector3.zero;
+
+            // Preserve authored prefab rotation
+            Vector3 authoredScale = _visualInstance.transform.localScale;
+
+            float diameter = _definition.Radius * 2f;
+
+            // Multiply authored prefab scale instead of replacing it
             _visualInstance.transform.localScale = new Vector3(
-                _definition.Radius * 2f,
-                1f,
-                _definition.Radius * 2f
+                authoredScale.x * diameter,
+                authoredScale.y,
+                authoredScale.z * diameter
             );
         }
     }
