@@ -6,11 +6,11 @@ using UnityEngine.InputSystem;
 
 namespace MOBA.Core.Infrastructure
 {
-    public class PlayerCommandSource : MonoBehaviour, IBrawlerCommandSource, InputSystem_Actions.IPlayerActions
+    public class PlayerCommandSource : MonoBehaviour, IBrawlerCommandSource, GameInput.IPlayerActions
     {
         [SerializeField] private BrawlerController _controlledBrawler;
 
-        private InputSystem_Actions _input;
+        private GameInput _input;
         private Vector2 _moveInput;
         private Vector2 _aimInput;
 
@@ -42,12 +42,9 @@ namespace MOBA.Core.Infrastructure
         private Vector3 _heldMainAttackTargetPoint = Vector3.zero;
         private Vector3 _heldSuperTargetPoint = Vector3.zero;
 
-        private bool _queuedMainAttackUsesHeldAim;
-        private bool _queuedSuperUsesHeldAim;
-
         private void Awake()
         {
-            _input = new InputSystem_Actions();
+            _input = new GameInput();
             _input.Player.AddCallbacks(this);
 
             if (_controlledBrawler == null)
@@ -124,14 +121,13 @@ namespace MOBA.Core.Infrastructure
                 if (shouldFire)
                 {
                     _superQueued = true;
-                    _queuedSuperUsesHeldAim = true;
                     _lastAimDirection = _heldSuperAimDirection;
                 }
 
                 _isHoldingSuperAim = false;
                 _superAimWasValidDuringHold = false;
                 _heldSuperAimDirection = Vector3.zero;
-                // keep _heldSuperTargetPoint until CollectCommands consumes it
+                // DO NOT clear _heldSuperTargetPoint here
             }
 
             _wasSuperKeyHeldLastFrame = superKeyHeld;
@@ -185,24 +181,19 @@ namespace MOBA.Core.Infrastructure
                 AbilityDefinition mainAttackAbility = GetAbilityDefinition(BrawlerActionRequestType.MainAttack);
                 bool hasTargetPoint = AbilityUsesPointTarget(mainAttackAbility);
 
-                Vector3 finalDirection = _queuedMainAttackUsesHeldAim && _heldMainAttackAimDirection.sqrMagnitude > 0.001f
-                    ? _heldMainAttackAimDirection
-                    : ResolveActionDirection(BrawlerActionRequestType.MainAttack);
-
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.MainAttack,
-                    Direction = finalDirection,
+                    Direction = ResolveActionDirection(BrawlerActionRequestType.MainAttack),
                     TargetPoint = hasTargetPoint ? _heldMainAttackTargetPoint : Vector3.zero,
                     HasTargetPoint = hasTargetPoint,
                     Tick = currentTick
                 });
 
                 _mainAttackQueued = false;
-                _queuedMainAttackUsesHeldAim = false;
-                _heldMainAttackAimDirection = Vector3.zero;
                 _heldMainAttackTargetPoint = Vector3.zero;
             }
+
             if (_gadgetQueued)
             {
                 output.Add(new BrawlerCommand
@@ -219,21 +210,16 @@ namespace MOBA.Core.Infrastructure
 
             if (_superQueued)
             {
-                Vector3 finalDirection = _queuedSuperUsesHeldAim && _heldSuperAimDirection.sqrMagnitude > 0.001f
-                    ? _heldSuperAimDirection
-                    : ResolveActionDirection(BrawlerActionRequestType.Super);
-
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.Super,
-                    Direction = finalDirection,
+                    Direction = ResolveActionDirection(BrawlerActionRequestType.Super),
                     TargetPoint = _heldSuperTargetPoint,
                     HasTargetPoint = true,
                     Tick = currentTick
                 });
 
                 _superQueued = false;
-                _queuedSuperUsesHeldAim = false;
                 _heldSuperTargetPoint = Vector3.zero;
             }
 
@@ -540,7 +526,6 @@ namespace MOBA.Core.Infrastructure
                 _heldMainAttackAimDirection = Vector3.zero;
                 _heldMainAttackTargetPoint = Vector3.zero;
             }
-
             if (!rightMouseHeld && _wasRightMouseHeldLastFrame)
             {
                 float releaseAimDistance = GetCurrentReleaseAimDistance();
@@ -554,14 +539,12 @@ namespace MOBA.Core.Infrastructure
                 if (shouldFire)
                 {
                     _mainAttackQueued = true;
-                    _queuedMainAttackUsesHeldAim = true;
                     _lastAimDirection = _heldMainAttackAimDirection;
                 }
 
                 _isHoldingMainAttackAim = false;
                 _mainAttackAimWasValidDuringHold = false;
-                // DO NOT clear _heldMainAttackAimDirection here
-                // DO NOT clear _heldMainAttackTargetPoint here
+                _heldMainAttackAimDirection = Vector3.zero;
             }
 
             _wasRightMouseHeldLastFrame = rightMouseHeld;
@@ -620,18 +603,7 @@ namespace MOBA.Core.Infrastructure
 
         public void OnFire(InputAction.CallbackContext context)
         {
-            Debug.Log($"[PLAYER INPUT] OnFire called. performed={context.performed}");
-
-            if (!context.performed)
-                return;
-
-            if (_isHoldingMainAttackAim)
-                return;
-
-            _mainAttackQueued = true;
-            _queuedMainAttackUsesHeldAim = false;
-
-            Debug.Log("[PLAYER INPUT] Quick fire queued using auto-aim path.");
+            // Main attack uses RMB / secondary click release-to-fire flow
         }
 
         public void OnGadget(InputAction.CallbackContext context)

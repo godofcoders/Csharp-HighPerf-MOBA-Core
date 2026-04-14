@@ -36,7 +36,7 @@ MonoBehaviour:
   AimAssistDistanceBias: 1
   AimAssistIdealRange: -1
   AimAssistPlacementDistance: 3
-  PreviewMode: 2
+  PreviewMode: 1
   ThrowRange: 7
   ThrowSpeed: 16
   ImpactRadius: 2.25
