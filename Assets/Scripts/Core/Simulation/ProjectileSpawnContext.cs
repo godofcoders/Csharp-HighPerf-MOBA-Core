@@ -45,5 +45,8 @@ namespace MOBA.Core.Simulation
         public bool IsChainProjectile;
         public int RemainingBounces;
         public float BounceRadius;
+        public AreaHazardDefinition LingeringHazardDefinition;
+        public bool CanAffectEnemiesOnImpact;
+        public bool CanAffectAlliesOnImpact;
     }
 }

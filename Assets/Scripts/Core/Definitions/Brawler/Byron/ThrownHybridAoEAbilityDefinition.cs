@@ -15,6 +15,12 @@ namespace MOBA.Core.Definitions
         public float AllyHeal = 350f;
         [Header("Presentation")]
         public ProjectilePresentationProfile PresentationProfile;
+        [Header("Lingering Hazard")]
+        public AreaHazardDefinition LingeringHazard;
+        [Header("Target Rules")]
+        public ProjectileHitTeamRule HitTeamRule = ProjectileHitTeamRule.EnemiesOnly;
+        public bool CanAffectEnemiesOnImpact = true;
+        public bool CanAffectAlliesOnImpact = false;
 
         public override IAbilityLogic CreateLogic()
         {
