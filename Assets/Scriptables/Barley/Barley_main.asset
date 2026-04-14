@@ -43,3 +43,4 @@ MonoBehaviour:
   EnemyDamage: 500
   AllyHeal: 0
   PresentationProfile: {fileID: 11400000, guid: b5e9e8d6ae56e4d50bc4fc597a8c9745, type: 2}
+  LingeringHazard: {fileID: 11400000, guid: ee98321559ce8406f84735b2e1b5be47, type: 2}

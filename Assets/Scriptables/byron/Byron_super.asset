@@ -43,3 +43,7 @@ MonoBehaviour:
   EnemyDamage: 350
   AllyHeal: 350
   PresentationProfile: {fileID: 11400000, guid: bf5d09313eb644759962493aae83506d, type: 2}
+  LingeringHazard: {fileID: 0}
+  HitTeamRule: 2
+  CanAffectEnemiesOnImpact: 1
+  CanAffectAlliesOnImpact: 1

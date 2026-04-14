@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14e9fe86713484ebb9d7833c9000644e, type: 3}
+  m_Name: Barley_puddle_hazard
+  m_EditorClassIdentifier: 
+  HazardName: Area Hazard
+  Radius: 2.25
+  DurationSeconds: 2.5
+  TickIntervalSeconds: 0.5
+  DamagePerTick: 180
+  TargetTeamRule: 2
+  VisualPrefab: {fileID: 654608214986896001, guid: 9543e730c75074d5c93e2a718f4c5989, type: 3}
