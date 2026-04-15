@@ -17,13 +17,10 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Presentation Smoothing")]
         [SerializeField] private bool _enablePresentationSmoothing = true;
+        [SerializeField] private float _visualPositionSmoothTime = 0.08f;
+        [SerializeField] private float _visualRotationSmoothSpeed = 14f;
 
-        private Vector3 _previousSimPosition;
-        private Vector3 _currentSimPosition;
-        private Quaternion _previousSimRotation;
-        private Quaternion _currentSimRotation;
-        private float _lastSimUpdateTime;
-        private const float SimTickInterval = 1f / 30f;
+        private Vector3 _visualLocalVelocity;
 
         private GameObject _spawnedVisualInstance;
 
@@ -54,8 +51,7 @@ namespace MOBA.Core.Infrastructure
         public Vector3 CurrentPosition => transform.position;
         public float CollisionRadius => 0.5f;
         public int EntityID => gameObject.GetInstanceID();
-
-        public Transform PresentationFollowTarget => _visualRoot != null ? _visualRoot : transform;
+        public Transform PresentationFollowTarget => transform;
 
         protected override void Awake()
         {
@@ -74,13 +70,30 @@ namespace MOBA.Core.Infrastructure
             if (!_enablePresentationSmoothing || _visualRoot == null)
                 return;
 
-            float alpha = Mathf.Clamp01((Time.time - _lastSimUpdateTime) / SimTickInterval);
+            _visualRoot.localPosition = Vector3.SmoothDamp(
+                _visualRoot.localPosition,
+                Vector3.zero,
+                ref _visualLocalVelocity,
+                _visualPositionSmoothTime);
 
-            Vector3 interpolatedWorldPosition = Vector3.Lerp(_previousSimPosition, _currentSimPosition, alpha);
-            Quaternion interpolatedWorldRotation = Quaternion.Slerp(_previousSimRotation, _currentSimRotation, alpha);
+            _visualRoot.localRotation = Quaternion.Slerp(
+                _visualRoot.localRotation,
+                Quaternion.identity,
+                Time.deltaTime * _visualRotationSmoothSpeed);
+        }
 
-            _visualRoot.position = interpolatedWorldPosition;
-            _visualRoot.rotation = interpolatedWorldRotation;
+        private void ApplyPresentationCompensation(Vector3 previousPosition, Vector3 currentPosition, Quaternion previousRotation, Quaternion currentRotation)
+        {
+            if (!_enablePresentationSmoothing || _visualRoot == null)
+                return;
+
+            Vector3 worldDelta = currentPosition - previousPosition;
+
+            // Because VisualRoot is a child of the root, compensate in local space.
+            _visualRoot.localPosition -= worldDelta;
+
+            Quaternion worldRotationDelta = currentRotation * Quaternion.Inverse(previousRotation);
+            _visualRoot.localRotation = Quaternion.Inverse(worldRotationDelta) * _visualRoot.localRotation;
         }
 
         public void SetCommandSource(IBrawlerCommandSource source)
@@ -144,16 +157,10 @@ namespace MOBA.Core.Infrastructure
 
             _lastTickPosition = transform.position;
 
-            _previousSimPosition = transform.position;
-            _currentSimPosition = transform.position;
-            _previousSimRotation = transform.rotation;
-            _currentSimRotation = transform.rotation;
-            _lastSimUpdateTime = Time.time;
-
             if (_visualRoot != null)
             {
-                _visualRoot.position = transform.position;
-                _visualRoot.rotation = transform.rotation;
+                _visualRoot.localPosition = Vector3.zero;
+                _visualRoot.localRotation = Quaternion.identity;
             }
 
             _isInitialized = true;
@@ -362,14 +369,8 @@ namespace MOBA.Core.Infrastructure
             else
                 SetMoveInput(Vector3.zero);
 
-            if (_currentMoveInput.sqrMagnitude <= 0.01f)
-            {
-                _previousSimPosition = _currentSimPosition;
-                _previousSimRotation = _currentSimRotation;
-                _currentSimPosition = transform.position;
-                _currentSimRotation = transform.rotation;
-                _lastSimUpdateTime = Time.time;
-            }
+
+
 
             State.Hypercharge.Tick(currentTick, () =>
             {
@@ -437,11 +438,11 @@ namespace MOBA.Core.Infrastructure
             if (_currentMoveInput.sqrMagnitude <= 0.01f)
                 return;
 
-            _previousSimPosition = _currentSimPosition;
-            _previousSimRotation = _currentSimRotation;
+            Vector3 previousPosition = transform.position;
+            Quaternion previousRotation = transform.rotation;
 
             float speed = State.IncomingMovementModifiers.Apply(State.MoveSpeed.Value);
-            float tickDelta = SimTickInterval;
+            float tickDelta = 1f / 30f;
 
             Vector3 movement = _currentMoveInput.normalized * (speed * tickDelta);
             transform.position += movement;
@@ -449,9 +450,7 @@ namespace MOBA.Core.Infrastructure
             if (movement != Vector3.zero)
                 transform.rotation = Quaternion.LookRotation(movement);
 
-            _currentSimPosition = transform.position;
-            _currentSimRotation = transform.rotation;
-            _lastSimUpdateTime = Time.time;
+            ApplyPresentationCompensation(previousPosition, transform.position, previousRotation, transform.rotation);
         }
 
         public void TakeDamage(float amount)
@@ -1065,16 +1064,11 @@ namespace MOBA.Core.Infrastructure
             State.SetEquippedHypercharge(_equippedHypercharge ?? _definition.Hypercharge);
             State.RefreshGadgetChargesFromRuntimeKit();
 
-            _previousSimPosition = position;
-            _currentSimPosition = position;
-            _previousSimRotation = transform.rotation;
-            _currentSimRotation = transform.rotation;
-            _lastSimUpdateTime = Time.time;
 
             if (_visualRoot != null)
             {
-                _visualRoot.position = position;
-                _visualRoot.rotation = transform.rotation;
+                _visualRoot.localPosition = Vector3.zero;
+                _visualRoot.localRotation = Quaternion.identity;
             }
 
             gameObject.SetActive(true);
