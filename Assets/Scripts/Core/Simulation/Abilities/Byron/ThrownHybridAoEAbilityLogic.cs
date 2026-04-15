@@ -72,7 +72,9 @@ namespace MOBA.Core.Simulation.Abilities
                 IsHybrid = false,
                 AllyHealAmount = 0f,
                 EnemyDamageAmount = 0f,
-                HitTeamRule = ProjectileHitTeamRule.AlliesAndEnemies,
+                HitTeamRule = _definition.HitTeamRule,
+                CanAffectEnemiesOnImpact = _definition.CanAffectEnemiesOnImpact,
+                CanAffectAlliesOnImpact = _definition.CanAffectAlliesOnImpact,
 
                 DeliveryType = ProjectileDeliveryType.ThrownImpactAoE,
                 TargetPoint = targetPoint,
@@ -81,7 +83,7 @@ namespace MOBA.Core.Simulation.Abilities
                 ImpactRadius = _definition.ImpactRadius,
                 ImpactEnemyDamage = _definition.EnemyDamage,
                 ImpactAllyHeal = _definition.AllyHeal,
-
+                LingeringHazardDefinition = _definition.LingeringHazard,
                 UseArcMotion = true,
                 ArcHeight = 1.75f,
                 TravelDistance = throwDistance,

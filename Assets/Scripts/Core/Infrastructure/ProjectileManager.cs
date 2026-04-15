@@ -58,6 +58,8 @@ namespace MOBA.Core.Infrastructure
                 ImpactRadius = context.ImpactRadius,
                 ImpactEnemyDamage = context.ImpactEnemyDamage,
                 ImpactAllyHeal = context.ImpactAllyHeal,
+                LingeringHazardDefinition = context.LingeringHazardDefinition,
+
 
                 UseArcMotion = context.UseArcMotion,
                 ArcHeight = context.ArcHeight,
@@ -305,24 +307,54 @@ namespace MOBA.Core.Infrastructure
 
                 if (isAlly)
                 {
-                    targetBrawler.State.Heal(p.ImpactAllyHeal);
-                    Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} healed ally {targetBrawler.name} for {p.ImpactAllyHeal}");
+                    if (!p.CanAffectAlliesOnImpact)
+                        continue;
+
+                    if (p.ImpactAllyHeal != 0f)
+                    {
+                        targetBrawler.State.Heal(p.ImpactAllyHeal);
+                        Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} healed ally {targetBrawler.name} for {p.ImpactAllyHeal}");
+                    }
                 }
                 else
                 {
-                    damageService.ApplyDamage(new DamageContext
+                    if (!p.CanAffectEnemiesOnImpact)
+                        continue;
+
+                    if (p.ImpactEnemyDamage != 0f)
                     {
-                        Attacker = p.Owner,
-                        Target = targetBrawler,
-                        Damage = p.ImpactEnemyDamage,
-                        Type = DamageType.AoE,
-                        HitPosition = impactPosition,
-                        Direction = (targetBrawler.Position - impactPosition).normalized,
+                        damageService.ApplyDamage(new DamageContext
+                        {
+                            Attacker = p.Owner,
+                            Target = targetBrawler,
+                            Damage = p.ImpactEnemyDamage,
+                            Type = DamageType.AoE,
+                            HitPosition = impactPosition,
+                            Direction = (targetBrawler.Position - impactPosition).normalized,
+                            SourceAbility = p.SourceAbility,
+                            IsSuper = p.IsSuper
+                        });
+
+                        Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} damaged enemy {targetBrawler.name} for {p.ImpactEnemyDamage}");
+                    }
+                }
+            }
+
+            if (p.LingeringHazardDefinition != null)
+            {
+                var hazardService = ServiceProvider.Get<IAreaHazardService>();
+                if (hazardService != null)
+                {
+                    hazardService.SpawnHazard(new AreaHazardSpawnRequest
+                    {
+                        Owner = p.Owner,
+                        Team = p.Team,
+                        Definition = p.LingeringHazardDefinition,
+                        Position = impactPosition,
                         SourceAbility = p.SourceAbility,
+                        SlotType = p.SlotType,
                         IsSuper = p.IsSuper
                     });
-
-                    Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} damaged enemy {targetBrawler.name} for {p.ImpactEnemyDamage}");
                 }
             }
 
@@ -425,6 +457,10 @@ namespace MOBA.Core.Infrastructure
             public int RemainingBounces;
             public float BounceRadius;
             public System.Collections.Generic.HashSet<int> HitEntityIds;
+            public AreaHazardDefinition LingeringHazardDefinition;
+
+            public bool CanAffectEnemiesOnImpact;
+            public bool CanAffectAlliesOnImpact;
         }
     }
 }
