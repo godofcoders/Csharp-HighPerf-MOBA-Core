@@ -17,8 +17,8 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Presentation Smoothing")]
         [SerializeField] private bool _enablePresentationSmoothing = true;
-        [SerializeField] private float _visualPositionSmoothTime = 0.08f;
-        [SerializeField] private float _visualRotationSmoothSpeed = 14f;
+        private float _visualPositionSmoothTime = 0.12f;
+        private float _visualRotationSmoothSpeed = 10f;
 
         private Vector3 _visualLocalVelocity;
 
@@ -51,7 +51,7 @@ namespace MOBA.Core.Infrastructure
         public Vector3 CurrentPosition => transform.position;
         public float CollisionRadius => 0.5f;
         public int EntityID => gameObject.GetInstanceID();
-        public Transform PresentationFollowTarget => transform;
+        public Transform PresentationFollowTarget => _visualRoot != null ? _visualRoot : transform;
 
         protected override void Awake()
         {
