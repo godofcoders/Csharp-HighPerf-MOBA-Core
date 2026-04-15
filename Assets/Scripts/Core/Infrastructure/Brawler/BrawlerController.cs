@@ -15,6 +15,16 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Transform _visualRoot;
         [SerializeField] private BrawlerPresentationAnchors _presentationAnchors;
 
+        [Header("Presentation Smoothing")]
+        [SerializeField] private bool _enablePresentationSmoothing = true;
+
+        private Vector3 _previousSimPosition;
+        private Vector3 _currentSimPosition;
+        private Quaternion _previousSimRotation;
+        private Quaternion _currentSimRotation;
+        private float _lastSimUpdateTime;
+        private const float SimTickInterval = 1f / 30f;
+
         private GameObject _spawnedVisualInstance;
 
         private Vector3 _lastTickPosition;
@@ -45,6 +55,8 @@ namespace MOBA.Core.Infrastructure
         public float CollisionRadius => 0.5f;
         public int EntityID => gameObject.GetInstanceID();
 
+        public Transform PresentationFollowTarget => _visualRoot != null ? _visualRoot : transform;
+
         protected override void Awake()
         {
             base.Awake();
@@ -55,6 +67,20 @@ namespace MOBA.Core.Infrastructure
             {
                 InternalInitialize(_definition, _team);
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (!_enablePresentationSmoothing || _visualRoot == null)
+                return;
+
+            float alpha = Mathf.Clamp01((Time.time - _lastSimUpdateTime) / SimTickInterval);
+
+            Vector3 interpolatedWorldPosition = Vector3.Lerp(_previousSimPosition, _currentSimPosition, alpha);
+            Quaternion interpolatedWorldRotation = Quaternion.Slerp(_previousSimRotation, _currentSimRotation, alpha);
+
+            _visualRoot.position = interpolatedWorldPosition;
+            _visualRoot.rotation = interpolatedWorldRotation;
         }
 
         public void SetCommandSource(IBrawlerCommandSource source)
@@ -117,6 +143,19 @@ namespace MOBA.Core.Infrastructure
             }
 
             _lastTickPosition = transform.position;
+
+            _previousSimPosition = transform.position;
+            _currentSimPosition = transform.position;
+            _previousSimRotation = transform.rotation;
+            _currentSimRotation = transform.rotation;
+            _lastSimUpdateTime = Time.time;
+
+            if (_visualRoot != null)
+            {
+                _visualRoot.position = transform.position;
+                _visualRoot.rotation = transform.rotation;
+            }
+
             _isInitialized = true;
 
             CombatRegistry.Register(this);
@@ -323,6 +362,15 @@ namespace MOBA.Core.Infrastructure
             else
                 SetMoveInput(Vector3.zero);
 
+            if (_currentMoveInput.sqrMagnitude <= 0.01f)
+            {
+                _previousSimPosition = _currentSimPosition;
+                _previousSimRotation = _currentSimRotation;
+                _currentSimPosition = transform.position;
+                _currentSimRotation = transform.rotation;
+                _lastSimUpdateTime = Time.time;
+            }
+
             State.Hypercharge.Tick(currentTick, () =>
             {
                 State.ClearHyperchargeRuntimeModifiers();
@@ -389,14 +437,21 @@ namespace MOBA.Core.Infrastructure
             if (_currentMoveInput.sqrMagnitude <= 0.01f)
                 return;
 
+            _previousSimPosition = _currentSimPosition;
+            _previousSimRotation = _currentSimRotation;
+
             float speed = State.IncomingMovementModifiers.Apply(State.MoveSpeed.Value);
-            float tickDelta = 1f / 30f;
+            float tickDelta = SimTickInterval;
 
             Vector3 movement = _currentMoveInput.normalized * (speed * tickDelta);
             transform.position += movement;
 
             if (movement != Vector3.zero)
                 transform.rotation = Quaternion.LookRotation(movement);
+
+            _currentSimPosition = transform.position;
+            _currentSimRotation = transform.rotation;
+            _lastSimUpdateTime = Time.time;
         }
 
         public void TakeDamage(float amount)
@@ -1009,6 +1064,18 @@ namespace MOBA.Core.Infrastructure
             State.Reset();
             State.SetEquippedHypercharge(_equippedHypercharge ?? _definition.Hypercharge);
             State.RefreshGadgetChargesFromRuntimeKit();
+
+            _previousSimPosition = position;
+            _currentSimPosition = position;
+            _previousSimRotation = transform.rotation;
+            _currentSimRotation = transform.rotation;
+            _lastSimUpdateTime = Time.time;
+
+            if (_visualRoot != null)
+            {
+                _visualRoot.position = position;
+                _visualRoot.rotation = transform.rotation;
+            }
 
             gameObject.SetActive(true);
             CombatRegistry.Register(this);
