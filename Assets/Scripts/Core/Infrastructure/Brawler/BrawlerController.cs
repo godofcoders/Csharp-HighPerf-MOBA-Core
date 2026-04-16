@@ -17,15 +17,13 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Transform _presentationAnchor;
         [SerializeField] private BrawlerPresentationAnchors _presentationAnchors;
 
-        [Header("Presentation Anchor Smoothing")]
-        [SerializeField] private bool _enablePresentationAnchorSmoothing = true;
-        [SerializeField] private float _anchorPositionSmoothTime = 0.035f;
-        [SerializeField] private float _anchorRotationSmoothSpeed = 16f;
+        private Vector3 _previousSimPosition;
+        private Vector3 _currentSimPosition;
+        private Quaternion _previousSimRotation;
+        private Quaternion _currentSimRotation;
+        private float _lastSimulationUpdateTime;
 
-        [Header("Visual Root Smoothing")]
-        [SerializeField] private bool _enablePresentationSmoothing = true;
-        [SerializeField] private float _visualPositionSmoothTime = 0.05f;
-        [SerializeField] private float _visualRotationSmoothSpeed = 10f;
+        private const float SimulationTickInterval = 1f / 30f;
 
         private Vector3 _anchorLocalVelocity;
 
@@ -76,42 +74,22 @@ namespace MOBA.Core.Infrastructure
 
         private void LateUpdate()
         {
-            if (_presentationAnchor != null && _enablePresentationAnchorSmoothing)
+            if (_presentationAnchor == null)
+                return;
+
+            float alpha = Mathf.Clamp01((Time.time - _lastSimulationUpdateTime) / SimulationTickInterval);
+
+            Vector3 interpolatedWorldPosition = Vector3.Lerp(_previousSimPosition, _currentSimPosition, alpha);
+            Quaternion interpolatedWorldRotation = Quaternion.Slerp(_previousSimRotation, _currentSimRotation, alpha);
+
+            _presentationAnchor.position = interpolatedWorldPosition;
+            _presentationAnchor.rotation = interpolatedWorldRotation;
+
+            if (_visualRoot != null)
             {
-                _presentationAnchor.localPosition = Vector3.SmoothDamp(
-                    _presentationAnchor.localPosition,
-                    Vector3.zero,
-                    ref _anchorLocalVelocity,
-                    _anchorPositionSmoothTime);
-
-                _presentationAnchor.localRotation = Quaternion.identity;
+                _visualRoot.localPosition = Vector3.zero;
+                _visualRoot.localRotation = Quaternion.identity;
             }
-        }
-
-        private void ApplyPresentationAnchorCompensation(Vector3 previousPosition, Vector3 currentPosition, Quaternion previousRotation, Quaternion currentRotation)
-        {
-            if (!_enablePresentationAnchorSmoothing || _presentationAnchor == null)
-                return;
-
-            Vector3 worldDelta = currentPosition - previousPosition;
-            _presentationAnchor.localPosition -= worldDelta;
-
-            Quaternion worldRotationDelta = currentRotation * Quaternion.Inverse(previousRotation);
-            _presentationAnchor.localRotation = Quaternion.Inverse(worldRotationDelta) * _presentationAnchor.localRotation;
-        }
-
-        private void ApplyPresentationCompensation(Vector3 previousPosition, Vector3 currentPosition, Quaternion previousRotation, Quaternion currentRotation)
-        {
-            if (!_enablePresentationSmoothing || _visualRoot == null)
-                return;
-
-            Vector3 worldDelta = currentPosition - previousPosition;
-
-            // Because VisualRoot is a child of the root, compensate in local space.
-            _visualRoot.localPosition -= worldDelta;
-
-            Quaternion worldRotationDelta = currentRotation * Quaternion.Inverse(previousRotation);
-            _visualRoot.localRotation = Quaternion.Inverse(worldRotationDelta) * _visualRoot.localRotation;
         }
 
         public void SetCommandSource(IBrawlerCommandSource source)
@@ -175,10 +153,16 @@ namespace MOBA.Core.Infrastructure
 
             _lastTickPosition = transform.position;
 
+            _previousSimPosition = transform.position;
+            _currentSimPosition = transform.position;
+            _previousSimRotation = transform.rotation;
+            _currentSimRotation = transform.rotation;
+            _lastSimulationUpdateTime = Time.time;
+
             if (_presentationAnchor != null)
             {
-                _presentationAnchor.localPosition = Vector3.zero;
-                _presentationAnchor.localRotation = Quaternion.identity;
+                _presentationAnchor.position = transform.position;
+                _presentationAnchor.rotation = transform.rotation;
             }
 
             if (_visualRoot != null)
@@ -393,8 +377,14 @@ namespace MOBA.Core.Infrastructure
             else
                 SetMoveInput(Vector3.zero);
 
-
-
+            if (_currentMoveInput.sqrMagnitude <= 0.01f)
+            {
+                _previousSimPosition = _currentSimPosition;
+                _previousSimRotation = _currentSimRotation;
+                _currentSimPosition = transform.position;
+                _currentSimRotation = transform.rotation;
+                _lastSimulationUpdateTime = Time.time;
+            }
 
             State.Hypercharge.Tick(currentTick, () =>
             {
@@ -462,11 +452,11 @@ namespace MOBA.Core.Infrastructure
             if (_currentMoveInput.sqrMagnitude <= 0.01f)
                 return;
 
-            Vector3 previousPosition = transform.position;
-            Quaternion previousRotation = transform.rotation;
+            _previousSimPosition = _currentSimPosition;
+            _previousSimRotation = _currentSimRotation;
 
             float speed = State.IncomingMovementModifiers.Apply(State.MoveSpeed.Value);
-            float tickDelta = 1f / 30f;
+            float tickDelta = SimulationTickInterval;
 
             Vector3 movement = _currentMoveInput.normalized * (speed * tickDelta);
             transform.position += movement;
@@ -474,7 +464,9 @@ namespace MOBA.Core.Infrastructure
             if (movement != Vector3.zero)
                 transform.rotation = Quaternion.LookRotation(movement);
 
-            ApplyPresentationAnchorCompensation(previousPosition, transform.position, previousRotation, transform.rotation);
+            _currentSimPosition = transform.position;
+            _currentSimRotation = transform.rotation;
+            _lastSimulationUpdateTime = Time.time;
         }
 
         public void TakeDamage(float amount)
@@ -1088,11 +1080,16 @@ namespace MOBA.Core.Infrastructure
             State.SetEquippedHypercharge(_equippedHypercharge ?? _definition.Hypercharge);
             State.RefreshGadgetChargesFromRuntimeKit();
 
+            _previousSimPosition = position;
+            _currentSimPosition = position;
+            _previousSimRotation = transform.rotation;
+            _currentSimRotation = transform.rotation;
+            _lastSimulationUpdateTime = Time.time;
 
             if (_presentationAnchor != null)
             {
-                _presentationAnchor.localPosition = Vector3.zero;
-                _presentationAnchor.localRotation = Quaternion.identity;
+                _presentationAnchor.position = transform.position;
+                _presentationAnchor.rotation = transform.rotation;
             }
 
             if (_visualRoot != null)
