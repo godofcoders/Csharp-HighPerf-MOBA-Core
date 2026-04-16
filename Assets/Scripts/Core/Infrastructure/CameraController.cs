@@ -6,7 +6,7 @@ namespace MOBA.Core.Infrastructure
     {
         [SerializeField] private Transform _target;
         [SerializeField] private Vector3 _offset = new Vector3(0, 10, -5);
-        private float _positionSmoothTime = 0.03f;
+        [SerializeField] private float _positionSmoothTime = 0.03f;
 
         private Vector3 _positionVelocity;
 

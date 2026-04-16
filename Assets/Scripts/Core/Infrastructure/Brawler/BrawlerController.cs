@@ -19,13 +19,13 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Presentation Anchor Smoothing")]
         [SerializeField] private bool _enablePresentationAnchorSmoothing = true;
-        private float _anchorPositionSmoothTime = 0.001f;
-        private float _anchorRotationSmoothSpeed = 16f;
+        [SerializeField] private float _anchorPositionSmoothTime = 0.035f;
+        [SerializeField] private float _anchorRotationSmoothSpeed = 16f;
 
         [Header("Visual Root Smoothing")]
         [SerializeField] private bool _enablePresentationSmoothing = true;
-        private float _visualPositionSmoothTime = 0.05f;
-        private float _visualRotationSmoothSpeed = 10f;
+        [SerializeField] private float _visualPositionSmoothTime = 0.05f;
+        [SerializeField] private float _visualRotationSmoothSpeed = 10f;
 
         private Vector3 _anchorLocalVelocity;
 
@@ -85,20 +85,6 @@ namespace MOBA.Core.Infrastructure
                     _anchorPositionSmoothTime);
 
                 _presentationAnchor.localRotation = Quaternion.identity;
-            }
-
-            if (_visualRoot != null && _enablePresentationSmoothing)
-            {
-                _visualRoot.localPosition = Vector3.SmoothDamp(
-                    _visualRoot.localPosition,
-                    Vector3.zero,
-                    ref _visualLocalVelocity,
-                    _visualPositionSmoothTime);
-
-                _visualRoot.localRotation = Quaternion.Slerp(
-                    _visualRoot.localRotation,
-                    Quaternion.identity,
-                    Time.deltaTime * _visualRotationSmoothSpeed);
             }
         }
 
@@ -489,7 +475,6 @@ namespace MOBA.Core.Infrastructure
                 transform.rotation = Quaternion.LookRotation(movement);
 
             ApplyPresentationAnchorCompensation(previousPosition, transform.position, previousRotation, transform.rotation);
-            ApplyPresentationCompensation(previousPosition, transform.position, previousRotation, transform.rotation);
         }
 
         public void TakeDamage(float amount)
