@@ -19,13 +19,13 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Presentation Anchor Smoothing")]
         [SerializeField] private bool _enablePresentationAnchorSmoothing = true;
-        [SerializeField] private float _anchorPositionSmoothTime = 0.06f;
-        [SerializeField] private float _anchorRotationSmoothSpeed = 8f;
+        private float _anchorPositionSmoothTime = 0.001f;
+        private float _anchorRotationSmoothSpeed = 16f;
 
         [Header("Visual Root Smoothing")]
         [SerializeField] private bool _enablePresentationSmoothing = true;
-        [SerializeField] private float _visualPositionSmoothTime = 0.06f;
-        [SerializeField] private float _visualRotationSmoothSpeed = 8f;
+        private float _visualPositionSmoothTime = 0.05f;
+        private float _visualRotationSmoothSpeed = 10f;
 
         private Vector3 _anchorLocalVelocity;
 
@@ -84,10 +84,7 @@ namespace MOBA.Core.Infrastructure
                     ref _anchorLocalVelocity,
                     _anchorPositionSmoothTime);
 
-                _presentationAnchor.localRotation = Quaternion.Slerp(
-                    _presentationAnchor.localRotation,
-                    Quaternion.identity,
-                    Time.deltaTime * _anchorRotationSmoothSpeed);
+                _presentationAnchor.localRotation = Quaternion.identity;
             }
 
             if (_visualRoot != null && _enablePresentationSmoothing)
