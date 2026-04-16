@@ -4,11 +4,8 @@ namespace MOBA.Core.Infrastructure
 {
     public class CameraController : MonoBehaviour
     {
-        [Header("Targeting")]
         [SerializeField] private Transform _target;
         [SerializeField] private Vector3 _offset = new Vector3(0, 10, -5);
-
-        [Header("Smoothing")]
         [SerializeField] private float _positionSmoothTime = 0.18f;
 
         private Vector3 _positionVelocity;

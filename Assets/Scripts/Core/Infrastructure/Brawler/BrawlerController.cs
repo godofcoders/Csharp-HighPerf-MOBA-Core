@@ -13,12 +13,21 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private GameObject _visualModel;
 
         [SerializeField] private Transform _visualRoot;
+
+        [SerializeField] private Transform _presentationAnchor;
         [SerializeField] private BrawlerPresentationAnchors _presentationAnchors;
 
-        [Header("Presentation Smoothing")]
+        [Header("Presentation Anchor Smoothing")]
+        [SerializeField] private bool _enablePresentationAnchorSmoothing = true;
+        [SerializeField] private float _anchorPositionSmoothTime = 0.06f;
+        [SerializeField] private float _anchorRotationSmoothSpeed = 8f;
+
+        [Header("Visual Root Smoothing")]
         [SerializeField] private bool _enablePresentationSmoothing = true;
-        private float _visualPositionSmoothTime = 0.12f;
-        private float _visualRotationSmoothSpeed = 10f;
+        [SerializeField] private float _visualPositionSmoothTime = 0.06f;
+        [SerializeField] private float _visualRotationSmoothSpeed = 8f;
+
+        private Vector3 _anchorLocalVelocity;
 
         private Vector3 _visualLocalVelocity;
 
@@ -51,7 +60,7 @@ namespace MOBA.Core.Infrastructure
         public Vector3 CurrentPosition => transform.position;
         public float CollisionRadius => 0.5f;
         public int EntityID => gameObject.GetInstanceID();
-        public Transform PresentationFollowTarget => _visualRoot != null ? _visualRoot : transform;
+        public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
 
         protected override void Awake()
         {
@@ -67,19 +76,45 @@ namespace MOBA.Core.Infrastructure
 
         private void LateUpdate()
         {
-            if (!_enablePresentationSmoothing || _visualRoot == null)
+            if (_presentationAnchor != null && _enablePresentationAnchorSmoothing)
+            {
+                _presentationAnchor.localPosition = Vector3.SmoothDamp(
+                    _presentationAnchor.localPosition,
+                    Vector3.zero,
+                    ref _anchorLocalVelocity,
+                    _anchorPositionSmoothTime);
+
+                _presentationAnchor.localRotation = Quaternion.Slerp(
+                    _presentationAnchor.localRotation,
+                    Quaternion.identity,
+                    Time.deltaTime * _anchorRotationSmoothSpeed);
+            }
+
+            if (_visualRoot != null && _enablePresentationSmoothing)
+            {
+                _visualRoot.localPosition = Vector3.SmoothDamp(
+                    _visualRoot.localPosition,
+                    Vector3.zero,
+                    ref _visualLocalVelocity,
+                    _visualPositionSmoothTime);
+
+                _visualRoot.localRotation = Quaternion.Slerp(
+                    _visualRoot.localRotation,
+                    Quaternion.identity,
+                    Time.deltaTime * _visualRotationSmoothSpeed);
+            }
+        }
+
+        private void ApplyPresentationAnchorCompensation(Vector3 previousPosition, Vector3 currentPosition, Quaternion previousRotation, Quaternion currentRotation)
+        {
+            if (!_enablePresentationAnchorSmoothing || _presentationAnchor == null)
                 return;
 
-            _visualRoot.localPosition = Vector3.SmoothDamp(
-                _visualRoot.localPosition,
-                Vector3.zero,
-                ref _visualLocalVelocity,
-                _visualPositionSmoothTime);
+            Vector3 worldDelta = currentPosition - previousPosition;
+            _presentationAnchor.localPosition -= worldDelta;
 
-            _visualRoot.localRotation = Quaternion.Slerp(
-                _visualRoot.localRotation,
-                Quaternion.identity,
-                Time.deltaTime * _visualRotationSmoothSpeed);
+            Quaternion worldRotationDelta = currentRotation * Quaternion.Inverse(previousRotation);
+            _presentationAnchor.localRotation = Quaternion.Inverse(worldRotationDelta) * _presentationAnchor.localRotation;
         }
 
         private void ApplyPresentationCompensation(Vector3 previousPosition, Vector3 currentPosition, Quaternion previousRotation, Quaternion currentRotation)
@@ -156,6 +191,12 @@ namespace MOBA.Core.Infrastructure
             }
 
             _lastTickPosition = transform.position;
+
+            if (_presentationAnchor != null)
+            {
+                _presentationAnchor.localPosition = Vector3.zero;
+                _presentationAnchor.localRotation = Quaternion.identity;
+            }
 
             if (_visualRoot != null)
             {
@@ -450,6 +491,7 @@ namespace MOBA.Core.Infrastructure
             if (movement != Vector3.zero)
                 transform.rotation = Quaternion.LookRotation(movement);
 
+            ApplyPresentationAnchorCompensation(previousPosition, transform.position, previousRotation, transform.rotation);
             ApplyPresentationCompensation(previousPosition, transform.position, previousRotation, transform.rotation);
         }
 
@@ -1064,6 +1106,12 @@ namespace MOBA.Core.Infrastructure
             State.SetEquippedHypercharge(_equippedHypercharge ?? _definition.Hypercharge);
             State.RefreshGadgetChargesFromRuntimeKit();
 
+
+            if (_presentationAnchor != null)
+            {
+                _presentationAnchor.localPosition = Vector3.zero;
+                _presentationAnchor.localRotation = Quaternion.identity;
+            }
 
             if (_visualRoot != null)
             {
