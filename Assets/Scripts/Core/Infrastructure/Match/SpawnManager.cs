@@ -87,7 +87,7 @@ namespace MOBA.Core.Infrastructure
 
                     controller.SetCommandSource(playerSource);
 
-                    SetPlayerTarget(controller.transform);
+                    SetPlayerTarget(controller.PresentationFollowTarget);
                 }
             }
         }

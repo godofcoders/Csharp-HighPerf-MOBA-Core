@@ -25,10 +25,6 @@ namespace MOBA.Core.Infrastructure
 
         private const float SimulationTickInterval = 1f / 30f;
 
-        private Vector3 _anchorLocalVelocity;
-
-        private Vector3 _visualLocalVelocity;
-
         private GameObject _spawnedVisualInstance;
 
         private Vector3 _lastTickPosition;
