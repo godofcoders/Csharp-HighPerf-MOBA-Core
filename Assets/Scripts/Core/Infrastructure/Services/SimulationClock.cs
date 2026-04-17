@@ -65,16 +65,15 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
         {
             uint tickCount = _processor.CurrentTick;
 
-            // 1. Tick all Entities (Brawlers)
+            // One call — the registry walks every phase in order (PreTick →
+            // InputApply → AbilityCast → Movement → Collision → DamageResolution
+            // → StatusEffectTick → Cleanup → PostTick) and ticks every registered
+            // ITickable in that phase.
+            //
+            // ProjectileManager is now registered in the Collision phase (used to
+            // be driven by a separate call here). Deployables and Brawlers are in
+            // Movement. AI controllers are in InputApply.
             _registry.TickAll(tickCount);
-
-            // 2. Tick all Projectiles via the Service
-            try
-            {
-                var projectileService = ServiceProvider.Get<IProjectileService>();
-                projectileService.ManualTick(tickCount);
-            }
-            catch { /* Handle case where no projectiles are in scene */ }
         }
     }
 }

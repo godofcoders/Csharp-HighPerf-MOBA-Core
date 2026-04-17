@@ -7,6 +7,12 @@ namespace MOBA.Core.Infrastructure
 {
     public class BrawlerAIController : SimulationEntity
     {
+        // AI runs in InputApply phase — earlier than Movement. This guarantees
+        // that commands produced by the AI (via _commandSource) are queued BEFORE
+        // BrawlerController.Tick (Movement phase) calls CollectCommands to consume
+        // them. Previously this ordering was an accident of Unity component order.
+        protected override TickPhase Phase => TickPhase.InputApply;
+
         [SerializeField] private BrawlerController _brawler;
 
         private NavigationAgent _navAgent;

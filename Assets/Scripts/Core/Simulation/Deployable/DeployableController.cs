@@ -53,7 +53,11 @@ namespace MOBA.Core.Simulation
             _behavior = CreateBehavior(_definition.DeployableType);
             _behavior?.Initialize(this);
 
-            SimulationClock.Registry?.Register(this);   // <-- add this
+            // Note: SimulationClock.Registry.Register(this) is NOT called here.
+            // The base class SimulationEntity.OnEnable already registered us under
+            // the default Movement phase when Unity instantiated this GameObject.
+            // Tick() guards on _definition == null, so ticks before Initialize()
+            // completes are safe no-ops.
             CombatRegistry.Register(this);
             SimulationClock.Grid?.Add(this);
 
@@ -94,7 +98,8 @@ namespace MOBA.Core.Simulation
             IDeployableRegistry registry = ServiceProvider.Get<IDeployableRegistry>();
             registry?.Unregister(this);
 
-            SimulationClock.Registry?.Unregister(this);   // <-- add this
+            // Destroy(gameObject) will fire OnDisable, which unregisters from
+            // SimulationClock.Registry via the SimulationEntity base class.
             SimulationClock.Grid?.Remove(this, transform.position);
             CombatRegistry.Unregister(this);
             Destroy(gameObject);

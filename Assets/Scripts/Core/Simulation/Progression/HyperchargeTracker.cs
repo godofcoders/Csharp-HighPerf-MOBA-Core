@@ -28,7 +28,12 @@ namespace MOBA.Core.Simulation
             IsActive = true;
             ChargePercent = 0f;
 
-            uint durationTicks = (uint)(durationSeconds * 30f);
+            // Convert seconds → ticks using the simulation's actual tick rate.
+            // Previously hardcoded `durationSeconds * 30f`, which broke silently if
+            // the sim's TPS ever changed. Dividing by TickDeltaTime (1f / TPS) gives
+            // the correct tick count for any TPS, and one source of truth stays in
+            // SimulationClock.
+            uint durationTicks = (uint)(durationSeconds / SimulationClock.TickDeltaTime);
             _endTick = startTick + durationTicks;
         }
 

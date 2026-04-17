@@ -6,7 +6,7 @@ using MOBA.Core.Definitions;
 namespace MOBA.Core.Infrastructure
 {
     [RequireComponent(typeof(SimpleObjectPool))]
-    public class ProjectileManager : MonoBehaviour, IProjectileService
+    public class ProjectileManager : MonoBehaviour, IProjectileService, ITickable
     {
         private SimpleObjectPool _pool;
         private readonly List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>(64);
@@ -15,6 +15,29 @@ namespace MOBA.Core.Infrastructure
         {
             _pool = GetComponent<SimpleObjectPool>();
             ServiceProvider.Register<IProjectileService>(this);
+        }
+
+        // Registered in Start (not Awake) so SimulationClock.Awake has run first
+        // and SimulationClock.Registry exists. Unity guarantees all Awake() finish
+        // before any Start() runs.
+        //
+        // Phase choice: Collision. ProjectileManager.Tick currently does movement +
+        // collision detection + damage application + despawn in one pass. "Collision"
+        // is the phase where it makes the most sense to land, because (a) the hit
+        // resolution is the part that depends on other systems' finished state
+        // (brawler positions updated in Movement), and (b) it preserves the old
+        // behavior of projectiles ticking AFTER brawlers.
+        //
+        // TODO (Session 3): Split Tick() into TickMovement (→ Movement phase) and
+        // TickCollision (→ Collision phase), and register for both phases.
+        private void Start()
+        {
+            SimulationClock.Registry?.Register(this, TickPhase.Collision);
+        }
+
+        private void OnDestroy()
+        {
+            SimulationClock.Registry?.Unregister(this, TickPhase.Collision);
         }
 
         public void FireProjectile(in ProjectileSpawnContext context)
@@ -87,7 +110,7 @@ namespace MOBA.Core.Infrastructure
             });
         }
 
-        public void ManualTick(uint currentTick)
+        public void Tick(uint currentTick)
         {
             for (int i = _activeProjectiles.Count - 1; i >= 0; i--)
             {
