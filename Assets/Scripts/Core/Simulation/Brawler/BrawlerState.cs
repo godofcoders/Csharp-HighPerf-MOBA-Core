@@ -55,9 +55,17 @@ namespace MOBA.Core.Simulation
         public List<IStatusEffectInstance> ActiveStatusEffects { get; private set; }
         public BrawlerActionStateData ActionState { get; private set; }
 
-        public AbilityCooldownState MainAttackCooldown { get; private set; }
-        public AbilityCooldownState SuperCooldown { get; private set; }
-        public AbilityCooldownState GadgetCooldown { get; private set; }
+        // Session 3 refactor: the three AbilityCooldownState timers now live
+        // inside this substate. Fields (not properties) inside the POCO so the
+        // struct mutations persist correctly — see BrawlerCooldowns for the
+        // detailed explanation.
+        public BrawlerCooldowns Cooldowns { get; private set; }
+
+        // Pass-through getters preserve the public API. External code only
+        // ever *reads* these (confirmed by grep), so returning a copy is fine.
+        public AbilityCooldownState MainAttackCooldown => Cooldowns.MainAttack;
+        public AbilityCooldownState SuperCooldown => Cooldowns.Super;
+        public AbilityCooldownState GadgetCooldown => Cooldowns.Gadget;
 
         public int CurrentPowerLevel { get; private set; }
 
@@ -84,6 +92,7 @@ namespace MOBA.Core.Simulation
             // ModifiableStats, the two damage modifier collections, the
             // movement modifier collection, and the shield pool in one shot.
             Stats = new BrawlerStats();
+            Cooldowns = new BrawlerCooldowns();
 
             Ammo = new ResourceStorage(3, 0.5f);
             Hypercharge = new HyperchargeTracker();
@@ -605,47 +614,17 @@ namespace MOBA.Core.Simulation
 
         public bool IsAbilityReady(AbilityRuntimeSlot slot, uint currentTick)
         {
-            switch (slot)
-            {
-                case AbilityRuntimeSlot.MainAttack:
-                    return MainAttackCooldown.IsReady(currentTick);
-
-                case AbilityRuntimeSlot.Super:
-                    return SuperCooldown.IsReady(currentTick);
-
-                case AbilityRuntimeSlot.Gadget:
-                    return GadgetCooldown.IsReady(currentTick);
-
-                default:
-                    return false;
-            }
+            return Cooldowns.IsReady(slot, currentTick);
         }
 
         public void StartAbilityCooldown(AbilityRuntimeSlot slot, uint currentTick, float cooldownSeconds)
         {
-            uint cooldownTicks = (uint)(cooldownSeconds * 30f);
-
-            switch (slot)
-            {
-                case AbilityRuntimeSlot.MainAttack:
-                    MainAttackCooldown.StartCooldown(currentTick, cooldownTicks);
-                    break;
-
-                case AbilityRuntimeSlot.Super:
-                    SuperCooldown.StartCooldown(currentTick, cooldownTicks);
-                    break;
-
-                case AbilityRuntimeSlot.Gadget:
-                    GadgetCooldown.StartCooldown(currentTick, cooldownTicks);
-                    break;
-            }
+            Cooldowns.StartCooldown(slot, currentTick, cooldownSeconds);
         }
 
         public void ResetAbilityCooldowns()
         {
-            MainAttackCooldown.Reset();
-            SuperCooldown.Reset();
-            GadgetCooldown.Reset();
+            Cooldowns.ResetAll();
         }
         public bool CanMove(uint currentTick)
         {
