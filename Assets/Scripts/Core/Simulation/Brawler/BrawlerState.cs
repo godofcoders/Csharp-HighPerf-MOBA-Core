@@ -20,19 +20,25 @@ namespace MOBA.Core.Simulation
         public MOBA.Core.Simulation.AI.ThreatTracker ThreatTracker { get; private set; }
         public MOBA.Core.Simulation.AI.AssistTracker AssistTracker { get; private set; }
 
-        public DamageModifierCollection IncomingDamageModifiers { get; private set; }
-        public DamageModifierCollection OutgoingDamageModifiers { get; private set; }
-        public float ShieldHealth { get; private set; }
-        public ModifiableStat MaxHealth { get; private set; }
-        public ModifiableStat MoveSpeed { get; private set; }
-        public ModifiableStat Damage { get; private set; }
+        // Session 3 refactor: all numeric state (max/move/damage stats, current
+        // health, shield, and the three modifier collections) now lives inside
+        // this POCO substate. The original fields are kept as pass-through
+        // properties below so callers don't have to change a thing.
+        public BrawlerStats Stats { get; private set; }
+
+        public DamageModifierCollection IncomingDamageModifiers => Stats.IncomingDamageModifiers;
+        public DamageModifierCollection OutgoingDamageModifiers => Stats.OutgoingDamageModifiers;
+        public float ShieldHealth => Stats.ShieldHealth;
+        public ModifiableStat MaxHealth => Stats.MaxHealth;
+        public ModifiableStat MoveSpeed => Stats.MoveSpeed;
+        public ModifiableStat Damage => Stats.Damage;
 
         public int RemainingGadgets { get; private set; }
         public HyperchargeTracker Hypercharge { get; private set; }
         public SuperChargeTracker SuperCharge { get; private set; }
 
-        public float CurrentHealth { get; private set; }
-        public bool IsDead => CurrentHealth <= 0;
+        public float CurrentHealth => Stats.CurrentHealth;
+        public bool IsDead => Stats.IsDead;
 
         public Action OnDeath;
         public Action<float> OnHealthChanged;
@@ -45,7 +51,7 @@ namespace MOBA.Core.Simulation
         public bool IsRevealed { get; set; }
 
         public BrawlerController Owner { get; set; }
-        public MovementModifierCollection IncomingMovementModifiers { get; private set; }
+        public MovementModifierCollection IncomingMovementModifiers => Stats.IncomingMovementModifiers;
         public List<IStatusEffectInstance> ActiveStatusEffects { get; private set; }
         public BrawlerActionStateData ActionState { get; private set; }
 
@@ -74,19 +80,16 @@ namespace MOBA.Core.Simulation
             Team = team;
             CurrentPowerLevel = 1;
 
-            MaxHealth = new ModifiableStat(0f);
-            MoveSpeed = new ModifiableStat(0f);
-            Damage = new ModifiableStat(0f);
+            // Stats = all numeric state. Creating it here wires up the three
+            // ModifiableStats, the two damage modifier collections, the
+            // movement modifier collection, and the shield pool in one shot.
+            Stats = new BrawlerStats();
 
             Ammo = new ResourceStorage(3, 0.5f);
             Hypercharge = new HyperchargeTracker();
             SuperCharge = new SuperChargeTracker();
             ThreatTracker = new MOBA.Core.Simulation.AI.ThreatTracker();
             AssistTracker = new MOBA.Core.Simulation.AI.AssistTracker();
-            IncomingDamageModifiers = new DamageModifierCollection();
-            OutgoingDamageModifiers = new DamageModifierCollection();
-            ShieldHealth = 0f;
-            IncomingMovementModifiers = new MovementModifierCollection();
             ActiveStatusEffects = new List<IStatusEffectInstance>(8);
             RuntimeBuild = new BrawlerRuntimeBuildState();
             RuntimeKit = new BrawlerRuntimeKit();
@@ -94,7 +97,7 @@ namespace MOBA.Core.Simulation
             RefreshRuntimeBuildUnlockState();
             RefreshGadgetChargesFromRuntimeKit();
             RebuildProgressionStats(false);
-            CurrentHealth = MaxHealth.Value;
+            Stats.ResetHealthToMax();
 
             ClearActionState();
             ResetAbilityCooldowns();
@@ -246,38 +249,32 @@ namespace MOBA.Core.Simulation
         {
             float newMaxHealth = MaxHealth.Value;
 
-            if (preserveHealthRatio && oldMaxHealth > 0f)
-            {
-                float healthRatio = oldHealth / oldMaxHealth;
-                CurrentHealth = newMaxHealth * healthRatio;
-            }
-            else
-            {
-                if (CurrentHealth > newMaxHealth)
-                    CurrentHealth = newMaxHealth;
-            }
+            // We no longer poke CurrentHealth directly — Stats.SetCurrentHealth
+            // enforces the [0, MaxHealth.Value] clamp. Computing the raw target
+            // here and letting Stats do the clamping is simpler than the old
+            // three-branch assignment, and behavior stays identical.
+            float target = preserveHealthRatio && oldMaxHealth > 0f
+                ? newMaxHealth * (oldHealth / oldMaxHealth)
+                : CurrentHealth;
 
-            if (CurrentHealth < 0f)
-                CurrentHealth = 0f;
+            Stats.SetCurrentHealth(target);
 
             OnHealthChanged?.Invoke(CurrentHealth);
         }
 
         public void RemoveAllStatModifiersFromSource(object source)
         {
-            MaxHealth.RemoveModifiersFromSource(source);
-            MoveSpeed.RemoveModifiersFromSource(source);
-            Damage.RemoveModifiersFromSource(source);
+            Stats.RemoveAllStatModifiersFromSource(source);
         }
 
         public void AddIncomingMovementModifier(MovementModifier modifier)
         {
-            IncomingMovementModifiers.Add(modifier);
+            Stats.AddIncomingMovementModifier(modifier);
         }
 
         public void RemoveIncomingMovementModifiersFromSource(object source)
         {
-            IncomingMovementModifiers.RemoveBySource(source);
+            Stats.RemoveIncomingMovementModifiersFromSource(source);
         }
 
         public void UseGadgetCharge()
@@ -303,8 +300,11 @@ namespace MOBA.Core.Simulation
 
             float beforeHealth = CurrentHealth;
 
-            CurrentHealth -= amount;
-            CurrentHealth = Math.Max(0, CurrentHealth);
+            // Stats.ApplyDamage does the math + clamp and returns true if THIS
+            // call caused the transition alive -> dead. We keep the side
+            // effects (debug log, events, action-state transition) here in
+            // BrawlerState, the coordinator, so the POCO stays pure.
+            bool justDied = Stats.ApplyDamage(amount);
 
             Debug.Log($"[DAMAGE] Target={Owner?.name ?? "Unknown"} Team={Team} Damage={amount} Health: {beforeHealth} -> {CurrentHealth}");
 
@@ -324,7 +324,7 @@ namespace MOBA.Core.Simulation
                 });
             }
 
-            if (IsDead)
+            if (justDied)
             {
                 uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
                 EnterActionState(
@@ -360,8 +360,10 @@ namespace MOBA.Core.Simulation
 
             float beforeHealth = CurrentHealth;
 
-            CurrentHealth += amount;
-            CurrentHealth = Math.Min(CurrentHealth, MaxHealth.Value);
+            // Clamped heal is done inside Stats; we still own the logging and
+            // event bus side effects so presentation hooks stay in the
+            // coordinator layer.
+            Stats.ApplyHeal(amount);
 
             Debug.Log($"[HEAL] Target={Owner?.name ?? "Unknown"} Team={Team} Heal={amount} Health: {beforeHealth} -> {CurrentHealth}");
 
@@ -392,7 +394,7 @@ namespace MOBA.Core.Simulation
             RebuildProgressionStats(false);
             RefreshPassiveLoadout(false);
 
-            CurrentHealth = MaxHealth.Value;
+            Stats.ResetHealthToMax();
             Ammo.Refill();
 
             RefreshGadgetChargesFromRuntimeKit();
@@ -406,10 +408,10 @@ namespace MOBA.Core.Simulation
 
             ThreatTracker.Clear();
             AssistTracker.Clear();
-            IncomingDamageModifiers.Clear();
-            OutgoingDamageModifiers.Clear();
-            ShieldHealth = 0f;
-            IncomingMovementModifiers.Clear();
+            // One line replaces the four-line reset of damage modifiers
+            // (incoming + outgoing), shield pool, and movement modifiers. The
+            // POCO now owns every field that line used to touch.
+            Stats.ClearAllModifiers();
             ActiveStatusEffects.Clear();
             RuntimeBuild.Clear();
             RuntimeKit.Clear();
@@ -546,15 +548,12 @@ namespace MOBA.Core.Simulation
 
         public void AddShield(float amount)
         {
-            if (amount <= 0f)
-                return;
-
-            ShieldHealth += amount;
+            Stats.AddShield(amount);
         }
 
         public void ClearShield()
         {
-            ShieldHealth = 0f;
+            Stats.ClearShield();
         }
 
         public void EnterActionState(
@@ -681,22 +680,22 @@ namespace MOBA.Core.Simulation
 
         public void AddIncomingDamageModifier(DamageModifier modifier)
         {
-            IncomingDamageModifiers.Add(modifier);
+            Stats.AddIncomingDamageModifier(modifier);
         }
 
         public void AddOutgoingDamageModifier(DamageModifier modifier)
         {
-            OutgoingDamageModifiers.Add(modifier);
+            Stats.AddOutgoingDamageModifier(modifier);
         }
 
         public void RemoveIncomingDamageModifiersFromSource(object source)
         {
-            IncomingDamageModifiers.RemoveBySource(source);
+            Stats.RemoveIncomingDamageModifiersFromSource(source);
         }
 
         public void RemoveOutgoingDamageModifiersFromSource(object source)
         {
-            OutgoingDamageModifiers.RemoveBySource(source);
+            Stats.RemoveOutgoingDamageModifiersFromSource(source);
         }
 
         public bool HasStatus(StatusEffectType type)
