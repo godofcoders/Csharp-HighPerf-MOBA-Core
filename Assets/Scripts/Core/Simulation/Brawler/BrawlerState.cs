@@ -53,7 +53,13 @@ namespace MOBA.Core.Simulation
         public BrawlerController Owner { get; set; }
         public MovementModifierCollection IncomingMovementModifiers => Stats.IncomingMovementModifiers;
         public List<IStatusEffectInstance> ActiveStatusEffects { get; private set; }
-        public BrawlerActionStateData ActionState { get; private set; }
+
+        // Session 3 refactor: action-state transitions (enter/clear/expire/
+        // interrupt) live in this substate. The ActionState property below is
+        // a pass-through getter — external code reading state.ActionState.* to
+        // inspect the current state works unchanged.
+        public BrawlerActionStateMachine ActionStateMachine { get; private set; }
+        public BrawlerActionStateData ActionState => ActionStateMachine.Current;
 
         // Session 3 refactor: the three AbilityCooldownState timers now live
         // inside this substate. Fields (not properties) inside the POCO so the
@@ -93,6 +99,9 @@ namespace MOBA.Core.Simulation
             // movement modifier collection, and the shield pool in one shot.
             Stats = new BrawlerStats();
             Cooldowns = new BrawlerCooldowns();
+            // The state machine's ctor already calls Clear(), so by the time
+            // we reach ClearActionState() below it's a second (harmless) reset.
+            ActionStateMachine = new BrawlerActionStateMachine();
 
             Ammo = new ResourceStorage(3, 0.5f);
             Hypercharge = new HyperchargeTracker();
@@ -573,43 +582,22 @@ namespace MOBA.Core.Simulation
             bool allowActionInput,
             bool isInterruptible)
         {
-            ActionState = new BrawlerActionStateData
-            {
-                StateType = stateType,
-                StartTick = currentTick,
-                LockUntilTick = currentTick + durationTicks,
-                AllowMovement = allowMovement,
-                AllowActionInput = allowActionInput,
-                IsInterruptible = isInterruptible
-            };
+            ActionStateMachine.Enter(stateType, currentTick, durationTicks, allowMovement, allowActionInput, isInterruptible);
         }
 
         public void ClearActionState()
         {
-            ActionState = new BrawlerActionStateData
-            {
-                StateType = BrawlerActionStateType.None,
-                StartTick = 0,
-                LockUntilTick = 0,
-                AllowMovement = true,
-                AllowActionInput = true,
-                IsInterruptible = true
-            };
+            ActionStateMachine.Clear();
         }
 
         public void UpdateActionState(uint currentTick)
         {
-            if (ActionState.StateType != BrawlerActionStateType.None &&
-                !ActionState.IsActive(currentTick))
-            {
-                ClearActionState();
-            }
+            ActionStateMachine.UpdateExpiry(currentTick);
         }
 
         public bool HasActiveActionState(uint currentTick)
         {
-            return ActionState.StateType != BrawlerActionStateType.None &&
-                   ActionState.IsActive(currentTick);
+            return ActionStateMachine.IsActive(currentTick);
         }
 
         public bool IsAbilityReady(AbilityRuntimeSlot slot, uint currentTick)
@@ -647,14 +635,7 @@ namespace MOBA.Core.Simulation
 
         public bool TryInterruptActionState()
         {
-            if (ActionState.StateType == BrawlerActionStateType.None)
-                return true;
-
-            if (!ActionState.IsInterruptible)
-                return false;
-
-            ClearActionState();
-            return true;
+            return ActionStateMachine.TryInterrupt();
         }
 
         public void AddIncomingDamageModifier(DamageModifier modifier)
@@ -690,7 +671,7 @@ namespace MOBA.Core.Simulation
 
         public bool IsInActionState(BrawlerActionStateType type, uint currentTick)
         {
-            return ActionState.StateType == type && ActionState.IsActive(currentTick);
+            return ActionStateMachine.IsInState(type, currentTick);
         }
 
         public void RefreshRuntimeBuildUnlockState()
