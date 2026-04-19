@@ -33,9 +33,16 @@ namespace MOBA.Core.Simulation
         public ModifiableStat MoveSpeed => Stats.MoveSpeed;
         public ModifiableStat Damage => Stats.Damage;
 
-        public int RemainingGadgets { get; private set; }
-        public HyperchargeTracker Hypercharge { get; private set; }
-        public SuperChargeTracker SuperCharge { get; private set; }
+        // Session 3 refactor: ammo + super charge + hypercharge meter + gadget
+        // charges live in this substate. Pass-through getters keep the public
+        // API identical — external code doing State.Hypercharge.Tick(...) etc.
+        // still works unchanged (those calls hit methods on the class-typed
+        // subsystems, which are references even through a getter).
+        public BrawlerResources Resources { get; private set; }
+
+        public int RemainingGadgets => Resources.RemainingGadgets;
+        public HyperchargeTracker Hypercharge => Resources.Hypercharge;
+        public SuperChargeTracker SuperCharge => Resources.SuperCharge;
 
         public float CurrentHealth => Stats.CurrentHealth;
         public bool IsDead => Stats.IsDead;
@@ -43,7 +50,7 @@ namespace MOBA.Core.Simulation
         public Action OnDeath;
         public Action<float> OnHealthChanged;
 
-        public ResourceStorage Ammo { get; private set; }
+        public ResourceStorage Ammo => Resources.Ammo;
         public bool IsStunned;
 
         public bool IsInBush { get; set; }
@@ -102,10 +109,8 @@ namespace MOBA.Core.Simulation
             // The state machine's ctor already calls Clear(), so by the time
             // we reach ClearActionState() below it's a second (harmless) reset.
             ActionStateMachine = new BrawlerActionStateMachine();
+            Resources = new BrawlerResources();
 
-            Ammo = new ResourceStorage(3, 0.5f);
-            Hypercharge = new HyperchargeTracker();
-            SuperCharge = new SuperChargeTracker();
             ThreatTracker = new MOBA.Core.Simulation.AI.ThreatTracker();
             AssistTracker = new MOBA.Core.Simulation.AI.AssistTracker();
             ActiveStatusEffects = new List<IStatusEffectInstance>(8);
@@ -119,7 +124,7 @@ namespace MOBA.Core.Simulation
 
             ClearActionState();
             ResetAbilityCooldowns();
-            SuperCharge.Reset(true);
+            Resources.ResetSuperCharge(true);
         }
 
         public void SetEquippedHypercharge(HyperchargeDefinition definition)
@@ -297,18 +302,17 @@ namespace MOBA.Core.Simulation
 
         public void UseGadgetCharge()
         {
-            if (RemainingGadgets > 0)
-                RemainingGadgets--;
+            Resources.UseGadgetCharge();
         }
 
         public void AddSuperCharge(float amount)
         {
-            SuperCharge.AddCharge(amount);
+            Resources.AddSuperCharge(amount);
         }
 
         public bool TryConsumeSuper()
         {
-            return SuperCharge.TryConsume();
+            return Resources.TryConsumeSuper();
         }
 
         public void TakeDamage(float amount)
@@ -404,7 +408,7 @@ namespace MOBA.Core.Simulation
 
         public void UpdateResources(float deltaTime)
         {
-            Ammo.Tick(deltaTime);
+            Resources.Tick(deltaTime);
         }
 
         public void Reset()
@@ -413,11 +417,14 @@ namespace MOBA.Core.Simulation
             RefreshPassiveLoadout(false);
 
             Stats.ResetHealthToMax();
-            Ammo.Refill();
+            Resources.RefillAmmo();
 
             RefreshGadgetChargesFromRuntimeKit();
-            Hypercharge = new HyperchargeTracker();
-            SuperCharge.Reset(true); // For testing purposes, start with a full super charge on reset. Adjust as needed.
+            // Used to be `Hypercharge = new HyperchargeTracker()` — a
+            // replace-the-whole-instance pattern that left any cached
+            // reference stale. Now a proper in-place reset.
+            Resources.ResetHypercharge();
+            Resources.ResetSuperCharge(true); // For testing purposes, start with a full super charge on reset. Adjust as needed.
 
             IsStunned = false;
             IsInBush = false;
@@ -905,8 +912,13 @@ namespace MOBA.Core.Simulation
 
         public void RefreshGadgetChargesFromRuntimeKit()
         {
+            // Loadout lookup (RuntimeKit + Definition) stays here in the
+            // coordinator; the resulting count gets pushed into Resources.
+            // This is the one seam between Loadout and Resources — kept small
+            // and one-directional on purpose.
             GadgetDefinition gadget = RuntimeKit?.GadgetDefinition ?? Definition?.Gadget;
-            RemainingGadgets = gadget != null ? gadget.MaxCharges : 0;
+            int charges = gadget != null ? gadget.MaxCharges : 0;
+            Resources.SetGadgetCharges(charges);
         }
 
         public bool DoesActionConsumePrimaryAmmo(BrawlerActionRequestType actionType)

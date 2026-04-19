@@ -45,5 +45,18 @@ namespace MOBA.Core.Simulation
                 onDeactivate?.Invoke();
             }
         }
+
+        /// <summary>
+        /// Resets the tracker in place: clears activity, charge, and the end
+        /// tick. Preferred over allocating a new HyperchargeTracker instance
+        /// because references held elsewhere stay valid. Mirrors the Reset
+        /// pattern on SuperChargeTracker.
+        /// </summary>
+        public void Reset()
+        {
+            IsActive = false;
+            ChargePercent = 0f;
+            _endTick = 0;
+        }
     }
 }
