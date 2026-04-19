@@ -8,13 +8,6 @@ namespace MOBA.Core.Simulation
 {
     public class BrawlerState : IStatusTarget
     {
-        private struct InstalledPassive
-        {
-            public PassiveDefinition Definition;
-            public PassiveInstallContext Context;
-            public IPassiveRuntime Runtime;
-        }
-
         public BrawlerDefinition Definition { get; private set; }
         public TeamType Team { get; private set; }
         public MOBA.Core.Simulation.AI.ThreatTracker ThreatTracker { get; private set; }
@@ -116,18 +109,22 @@ namespace MOBA.Core.Simulation
         public AbilityCooldownState SuperCooldown => Cooldowns.Super;
         public AbilityCooldownState GadgetCooldown => Cooldowns.Gadget;
 
-        public int CurrentPowerLevel { get; private set; }
+        // Session 3 refactor: power level, equipped passives + their
+        // installed runtimes, RuntimeBuild, RuntimeKit, EquippedHypercharge,
+        // and the hypercharge-modifier token all live in this substate. Every
+        // external read goes through a pass-through getter below — external
+        // callers doing State.RuntimeBuild.SetEquippedGadget(...) or
+        // State.RuntimeKit.SetMainAttack(...) still work unchanged because
+        // the pass-throughs return the same reference instances the POCO
+        // owns.
+        public BrawlerLoadout Loadout { get; private set; }
 
-        private readonly List<PassiveDefinition> _equippedPassives = new List<PassiveDefinition>(4);
-        private readonly List<InstalledPassive> _installedPassives = new List<InstalledPassive>(4);
-
-        public IReadOnlyList<PassiveDefinition> EquippedPassives => _equippedPassives;
-
-        public HyperchargeDefinition EquippedHypercharge { get; private set; }
-        public object HyperchargeModifierSource { get; } = new object();
-
-        public BrawlerRuntimeBuildState RuntimeBuild { get; private set; }
-        public BrawlerRuntimeKit RuntimeKit { get; private set; }
+        public int CurrentPowerLevel => Loadout.CurrentPowerLevel;
+        public IReadOnlyList<PassiveDefinition> EquippedPassives => Loadout.EquippedPassives;
+        public HyperchargeDefinition EquippedHypercharge => Loadout.EquippedHypercharge;
+        public object HyperchargeModifierSource => Loadout.HyperchargeModifierSource;
+        public BrawlerRuntimeBuildState RuntimeBuild => Loadout.RuntimeBuild;
+        public BrawlerRuntimeKit RuntimeKit => Loadout.RuntimeKit;
 
         public int EntityID => Owner != null ? Owner.EntityID : 0;
 
@@ -135,7 +132,6 @@ namespace MOBA.Core.Simulation
         {
             Definition = definition;
             Team = team;
-            CurrentPowerLevel = 1;
 
             // Stats = all numeric state. Creating it here wires up the three
             // ModifiableStats, the two damage modifier collections, the
@@ -151,8 +147,12 @@ namespace MOBA.Core.Simulation
             ThreatTracker = new MOBA.Core.Simulation.AI.ThreatTracker();
             AssistTracker = new MOBA.Core.Simulation.AI.AssistTracker();
             StatusEffects = new BrawlerStatusEffects();
-            RuntimeBuild = new BrawlerRuntimeBuildState();
-            RuntimeKit = new BrawlerRuntimeKit();
+
+            // Loadout's ctor wires up RuntimeBuild, RuntimeKit, sets
+            // CurrentPowerLevel = 1, and mints the HyperchargeModifierSource
+            // token — one line replaces the four separate initializations
+            // that used to live here.
+            Loadout = new BrawlerLoadout();
 
             RefreshRuntimeBuildUnlockState();
             RefreshGadgetChargesFromRuntimeKit();
@@ -166,12 +166,16 @@ namespace MOBA.Core.Simulation
 
         public void SetEquippedHypercharge(HyperchargeDefinition definition)
         {
-            EquippedHypercharge = definition;
+            Loadout.SetEquippedHypercharge(definition);
         }
 
         public AbilityDefinition GetCurrentSuperDefinition()
         {
-            AbilityDefinition baseSuper = RuntimeKit?.SuperDefinition ?? Definition?.SuperAbility;
+            // Composition that spans two substates — Loadout (RuntimeKit +
+            // EquippedHypercharge) and Resources (Hypercharge.IsActive) —
+            // stays on the coordinator. The "base case" lookup lives on
+            // Loadout; the hypercharge override is layered on top here.
+            AbilityDefinition baseSuper = Loadout.GetBaseSuperDefinition(Definition);
 
             if (Hypercharge.IsActive &&
                 EquippedHypercharge != null &&
@@ -192,10 +196,11 @@ namespace MOBA.Core.Simulation
 
         public void SetPowerLevel(int powerLevel, bool preserveHealthRatio = true)
         {
-            if (powerLevel < 1)
-                powerLevel = 1;
-
-            CurrentPowerLevel = powerLevel;
+            // Loadout does the clamp + field update; coordinator then cascades
+            // the three knock-on effects: slot-unlock refresh (Loadout),
+            // progression stat rebuild (Stats), and passive reinstall (Loadout
+            // + Stats again via health-restore).
+            Loadout.SetPowerLevel(powerLevel);
             RefreshRuntimeBuildUnlockState();
             RebuildProgressionStats(preserveHealthRatio);
             RefreshPassiveLoadout(preserveHealthRatio);
@@ -203,38 +208,29 @@ namespace MOBA.Core.Simulation
 
         public void SetPassiveLoadout(IEnumerable<PassiveDefinition> definitions, bool preserveHealthRatio = true)
         {
+            // Coordinator brackets the swap with health measurement so the
+            // preserve-ratio math still works across passives that modify
+            // MaxHealth. The three middle steps are pure loadout bookkeeping.
             float oldMaxHealth = MaxHealth.Value;
             float oldHealth = CurrentHealth;
 
-            UninstallAllPassivesInternal();
-            _equippedPassives.Clear();
+            Loadout.UninstallAll(this);
+            Loadout.SetEquippedPassives(definitions);
+            Loadout.InstallAll(this, Owner);
 
-            if (definitions != null)
-            {
-                foreach (PassiveDefinition definition in definitions)
-                {
-                    if (definition == null)
-                        continue;
-
-                    if (!_equippedPassives.Contains(definition))
-                        _equippedPassives.Add(definition);
-                }
-            }
-
-            InstallAllPassivesInternal();
             RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
         }
 
         public void RefreshPassiveLoadout(bool preserveHealthRatio = true)
         {
-            if (_equippedPassives.Count == 0)
+            if (Loadout.EquippedPassives.Count == 0)
                 return;
 
             float oldMaxHealth = MaxHealth.Value;
             float oldHealth = CurrentHealth;
 
-            UninstallAllPassivesInternal();
-            InstallAllPassivesInternal();
+            Loadout.UninstallAll(this);
+            Loadout.InstallAll(this, Owner);
 
             RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
         }
@@ -249,46 +245,9 @@ namespace MOBA.Core.Simulation
             RefreshPassiveLoadout(preserveHealthRatio);
         }
 
-        private void InstallAllPassivesInternal()
-        {
-            for (int i = 0; i < _equippedPassives.Count; i++)
-            {
-                PassiveDefinition definition = _equippedPassives[i];
-                object sourceToken = new object();
-
-                PassiveInstallContext context = new PassiveInstallContext(this, Owner, sourceToken);
-                definition.Install(context);
-
-                IPassiveRuntime runtime = definition.CreateRuntime(context);
-                runtime?.OnInstalled(this);
-
-                _installedPassives.Add(new InstalledPassive
-                {
-                    Definition = definition,
-                    Context = context,
-                    Runtime = runtime
-                });
-            }
-        }
-
-        private void UninstallAllPassivesInternal()
-        {
-            for (int i = _installedPassives.Count - 1; i >= 0; i--)
-            {
-                InstalledPassive installed = _installedPassives[i];
-                installed.Runtime?.OnUninstalled(this);
-                installed.Definition?.Uninstall(installed.Context);
-            }
-
-            _installedPassives.Clear();
-        }
-
         public void TickPassives(uint currentTick)
         {
-            for (int i = 0; i < _installedPassives.Count; i++)
-            {
-                _installedPassives[i].Runtime?.Tick(this, currentTick);
-            }
+            Loadout.TickPassives(this, currentTick);
         }
 
         private void RebuildProgressionStats(bool preserveHealthRatio)
@@ -296,7 +255,9 @@ namespace MOBA.Core.Simulation
             float oldMaxHealth = MaxHealth.Value;
             float oldHealth = CurrentHealth;
 
-            var progression = Definition.GetProgressionBonus(CurrentPowerLevel);
+            // Definition stays on BrawlerState (it's the whole brawler's
+            // identity), current power level now lives on Loadout.
+            var progression = Definition.GetProgressionBonus(Loadout.CurrentPowerLevel);
 
             MaxHealth.SetBaseValue(Definition.BaseHealth + progression.BonusHealth);
             MoveSpeed.SetBaseValue(Definition.BaseMoveSpeed + progression.BonusMoveSpeed);
@@ -718,56 +679,32 @@ namespace MOBA.Core.Simulation
 
         public void RefreshRuntimeBuildUnlockState()
         {
-            if (Definition == null || Definition.BuildLayout == null || RuntimeBuild == null)
-                return;
-
-            RuntimeBuild.SetUnlockedState(
-                Definition.BuildLayout.IsSlotUnlocked("gear_1", CurrentPowerLevel),
-                Definition.BuildLayout.IsSlotUnlocked("gear_2", CurrentPowerLevel),
-                Definition.BuildLayout.IsSlotUnlocked("gadget_1", CurrentPowerLevel),
-                Definition.BuildLayout.IsSlotUnlocked("starpower_1", CurrentPowerLevel),
-                Definition.BuildLayout.IsSlotUnlocked("hypercharge_1", CurrentPowerLevel)
-            );
+            Loadout.RefreshRuntimeBuildUnlockState(Definition);
         }
 
-        public bool HasUnlockedGadgetSlot()
-        {
-            return RuntimeBuild != null && RuntimeBuild.IsGadgetSlotUnlocked;
-        }
-
-        public bool HasUnlockedStarPowerSlot()
-        {
-            return RuntimeBuild != null && RuntimeBuild.IsStarPowerSlotUnlocked;
-        }
-
-        public bool HasUnlockedHyperchargeSlot()
-        {
-            return RuntimeBuild != null && RuntimeBuild.IsHyperchargeSlotUnlocked;
-        }
-
-        public bool HasAnyUnlockedGearSlot()
-        {
-            return RuntimeBuild != null && (RuntimeBuild.IsGearSlot1Unlocked || RuntimeBuild.IsGearSlot2Unlocked);
-        }
+        public bool HasUnlockedGadgetSlot() => Loadout.HasUnlockedGadgetSlot();
+        public bool HasUnlockedStarPowerSlot() => Loadout.HasUnlockedStarPowerSlot();
+        public bool HasUnlockedHyperchargeSlot() => Loadout.HasUnlockedHyperchargeSlot();
+        public bool HasAnyUnlockedGearSlot() => Loadout.HasAnyUnlockedGearSlot();
 
         public AbilityDefinition GetCurrentMainAttackDefinition()
         {
-            return RuntimeKit?.MainAttackDefinition ?? Definition?.MainAttack;
+            return Loadout.GetCurrentMainAttackDefinition(Definition);
         }
 
         public AbilityDefinition GetBaseSuperDefinition()
         {
-            return RuntimeKit?.SuperDefinition ?? Definition?.SuperAbility;
+            return Loadout.GetBaseSuperDefinition(Definition);
         }
 
         public GadgetDefinition GetCurrentGadgetDefinition()
         {
-            return RuntimeKit?.GadgetDefinition;
+            return Loadout.GetCurrentGadgetDefinition();
         }
 
         public HyperchargeDefinition GetCurrentHyperchargeDefinition()
         {
-            return RuntimeKit?.HyperchargeDefinition ?? EquippedHypercharge;
+            return Loadout.GetCurrentHyperchargeDefinition();
         }
 
         public BrawlerActionBlockReason GetMainAttackBlockReason(uint currentTick)
