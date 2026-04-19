@@ -53,9 +53,29 @@ namespace MOBA.Core.Simulation
         public ResourceStorage Ammo => Resources.Ammo;
         public bool IsStunned;
 
-        public bool IsInBush { get; set; }
-        public uint LastAttackTick { get; set; }
-        public bool IsRevealed { get; set; }
+        // Session 3 refactor: bush / reveal / last-attack-tick live in the
+        // Stealth substate. These are pass-through get/set properties because
+        // external systems (VisibilitySystem, RevealEffect, BrawlerController)
+        // write these fields directly — the existing API surface stays intact.
+        public BrawlerStealth Stealth { get; private set; }
+
+        public bool IsInBush
+        {
+            get => Stealth.IsInBush;
+            set => Stealth.IsInBush = value;
+        }
+
+        public uint LastAttackTick
+        {
+            get => Stealth.LastAttackTick;
+            set => Stealth.LastAttackTick = value;
+        }
+
+        public bool IsRevealed
+        {
+            get => Stealth.IsRevealed;
+            set => Stealth.IsRevealed = value;
+        }
 
         public BrawlerController Owner { get; set; }
         public MovementModifierCollection IncomingMovementModifiers => Stats.IncomingMovementModifiers;
@@ -110,6 +130,7 @@ namespace MOBA.Core.Simulation
             // we reach ClearActionState() below it's a second (harmless) reset.
             ActionStateMachine = new BrawlerActionStateMachine();
             Resources = new BrawlerResources();
+            Stealth = new BrawlerStealth();
 
             ThreatTracker = new MOBA.Core.Simulation.AI.ThreatTracker();
             AssistTracker = new MOBA.Core.Simulation.AI.AssistTracker();
@@ -427,9 +448,7 @@ namespace MOBA.Core.Simulation
             Resources.ResetSuperCharge(true); // For testing purposes, start with a full super charge on reset. Adjust as needed.
 
             IsStunned = false;
-            IsInBush = false;
-            IsRevealed = false;
-            LastAttackTick = 0;
+            Stealth.Reset();
 
             ThreatTracker.Clear();
             AssistTracker.Clear();
@@ -559,16 +578,14 @@ namespace MOBA.Core.Simulation
 
         public bool IsHiddenTo(TeamType observerTeam)
         {
+            // Allies always see allies.
             if (observerTeam == Team)
                 return false;
 
+            // The pure "am I hidden right now" question belongs to the
+            // stealth substate; we just ask it with the current sim tick.
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
-            bool recentlyAttacked = (currentTick - LastAttackTick) < 60;
-
-            if (!IsInBush || recentlyAttacked || IsRevealed)
-                return false;
-
-            return true;
+            return Stealth.IsHidden(currentTick);
         }
 
         public void AddShield(float amount)
