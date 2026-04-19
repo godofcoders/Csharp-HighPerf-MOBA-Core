@@ -79,7 +79,23 @@ namespace MOBA.Core.Simulation
 
         public BrawlerController Owner { get; set; }
         public MovementModifierCollection IncomingMovementModifiers => Stats.IncomingMovementModifiers;
-        public List<IStatusEffectInstance> ActiveStatusEffects { get; private set; }
+
+        // Session 3 refactor: the active status-effect list and its pure
+        // queries (HasStatus, HasSilence, HasAttackLock, etc.) live in this
+        // substate. ActiveStatusEffects below is a pass-through to the
+        // substate's list — this is load-bearing because IStatusTarget
+        // requires a List getter and StatusEffectService mutates that list
+        // directly when applying new effects.
+        public BrawlerStatusEffects StatusEffects { get; private set; }
+
+        public List<IStatusEffectInstance> ActiveStatusEffects => StatusEffects.Active;
+
+        // Reused buffer for TickEffects so the event-bus side effects can run
+        // outside the removal loop without allocating a new list every tick.
+        // See BrawlerStatusEffects.TickAndCollectExpired for why the buffer
+        // is coordinator-owned.
+        private readonly List<IStatusEffectInstance> _tickRemovedBuffer =
+            new List<IStatusEffectInstance>(4);
 
         // Session 3 refactor: action-state transitions (enter/clear/expire/
         // interrupt) live in this substate. The ActionState property below is
@@ -134,7 +150,7 @@ namespace MOBA.Core.Simulation
 
             ThreatTracker = new MOBA.Core.Simulation.AI.ThreatTracker();
             AssistTracker = new MOBA.Core.Simulation.AI.AssistTracker();
-            ActiveStatusEffects = new List<IStatusEffectInstance>(8);
+            StatusEffects = new BrawlerStatusEffects();
             RuntimeBuild = new BrawlerRuntimeBuildState();
             RuntimeKit = new BrawlerRuntimeKit();
 
@@ -456,7 +472,7 @@ namespace MOBA.Core.Simulation
             // (incoming + outgoing), shield pool, and movement modifiers. The
             // POCO now owns every field that line used to touch.
             Stats.ClearAllModifiers();
-            ActiveStatusEffects.Clear();
+            StatusEffects.Clear();
             RuntimeBuild.Clear();
             RuntimeKit.Clear();
             RefreshRuntimeBuildUnlockState();
@@ -543,36 +559,44 @@ namespace MOBA.Core.Simulation
 
         public void TickEffects(uint currentTick)
         {
-            for (int i = ActiveStatusEffects.Count - 1; i >= 0; i--)
+            // Delegate the pure bookkeeping (tick each effect, remove expired
+            // ones, collect which were removed) to the POCO, which knows
+            // nothing about event buses or combat logs. The reused buffer
+            // must be cleared before each call — BrawlerStatusEffects
+            // intentionally appends without clearing.
+            _tickRemovedBuffer.Clear();
+            StatusEffects.TickAndCollectExpired(this, currentTick, _tickRemovedBuffer);
+
+            if (_tickRemovedBuffer.Count == 0)
+                return;
+
+            // Side effects for anything that expired this tick: raise the
+            // status-effect event and write a combat-log entry. Kept in the
+            // coordinator because touching global services is not the POCO's
+            // job.
+            var combatLog = ServiceProvider.Get<ICombatLogService>();
+            for (int i = 0; i < _tickRemovedBuffer.Count; i++)
             {
-                var effect = ActiveStatusEffects[i];
-                effect.Tick(this, currentTick);
+                IStatusEffectInstance effect = _tickRemovedBuffer[i];
 
-                if (effect.IsExpired(currentTick))
+                var result = new StatusEffectResult
                 {
-                    var result = new StatusEffectResult
+                    Context = new StatusEffectContext
                     {
-                        Context = new StatusEffectContext
-                        {
-                            Source = null,
-                            Target = this,
-                            Type = effect.Type,
-                            Duration = 0f,
-                            Magnitude = 0f,
-                            Origin = default,
-                            SourceToken = null
-                        },
-                        Applied = false,
-                        Refreshed = false
-                    };
+                        Source = null,
+                        Target = this,
+                        Type = effect.Type,
+                        Duration = 0f,
+                        Magnitude = 0f,
+                        Origin = default,
+                        SourceToken = null
+                    },
+                    Applied = false,
+                    Refreshed = false
+                };
 
-                    effect.Remove(this, currentTick);
-                    ActiveStatusEffects.RemoveAt(i);
-                    StatusEffectEventBus.RaiseRemoved(result);
-
-                    var combatLog = ServiceProvider.Get<ICombatLogService>();
-                    combatLog.AddEntry(CombatLogEntry.CreateStatusRemoved(currentTick, result));
-                }
+                StatusEffectEventBus.RaiseRemoved(result);
+                combatLog.AddEntry(CombatLogEntry.CreateStatusRemoved(currentTick, result));
             }
         }
 
@@ -684,13 +708,7 @@ namespace MOBA.Core.Simulation
 
         public bool HasStatus(StatusEffectType type)
         {
-            for (int i = 0; i < ActiveStatusEffects.Count; i++)
-            {
-                if (ActiveStatusEffects[i].Type == type)
-                    return true;
-            }
-
-            return false;
+            return StatusEffects.HasStatus(type);
         }
 
         public bool IsInActionState(BrawlerActionStateType type, uint currentTick)
@@ -1029,27 +1047,30 @@ namespace MOBA.Core.Simulation
         }
         public bool HasSilence()
         {
-            return HasStatus(StatusEffectType.Silence);
+            return StatusEffects.HasSilence();
         }
 
         public bool IsMainAttackLocked()
         {
-            return HasStatus(StatusEffectType.AttackLock);
+            return StatusEffects.HasAttackLock();
         }
 
         public bool IsGadgetLocked()
         {
-            return HasStatus(StatusEffectType.GadgetLock);
+            return StatusEffects.HasGadgetLock();
         }
 
         public bool IsSuperLocked()
         {
-            return HasStatus(StatusEffectType.SuperLock);
+            return StatusEffects.HasSuperLock();
         }
 
+        // Composite: the pure status half lives on the POCO; IsStunned is a
+        // separate coordinator-owned flag (set by stun status-effect instances
+        // and by other systems), so the OR stays here.
         public bool IsMovementLocked()
         {
-            return HasStatus(StatusEffectType.MovementLock) || IsStunned;
+            return StatusEffects.HasMovementLockStatus() || IsStunned;
         }
         public bool CanReceiveStatusEffects()
         {
