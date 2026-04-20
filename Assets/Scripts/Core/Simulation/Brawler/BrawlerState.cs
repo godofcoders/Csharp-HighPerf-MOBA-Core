@@ -409,37 +409,70 @@ namespace MOBA.Core.Simulation
             Resources.Tick(deltaTime);
         }
 
+        /// <summary>
+        /// Respawn-time reset. Called by BrawlerController.Respawn only.
+        ///
+        /// Semantics in plain English: "bring this brawler back to a fresh
+        /// fighting state, keeping identity (Definition, Team, equipped
+        /// passive *definitions*) but clearing everything transient." The
+        /// steps are grouped below by concern; ordering matters where noted.
+        ///
+        /// KNOWN GAP (TODO session-4): this method clears RuntimeBuild and
+        /// RuntimeKit via Loadout.ResetRuntimeState, which means after a
+        /// respawn the brawler has no equipped gadget / star power / gears
+        /// and no GadgetDefinition in the kit (GetCurrentGadgetDefinition
+        /// returns null — there is no Definition fallback for it). The
+        /// controller's Respawn flow does NOT re-apply the resolved build
+        /// afterwards, so across death→respawn the brawler loses gadget
+        /// usability until the next match start. Two possible fixes:
+        ///   (a) Have Reset preserve RuntimeBuild/RuntimeKit, or
+        ///   (b) Have BrawlerController.Respawn call ApplyResolvedBuild
+        ///       after State.Reset().
+        /// Either is a behavior change — intentionally NOT done as part of
+        /// the Session 3 substate refactor. Revisit with a gameplay decision.
+        /// </summary>
         public void Reset()
         {
+            // --- 1. Rebuild progression-driven base stats and refresh
+            //        passive modifiers. Uninstall+reinstall also resets any
+            //        transient runtime state that passives track internally
+            //        (stacks, timers, etc.). Passive modifiers on
+            //        MoveSpeed/Damage/MaxHealth survive through ClearAllModifiers
+            //        below, because that method only wipes the damage,
+            //        movement, and shield collections — not the three
+            //        primary ModifiableStats.
             RebuildProgressionStats(false);
             RefreshPassiveLoadout(false);
 
+            // --- 2. Restore pooled resources to full / fresh.
             Stats.ResetHealthToMax();
             Resources.RefillAmmo();
-
             RefreshGadgetChargesFromRuntimeKit();
-            // Used to be `Hypercharge = new HyperchargeTracker()` — a
-            // replace-the-whole-instance pattern that left any cached
-            // reference stale. Now a proper in-place reset.
-            Resources.ResetHypercharge();
-            Resources.ResetSuperCharge(true); // For testing purposes, start with a full super charge on reset. Adjust as needed.
+            Resources.ResetHypercharge();     // in-place reset; references stay valid
+            Resources.ResetSuperCharge(true); // start with full super (design choice)
 
+            // --- 3. Clear transient combat state.
             IsStunned = false;
             Stealth.Reset();
-
             ThreatTracker.Clear();
             AssistTracker.Clear();
-            // One line replaces the four-line reset of damage modifiers
-            // (incoming + outgoing), shield pool, and movement modifiers. The
-            // POCO now owns every field that line used to touch.
-            Stats.ClearAllModifiers();
+            Stats.ClearAllModifiers();        // incoming/outgoing damage mods, movement mods, shield
             StatusEffects.Clear();
-            RuntimeBuild.Clear();
-            RuntimeKit.Clear();
-            RefreshRuntimeBuildUnlockState();
-
             ClearActionState();
             ResetAbilityCooldowns();
+
+            // --- 4. Clear the runtime loadout slots (see KNOWN GAP above).
+            //        Encapsulated in one POCO call so the "what gets wiped
+            //        on respawn" decision has one home.
+            Loadout.ResetRuntimeState(Definition);
+
+            // --- 5. Clear hypercharge-tagged stat modifiers. Must come last:
+            //        earlier steps (RebuildProgressionStats, RefreshPassiveLoadout)
+            //        operate on MoveSpeed/Damage/IncomingDamage, and we want
+            //        to leave those collections with only the contributions
+            //        that survive respawn. This call strips anything tagged
+            //        with the HyperchargeModifierSource token from those
+            //        three collections.
             ClearHyperchargeRuntimeModifiers();
 
             OnHealthChanged?.Invoke(CurrentHealth);

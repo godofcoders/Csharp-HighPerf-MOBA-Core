@@ -207,6 +207,30 @@ namespace MOBA.Core.Simulation
             );
         }
 
+        /// <summary>
+        /// Respawn-time cleanup for the *runtime* side of the loadout: wipes
+        /// the equipped build slots (gadget / star power / hypercharge / gears)
+        /// and the resolved ability kit (main attack / super / gadget /
+        /// hypercharge definitions + logics), then recomputes the slot-unlock
+        /// flags so the UI reflects the current power level.
+        ///
+        /// Does NOT touch _equippedPassives, _installedPassives, or
+        /// EquippedHypercharge — those are considered "persistent loadout
+        /// config" that survives respawn. Callers who want to uninstall
+        /// passives on reset should call UninstallAll separately.
+        ///
+        /// IMPORTANT: after this runs, RuntimeKit.GadgetDefinition is null,
+        /// so the brawler has no usable gadget until the caller re-applies
+        /// the build. See the TODO in BrawlerState.Reset for the known gap
+        /// on the respawn flow.
+        /// </summary>
+        public void ResetRuntimeState(BrawlerDefinition definition)
+        {
+            RuntimeBuild.Clear();
+            RuntimeKit.Clear();
+            RefreshRuntimeBuildUnlockState(definition);
+        }
+
         // ---------- Slot-unlock convenience reads ----------
 
         public bool HasUnlockedGadgetSlot() => RuntimeBuild.IsGadgetSlotUnlocked;
