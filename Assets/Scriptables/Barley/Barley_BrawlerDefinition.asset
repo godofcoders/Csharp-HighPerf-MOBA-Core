@@ -19,7 +19,7 @@ MonoBehaviour:
   BaseDamage: 500
   ProgressionBonuses: []
   MainAttack: {fileID: 11400000, guid: 0ff2602fafb2b4279b84db42c61f252d, type: 2}
-  SuperAbility: {fileID: 0}
+  SuperAbility: {fileID: 11400000, guid: 9a4f2e7c3b8d1e6a5f9c2b4d3e1f8a5c, type: 2}
   Gadget: {fileID: 0}
   StarPower: {fileID: 0}
   DefaultPassiveLoadout: {fileID: 0}

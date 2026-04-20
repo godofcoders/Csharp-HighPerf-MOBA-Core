@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e2a9f3b8c4d1e7a6f8b2c9d4e1f5a3b, type: 3}
+  m_Name: Barley_Super
+  m_EditorClassIdentifier:
+  OptionName:
+  Description:
+  AllowedBuildSlotTypes:
+  AbilityName: Last Call
+  Icon: {fileID: 0}
+  SlotType: 1
+  TargetingType: 1
+  DeliveryType: 2
+  Cooldown: 0
+  Tags:
+  CastDurationSeconds: 0.15
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 3
+  AllowAimAssist: 1
+  AimAssistMode: 1
+  AimAssistIncludeSelf: 0
+  PreferManualAim: 1
+  AimAssistRangeOverride: 7
+  AimAssistForwardBias: 2
+  AimAssistDistanceBias: 1
+  AimAssistIdealRange: -1
+  AimAssistPlacementDistance: 3
+  PreviewMode: 2
+  ThrowRange: 7
+  ThrowSpeed: 16
+  ArcHeight: 1.75
+  ImpactRadius: 2.25
+  EnemyDamage: 0
+  AllyHeal: 0
+  ProjectileCount: 6
+  DelayBetweenShots: 0.08
+  LandingSpreadAngle: 30
+  DistanceJitter: 0.2
+  PresentationProfile: {fileID: 11400000, guid: b5e9e8d6ae56e4d50bc4fc597a8c9745, type: 2}
+  LingeringHazard: {fileID: 11400000, guid: ee98321559ce8406f84735b2e1b5be47, type: 2}
+  HitTeamRule: 0
+  CanAffectEnemiesOnImpact: 1
+  CanAffectAlliesOnImpact: 0
