@@ -25,6 +25,8 @@ MonoBehaviour:
   DefaultPassiveLoadout: {fileID: 0}
   DefaultPassiveEntries: []
   Hypercharge: {fileID: 0}
+  SuperChargeSources:
+  - {fileID: 11400000, guid: a1f5c3e7b9d2f4a8c6e1b5d9f3a7c2e4, type: 2}
   AIProfile: {fileID: 0}
   Archetype: 2
   Aggression: 1

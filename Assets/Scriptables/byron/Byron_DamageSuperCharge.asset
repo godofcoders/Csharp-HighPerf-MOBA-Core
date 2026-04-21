@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d4e7a1f5b3c9e2a6f4d8b1c5e7a3d9f, type: 3}
+  m_Name: Byron_DamageSuperCharge
+  m_EditorClassIdentifier:
+  SourceName: Byron Damage Dealt
+  Description: Byron charges super from landing poison darts. At 500 dmg per hit on a slow cadence, 0.00035 per damage gives ~6 landed hits to fill — rewarding careful, accurate play.
+  Enabled: 1
+  ChargePerDamage: 0.00035
+  MainAttackOnly: 0
