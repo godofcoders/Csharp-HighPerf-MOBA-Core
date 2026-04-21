@@ -98,7 +98,6 @@ namespace MOBA.Core.Simulation
                 Range = range,
                 Damage = damage,
                 Team = Team,
-                SuperChargeOnHit = 0.20f,
                 IsSuper = isSuper,
                 IsGadget = isGadget,
 

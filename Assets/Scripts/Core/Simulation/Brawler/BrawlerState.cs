@@ -456,19 +456,15 @@ namespace MOBA.Core.Simulation
         /// passive *definitions*) but clearing everything transient." The
         /// steps are grouped below by concern; ordering matters where noted.
         ///
-        /// KNOWN GAP (TODO session-4): this method clears RuntimeBuild and
-        /// RuntimeKit via Loadout.ResetRuntimeState, which means after a
-        /// respawn the brawler has no equipped gadget / star power / gears
-        /// and no GadgetDefinition in the kit (GetCurrentGadgetDefinition
-        /// returns null — there is no Definition fallback for it). The
-        /// controller's Respawn flow does NOT re-apply the resolved build
-        /// afterwards, so across death→respawn the brawler loses gadget
-        /// usability until the next match start. Two possible fixes:
-        ///   (a) Have Reset preserve RuntimeBuild/RuntimeKit, or
-        ///   (b) Have BrawlerController.Respawn call ApplyResolvedBuild
-        ///       after State.Reset().
-        /// Either is a behavior change — intentionally NOT done as part of
-        /// the Session 3 substate refactor. Revisit with a gameplay decision.
+        /// This method deliberately clears RuntimeBuild and RuntimeKit via
+        /// Loadout.ResetRuntimeState — installed ability logics are transient
+        /// per-life instances, so a fresh respawn deserves fresh instances.
+        /// BrawlerController.Respawn re-resolves and re-applies the current
+        /// default build (ResolveAndApplyCurrentBuild) immediately after this
+        /// returns, so the gadget / star power / gears are restored before
+        /// the brawler is reactivated. See Session 4 of SESSIONS.md for the
+        /// gap-close history (the previous Respawn implementation didn't
+        /// re-apply the build, leaving brawlers without a gadget post-death).
         /// </summary>
         public void Reset()
         {

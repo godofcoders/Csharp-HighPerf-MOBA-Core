@@ -114,10 +114,6 @@ namespace MOBA.Core.Simulation.Abilities
                 Damage = 0f,
                 Team = brawler.Team,
 
-                // Supers shouldn't charge themselves via their own hits; 0 is
-                // the conservative choice and matches Brawl Stars behavior.
-                SuperChargeOnHit = 0f,
-
                 IsSuper = context.IsSuper,
                 IsGadget = context.IsGadget,
 

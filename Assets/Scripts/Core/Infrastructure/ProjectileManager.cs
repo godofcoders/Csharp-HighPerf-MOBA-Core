@@ -67,7 +67,6 @@ namespace MOBA.Core.Infrastructure
                 MaxRangeSq = context.Range * context.Range,
                 Damage = context.Damage,
                 Team = context.Team,
-                SuperChargeOnHit = context.SuperChargeOnHit,
 
                 IsHybrid = context.IsHybrid,
                 AllyHealAmount = context.AllyHealAmount,
@@ -454,7 +453,6 @@ namespace MOBA.Core.Infrastructure
             public float MaxRangeSq;
             public float Damage;
             public TeamType Team;
-            public float SuperChargeOnHit;
 
             public bool IsHybrid;
             public float AllyHealAmount;

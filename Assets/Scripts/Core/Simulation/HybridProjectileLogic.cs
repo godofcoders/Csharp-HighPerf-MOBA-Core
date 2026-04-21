@@ -40,7 +40,6 @@ namespace MOBA.Core.Simulation
                 Range = _definition.Range,
                 Damage = 0f,
                 Team = brawler.Team,
-                SuperChargeOnHit = 0.20f,
                 IsSuper = context.IsSuper,
                 IsGadget = context.IsGadget,
 

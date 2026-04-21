@@ -18,7 +18,6 @@ namespace MOBA.Core.Simulation
         public float Damage;
 
         public TeamType Team;
-        public float SuperChargeOnHit;
 
         public bool IsSuper;
         public bool IsGadget;

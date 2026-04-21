@@ -307,8 +307,9 @@ namespace MOBA.Core.Simulation
         ///
         /// IMPORTANT: after this runs, RuntimeKit.GadgetDefinition is null,
         /// so the brawler has no usable gadget until the caller re-applies
-        /// the build. See the TODO in BrawlerState.Reset for the known gap
-        /// on the respawn flow.
+        /// the build. BrawlerController.Respawn handles that re-application
+        /// immediately after State.Reset() via ResolveAndApplyCurrentBuild
+        /// (Session 4 gap fix).
         /// </summary>
         public void ResetRuntimeState(BrawlerDefinition definition)
         {

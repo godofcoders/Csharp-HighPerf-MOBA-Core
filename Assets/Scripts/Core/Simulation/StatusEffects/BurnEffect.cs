@@ -1,4 +1,5 @@
 using MOBA.Core.Infrastructure;
+using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
@@ -35,14 +36,37 @@ namespace MOBA.Core.Simulation
 
             _nextTickDamageTick = currentTick + 30;
 
+            // Route through DamageService so every pipeline step runs: incoming
+            // modifiers, shields, lifesteal, DamageEventBus, combat log, and
+            // — critically — the super-charge push on the burn's ignitor. Before
+            // this, burn DoT bypassed DamageService entirely (a direct
+            // state.TakeDamage call), so ticks never fed the attacker's
+            // super-charge and deployables wouldn't despawn on fatal ticks.
+            ISpatialEntity spatialTarget = null;
             if (target is BrawlerState brawlerState)
-            {
-                brawlerState.TakeDamage(_magnitude);
-            }
+                spatialTarget = brawlerState.Owner;
             else if (target is DeployableState deployableState)
+                spatialTarget = deployableState.Controller;
+
+            if (spatialTarget == null)
+                return;
+
+            var damageService = ServiceProvider.Get<IDamageService>();
+            if (damageService == null)
+                return;
+
+            damageService.ApplyDamage(new DamageContext
             {
-                deployableState.TakeDamage(_magnitude);
-            }
+                Attacker = _source,
+                Target = spatialTarget,
+                Damage = _magnitude,
+                Type = DamageType.Ability,
+                HitPosition = spatialTarget.Position,
+                Direction = Vector3.forward,
+                IsCritical = false,
+                SourceAbility = null,
+                IsSuper = false
+            });
         }
 
         public void Remove(IStatusTarget target, uint currentTick)
