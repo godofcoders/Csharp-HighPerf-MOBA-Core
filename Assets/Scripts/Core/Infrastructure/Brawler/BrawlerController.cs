@@ -123,29 +123,7 @@ namespace MOBA.Core.Infrastructure
             State.RuntimeKit.SetMainAttack(_definition.MainAttack, _mainAttack);
             State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
 
-            BrawlerBuildDefinition buildToUse = GetBuildToUse();
-            if (buildToUse != null)
-            {
-                if (BrawlerBuildResolver.TryResolveUnlockedOnly(_definition, buildToUse, State.CurrentPowerLevel, out ResolvedBrawlerBuild resolved, out string error))
-                {
-                    _resolvedBuildSource = buildToUse;
-                    ApplyResolvedBuild(resolved);
-                    State.RefreshGadgetChargesFromRuntimeKit();
-                }
-                else
-                {
-                    Debug.LogWarning($"[Build] Failed to resolve build '{buildToUse.name}' for '{_definition.name}': {error}");
-                    _resolvedBuildSource = null;
-                    ApplyLegacyFallbackBuild();
-                    State.RefreshGadgetChargesFromRuntimeKit();
-                }
-            }
-            else
-            {
-                _resolvedBuildSource = null;
-                ApplyLegacyFallbackBuild();
-                State.RefreshGadgetChargesFromRuntimeKit();
-            }
+            ResolveAndApplyCurrentBuild();
 
             _lastTickPosition = transform.position;
 
@@ -174,6 +152,39 @@ namespace MOBA.Core.Infrastructure
             State.OnDeath += HandleDeath;
 
             Debug.Log($"[SIM] {gameObject.name} initialized as {_definition.BrawlerName} on Team {_team}");
+        }
+
+        /// <summary>
+        /// Resolves the current default build for this brawler/power-level and
+        /// applies it to State (passives, runtime kit slots, runtime build,
+        /// hypercharge) and to local controller fields (_equippedGadgets,
+        /// _equippedHypercharge, _gadgetLogic). Falls back to the legacy
+        /// definition-direct build on resolve failure.
+        ///
+        /// Called from both InternalInitialize (match start) and Respawn
+        /// (after State.Reset wipes RuntimeBuild/RuntimeKit). Keeping the flow
+        /// in one place means respawn behavior can't drift from match-start
+        /// behavior the next time the resolver or ApplyResolvedBuild evolves.
+        /// </summary>
+        private void ResolveAndApplyCurrentBuild()
+        {
+            BrawlerBuildDefinition buildToUse = GetBuildToUse();
+            if (buildToUse != null)
+            {
+                if (BrawlerBuildResolver.TryResolveUnlockedOnly(_definition, buildToUse, State.CurrentPowerLevel, out ResolvedBrawlerBuild resolved, out string error))
+                {
+                    _resolvedBuildSource = buildToUse;
+                    ApplyResolvedBuild(resolved);
+                    State.RefreshGadgetChargesFromRuntimeKit();
+                    return;
+                }
+
+                Debug.LogWarning($"[Build] Failed to resolve build '{buildToUse.name}' for '{_definition.name}': {error}");
+            }
+
+            _resolvedBuildSource = null;
+            ApplyLegacyFallbackBuild();
+            State.RefreshGadgetChargesFromRuntimeKit();
         }
 
         private void ApplyLegacyFallbackBuild()
@@ -503,7 +514,6 @@ namespace MOBA.Core.Infrastructure
                 Range = range,
                 Damage = damage,
                 Team = Team,
-                SuperChargeOnHit = 0.20f,
                 IsSuper = isSuper,
                 IsGadget = isGadget,
 
@@ -1074,6 +1084,18 @@ namespace MOBA.Core.Infrastructure
             _lastTickPosition = position;
 
             State.Reset();
+
+            // State.Reset clears RuntimeBuild + RuntimeKit (we want a clean
+            // slate so transient installed ability logics get fresh instances
+            // on respawn). Now re-resolve and re-apply the default build so
+            // the brawler keeps their gadget / star power / gears / hypercharge
+            // definition across death→respawn. Mirrors the flow at match start
+            // in InternalInitialize — without this the brawler came back with
+            // no usable gadget and an empty kit (Session 4 gap fix).
+            State.RuntimeKit.SetMainAttack(_definition.MainAttack, _mainAttack);
+            State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
+            ResolveAndApplyCurrentBuild();
+
             State.SetEquippedHypercharge(_equippedHypercharge ?? _definition.Hypercharge);
             State.RefreshGadgetChargesFromRuntimeKit();
 

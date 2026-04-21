@@ -8,6 +8,12 @@ namespace MOBA.Core.Simulation
     {
         public DeployableDefinition Definition { get; private set; }
         public BrawlerController Owner { get; private set; }
+        // Back-reference to the owning DeployableController. Set once by the
+        // controller right after construction so systems that only see the
+        // IStatusTarget (BurnEffect, etc.) can route damage through the
+        // DamageService pipeline instead of calling state.TakeDamage directly.
+        // Parallels BrawlerState.Owner.
+        public DeployableController Controller { get; set; }
         public TeamType Team { get; private set; }
 
         public float MaxHealth { get; private set; }

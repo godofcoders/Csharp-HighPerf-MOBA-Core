@@ -47,6 +47,7 @@ namespace MOBA.Core.Simulation
 
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
             _state = new DeployableState(_definition, _owner, _team, currentTick);
+            _state.Controller = this;
 
             transform.position = request.Position;
 
