@@ -161,7 +161,19 @@ namespace MOBA.Core.Simulation
 
             ClearActionState();
             ResetAbilityCooldowns();
-            Resources.ResetSuperCharge(true);
+
+            // Super meter starts empty — it's earned in-match through the
+            // configured SuperChargeSources (damage dealt, heal done, auto-
+            // over-time, ally proximity, etc.). The "start full" test line
+            // that used to live here is gone; re-enable via a test-only
+            // hook if you need it for manual smoke tests.
+            Resources.ResetSuperCharge(false);
+
+            // Install the brawler's data-driven super-charge sources. Empty
+            // array or null definition is a silent no-op — a brawler with
+            // no sources configured simply never charges, which is the same
+            // behaviour we had before damage-based charging existed.
+            Loadout.InstallSuperChargeSources(this, Definition);
         }
 
         public void SetEquippedHypercharge(HyperchargeDefinition definition)
@@ -313,6 +325,33 @@ namespace MOBA.Core.Simulation
             return Resources.TryConsumeSuper();
         }
 
+        /// <summary>Per-tick update for every installed super-charge source runtime (auto-over-time, ally proximity, etc.).</summary>
+        public void TickSuperChargeSources(float deltaTime, uint currentTick)
+        {
+            Loadout.TickSuperChargeSources(this, deltaTime, currentTick);
+        }
+
+        /// <summary>
+        /// Fan a finalised damage-dealt event to every installed super-charge
+        /// source runtime (DamageDealt runtime, future MainAttackOnly filter,
+        /// etc.). Called once from <c>DamageService</c> after the damage hit
+        /// has been fully resolved (post shields, post modifiers).
+        /// </summary>
+        public void NotifyDamageDealt(float damageAmount, BrawlerState victim)
+        {
+            Loadout.NotifyDamageDealt(this, damageAmount, victim);
+        }
+
+        /// <summary>
+        /// Fan a finalised heal-applied event to every installed super-charge
+        /// source runtime. Not wired into the heal pipeline yet — safe to
+        /// call when that integration lands.
+        /// </summary>
+        public void NotifyHealApplied(float healAmount, BrawlerState recipient)
+        {
+            Loadout.NotifyHealApplied(this, healAmount, recipient);
+        }
+
         public void TakeDamage(float amount)
         {
             if (IsDead)
@@ -449,7 +488,14 @@ namespace MOBA.Core.Simulation
             Resources.RefillAmmo();
             RefreshGadgetChargesFromRuntimeKit();
             Resources.ResetHypercharge();     // in-place reset; references stay valid
-            Resources.ResetSuperCharge(true); // start with full super (design choice)
+            Resources.ResetSuperCharge(false); // respawn with empty meter — earned in-match via SuperChargeSources
+
+            // Rebuild the super-charge source runtimes from the brawler's
+            // definition. Reset() is the respawn path, and we want any
+            // transient runtime state on a source (e.g. a hypothetical
+            // combat-lull timer on AutoOverTimeChargeSource) to reset too.
+            Loadout.UninstallAllSuperChargeSources(this);
+            Loadout.InstallSuperChargeSources(this, Definition);
 
             // --- 3. Clear transient combat state.
             IsStunned = false;

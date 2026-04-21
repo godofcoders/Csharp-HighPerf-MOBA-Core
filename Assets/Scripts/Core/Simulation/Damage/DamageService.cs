@@ -9,8 +9,6 @@ namespace MOBA.Core.Simulation
 
     public class DamageService : IDamageService
     {
-        private const float DefaultSuperChargePerHit = 0.20f;
-
         public void ApplyDamage(in DamageContext ctx)
         {
             if (ctx.Target == null)
@@ -101,9 +99,17 @@ namespace MOBA.Core.Simulation
 
             DamageEventBus.RaiseDamageApplied(result);
 
-            if (ctx.Attacker != null)
+            // Data-driven super-charge. The old hardcoded 0.20f flat grant
+            // is replaced by a push to the attacker's SuperChargeSources
+            // (see BrawlerLoadout.NotifyDamageDealt). Brawlers with a
+            // DamageDealtChargeSource configured grant per-damage; those
+            // without one simply don't charge on damage — keeping the
+            // single "one grant per landed hit" semantics while letting
+            // per-brawler tuning live on ScriptableObject assets.
+            if (ctx.Attacker != null && ctx.Attacker.State != null && workingDamage > 0f)
             {
-                ctx.Attacker.GrantSuperCharge(DefaultSuperChargePerHit);
+                BrawlerState victimState = targetBrawler != null ? targetBrawler.State : null;
+                ctx.Attacker.State.NotifyDamageDealt(workingDamage, victimState);
             }
 
             var combatLog = ServiceProvider.Get<ICombatLogService>();

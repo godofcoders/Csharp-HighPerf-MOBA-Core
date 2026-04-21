@@ -365,6 +365,7 @@ namespace MOBA.Core.Infrastructure
 
             State.TickEffects(currentTick);
             State.TickPassives(currentTick);
+            State.TickSuperChargeSources(SimulationClock.TickDeltaTime, currentTick);
             State.UpdateActionState(currentTick);
             State.UpdateResources(SimulationClock.TickDeltaTime);
 

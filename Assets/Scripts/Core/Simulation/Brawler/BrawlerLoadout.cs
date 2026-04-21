@@ -79,6 +79,20 @@ namespace MOBA.Core.Simulation
 
         public IReadOnlyList<PassiveDefinition> EquippedPassives => _equippedPassives;
 
+        // ---------- Super charge sources ----------
+        //
+        // Mirrors the passive install pattern above, minus the install
+        // context — charge-source runtimes don't need a source token
+        // because they never register stat modifiers. The runtime list
+        // is rebuilt from the brawler definition whenever the loadout
+        // is (re)initialised, so per-session balance tweaks to the
+        // ScriptableObject are picked up on the next respawn.
+        private readonly List<SuperChargeSourceRuntime> _installedSuperChargeSources =
+            new List<SuperChargeSourceRuntime>(4);
+
+        public IReadOnlyList<SuperChargeSourceRuntime> InstalledSuperChargeSources =>
+            _installedSuperChargeSources;
+
         public BrawlerLoadout()
         {
             CurrentPowerLevel = 1;
@@ -182,6 +196,78 @@ namespace MOBA.Core.Simulation
             for (int i = 0; i < _installedPassives.Count; i++)
             {
                 _installedPassives[i].Runtime?.Tick(target, currentTick);
+            }
+        }
+
+        // ---------- Super charge source lifecycle ----------
+
+        /// <summary>
+        /// (Re)installs the super-charge source runtimes from the brawler
+        /// definition. Disabled sources are skipped; null entries are
+        /// skipped; null-returning <c>CreateRuntime()</c> calls are also
+        /// tolerated. Caller should call <see cref="UninstallAllSuperChargeSources"/>
+        /// first if this is a swap rather than the first install.
+        /// </summary>
+        public void InstallSuperChargeSources(BrawlerState target, BrawlerDefinition definition)
+        {
+            if (definition == null || definition.SuperChargeSources == null)
+                return;
+
+            for (int i = 0; i < definition.SuperChargeSources.Length; i++)
+            {
+                SuperChargeSourceDefinition sourceDefinition = definition.SuperChargeSources[i];
+                if (sourceDefinition == null || !sourceDefinition.Enabled)
+                    continue;
+
+                SuperChargeSourceRuntime runtime = sourceDefinition.CreateRuntime();
+                if (runtime == null)
+                    continue;
+
+                runtime.OnInstalled(target);
+                _installedSuperChargeSources.Add(runtime);
+            }
+        }
+
+        /// <summary>
+        /// Tears down every installed super-charge source runtime in
+        /// reverse install order. Clears the installed list; caller is
+        /// responsible for re-running <see cref="InstallSuperChargeSources"/>
+        /// if a loadout is being swapped in.
+        /// </summary>
+        public void UninstallAllSuperChargeSources(BrawlerState target)
+        {
+            for (int i = _installedSuperChargeSources.Count - 1; i >= 0; i--)
+            {
+                _installedSuperChargeSources[i]?.OnUninstalled(target);
+            }
+
+            _installedSuperChargeSources.Clear();
+        }
+
+        /// <summary>Per-tick update for every installed super-charge source runtime.</summary>
+        public void TickSuperChargeSources(BrawlerState target, float deltaTime, uint currentTick)
+        {
+            for (int i = 0; i < _installedSuperChargeSources.Count; i++)
+            {
+                _installedSuperChargeSources[i]?.Tick(target, deltaTime, currentTick);
+            }
+        }
+
+        /// <summary>Fans a damage-dealt event to every installed super-charge source runtime.</summary>
+        public void NotifyDamageDealt(BrawlerState owner, float damageAmount, BrawlerState victim)
+        {
+            for (int i = 0; i < _installedSuperChargeSources.Count; i++)
+            {
+                _installedSuperChargeSources[i]?.OnDamageDealt(owner, damageAmount, victim);
+            }
+        }
+
+        /// <summary>Fans a heal-applied event to every installed super-charge source runtime.</summary>
+        public void NotifyHealApplied(BrawlerState owner, float healAmount, BrawlerState recipient)
+        {
+            for (int i = 0; i < _installedSuperChargeSources.Count; i++)
+            {
+                _installedSuperChargeSources[i]?.OnHealApplied(owner, healAmount, recipient);
             }
         }
 

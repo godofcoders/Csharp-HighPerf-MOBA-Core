@@ -89,8 +89,13 @@ namespace MOBA.Core.Simulation
             Hypercharge.Reset();
         }
 
-        /// <summary>Resets the super charge meter. `startFull` grants immediate super readiness.</summary>
-        public void ResetSuperCharge(bool startFull)
+        /// <summary>
+        /// Resets the super charge meter. <paramref name="startFull"/> grants
+        /// immediate super readiness — intended for test/debug flows only.
+        /// Production respawn and spawn paths should pass <c>false</c>; the
+        /// meter is built up from configured <c>SuperChargeSources</c>.
+        /// </summary>
+        public void ResetSuperCharge(bool startFull = false)
         {
             SuperCharge.Reset(startFull);
         }

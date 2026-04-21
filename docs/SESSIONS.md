@@ -17,10 +17,10 @@
 ## Current State
 
 - **Phase:** 1
-- **Active session:** 2 (complete)
-- **Last completed session:** 2
-- **Next session target:** Session 3 — State decomposition + first unit tests
-- **Blockers:** none
+- **Active session:** 4 (in progress — Barley super authored; super-charge pipeline authored; AIProfile assets still pending)
+- **Last completed session:** 3
+- **Next session target:** Finish Session 4 — AIProfile assets, Archetype fixes, verify BrawlerBuildResolver option-unlock logic, decide respawn-gap fix. Then loadouts work. Stretch: remaining BrawlerState extractions, BrawlerController.Tick split.
+- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) are parked — gameplay integration for those substates is not in a testable state yet. The refactor is behavior-preserving, so this is not blocking further code work, just delayed verification.
 
 ## Key Decisions Ledger
 
@@ -42,6 +42,18 @@
 | Deterministic simulation | S2 | Given the same inputs and same tick sequence, the simulation produces exactly the same outputs. Required for rollback netcode and replays. |
 | Phase-bucketed registry | S2 | Registry that stores tickables in per-phase lists, so each tick walks phases in declared order instead of walking a single flat list. |
 | Reverse iteration during tick | S2 | Iterating `list[i]` from `Count-1` down to `0` so that if an entity self-unregisters during its Tick, we don't skip the next element. |
+| POCO substate | S3 | "Plain Old C# Object" — a pure data/logic class with no Unity types, no singletons, no event-bus calls, no `Debug.Log`, no stored back-references to the coordinator. Carved out of a god-class so each substate owns one concern. |
+| Pass-through property | S3 | A one-liner getter on the coordinator that returns a substate's field, so external callers written against the old API keep compiling without edits. Zero runtime cost for reference types. |
+| Coordinator / substate pattern | S3 | The god-class shrinks into a thin coordinator that owns cross-concern orchestration and side effects; each concern lives in its own POCO substate. Two-layer: substates are pure, the coordinator is where Unity services and event buses show up. |
+| Pure orchestration | S3 | A coordinator method that only *schedules* work across substates — no branching on substate internals, no raw state reads, no game logic inline. Each line is one verb on one substate. |
+| Caller-owned out-buffer | S3 | A method takes a `List<T> outBuffer` and appends to it instead of returning a new list. Caller owns allocation + lifetime + clearing. Zero-alloc in the tick loop. Kent Beck calls the broader idea "Collecting Parameter." |
+| Parameter-based context injection | S3 | Instead of a substate storing a reference to the coordinator, operations that need the coordinator take it as a method parameter. Avoids circular object graphs and keeps the substate's shape genuinely "plain." |
+| Health-ratio preservation | S3 | When stats change mid-match (power up, new passives), the bracketing pattern is: snapshot `(oldMax, oldHealth)` → do stat work → set new CurrentHealth so the *ratio* is preserved rather than the absolute value. Lives on the coordinator because it touches two substates (Loadout + Stats) and fires the health-changed event. |
+| Known-gap TODO | S3 | A latent bug found mid-refactor that is *documented where the trap lives* rather than silently fixed. Policy: refactor sessions are behavior-preserving; gameplay changes are their own decision, made with eyes open. See `BrawlerState.Reset` for the canonical example. |
+| Data-driven strategy pattern | S4 | A family of behaviors expressed as ScriptableObject subclasses, each pairing a data definition with a `CreateRuntime()` factory that spawns its runtime counterpart. Mirrors how `PassiveDefinition` / `IPassiveRuntime` work; lets designers author new variants with no code changes to the install pipeline. Applied to `SuperChargeSourceDefinition` / `SuperChargeSourceRuntime` in S4. |
+| Per-brawler charge tuning | S4 | Each brawler ships their own `*DamageSuperCharge.asset` rather than sharing one global rate. Fraction-of-meter-per-damage varies by brawler so fast-rate/low-damage heroes don't hit super instantly and slow-throw heroes still charge at a pace that rewards landing shots. |
+| Push-based notification | S4 | Coordinator explicitly calls `NotifyDamageDealt` on the attacker after damage resolves, fanning out to every installed super-charge source runtime. Chosen over an event-bus listener because the damage pipeline already runs "direct call" style and every event-bus escape introduces a non-deterministic seam. |
+| Hook-override runtime base | S4 | Abstract `SuperChargeSourceRuntime` ships five no-op virtual hooks (`OnInstalled`, `OnUninstalled`, `Tick`, `OnDamageDealt`, `OnHealApplied`); each concrete subclass overrides only the hook it cares about. Lets the install loop ping every hook on every runtime without null checks inside the callers. |
 
 ## Sessions
 
@@ -165,5 +177,157 @@
 
 **Next session goal**
 - Session 3: State decomposition + first tests. Split `BrawlerState` into `BrawlerStats` / `BrawlerCooldowns` / `BrawlerActionState` / `BrawlerLoadout`. Add a Unity test assembly. Write the first unit tests for damage math and the stat-modifier pipeline. As a warmup, split `ProjectileManager.Tick` into `TickMovement` and `TickCollision` and register for both phases — the tests we add this session will keep that refactor honest.
+
+---
+
+### Session 3 — 2026-04-20 — BrawlerState decomposition (7 substates)
+
+**Goals**
+- Carve `BrawlerState` (originally 1,071 lines, nine concerns fused into one class) into focused POCO substates, one surgical move at a time
+- Keep every external caller compiling by leaving pass-through properties on the coordinator
+- Teach the patterns as we go: POCO, caller-owned out-buffer, pass-through, pure orchestration, parameter-based context injection, health-ratio preservation
+- NOT in scope this session: test assembly (#20) and first unit tests (#21) — pushed to a dedicated session because the decomposition itself ran long enough to be the whole session
+
+**Work done** (in the order we did the cuts)
+- **Stats** → `BrawlerStats` (#16, #17): `CurrentHealth`, `MaxHealth`, `MoveSpeed`, `Damage`, shield pool, two damage-modifier collections, movement-modifier collection, plus pure helpers `ApplyDamage` / `ApplyHeal` / `ResetHealthToMax` / `ClearAllModifiers` / `SetCurrentHealth` with clamping enforced inside the POCO. Coordinator keeps the side-effectful `TakeDamage` / `Heal` (`Debug.Log`, `BrawlerPresentationEventBus`, `OnHealthChanged`, death transition).
+- **Cooldowns** → `BrawlerCooldowns` (#22, #23): the three `AbilityCooldownState` timers (MainAttack / Super / Gadget), plus `IsReady(slot, tick)` / `StartCooldown(slot, tick, seconds)` / `ResetAll`. Kept as fields (not properties) inside the POCO so `struct` mutations persist.
+- **Action-state machine** → `BrawlerActionStateMachine` (#25, #26): enter / clear / expire / interrupt transitions. `Current` exposes the active `BrawlerActionStateData`. Coordinator just calls through.
+- **Resources** → `BrawlerResources` (#29, #30): ammo `ResourceStorage`, `SuperChargeTracker`, `HyperchargeTracker`, and the gadget-charge count. `Tick(deltaTime)`, `RefillAmmo`, `ResetHypercharge`, `ResetSuperCharge(filled)`, `UseGadgetCharge`, `AddSuperCharge`, `TryConsumeSuper`. The "push gadget-max-charges from RuntimeKit into Resources" seam stays on the coordinator — documented as the one explicit bridge between Loadout and Resources.
+- **Stealth** → `BrawlerStealth` (#32, #33): `IsInBush`, `IsRevealed`, `LastAttackTick`, and the pure `IsHidden(currentTick)` query that composes all three. Pass-through is get/set on these three because `VisibilitySystem` / `RevealEffect` / `BrawlerController` write them directly.
+- **Status effects** → `BrawlerStatusEffects` (#35, #36): the `Active` list plus every "do I have status X" query (`HasStatus`, `HasSilence`, `HasAttackLock`, `HasGadgetLock`, `HasSuperLock`, `HasMovementLockStatus`). Crucial method: `TickAndCollectExpired(target, tick, removedOut)` — the POCO ticks + reaps expired effects, appends them into a caller-owned buffer, and the coordinator owns the event-bus / combat-log side effects. `BrawlerState` holds one reusable `_tickRemovedBuffer` of capacity 4 so `TickEffects` is allocation-free in the hot path.
+- **Loadout** → `BrawlerLoadout` (#38, #39): `CurrentPowerLevel`, `RuntimeBuild`, `RuntimeKit`, `EquippedHypercharge`, `HyperchargeModifierSource` token, `_equippedPassives`, and the private nested `InstalledPassive` struct holding `(Definition, Context, Runtime)` triples. Methods: `SetPowerLevel` (clamps ≥1), `SetEquippedHypercharge`, `SetEquippedPassives`, `InstallAll(target, owner)`, `UninstallAll(target)`, `TickPassives(target, tick)`, `RefreshRuntimeBuildUnlockState(definition)`, `ResetRuntimeState(definition)`, the slot-unlock reads, and the current-ability-definition lookups with `Definition` fallback. `InstallAll`/`UninstallAll`/`TickPassives` take the coordinator as a *method parameter* rather than storing it as a field — parameter-based context injection.
+- **Reset() cleanup** (as a finishing pass): rewrote `BrawlerState.Reset` with five numbered sections (progression + passives, pooled resources, transient combat state, runtime-loadout slots, hypercharge-tagged modifiers), added `Loadout.ResetRuntimeState(Definition)` to encapsulate the RuntimeBuild.Clear + RuntimeKit.Clear + unlock-refresh cluster, and documented a latent respawn bug as a `KNOWN GAP (TODO session-4)` doc comment above `Reset`. Audit traced the respawn flow end to end (`Respawn` → `State.Reset` → `SetEquippedHypercharge` → `RefreshGadgetChargesFromRuntimeKit` → register) and confirmed nothing re-applies the resolved build after reset, so `GetCurrentGadgetDefinition` returns null post-respawn until match restart. Documented, not fixed — that's a gameplay decision, out of refactor scope.
+
+**Files touched**
+- New:
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerStats.cs`
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerCooldowns.cs`
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerActionStateMachine.cs`
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerResources.cs`
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerStealth.cs`
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerStatusEffects.cs`
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerLoadout.cs`
+- Modified:
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerState.cs` (extensively — shrunk from monolith to a coordinator full of pass-throughs and cross-substate orchestration)
+  - `Assets/Scripts/Core/Simulation/Progression/HyperchargeTracker.cs` (added `Reset()` so `BrawlerResources.ResetHypercharge` could be an in-place reset rather than a reference reassignment — #28)
+
+**Decisions made**
+- **Pass-throughs over call-site rewrites.** Every substate extraction preserved the old public API via one-line getters. The refactor added zero work for anyone calling `state.MaxHealth`, `state.Ammo`, `state.ActiveStatusEffects`, etc. This was the single most important discipline; it let every extraction be a local, reviewable change instead of a cross-file ripple.
+- **Parameter-based context injection for Loadout.** Passive install/uninstall/tick need `PassiveInstallContext(State, Controller, SourceToken)`. Rather than storing a coordinator back-reference on `BrawlerLoadout` (which would recreate the exact kind of circular graph we were carving up), the methods take the coordinator as a parameter. Substate stays genuinely plain; circular ownership avoided.
+- **Caller-owned out-buffer for status-effect reap.** `TickAndCollectExpired` writes removed effects into a caller-provided `List<IStatusEffectInstance>`. The coordinator owns one such buffer across ticks (`_tickRemovedBuffer`, capacity 4) so the tick loop doesn't allocate. Substate knows nothing about `StatusEffectEventBus` or `ICombatLogService`; those live on the coordinator.
+- **Known-gap policy.** When the Reset() audit turned up the latent "RuntimeBuild wiped but not re-applied" bug, we *documented it in place* with `TODO(session-4)` rather than silently fixing it. Behavior-preserving refactors stay behavior-preserving; gameplay changes are their own decision with their own owner.
+- **Smoke tests parked, not abandoned.** Status effects (#37) and loadout (#40) can't be exercised in the current gameplay state. Refactor is behavior-preserving so this isn't gating, but the tasks stay open so they're picked up the moment the gameplay integration lands.
+- **No Unity test assembly this session.** Originally #20/#21 were planned for Session 3. The decomposition itself ran long and the teaching load was already heavy; better to land tests as their own session with full focus than to bolt them on at the end.
+
+**Learnings covered**
+- **POCO vs Unity-flavored class:** why pulling `Debug.Log` / `ServiceProvider` / event buses out of a substate is what makes it testable in a plain NUnit run with no Unity runtime.
+- **Coordinator as the "seam" layer:** any method that touches *two* substates (health-ratio preservation, gadget-charges from RuntimeKit, hypercharge override of super) stays on the coordinator. One substate = zero coordinator logic.
+- **Pure orchestration:** what `SetPowerLevel`, `SetPassiveLoadout`, `RefreshPassiveLoadout`, `Reset` look like when every line is one verb on one substate. `Reset` especially: nine different concerns, each a single method call, grouped into five numbered sections.
+- **Caller-owned out-buffer as a zero-alloc pattern:** why the buffer lives on the coordinator rather than inside the POCO — the coordinator knows the ticking cadence and can size the capacity once.
+- **Parameter-based context injection vs stored references:** the "ask for your context" call style keeps substates genuinely plain (no back-pointers to the coordinator) and avoids the circular-ownership smell.
+- **Health-ratio preservation as the bracketing pattern:** snapshot `(oldMax, oldHealth)` → mutate stats → recompute `CurrentHealth = newMax * (oldHealth/oldMax)`. The reason this lives on the coordinator and not inside `Stats` is that the trigger is a *Loadout* change (power level, passives) — the bracket spans two substates.
+- **Side-channel tour through the GoF catalog** (teaching, not code): plus Repository, CQRS, RAII, copy-on-write, double-buffering — all on the casual-intro level.
+
+**Open questions / notes for future Claude**
+- **Respawn gap (the KNOWN GAP):** `BrawlerState.Reset` wipes `RuntimeBuild` + `RuntimeKit` (via `Loadout.ResetRuntimeState`), but nothing in the controller's `Respawn` flow re-applies the resolved build. Result: after death→respawn the brawler has no gadget/starpower/gears until the next match. Two fix options documented in the Reset() doc comment. Decide in Session 4.
+- **Remaining cuts inside BrawlerState.cs** (each is clean to extract, none is urgent):
+  - *Action-request translator layer* (~150 lines, stateless helper pattern): the fourteen switch statements that translate `BrawlerActionRequestType` → resource / cooldown slot / block reason / etc. Pure functions of the enum. Natural home: a static `BrawlerActionRequestTranslator` or an instance helper injected with the substates it reads.
+  - *Block-reason evaluators* (~120 lines): `GetMainAttackBlockReason` / `GetGadgetBlockReason` / `GetSuperBlockReason` / `GetHyperchargeBlockReason` / `GetMovementBlockReason`, plus the `CanUseX` one-liners on top. Pure "read substate state → return enum" query object. Natural home: a `BrawlerActionGate` that takes the brawler and answers yes/no per action type.
+  - *Damage/heal pipeline* (~100 lines): `TakeDamage` and `Heal` on the coordinator do `Stats.ApplyX` + `Debug.Log` + `BrawlerPresentationEventBus.Raise` + `OnHealthChanged` + death handling. Could be a `BrawlerDamagePipeline` collaborator that owns the side-effect choreography; payoff is modest relative to risk, because the death-transition path is subtle.
+- **BrawlerController.Tick god-method (carried over from Session 2):** still 80+ lines spanning several tick phases. Session 2's next-session note flagged this; state decomposition was the precondition, and it's now done. Ripe whenever we want a short, focused session.
+- **ProjectileManager.Tick split (also carried over from Session 2):** single-pass Movement + Collision + Damage + Cleanup. Session 2 said "split once unit tests exist" — still waiting on tests.
+- **`SimulationClock.TickDeltaTime` is a compile-time `const`** — if Phase 2 wants runtime TPS, promote to instance property. `HyperchargeTracker` already reads through it, so one touch.
+- **Don't re-read the Session 2 projectile smells yet** — they're blocked on the test harness. Keep them parked until #20/#21 land.
+
+**Next session goal**
+- Session 4 (per plan doc): Brawler fix pass. Author Barley's missing super, design + author four distinct `BrawlerAIProfile` assets (ranged-skirmisher / hybrid-support / summoner-zoner / area-zoner) and wire each brawler, fix the `Archetype` enums, verify `BrawlerBuildResolver` option-unlock logic. First thing on arrival: decide the respawn-gap fix (preserve-build-through-Reset vs re-apply-after-Respawn). Optional stretch work if time permits and the learner wants more refactor practice: the three remaining BrawlerState cuts listed above, the `BrawlerController.Tick` split, or standing up the Unity test assembly (#20) + first damage-math tests (#21).
+
+---
+
+### Session 4 — 2026-04-20 → 2026-04-21 — Barley super + super-charge pipeline
+
+**Goals** (scope expanded mid-session)
+- Author Barley's missing super ability (`SuperAbility` was null on the brawler definition) — done
+- Replace the test-only "spawn with full super" + "flat 0.20 per hit" placeholders with a real, extensible super-charge system — done
+- Per-brawler tuning, with scaffolding in place for future charge sources (heal, auto-over-time, ally-proximity)
+- NOT in scope this session: AIProfile assets, Archetype fixes, BuildResolver verification — pushed to a follow-up once super-charge is verified in-game.
+
+**Work done**
+
+*Barley super (#42, #43)*
+- Investigated Barley's existing assets and existing super delivery patterns. Ruled out `VolleyProjectileAbilityDefinition` (no arc), `BurstSequenceProjectile` (no arc), and single-bottle `ThrownHybridAoE` — none fit the "barrage of arcing bottles that leave puddles" design.
+- Created a new `ThrownVolleyAoEAbilityDefinition` (Barley-folder scope) combining: multi-shot burst + arc motion + AoE impact + lingering hazard. Mirrors existing definition-plus-logic pattern; `CreateLogic()` returns `ThrownVolleyAoEAbilityLogic`.
+- `ThrownVolleyAoEAbilityLogic` runs `brawler.RunTimedBurst` (coroutine pattern from `BurstSequenceProjectileLogic`) distributing N bottles across a configurable spread angle with distance jitter. Each bottle is an arc-motion `ThrownImpactAoE` that spawns the existing `Barley_puddle_hazard` on landing.
+- Authored `Barley_Super.asset` ("Last Call") reusing the existing puddle hazard. Tuned: 7u range, arc height 1.75, impact radius 2.25, six bottles at 0.08s cadence, 30° spread, 0.2 jitter, puddles do the damage (bottles don't, avoiding double-counting).
+- Wired `Barley_BrawlerDefinition.SuperAbility` → the new asset.
+
+*Super-charge architecture (#44, #45, #46)*
+- Investigation of the existing flow turned up three problems: (1) `Resources.ResetSuperCharge(true)` was being called in both constructor and `Reset` — a debug line granting free super on spawn / respawn; (2) `DamageService` had a hardcoded `DefaultSuperChargePerHit = 0.20f` flat grant with no per-brawler or per-damage scaling; (3) `ProjectileSpawnContext.SuperChargeOnHit` is set by several ability logics but *never read* anywhere — dead code. Also noted three bypass paths that skip `DamageService` entirely (two in `BurnEffect`, one in `DeployableController`), meaning burn DoTs and deployable damage currently feed no charge at all — known-gap, not fixing this session.
+- Designed a data-driven ScriptableObject strategy pattern matching the existing `PassiveDefinition` shape. Abstract `SuperChargeSourceDefinition : ScriptableObject` with a single `abstract SuperChargeSourceRuntime CreateRuntime()`; abstract `SuperChargeSourceRuntime` with five virtual no-op hooks (`OnInstalled`, `OnUninstalled`, `Tick`, `OnDamageDealt`, `OnHealApplied`). Subclasses override only the hooks they care about.
+- Scaffolded all four concrete definition/runtime pairs even though only damage is wired today: `DamageDealtChargeSource`, `HealingDoneChargeSource`, `AutoOverTimeChargeSource`, `AllyProximityChargeSource`. `Ally`'s runtime takes an injected `AllyScanner` callback so a future brawler-registry service can wire it up without touching the runtime itself.
+- Added `BrawlerDefinition.SuperChargeSources` array so each brawler lists the sources they feed from in-editor.
+- Extended `BrawlerLoadout` with the install/uninstall/tick/notify lifecycle (`InstallSuperChargeSources`, `UninstallAllSuperChargeSources`, `TickSuperChargeSources`, `NotifyDamageDealt`, `NotifyHealApplied`) — mirrors the existing passive install pattern.
+- Added coordinator pass-throughs on `BrawlerState` (`TickSuperChargeSources`, `NotifyDamageDealt`, `NotifyHealApplied`) that delegate to `Loadout`. Ticking wired in `BrawlerController.Tick` alongside `TickPassives` so auto-over-time and proximity sources get a delta every sim step.
+- Replaced `DamageService`'s hardcoded 0.20f grant with `ctx.Attacker.State.NotifyDamageDealt(workingDamage, victimState)`. Removed the `DefaultSuperChargePerHit` constant entirely.
+- Removed both test-only `Resources.ResetSuperCharge(true)` lines (constructor + Reset) — respawn now has an empty meter, charged from configured sources. `BrawlerResources.ResetSuperCharge` default parameter flipped to `false` so accidentally omitting the arg now defaults to the safe production behavior.
+- Authored per-brawler `*_DamageSuperCharge.asset` for Colt, Byron, Jessie, Barley, and Blaze. Rates tuned per brawler — Colt 0.00020 (fast cadence), Byron 0.00035 (slow but accurate), Jessie 0.00045 (lower base damage), Barley 0.00029 (slow throw), Blaze 0.00029 — all targeting roughly 7–10 landed hits to fill the meter. Wired each brawler definition's `SuperChargeSources` array to point at their own asset.
+
+**Files touched**
+- New code:
+  - `Assets/Scripts/Core/Definitions/Brawler/Barley/ThrownVolleyAoEAbilityDefinition.cs`
+  - `Assets/Scripts/Core/Simulation/Abilities/Barley/ThrownVolleyAoEAbilityLogic.cs`
+  - `Assets/Scripts/Core/Definitions/Brawler/SuperCharge/SuperChargeSourceDefinition.cs`
+  - `Assets/Scripts/Core/Definitions/Brawler/SuperCharge/DamageDealtChargeSource.cs`
+  - `Assets/Scripts/Core/Definitions/Brawler/SuperCharge/HealingDoneChargeSource.cs`
+  - `Assets/Scripts/Core/Definitions/Brawler/SuperCharge/AutoOverTimeChargeSource.cs`
+  - `Assets/Scripts/Core/Definitions/Brawler/SuperCharge/AllyProximityChargeSource.cs`
+  - `Assets/Scripts/Core/Simulation/SuperCharge/SuperChargeSourceRuntime.cs`
+  - `Assets/Scripts/Core/Simulation/SuperCharge/DamageDealtChargeRuntime.cs`
+  - `Assets/Scripts/Core/Simulation/SuperCharge/HealingDoneChargeRuntime.cs`
+  - `Assets/Scripts/Core/Simulation/SuperCharge/AutoOverTimeChargeRuntime.cs`
+  - `Assets/Scripts/Core/Simulation/SuperCharge/AllyProximityChargeRuntime.cs`
+- New assets:
+  - `Assets/Scriptables/Barley/Barley_Super.asset` (+ meta)
+  - `Assets/Scriptables/colt/Colt_DamageSuperCharge.asset` (+ meta)
+  - `Assets/Scriptables/byron/Byron_DamageSuperCharge.asset` (+ meta)
+  - `Assets/Scriptables/Jesse/Jessie_DamageSuperCharge.asset` (+ meta)
+  - `Assets/Scriptables/Barley/Barley_DamageSuperCharge.asset` (+ meta)
+  - `Assets/Scriptables/Blaze_DamageSuperCharge.asset` (+ meta)
+- Modified:
+  - `Assets/Scripts/Core/Definitions/Brawler/BrawlerDefinition.cs` (added `SuperChargeSources` array)
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerLoadout.cs` (install/tick/notify lifecycle)
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerState.cs` (constructor install, Reset re-install, `TickSuperChargeSources`, `NotifyDamageDealt`, `NotifyHealApplied`, removed both `ResetSuperCharge(true)` test lines)
+  - `Assets/Scripts/Core/Simulation/Brawler/BrawlerResources.cs` (flipped `ResetSuperCharge` default to `false`, doc updated)
+  - `Assets/Scripts/Core/Simulation/Damage/DamageService.cs` (replaced flat 0.20 grant with `NotifyDamageDealt`, removed dead constant)
+  - `Assets/Scripts/Core/Infrastructure/Brawler/BrawlerController.cs` (wired `TickSuperChargeSources` into the per-tick loop)
+  - `Assets/Scriptables/Barley/Barley_BrawlerDefinition.asset` (SuperAbility + SuperChargeSources)
+  - `Assets/Scriptables/colt/Colt_Definition.asset`, `Assets/Scriptables/byron/Byron_definition.asset`, `Assets/Scriptables/Jesse/Jesse_Definition.asset`, `Assets/Scriptables/Blaze_BrawlerDefinition.asset` (SuperChargeSources wired)
+
+**Decisions made**
+- **Strategy pattern via ScriptableObject, not interface.** Each charge source is a `ScriptableObject` subclass with a `CreateRuntime()` factory, matching the existing `PassiveDefinition` / `IPassiveRuntime` shape. Keeps the system authoring-friendly (designers create assets in the `Create Asset` menu, no code changes) and lets each source carry its own tuning fields.
+- **Abstract runtime base with virtual no-op hooks, not an interface.** An interface would force every concrete runtime to stub every hook; the virtual-no-op base lets a damage-only source leave `Tick` / `OnHealApplied` untouched. Same trick gives the install loop a single "call every hook on every runtime" shape with no null-check scaffolding inside callers.
+- **Per-brawler assets, not shared.** Every brawler ships their own `*_DamageSuperCharge.asset`. Explicit user ask. Also lets future balance passes tune one brawler without touching any others.
+- **Push notification from coordinator, not event-bus subscription.** `DamageService` already runs direct-call style (passes a `DamageContext`, invokes methods on `ctx.Attacker`). Adding an event-bus listener would introduce a non-deterministic seam in the damage pipeline; push notification keeps determinism intact and matches the existing idiom.
+- **Scaffold all four source types up front, even though only damage is wired.** User-approved. Saves a future session having to introduce the definition/runtime pair infrastructure — adding a new source later becomes a one-file-each drop.
+- **Dead code removed (`DefaultSuperChargePerHit`), not just replaced.** The constant was the last caller; leaving it would confuse future readers. `SuperChargeOnHit` on `ProjectileSpawnContext` is also dead code — flagged in the Open Questions list below but left alone this session.
+- **Known-gap: three TakeDamage bypass paths.** `BurnEffect` (two call sites) and `DeployableController` call `ITakeDamage.TakeDamage` directly, skipping `DamageService` entirely. Under the new system this means burn DoTs and deployable damage don't feed any super charge. Documented here; deciding whether to route them through `DamageService` is its own gameplay call.
+
+**Learnings covered**
+- **Data-driven strategy pattern** — how ScriptableObject subclasses with a factory method beat a switch-over-enum approach for extensibility. Designers add an asset; no code change.
+- **Virtual-no-op hooks vs interface methods** — why the base class pays off when most concrete subclasses only care about one or two of the hooks.
+- **Push vs pull for cross-system notification** — why we chose direct `NotifyDamageDealt` call over `DamageEventBus` subscription (determinism, matches existing style, no ordering risk).
+- **Killing test-only debug lines at their source** — the `ResetSuperCharge(true)` default parameter flip means future "forgot to specify" calls default to production-correct behavior.
+- **Scaffolding future work when the cost is low** — authoring four def/runtime pairs now (when the install plumbing is fresh) vs coming back later for three of them separately.
+
+**Open questions / notes for future Claude**
+- **`ProjectileSpawnContext.SuperChargeOnHit` is dead code.** Five ability logics still *set* it (`ChargedShotProjectileLogic`, `BurstSequenceProjectileLogic`, `VolleyProjectileLogic`, two more); nothing reads it. Decision point: either (a) delete the field + the five set sites, or (b) revive it as an ability-specific multiplier on top of the `DamageDealtChargeSource` grant. Leaning (a).
+- **Three bypass paths around `DamageService`.** `BurnEffect` (two call sites), `DeployableController`. These call `ITakeDamage.TakeDamage` directly, so the new `NotifyDamageDealt` never fires. If we want burn-tick and deployable damage to charge super, they need to route through `DamageService` (or manually call `NotifyDamageDealt`). Gameplay decision.
+- **AllyProximity runtime is scaffolded but dormant.** Needs a brawler/team registry service before it can do anything. When that service lands, `BrawlerState.InstallSuperChargeSources` (or the `InstallAll` call site) needs to inject the `AllyScanner` callback on each `AllyProximityChargeRuntime` it creates.
+- **Heal pipeline doesn't push `NotifyHealApplied`.** `HealingDoneChargeSource` will no-op until the heal pipeline is updated to fan out. Small drop-in when we get there — every heal site calls `healer.State.NotifyHealApplied(appliedAmount, recipient)`.
+- **Auto-over-time `PauseInCombat` flag.** Currently authored but unimplemented — needs a "recently took/dealt damage" field on `BrawlerState` first. Tick-gate is one line once that lands.
+- **Per-brawler rates are first-pass estimates.** Based on "~7–10 landed main-attack hits to fill" heuristic, but not yet playtested. Expect a balance pass once #37/#40 smoke tests are back online.
+
+**Next session goal**
+- Finish Session 4: AIProfile assets (four distinct profiles — ranged-skirmisher / hybrid-support / summoner-zoner / area-zoner), Archetype enum fixes, BrawlerBuildResolver option-unlock verification. Then loadouts work (S5+). First thing to decide on arrival: the respawn-gap fix carried over from Session 3.
 
 ---

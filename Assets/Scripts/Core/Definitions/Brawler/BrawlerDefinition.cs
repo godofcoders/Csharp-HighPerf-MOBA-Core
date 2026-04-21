@@ -37,6 +37,10 @@ namespace MOBA.Core.Definitions
 
         public HyperchargeDefinition Hypercharge;
 
+        [Header("Super Charge")]
+        [Tooltip("Data-driven list of sources that feed the super meter (damage dealt, heal done, auto-over-time, ally proximity, etc.). Each entry is a ScriptableObject subclass of SuperChargeSourceDefinition, authored per-brawler so each hero can tune their own charge rates.")]
+        public SuperChargeSourceDefinition[] SuperChargeSources;
+
         [Header("AI")]
         public BrawlerAIProfile AIProfile;
 
