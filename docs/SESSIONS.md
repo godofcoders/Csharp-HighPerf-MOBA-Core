@@ -17,9 +17,9 @@
 ## Current State
 
 - **Phase:** 1
-- **Active session:** 4 (in progress — Barley super authored; super-charge pipeline authored; AIProfile assets still pending)
+- **Active session:** 4 (in progress — Barley super authored; super-charge pipeline authored; all three S4 known-gaps closed (dead `SuperChargeOnHit`, `BurnEffect` bypass, respawn loadout wipe); AIProfile assets still pending)
 - **Last completed session:** 3
-- **Next session target:** Finish Session 4 — AIProfile assets, Archetype fixes, verify BrawlerBuildResolver option-unlock logic, decide respawn-gap fix. Then loadouts work. Stretch: remaining BrawlerState extractions, BrawlerController.Tick split.
+- **Next session target:** Finish Session 4 — AIProfile assets, Archetype fixes, verify BrawlerBuildResolver option-unlock logic. Then loadouts work. Stretch: remaining BrawlerState extractions, BrawlerController.Tick split.
 - **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) are parked — gameplay integration for those substates is not in a testable state yet. The refactor is behavior-preserving, so this is not blocking further code work, just delayed verification.
 
 ## Key Decisions Ledger
@@ -329,5 +329,94 @@
 
 **Next session goal**
 - Finish Session 4: AIProfile assets (four distinct profiles — ranged-skirmisher / hybrid-support / summoner-zoner / area-zoner), Archetype enum fixes, BrawlerBuildResolver option-unlock verification. Then loadouts work (S5+). First thing to decide on arrival: the respawn-gap fix carried over from Session 3.
+
+---
+
+### Session 4 (continued) — 2026-04-21 — Gap-fix pass
+
+**Goals**
+- Close the three known-gap TODOs left at the end of the super-charge pipeline work: `ProjectileSpawnContext.SuperChargeOnHit` dead code, `BurnEffect` `DamageService` bypass, respawn-time loadout wipe. Explicit user ask: "fix these gaps".
+
+**Work done**
+
+*Gap 1 — Dead code removal (`SuperChargeOnHit`)*
+- Deleted the `SuperChargeOnHit` field from `ProjectileSpawnContext` and from the internal projectile-data struct in `ProjectileManager`. Removed the copy-over at `ProjectileManager.CreateProjectile`. Removed the six set sites (`ChainProjectileLogic`, `DeployableAbilityUser`, `ThrownVolleyAoEAbilityLogic`, `ThrownHybridAoEAbilityLogic`, `HybridProjectileLogic`, `BrawlerController.FireProjectile`). Chose option (a) from the S4 Open Questions — the field had no readers and "ability-specific multiplier" can live on a new ScriptableObject source type later if it actually becomes a gameplay requirement; no reason to carry dead fields in the meantime.
+
+*Gap 2 — BurnEffect bypass of DamageService*
+- `BurnEffect.Tick` now routes every DoT tick through `ServiceProvider.Get<IDamageService>().ApplyDamage` with a constructed `DamageContext` (`Attacker = _source`, `Target = <spatial entity>`, `Damage = _magnitude`, `Type = DamageType.Ability`). Before: two direct `state.TakeDamage(_magnitude)` calls bypassed the pipeline entirely — no incoming modifiers, no shield, no lifesteal, no combat-log entry, no `DamageEventBus` event, and (critically under the new super-charge system) no `NotifyDamageDealt` push to the ignitor's charge sources.
+- Needed a way to get from `IStatusTarget` (what `BurnEffect.Tick` receives) to `ISpatialEntity` (what `DamageService.ApplyDamage` needs as `Target`). `BrawlerState.Owner` already held the back-reference to `BrawlerController`, but `DeployableState` had no such back-ref. Added a `DeployableController Controller { get; set; }` property on `DeployableState` and wired it from `DeployableController.Initialize` immediately after state construction — mirrors `BrawlerState.Owner` setup.
+- Side-benefit: before this change, a fatal burn tick on a deployable would zero the state's health but *not* despawn the controller (which only happens in `DeployableController.TakeDamage`, not in the state). Routing through `DamageService` → `ctx.Target.TakeDamage(...)` → `DeployableController.TakeDamage(...)` now hits the despawn path too. Two bugs, one fix.
+
+*Gap 3 — Respawn loadout wipe*
+- Picked option (b) from the `BrawlerState.Reset` doc comment: have the controller re-apply the resolved build after `State.Reset()`. The alternative (have `Reset` preserve `RuntimeBuild`/`RuntimeKit`) would have re-used stale ability-logic instances across death→respawn; keeping the wipe + re-resolve flow means every life gets fresh logic instances, matching match-start behavior exactly.
+- Extracted the build-resolution block from `InternalInitialize` into a private `ResolveAndApplyCurrentBuild()` helper on `BrawlerController` (handles the three cases: resolved build applies, resolve-error falls back to legacy, no-default-build falls back to legacy). `InternalInitialize` now calls the helper in place of the inlined block; `Respawn` calls `State.RuntimeKit.SetMainAttack/SetSuper` and then the same helper after `State.Reset()`. One source of truth for "how do we pick and install the brawler's build".
+- Updated doc-comments on `BrawlerState.Reset` and `BrawlerLoadout.ResetRuntimeState` — the "KNOWN GAP" block on Reset and the "see the TODO" pointer on ResetRuntimeState now describe the solved behavior with a Session 4 back-reference.
+
+**Files touched**
+- `Assets/Scripts/Core/Simulation/ProjectileSpawnContext.cs` (removed `SuperChargeOnHit`)
+- `Assets/Scripts/Core/Infrastructure/ProjectileManager.cs` (removed field + copy site)
+- `Assets/Scripts/Core/Infrastructure/Brawler/BrawlerController.cs` (removed one set site; extracted `ResolveAndApplyCurrentBuild`; wired into Respawn)
+- `Assets/Scripts/Core/Simulation/HybridProjectileLogic.cs` (removed set site)
+- `Assets/Scripts/Core/Simulation/Abilities/ChainProjectileLogic.cs` (removed set site)
+- `Assets/Scripts/Core/Simulation/Abilities/DeployableAbilityUser.cs` (removed set site)
+- `Assets/Scripts/Core/Simulation/Abilities/Barley/ThrownVolleyAoEAbilityLogic.cs` (removed set site + stale comment)
+- `Assets/Scripts/Core/Simulation/Abilities/Byron/ThrownHybridAoEAbilityLogic.cs` (removed set site)
+- `Assets/Scripts/Core/Simulation/StatusEffects/BurnEffect.cs` (routed ticks through DamageService)
+- `Assets/Scripts/Core/Simulation/Deployable/DeployableState.cs` (added `Controller` back-reference)
+- `Assets/Scripts/Core/Simulation/Deployable/DeployableController.cs` (set `Controller` on state post-construction)
+- `Assets/Scripts/Core/Simulation/Brawler/BrawlerState.cs` (updated Reset doc comment — KNOWN GAP → "gap closed by S4")
+- `Assets/Scripts/Core/Simulation/Brawler/BrawlerLoadout.cs` (updated ResetRuntimeState doc comment)
+
+**Decisions made**
+- **Gap 1 went (a), not (b).** `ProjectileSpawnContext.SuperChargeOnHit` is gone. Revive-as-multiplier was considered but there's no caller that would consume it and no pressing design need — the new `SuperChargeSourceDefinition` hierarchy is the hook for future per-ability tuning. Carrying a dead field "just in case" is exactly the trap the refactor policy warns against.
+- **Gap 3 went (b), not (a).** Reset continues to wipe RuntimeBuild/RuntimeKit; BrawlerController.Respawn re-applies. Keeping the wipe means installed ability logics (which carry transient per-life state — cooldown timers on the *logic* instance, pending coroutines, etc.) get rebuilt fresh every life. The preserve-through-Reset alternative would have forced us to audit every ability logic for respawn-safe in-place reset semantics; not worth it for a one-line controller change.
+- **Extracted a helper rather than duplicating.** Two Respawn implementations would have drifted; the shared `ResolveAndApplyCurrentBuild` means any future change to build-resolution policy (new fallback tier, new resolver, new post-apply step) affects match-start and respawn identically by default.
+- **New `DeployableState.Controller` back-ref.** Parallels `BrawlerState.Owner`. The alternative — looking up controller-by-state via a registry in `BurnEffect` — would have added a runtime cost to every burn tick and introduced a registry dependency in a system that otherwise knows nothing about registries.
+
+**Learnings covered**
+- **"Known gaps" aren't "accepted bugs".** The S3 refactor policy (document-in-place, don't silently fix) gets paired with a follow-up session that actually closes them. The gaps were documented with enough detail (options (a)/(b), affected call sites, knock-on effects) that the fix session could move directly to decisions without re-investigation. That's the intended cadence.
+- **Extract-then-reuse beats copy-paste for multi-caller flows.** The Respawn fix became one method call because `InternalInitialize` was also refactored to call the same helper. Copying the resolution block into Respawn would have "worked" but would have created two drift-prone copies.
+- **Fixing one bug sometimes exposes another.** Routing burn through DamageService fixed the super-charge feed *and* the missing-despawn-on-fatal-DoT for deployables. The bypass was hiding two bugs; removing it fixed both.
+- **Back-reference pattern symmetry.** When `BrawlerState.Owner` already existed, adding `DeployableState.Controller` needed no new justification beyond "the same problem exists and the same solution fits". Precedent makes the review cheap.
+
+**Open questions / notes for future Claude**
+- **Burn tuning check.** BurnEffect now runs through the full damage pipeline, which means incoming damage modifiers apply to burn ticks (they didn't before). If any burn magnitudes were tuned assuming raw damage, expect them to feel different against brawlers with incoming-damage reduction modifiers. Not a bug, but a playtest item.
+- **Other `TakeDamage` bypasses.** Grep now returns only the valid sites (`DamageService` pipeline + the state TakeDamage methods + `DeployableController.TakeDamage` — all correctly-routed callers). Any future effect that deals damage should route through `DamageService` rather than `state.TakeDamage`; enforce in review.
+- **Deployable-as-attacker is still not wired.** `DeployableController` has no `.NotifyDamageDealt` hookup because deployables don't currently attribute damage to a brawler's super-charge sources. If turrets ever need to charge their owner's super, `DeployableAbilityUser`'s damage-applying sites need `ctx.Attacker = _owner.Owner` set (some already do).
+
+**Next session goal**
+- Finish Session 4: AIProfile assets (four distinct profiles — ranged-skirmisher / hybrid-support / summoner-zoner / area-zoner), Archetype enum fixes, BrawlerBuildResolver option-unlock verification. Then loadouts work (S5+).
+
+## Session 5 — Archetype enum + BuildLayout wiring + resolver verification
+
+### Enum extension
+- `BrawlerArchetype` gained `Controller = 5` and `Artillery = 6` (append-only; explicit integer values added to prevent silent re-categorisation on reorder).
+- Header comment clarifies naming-vs-Brawl-Stars mapping (Sniper == Marksman, Fighter == Damage Dealer).
+
+### Brawler archetype fixes
+- Colt: 2 (Sniper) — unchanged
+- Byron: 0 → 3 (Support)
+- Jessie: 0 → 5 (Controller)
+- Barley: 3 → 6 (Artillery)
+
+### BuildLayout wiring
+- Discovered `StandardBrawlerBuildLayout.asset` already existed with the intended 5-slot shape (gear_1 PL8, gear_2 PL10, gadget_1 PL7, starpower_1 PL9, hypercharge_1 PL11).
+- All 4 brawler definitions (Colt, Byron, Jessie, Barley) now reference this single shared asset — no duplicate BuildLayouts authored.
+- Rationale: flyweight at the data layer. Balance passes on unlock thresholds are one-asset edits. Per-brawler option arrays stay per-brawler.
+
+### Resolver verification
+- Walked `TryResolveUnlockedOnly(Colt, build, PL)` at PL 1/7/9/11.
+- At every PL: empty option arrays → empty build returned, no exceptions.
+- Validated: resolver code path + PL-gating logic + layout wiring all functional. Content authoring is now a pure data-layer task.
+
+### Known gaps (unchanged from Session 4)
+- `AIUtilityScorer` IsX booleans don't cover Controller/Artillery — Option A: rely on AIProfile assets to override.
+- `BrawlerAIProfile` switch doesn't cover Controller/Artillery — same Option A posture.
+- #20 test assembly, #21 unit tests, #37 status-effect smoke test, #40 loadout smoke test — pending.
+
+### Next session candidates
+- Author 4 distinct AIProfile assets (Colt ranged-skirmisher, Byron hybrid-support, Jessie summoner-zoner, Barley area-zoner).
+- Populate GadgetOptions / StarPowerOptions for the 4 brawlers.
+- Unity test assembly bootstrap (#20).
 
 ---

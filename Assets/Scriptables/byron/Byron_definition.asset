@@ -33,9 +33,14 @@ MonoBehaviour:
   SurvivalInstinct: 1
   TeamplayWeight: 1
   BuildLayout: {fileID: 11400000, guid: e7eb581d16fba44e382042c75204d09c, type: 2}
-  GadgetOptions: []
-  StarPowerOptions: []
-  HyperchargeOptions: []
+  GadgetOptions:
+  - {fileID: 11400000, guid: e2d3c4b5a6f7098819b2c3d4e5f60708, type: 2}
+  - {fileID: 11400000, guid: d3c4b5a6f7e809892ac3d4e5f6071829, type: 2}
+  StarPowerOptions:
+  - {fileID: 11400000, guid: c4b5a6f7e8d90a9a3bd4e5f60718293a, type: 2}
+  - {fileID: 11400000, guid: b5a6f7e8d9c0b9ab4ce5f6071829304b, type: 2}
+  HyperchargeOptions:
+  - {fileID: 11400000, guid: a6f7e8d9c0b1ca9c5df6071829304b5c, type: 2}
   DefaultBuild: {fileID: 0}
   SharedGearCatalog: {fileID: 0}
   GearOptions: []
