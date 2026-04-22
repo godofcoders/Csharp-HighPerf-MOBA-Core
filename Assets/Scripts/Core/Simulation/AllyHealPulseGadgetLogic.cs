@@ -7,6 +7,14 @@ namespace MOBA.Core.Simulation
     public sealed class AllyHealPulseGadgetLogic : IAbilityLogic
     {
         private readonly List<BrawlerController> _targets = new List<BrawlerController>(16);
+        private readonly float _healAmount;
+        private readonly float _radius;
+
+        public AllyHealPulseGadgetLogic(float healAmount, float radius)
+        {
+            _healAmount = healAmount;
+            _radius = radius;
+        }
 
         public void Tick(uint currentTick)
         {
@@ -18,16 +26,10 @@ namespace MOBA.Core.Simulation
             if (caster == null || caster.State == null || context.AbilityDefinition == null)
                 return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
 
-            float healAmount = 800f;
-            float radius = 6f;
-
-            if (context.AbilityDefinition is AoEAbilityDefinition aoe)
-                radius = aoe.Radius;
-
             caster.ResolveTargets(
                 AbilityTargetTeamRule.Ally,
                 AbilityTargetSelectionRule.LowestHealth,
-                radius,
+                _radius,
                 _targets,
                 includeSelf: true,
                 requireAlive: true);
@@ -46,7 +48,7 @@ namespace MOBA.Core.Simulation
                     Source = caster,
                     Target = target,
                     EffectType = SupportEffectType.Heal,
-                    Magnitude = healAmount,
+                    Magnitude = _healAmount,
                     DurationSeconds = 0f,
                     SourceToken = sourceToken,
                     Origin = caster.Position
