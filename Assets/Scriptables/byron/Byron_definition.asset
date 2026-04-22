@@ -28,7 +28,7 @@ MonoBehaviour:
   SuperChargeSources:
   - {fileID: 11400000, guid: b2e6d4f8c1a5b7d9e3f7a1c5b9d3e7f1, type: 2}
   AIProfile: {fileID: 0}
-  Archetype: 0
+  Archetype: 3
   Aggression: 1
   SurvivalInstinct: 1
   TeamplayWeight: 1
