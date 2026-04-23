@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bcaae8e2e0e88477b95d6bd68b0d0387, type: 3}
+  m_Name: Jessie_SP_Shocky
+  m_EditorClassIdentifier:
+  OptionName: Shocky
+  Description: Bouncing shots hit harder. (Stand-in tuning — chain-slow SP type not yet implemented.)
+  AllowedBuildSlotTypes: 02000000
+  PassiveName: Shocky
+  Description:
+  Category: 0
+  AllowedSlotTypes:
+  Family: {fileID: 0}
+  IsUniqueInFamily: 0
+  IncompatiblePassives: []
+  DamageMultiplier: 0.1

@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1c2d3e4b5a6978809a1b2c3d4e5f678, type: 3}
+  m_Name: Jessie_Gadget_Energize
+  m_EditorClassIdentifier:
+  OptionName: Energize
+  Description: Pulse heal on Jessie and nearby allies (Scrappy counts if in range).
+  AllowedBuildSlotTypes: 01000000
+  AbilityName: Energize
+  Icon: {fileID: 0}
+  SlotType: 2
+  TargetingType: 1
+  DeliveryType: 0
+  Cooldown: 12
+  Tags:
+  CastDurationSeconds: 0.2
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 0
+  MaxCharges: 3
+  HealAmount: 400
+  Radius: 4

@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f, type: 3}
+  m_Name: Jessie_Gadget_PowerSurge
+  m_EditorClassIdentifier:
+  OptionName: Power Surge
+  Description: Jessie channels Scrappy's stored energy into her super meter.
+  AllowedBuildSlotTypes: 01000000
+  AbilityName: Power Surge
+  Icon: {fileID: 0}
+  SlotType: 2
+  TargetingType: 1
+  DeliveryType: 0
+  Cooldown: 14
+  Tags:
+  CastDurationSeconds: 0.15
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 0
+  Intent: 0
+  MaxCharges: 3
+  ChargeFraction: 0.25
