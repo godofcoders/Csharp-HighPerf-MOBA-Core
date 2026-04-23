@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7c663eb7c522408b8e2f80190542f78, type: 3}
+  m_Name: Barley_Hypercharge
+  m_EditorClassIdentifier:
+  OptionName: Fizz
+  Description: Barley's stock goes volatile — everything he throws bites harder.
+  AllowedBuildSlotTypes: 03000000
+  Name: Fizz
+  DurationSeconds: 5
+  SpeedBuff: 0.15
+  DamageBuff: 0.2
+  ShieldBuff: 0.15
+  EnhancedSuper: {fileID: 0}
