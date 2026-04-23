@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10ecdce0d9d4a4c8286178176b3bc569, type: 3}
+  m_Name: Colt_DefaultBuild
+  m_EditorClassIdentifier:
+  Selections:
+  - SlotId: gadget_1
+    SelectedOption: {fileID: 11400000, guid: c9d5a1b34e6f7a6ccd8f0a3b5c7d1e49, type: 2}
+  - SlotId: starpower_1
+    SelectedOption: {fileID: 11400000, guid: ebf7c3d560819c8eef0b2c5d7e9f3a6b, type: 2}
+  - SlotId: hypercharge_1
+    SelectedOption: {fileID: 11400000, guid: 0d19e5f78203104aab2d4e7f9c1d5e8f, type: 2}

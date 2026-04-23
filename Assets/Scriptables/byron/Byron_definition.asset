@@ -41,7 +41,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b5a6f7e8d9c0b9ab4ce5f6071829304b, type: 2}
   HyperchargeOptions:
   - {fileID: 11400000, guid: a6f7e8d9c0b1ca9c5df6071829304b5c, type: 2}
-  DefaultBuild: {fileID: 0}
+  DefaultBuild: {fileID: 11400000, guid: b170de4a01b1c2d3e4f5a6b7c8d9e0f2, type: 2}
   SharedGearCatalog: {fileID: 0}
   GearOptions: []
   ExtraGearOptions: []
