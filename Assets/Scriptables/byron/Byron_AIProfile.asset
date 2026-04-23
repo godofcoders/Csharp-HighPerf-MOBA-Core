@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 100fa30d2c78d4094b9cb6cd0594c58f, type: 3}
+  m_Name: Byron_AIProfile
+  m_EditorClassIdentifier:
+  DetectionRadius: 10
+  MemoryDurationTicks: 90
+  IdleSenseIntervalTicks: 10
+  CombatSenseIntervalTicks: 3
+  DistanceWeight: 1
+  CurrentTargetStickiness: 15
+  LowHealthTargetBias: 25
+  FinisherHealthThreshold: 0.35
+  FinisherBonus: 20
+  ThreatRange: 6
+  ThreatBonus: 12
+  ClusterTargetBonus: 10
+  InRangeTargetBonus: 12
+  AttackRangeBuffer: 0.75
+  PreferredAttackRangeRatio: 0.85
+  TooCloseRangeRatio: 0.45
+  AttackCadenceTicks: 12
+  EnableGadgetUsage: 1
+  GadgetLowHealthThreshold: 0.5
+  GadgetEnemyDistanceThreshold: 4
+  GadgetCooldownTicks: 105
+  LowHealthRetreatRatio: 0.35
+  RetreatStepDistance: 4
+  SharedHotspotMemoryTicks: 120
+  EnableSuperUsage: 1
+  SuperLowHealthTargetThreshold: 0.35
+  SuperMinRangeRatio: 0.15
+  SuperMaxRangeMultiplier: 1.2
+  SuperMinClusterCount: 2
+  SuperDecisionCooldownTicks: 20
+  UseStrafe: 1
+  StrafeDistance: 1.5
+  StrafeRetargetTicks: 15
+  RepositionStepDistance: 2.5
+  FallbackWanderRadius: 5
+  FallbackWanderRetargetTicks: 45
+  RetreatWeight: 1.15
+  ApproachWeight: 0.85
+  HoldRangeWeight: 1.15
+  RepositionWeight: 1.2
+  SearchWeight: 1.05
+  WanderWeight: 0.9
+  SuperWeight: 1.15
+  PreferredObjective: 4
+  ObjectiveWeight: 42
+  FocusFireWeight: 22
+  RegroupWeight: 35
+  PeelWeight: 40
+  RegroupHealthThreshold: 0.4
+  AllySupportRange: 12
+  AllyAvoidanceRadius: 3
+  AllyAvoidanceWeight: 1.8
+  HoldRangePositionRefreshTicks: 20
+  PreferredCombatOffset: 1
