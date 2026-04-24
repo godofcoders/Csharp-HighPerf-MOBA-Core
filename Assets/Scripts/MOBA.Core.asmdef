@@ -1,7 +1,10 @@
 {
     "name": "MOBA.Core",
     "rootNamespace": "MOBA.Core",
-    "references": [],
+    "references": [
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
