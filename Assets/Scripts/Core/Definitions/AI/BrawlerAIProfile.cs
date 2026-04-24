@@ -218,6 +218,73 @@ namespace MOBA.Core.Simulation.AI
                     GadgetCooldownTicks = 105;
                     break;
 
+                case BrawlerArchetype.Controller:
+                    // Zone-control specialists: turrets, crowd-control, map-presence
+                    // super. Mid-range play, HotZone-oriented, values super uptime.
+                    RetreatWeight = 1.05f;
+                    ApproachWeight = 0.9f;
+                    HoldRangeWeight = 1.2f;
+                    RepositionWeight = 1.1f;
+                    SearchWeight = 1.0f;
+                    WanderWeight = 0.9f;
+                    SuperWeight = 1.3f;
+
+                    PreferredObjective = AIObjectiveType.HotZone;
+                    ObjectiveWeight = 45f;
+
+                    FocusFireWeight = 28f;
+                    RegroupWeight = 30f;
+                    PeelWeight = 25f;
+                    RegroupHealthThreshold = 0.35f;
+                    AllySupportRange = 8.5f;
+
+                    AllyAvoidanceRadius = 2.5f;
+                    AllyAvoidanceWeight = 1.5f;
+                    PreferredCombatOffset = 0.75f;
+
+                    AttackCadenceTicks = 11;
+                    EnableGadgetUsage = true;
+                    GadgetLowHealthThreshold = 0.45f;
+                    GadgetEnemyDistanceThreshold = 4f;
+                    GadgetCooldownTicks = 100;
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    // Indirect-fire AoE specialists: bottles, bombs, throwables that
+                    // arc over walls. Fragile, so retreat-biased; loves cluster
+                    // targeting (signature trait — only archetype to override
+                    // ClusterTargetBonus). Attack cadence is slow due to arc
+                    // wind-up.
+                    RetreatWeight = 1.2f;
+                    ApproachWeight = 0.7f;
+                    HoldRangeWeight = 1.35f;
+                    RepositionWeight = 1.25f;
+                    SearchWeight = 1.05f;
+                    WanderWeight = 0.85f;
+                    SuperWeight = 1.2f;
+
+                    PreferredObjective = AIObjectiveType.HotZone;
+                    ObjectiveWeight = 50f;
+
+                    ClusterTargetBonus = 16f;
+
+                    FocusFireWeight = 22f;
+                    RegroupWeight = 30f;
+                    PeelWeight = 30f;
+                    RegroupHealthThreshold = 0.3f;
+                    AllySupportRange = 8f;
+
+                    AllyAvoidanceRadius = 3f;
+                    AllyAvoidanceWeight = 1.7f;
+                    PreferredCombatOffset = 1f;
+
+                    AttackCadenceTicks = 16;
+                    EnableGadgetUsage = true;
+                    GadgetLowHealthThreshold = 0.45f;
+                    GadgetEnemyDistanceThreshold = 4f;
+                    GadgetCooldownTicks = 100;
+                    break;
+
                 case BrawlerArchetype.Fighter:
                 default:
                     RetreatWeight = 1.0f;

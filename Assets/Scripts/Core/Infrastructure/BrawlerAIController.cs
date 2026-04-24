@@ -167,7 +167,6 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             _profile = ResolveAIProfile(_brawler.Definition);
-            _profile.ApplyArchetypeDefaults(_brawler.Definition.Archetype);
 
             _targetInfo = new AITargetInfo();
 
@@ -200,11 +199,24 @@ namespace MOBA.Core.Infrastructure
 
         private BrawlerAIProfile ResolveAIProfile(BrawlerDefinition definition)
         {
+            // Authored AIProfile: used AS-IS. Do NOT mutate at runtime — a
+            // ScriptableObject asset is shared across all brawler instances
+            // referencing it, and in the Unity Editor Play-mode mutations can
+            // bleed into the saved asset on disk. Archetype defaults are
+            // applied in the Editor via the BrawlerAIProfile custom inspector
+            // ("Apply archetype defaults" button), not here.
             if (definition != null && definition.AIProfile != null)
                 return definition.AIProfile;
 
             Debug.LogWarning($"Brawler '{definition?.BrawlerName}' has no AIProfile assigned. Using emergency fallback values.");
-            return ScriptableObject.CreateInstance<BrawlerAIProfile>();
+
+            // Emergency fallback only: the instance is freshly constructed, not
+            // a shared asset, so stamping archetype defaults here is safe and
+            // gives the brawler a sensible starting configuration.
+            BrawlerAIProfile fallback = ScriptableObject.CreateInstance<BrawlerAIProfile>();
+            if (definition != null)
+                fallback.ApplyArchetypeDefaults(definition.Archetype);
+            return fallback;
         }
 
         private bool CanRunAI()
