@@ -33,7 +33,16 @@ namespace MOBA.Core.Simulation
             // the sim's TPS ever changed. Dividing by TickDeltaTime (1f / TPS) gives
             // the correct tick count for any TPS, and one source of truth stays in
             // SimulationClock.
-            uint durationTicks = (uint)(durationSeconds / SimulationClock.TickDeltaTime);
+            //
+            // The `+ 0.5f` rounds-to-nearest before truncation. SimulationClock.TickDeltaTime
+            // is 1f/30f, which is ~0.033333335f in IEEE float, so a naive
+            // (uint)(seconds / TickDeltaTime) computes 59.9999... and truncates to 59
+            // for a 2s input — designers typing "2.0s hypercharge duration" would
+            // silently get 59 ticks instead of 60. Pinned by
+            // HyperchargeTrackerTests.Activate_ConvertsDurationSeconds_ToTicks_AtTPS
+            // and the zero-duration fallback test in the same fixture. Same fix
+            // shape as BrawlerCooldowns.StartCooldown.
+            uint durationTicks = (uint)(durationSeconds / SimulationClock.TickDeltaTime + 0.5f);
             _endTick = startTick + durationTicks;
         }
 

@@ -1,0 +1,699 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="102" result="Failed(Child)" total="102" passed="100" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.055495">
+  <test-suite type="TestSuite" id="1120" name="Csharp-HighPerf-MOBA-Core" fullname="Csharp-HighPerf-MOBA-Core" runstate="Runnable" testcasecount="102" result="Failed" site="Child" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.055495" total="102" passed="100" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1112" name="Tests.EditMode.dll" fullname="/Users/vapronix/Documents/GitHub/MOBA/Csharp-HighPerf-MOBA-Core/Library/ScriptAssemblies/Tests.EditMode.dll" runstate="Runnable" testcasecount="102" result="Failed" site="Child" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.050519" total="102" passed="100" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="7640" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1113" name="MOBA" fullname="MOBA" runstate="Runnable" testcasecount="102" result="Failed" site="Child" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.049900" total="102" passed="100" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1114" name="Tests" fullname="MOBA.Tests" runstate="Runnable" testcasecount="102" result="Failed" site="Child" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.049350" total="102" passed="100" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1115" name="EditMode" fullname="MOBA.Tests.EditMode" runstate="Runnable" testcasecount="102" result="Failed" site="Child" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.048720" total="102" passed="100" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestFixture" id="1001" name="BrawlerBuildResolverTests" fullname="MOBA.Tests.EditMode.BrawlerBuildResolverTests" classname="MOBA.Tests.EditMode.BrawlerBuildResolverTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.015832" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1007" name="TryResolve_FullLoadout_PopulatesAllThreeBuckets" fullname="MOBA.Tests.EditMode.BrawlerBuildResolverTests.TryResolve_FullLoadout_PopulatesAllThreeBuckets" methodname="TryResolve_FullLoadout_PopulatesAllThreeBuckets" classname="MOBA.Tests.EditMode.BrawlerBuildResolverTests" runstate="Runnable" seed="107657294" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.007795" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1004" name="TryResolve_PutsGadget_IntoResolvedGadgets" fullname="MOBA.Tests.EditMode.BrawlerBuildResolverTests.TryResolve_PutsGadget_IntoResolvedGadgets" methodname="TryResolve_PutsGadget_IntoResolvedGadgets" classname="MOBA.Tests.EditMode.BrawlerBuildResolverTests" runstate="Runnable" seed="1486047916" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000396" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1006" name="TryResolve_PutsHypercharge_IntoResolvedHypercharge" fullname="MOBA.Tests.EditMode.BrawlerBuildResolverTests.TryResolve_PutsHypercharge_IntoResolvedHypercharge" methodname="TryResolve_PutsHypercharge_IntoResolvedHypercharge" classname="MOBA.Tests.EditMode.BrawlerBuildResolverTests" runstate="Runnable" seed="1774123146" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000138" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1005" name="TryResolve_PutsStarPower_IntoResolvedPassiveOptions" fullname="MOBA.Tests.EditMode.BrawlerBuildResolverTests.TryResolve_PutsStarPower_IntoResolvedPassiveOptions" methodname="TryResolve_PutsStarPower_IntoResolvedPassiveOptions" classname="MOBA.Tests.EditMode.BrawlerBuildResolverTests" runstate="Runnable" seed="686155287" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000194" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1002" name="TryResolve_ReturnsFalse_AndPropagatesError_WhenValidationFails" fullname="MOBA.Tests.EditMode.BrawlerBuildResolverTests.TryResolve_ReturnsFalse_AndPropagatesError_WhenValidationFails" methodname="TryResolve_ReturnsFalse_AndPropagatesError_WhenValidationFails" classname="MOBA.Tests.EditMode.BrawlerBuildResolverTests" runstate="Runnable" seed="1125265916" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000362" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1003" name="TryResolve_ReturnsTrue_WithEmptyResolved_WhenBuildIsNullButBrawlerValid" fullname="MOBA.Tests.EditMode.BrawlerBuildResolverTests.TryResolve_ReturnsTrue_WithEmptyResolved_WhenBuildIsNullButBrawlerValid" methodname="TryResolve_ReturnsTrue_WithEmptyResolved_WhenBuildIsNullButBrawlerValid" classname="MOBA.Tests.EditMode.BrawlerBuildResolverTests" runstate="Runnable" seed="629150808" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000087" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1008" name="TryResolveUnlockedOnly_DropsLockedSlot_KeepsUnlockedSlot" fullname="MOBA.Tests.EditMode.BrawlerBuildResolverTests.TryResolveUnlockedOnly_DropsLockedSlot_KeepsUnlockedSlot" methodname="TryResolveUnlockedOnly_DropsLockedSlot_KeepsUnlockedSlot" classname="MOBA.Tests.EditMode.BrawlerBuildResolverTests" runstate="Runnable" seed="1917311101" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000603" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1009" name="BrawlerBuildValidatorTests" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" testcasecount="14" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.004769" total="14" passed="14" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1012" name="Validate_ReturnsInvalid_WhenBrawlerHasNoLayout" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsInvalid_WhenBrawlerHasNoLayout" methodname="Validate_ReturnsInvalid_WhenBrawlerHasNoLayout" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="2131301677" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000245" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1010" name="Validate_ReturnsInvalid_WhenBrawlerNull" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsInvalid_WhenBrawlerNull" methodname="Validate_ReturnsInvalid_WhenBrawlerNull" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="469015709" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000060" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1011" name="Validate_ReturnsInvalid_WhenBuildNull" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsInvalid_WhenBuildNull" methodname="Validate_ReturnsInvalid_WhenBuildNull" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="768458254" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000135" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1021" name="Validate_ReturnsInvalid_WhenGadget_NotInBrawlerOptions" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsInvalid_WhenGadget_NotInBrawlerOptions" methodname="Validate_ReturnsInvalid_WhenGadget_NotInBrawlerOptions" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="1815720102" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000341" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1020" name="Validate_ReturnsInvalid_WhenOptionTypeMismatchesSlotType" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsInvalid_WhenOptionTypeMismatchesSlotType" methodname="Validate_ReturnsInvalid_WhenOptionTypeMismatchesSlotType" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="1664576244" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000211" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1017" name="Validate_ReturnsInvalid_WhenPowerLevelBelowSlotUnlock" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsInvalid_WhenPowerLevelBelowSlotUnlock" methodname="Validate_ReturnsInvalid_WhenPowerLevelBelowSlotUnlock" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="2011004828" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000098" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1023" name="Validate_ReturnsInvalid_WhenSameGadgetEquippedTwice_AndDuplicatesNotAllowed" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsInvalid_WhenSameGadgetEquippedTwice_AndDuplicatesNotAllowed" methodname="Validate_ReturnsInvalid_WhenSameGadgetEquippedTwice_AndDuplicatesNotAllowed" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="647571111" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000205" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1015" name="Validate_ReturnsInvalid_WhenSelectionHasEmptySlotId" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsInvalid_WhenSelectionHasEmptySlotId" methodname="Validate_ReturnsInvalid_WhenSelectionHasEmptySlotId" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="974288070" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000085" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1016" name="Validate_ReturnsInvalid_WhenSelectionReferencesUnknownSlot" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsInvalid_WhenSelectionReferencesUnknownSlot" methodname="Validate_ReturnsInvalid_WhenSelectionReferencesUnknownSlot" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="812341321" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000089" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1022" name="Validate_ReturnsValid_WhenGadget_IsInBrawlerOptions" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsValid_WhenGadget_IsInBrawlerOptions" methodname="Validate_ReturnsValid_WhenGadget_IsInBrawlerOptions" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="1625853588" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000192" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1013" name="Validate_ReturnsValid_WhenLayoutHasNoSlots" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsValid_WhenLayoutHasNoSlots" methodname="Validate_ReturnsValid_WhenLayoutHasNoSlots" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="870407290" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000080" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1018" name="Validate_ReturnsValid_WhenPowerLevelMatchesUnlockExactly" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsValid_WhenPowerLevelMatchesUnlockExactly" methodname="Validate_ReturnsValid_WhenPowerLevelMatchesUnlockExactly" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="122342316" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000092" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1019" name="Validate_ReturnsValid_WhenSelectedOptionIsNull" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsValid_WhenSelectedOptionIsNull" methodname="Validate_ReturnsValid_WhenSelectedOptionIsNull" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="1552399137" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000079" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1014" name="Validate_ReturnsValid_WhenSelectionsAreNull" fullname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests.Validate_ReturnsValid_WhenSelectionsAreNull" methodname="Validate_ReturnsValid_WhenSelectionsAreNull" classname="MOBA.Tests.EditMode.BrawlerBuildValidatorTests" runstate="Runnable" seed="133061726" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000080" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1024" name="BrawlerCooldownsTests" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" testcasecount="13" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.003143" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1025" name="Construction_AllSlotsReady_AtTickZero" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.Construction_AllSlotsReady_AtTickZero" methodname="Construction_AllSlotsReady_AtTickZero" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="1708341452" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000204" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1029" name="IsReady_ReturnsFalse_ForUnknownSlot" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.IsReady_ReturnsFalse_ForUnknownSlot" methodname="IsReady_ReturnsFalse_ForUnknownSlot" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="860272140" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000033" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1026" name="IsReady_ReturnsFalse_WhenCurrentTickIsBeforeReadyAtTick" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.IsReady_ReturnsFalse_WhenCurrentTickIsBeforeReadyAtTick" methodname="IsReady_ReturnsFalse_WhenCurrentTickIsBeforeReadyAtTick" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="1536832940" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000071" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1027" name="IsReady_ReturnsTrue_WhenCurrentTickReachesReadyAtTick" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.IsReady_ReturnsTrue_WhenCurrentTickReachesReadyAtTick" methodname="IsReady_ReturnsTrue_WhenCurrentTickReachesReadyAtTick" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="927226758" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000029" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1028" name="IsReady_RoutesToCorrectSlot_AndDoesNotLeakToOthers" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.IsReady_RoutesToCorrectSlot_AndDoesNotLeakToOthers" methodname="IsReady_RoutesToCorrectSlot_AndDoesNotLeakToOthers" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="1312807607" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000034" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1036" name="ResetAll_ClearsEveryCooldownTimer" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.ResetAll_ClearsEveryCooldownTimer" methodname="ResetAll_ClearsEveryCooldownTimer" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="1986765383" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000271" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1037" name="ResetAll_OnFreshInstance_IsNoOp" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.ResetAll_OnFreshInstance_IsNoOp" methodname="ResetAll_OnFreshInstance_IsNoOp" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="1712886425" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000044" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1033" name="StartCooldown_ConvertsFractionalSeconds_ToTicks" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.StartCooldown_ConvertsFractionalSeconds_ToTicks" methodname="StartCooldown_ConvertsFractionalSeconds_ToTicks" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="1079212383" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000035" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1032" name="StartCooldown_Gadget_OnlyAffectsGadgetSlot" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.StartCooldown_Gadget_OnlyAffectsGadgetSlot" methodname="StartCooldown_Gadget_OnlyAffectsGadgetSlot" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="416118669" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000043" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1030" name="StartCooldown_MainAttack_SetsReadyAtTickBasedOnTPS" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.StartCooldown_MainAttack_SetsReadyAtTickBasedOnTPS" methodname="StartCooldown_MainAttack_SetsReadyAtTickBasedOnTPS" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="2042254002" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000042" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1035" name="StartCooldown_OverwritesPreviousCooldown_ProvingFieldIsMutatedNotCopied" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.StartCooldown_OverwritesPreviousCooldown_ProvingFieldIsMutatedNotCopied" methodname="StartCooldown_OverwritesPreviousCooldown_ProvingFieldIsMutatedNotCopied" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="506829968" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000046" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1031" name="StartCooldown_Super_OnlyAffectsSuperSlot" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.StartCooldown_Super_OnlyAffectsSuperSlot" methodname="StartCooldown_Super_OnlyAffectsSuperSlot" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="1963128432" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000039" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1034" name="StartCooldown_ZeroSeconds_LeavesSlotReadyImmediately" fullname="MOBA.Tests.EditMode.BrawlerCooldownsTests.StartCooldown_ZeroSeconds_LeavesSlotReadyImmediately" methodname="StartCooldown_ZeroSeconds_LeavesSlotReadyImmediately" classname="MOBA.Tests.EditMode.BrawlerCooldownsTests" runstate="Runnable" seed="282209492" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000032" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1038" name="BrawlerStatsTests" fullname="MOBA.Tests.EditMode.BrawlerStatsTests" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" testcasecount="13" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.003886" total="13" passed="13" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1048" name="AddShield_Accumulates" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.AddShield_Accumulates" methodname="AddShield_Accumulates" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="291149345" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000618" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1049" name="AddShield_IgnoresNonPositive" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.AddShield_IgnoresNonPositive" methodname="AddShield_IgnoresNonPositive" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="1887885353" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000060" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1041" name="ApplyDamage_ClampsHealthToZero_OnOverkill" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.ApplyDamage_ClampsHealthToZero_OnOverkill" methodname="ApplyDamage_ClampsHealthToZero_OnOverkill" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="1537355897" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000235" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1039" name="ApplyDamage_ReducesHealth_WhenAlive" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.ApplyDamage_ReducesHealth_WhenAlive" methodname="ApplyDamage_ReducesHealth_WhenAlive" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="752383096" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000051" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1042" name="ApplyDamage_ReturnsFalse_WhenAlreadyDead" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.ApplyDamage_ReturnsFalse_WhenAlreadyDead" methodname="ApplyDamage_ReturnsFalse_WhenAlreadyDead" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="722007669" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000041" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1040" name="ApplyDamage_ReturnsTrue_OnKillingBlow" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.ApplyDamage_ReturnsTrue_OnKillingBlow" methodname="ApplyDamage_ReturnsTrue_OnKillingBlow" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="1560146072" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000037" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1044" name="ApplyHeal_ClampsAtMaxHealth" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.ApplyHeal_ClampsAtMaxHealth" methodname="ApplyHeal_ClampsAtMaxHealth" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="88975805" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000067" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1043" name="ApplyHeal_IncreasesHealth_WhenAlive" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.ApplyHeal_IncreasesHealth_WhenAlive" methodname="ApplyHeal_IncreasesHealth_WhenAlive" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="1140743361" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000035" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1045" name="ApplyHeal_IsNoOp_WhenDead" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.ApplyHeal_IsNoOp_WhenDead" methodname="ApplyHeal_IsNoOp_WhenDead" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="1403055672" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000035" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1051" name="ClearAllModifiers_ClearsShield" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.ClearAllModifiers_ClearsShield" methodname="ClearAllModifiers_ClearsShield" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="556630592" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000142" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1050" name="ClearShield_ZeroesShieldHealth" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.ClearShield_ZeroesShieldHealth" methodname="ClearShield_ZeroesShieldHealth" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="1261996870" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000046" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1046" name="SetCurrentHealth_ClampsToMaxHealth" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.SetCurrentHealth_ClampsToMaxHealth" methodname="SetCurrentHealth_ClampsToMaxHealth" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="561256037" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000055" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1047" name="SetCurrentHealth_ClampsToZero_WhenNegative" fullname="MOBA.Tests.EditMode.BrawlerStatsTests.SetCurrentHealth_ClampsToZero_WhenNegative" methodname="SetCurrentHealth_ClampsToZero_WhenNegative" classname="MOBA.Tests.EditMode.BrawlerStatsTests" runstate="Runnable" seed="1491289243" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000030" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1052" name="BrawlerStatusEffectsTests" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.004722" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1069" name="Clear_RemovesAllEffects_WithoutFiringRemoveHooks" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.Clear_RemovesAllEffects_WithoutFiringRemoveHooks" methodname="Clear_RemovesAllEffects_WithoutFiringRemoveHooks" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="1923747259" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000199" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1053" name="Construction_StartsEmpty" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.Construction_StartsEmpty" methodname="Construction_StartsEmpty" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="1674202654" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000773" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1058" name="HasAttackLock_DelegatesToHasStatus_AttackLock" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.HasAttackLock_DelegatesToHasStatus_AttackLock" methodname="HasAttackLock_DelegatesToHasStatus_AttackLock" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="2012200303" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000096" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1059" name="HasGadgetLock_DelegatesToHasStatus_GadgetLock" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.HasGadgetLock_DelegatesToHasStatus_GadgetLock" methodname="HasGadgetLock_DelegatesToHasStatus_GadgetLock" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="949163554" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000045" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1061" name="HasMovementLockStatus_ReturnsTrueOnly_ForMovementLockType" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.HasMovementLockStatus_ReturnsTrueOnly_ForMovementLockType" methodname="HasMovementLockStatus_ReturnsTrueOnly_ForMovementLockType" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="2021267119" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000068" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1057" name="HasSilence_DelegatesToHasStatus_Silence" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.HasSilence_DelegatesToHasStatus_Silence" methodname="HasSilence_DelegatesToHasStatus_Silence" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="1020276480" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000040" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1056" name="HasStatus_ReturnsFalse_ForUnmatchedType" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.HasStatus_ReturnsFalse_ForUnmatchedType" methodname="HasStatus_ReturnsFalse_ForUnmatchedType" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="1641336568" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000036" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1054" name="HasStatus_ReturnsFalse_WhenNoEffects" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.HasStatus_ReturnsFalse_WhenNoEffects" methodname="HasStatus_ReturnsFalse_WhenNoEffects" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="915823877" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000026" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1055" name="HasStatus_ReturnsTrue_AfterMatchingEffectAdded" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.HasStatus_ReturnsTrue_AfterMatchingEffectAdded" methodname="HasStatus_ReturnsTrue_AfterMatchingEffectAdded" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="411360566" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000031" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1060" name="HasSuperLock_DelegatesToHasStatus_SuperLock" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.HasSuperLock_DelegatesToHasStatus_SuperLock" methodname="HasSuperLock_DelegatesToHasStatus_SuperLock" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="751630825" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000040" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1064" name="TickAndCollectExpired_AppendsRemovedToBuffer" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.TickAndCollectExpired_AppendsRemovedToBuffer" methodname="TickAndCollectExpired_AppendsRemovedToBuffer" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="1174798279" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000185" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1068" name="TickAndCollectExpired_CallsRemoveHook_OnExpiredEffects" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.TickAndCollectExpired_CallsRemoveHook_OnExpiredEffects" methodname="TickAndCollectExpired_CallsRemoveHook_OnExpiredEffects" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="1234145057" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000042" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1065" name="TickAndCollectExpired_DoesNotClearBuffer_BetweenCalls" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.TickAndCollectExpired_DoesNotClearBuffer_BetweenCalls" methodname="TickAndCollectExpired_DoesNotClearBuffer_BetweenCalls" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="571341804" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000056" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1067" name="TickAndCollectExpired_MultipleExpiredEffects_AllRemoved" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.TickAndCollectExpired_MultipleExpiredEffects_AllRemoved" methodname="TickAndCollectExpired_MultipleExpiredEffects_AllRemoved" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="672684159" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000057" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1066" name="TickAndCollectExpired_NullBuffer_DoesNotThrow" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.TickAndCollectExpired_NullBuffer_DoesNotThrow" methodname="TickAndCollectExpired_NullBuffer_DoesNotThrow" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="222741839" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000336" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1063" name="TickAndCollectExpired_RemovesExpired_FromActiveList" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.TickAndCollectExpired_RemovesExpired_FromActiveList" methodname="TickAndCollectExpired_RemovesExpired_FromActiveList" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="1210353332" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000058" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1062" name="TickAndCollectExpired_TicksAllActiveEffects" fullname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests.TickAndCollectExpired_TicksAllActiveEffects" methodname="TickAndCollectExpired_TicksAllActiveEffects" classname="MOBA.Tests.EditMode.BrawlerStatusEffectsTests" runstate="Runnable" seed="1358771672" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000052" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1070" name="HyperchargeTrackerTests" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" testcasecount="15" result="Failed" site="Child" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.005960" total="15" passed="13" failed="2" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-case id="1079" name="Activate_ConvertsDurationSeconds_ToTicks_AtTPS" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Activate_ConvertsDurationSeconds_ToTicks_AtTPS" methodname="Activate_ConvertsDurationSeconds_ToTicks_AtTPS" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="948246524" result="Failed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.002625" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <failure>
+                  <message><![CDATA[  At tick 59 (one before end), hypercharge should still be active.
+  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at MOBA.Tests.EditMode.HyperchargeTrackerTests.Activate_ConvertsDurationSeconds_ToTicks_AtTPS () [0x0002a] in /Users/vapronix/Documents/GitHub/MOBA/Csharp-HighPerf-MOBA-Core/Assets/Tests/EditMode/HyperchargeTrackerTests.cs:183
+]]></stack-trace>
+                </failure>
+              </test-case>
+              <test-case id="1075" name="Activate_DoesNothing_WhenChargeBelowOne" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Activate_DoesNothing_WhenChargeBelowOne" methodname="Activate_DoesNothing_WhenChargeBelowOne" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="979719938" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000298" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1077" name="Activate_DurationOfZero_FallsBackToFiveSecondsDefault" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Activate_DurationOfZero_FallsBackToFiveSecondsDefault" methodname="Activate_DurationOfZero_FallsBackToFiveSecondsDefault" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="5084134" result="Failed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000111" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <failure>
+                  <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                  <stack-trace><![CDATA[at MOBA.Tests.EditMode.HyperchargeTrackerTests.Activate_DurationOfZero_FallsBackToFiveSecondsDefault () [0x0002d] in /Users/vapronix/Documents/GitHub/MOBA/Csharp-HighPerf-MOBA-Core/Assets/Tests/EditMode/HyperchargeTrackerTests.cs:146
+]]></stack-trace>
+                </failure>
+              </test-case>
+              <test-case id="1078" name="Activate_NegativeDuration_AlsoFallsBackToFiveSecondsDefault" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Activate_NegativeDuration_AlsoFallsBackToFiveSecondsDefault" methodname="Activate_NegativeDuration_AlsoFallsBackToFiveSecondsDefault" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="771855468" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000041" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1076" name="Activate_StartsHypercharge_AndConsumesCharge_WhenChargeAtOne" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Activate_StartsHypercharge_AndConsumesCharge_WhenChargeAtOne" methodname="Activate_StartsHypercharge_AndConsumesCharge_WhenChargeAtOne" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="155016653" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000052" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1072" name="AddCharge_AccumulatesPartialCharge" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.AddCharge_AccumulatesPartialCharge" methodname="AddCharge_AccumulatesPartialCharge" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="409678535" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000036" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1073" name="AddCharge_ClampsAtOne_WhenAccumulationOverflows" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.AddCharge_ClampsAtOne_WhenAccumulationOverflows" methodname="AddCharge_ClampsAtOne_WhenAccumulationOverflows" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="371482498" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000061" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1074" name="AddCharge_IsNoOp_WhenAlreadyActive" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.AddCharge_IsNoOp_WhenAlreadyActive" methodname="AddCharge_IsNoOp_WhenAlreadyActive" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="900574253" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000074" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1071" name="Construction_StartsInactive_AndAtZeroCharge" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Construction_StartsInactive_AndAtZeroCharge" methodname="Construction_StartsInactive_AndAtZeroCharge" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="1769358514" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000042" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1085" name="Reset_AllowsRechargeFromZero_AndReactivation" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Reset_AllowsRechargeFromZero_AndReactivation" methodname="Reset_AllowsRechargeFromZero_AndReactivation" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="1245823036" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000059" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1084" name="Reset_ClearsActiveState_ChargePercent_AndEndTick" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Reset_ClearsActiveState_ChargePercent_AndEndTick" methodname="Reset_ClearsActiveState_ChargePercent_AndEndTick" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="1977446116" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000079" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1081" name="Tick_AtEndTick_DeactivatesAndFiresCallbackExactlyOnce" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Tick_AtEndTick_DeactivatesAndFiresCallbackExactlyOnce" methodname="Tick_AtEndTick_DeactivatesAndFiresCallbackExactlyOnce" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="611834127" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000083" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1080" name="Tick_BeforeEndTick_DoesNothing_AndStaysActive" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Tick_BeforeEndTick_DoesNothing_AndStaysActive" methodname="Tick_BeforeEndTick_DoesNothing_AndStaysActive" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="1940076309" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000065" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1082" name="Tick_NullCallback_DoesNotThrow_OnDeactivation" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Tick_NullCallback_DoesNotThrow_OnDeactivation" methodname="Tick_NullCallback_DoesNotThrow_OnDeactivation" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="316344109" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000074" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1083" name="Tick_WhenInactive_DoesNothing_AndDoesNotFireCallback" fullname="MOBA.Tests.EditMode.HyperchargeTrackerTests.Tick_WhenInactive_DoesNothing_AndDoesNotFireCallback" methodname="Tick_WhenInactive_DoesNothing_AndDoesNotFireCallback" classname="MOBA.Tests.EditMode.HyperchargeTrackerTests" runstate="Runnable" seed="426299767" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000057" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1086" name="ModifiableStatTests" fullname="MOBA.Tests.EditMode.ModifiableStatTests" classname="MOBA.Tests.EditMode.ModifiableStatTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.002658" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1088" name="AdditiveModifier_AddsToBase" fullname="MOBA.Tests.EditMode.ModifiableStatTests.AdditiveModifier_AddsToBase" methodname="AdditiveModifier_AddsToBase" classname="MOBA.Tests.EditMode.ModifiableStatTests" runstate="Runnable" seed="1278381292" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000218" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1090" name="ModifierOrder_AdditiveBeforeMultiplicative" fullname="MOBA.Tests.EditMode.ModifiableStatTests.ModifierOrder_AdditiveBeforeMultiplicative" methodname="ModifierOrder_AdditiveBeforeMultiplicative" classname="MOBA.Tests.EditMode.ModifiableStatTests" runstate="Runnable" seed="23958601" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000056" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1091" name="MultipleAdditiveModifiers_Stack" fullname="MOBA.Tests.EditMode.ModifiableStatTests.MultipleAdditiveModifiers_Stack" methodname="MultipleAdditiveModifiers_Stack" classname="MOBA.Tests.EditMode.ModifiableStatTests" runstate="Runnable" seed="877182768" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000049" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1092" name="MultipleMultiplicativeModifiers_StackAdditively_NotCompounding" fullname="MOBA.Tests.EditMode.ModifiableStatTests.MultipleMultiplicativeModifiers_StackAdditively_NotCompounding" methodname="MultipleMultiplicativeModifiers_StackAdditively_NotCompounding" classname="MOBA.Tests.EditMode.ModifiableStatTests" runstate="Runnable" seed="107031804" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000043" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1089" name="MultiplicativeModifier_MultipliesBase" fullname="MOBA.Tests.EditMode.ModifiableStatTests.MultiplicativeModifier_MultipliesBase" methodname="MultiplicativeModifier_MultipliesBase" classname="MOBA.Tests.EditMode.ModifiableStatTests" runstate="Runnable" seed="1390083887" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000039" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1093" name="RemoveModifiersFromSource_RemovesOnlyThatSource" fullname="MOBA.Tests.EditMode.ModifiableStatTests.RemoveModifiersFromSource_RemovesOnlyThatSource" methodname="RemoveModifiersFromSource_RemovesOnlyThatSource" classname="MOBA.Tests.EditMode.ModifiableStatTests" runstate="Runnable" seed="2107233615" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000198" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1094" name="SetBaseValue_RecalculatesWithExistingModifiers" fullname="MOBA.Tests.EditMode.ModifiableStatTests.SetBaseValue_RecalculatesWithExistingModifiers" methodname="SetBaseValue_RecalculatesWithExistingModifiers" classname="MOBA.Tests.EditMode.ModifiableStatTests" runstate="Runnable" seed="1213070631" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000043" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1087" name="Value_EqualsBaseValue_WhenNoModifiers" fullname="MOBA.Tests.EditMode.ModifiableStatTests.Value_EqualsBaseValue_WhenNoModifiers" methodname="Value_EqualsBaseValue_WhenNoModifiers" classname="MOBA.Tests.EditMode.ModifiableStatTests" runstate="Runnable" seed="1738322815" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000038" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1095" name="ResourceStorageTests" fullname="MOBA.Tests.EditMode.ResourceStorageTests" classname="MOBA.Tests.EditMode.ResourceStorageTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.002015" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1102" name="AvailableBars_IsFloorOfCurrentAmmo" fullname="MOBA.Tests.EditMode.ResourceStorageTests.AvailableBars_IsFloorOfCurrentAmmo" methodname="AvailableBars_IsFloorOfCurrentAmmo" classname="MOBA.Tests.EditMode.ResourceStorageTests" runstate="Runnable" seed="1259374401" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000198" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1096" name="Construction_StartsAtMaxAmmo" fullname="MOBA.Tests.EditMode.ResourceStorageTests.Construction_StartsAtMaxAmmo" methodname="Construction_StartsAtMaxAmmo" classname="MOBA.Tests.EditMode.ResourceStorageTests" runstate="Runnable" seed="1645450815" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000045" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1098" name="Consume_FailsAtomically_WhenInsufficient" fullname="MOBA.Tests.EditMode.ResourceStorageTests.Consume_FailsAtomically_WhenInsufficient" methodname="Consume_FailsAtomically_WhenInsufficient" classname="MOBA.Tests.EditMode.ResourceStorageTests" runstate="Runnable" seed="1509741447" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000036" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1097" name="Consume_Succeeds_WhenEnoughAvailable" fullname="MOBA.Tests.EditMode.ResourceStorageTests.Consume_Succeeds_WhenEnoughAvailable" methodname="Consume_Succeeds_WhenEnoughAvailable" classname="MOBA.Tests.EditMode.ResourceStorageTests" runstate="Runnable" seed="1282435609" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000038" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1101" name="Refill_JumpsToMax_EvenMidReload" fullname="MOBA.Tests.EditMode.ResourceStorageTests.Refill_JumpsToMax_EvenMidReload" methodname="Refill_JumpsToMax_EvenMidReload" classname="MOBA.Tests.EditMode.ResourceStorageTests" runstate="Runnable" seed="1571081205" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000046" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1100" name="Tick_ClampsAtMax" fullname="MOBA.Tests.EditMode.ResourceStorageTests.Tick_ClampsAtMax" methodname="Tick_ClampsAtMax" classname="MOBA.Tests.EditMode.ResourceStorageTests" runstate="Runnable" seed="291872628" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000030" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1099" name="Tick_RefillsOverTime" fullname="MOBA.Tests.EditMode.ResourceStorageTests.Tick_RefillsOverTime" methodname="Tick_RefillsOverTime" classname="MOBA.Tests.EditMode.ResourceStorageTests" runstate="Runnable" seed="1458823062" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000033" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1103" name="SimulationRegistryTests" fullname="MOBA.Tests.EditMode.SimulationRegistryTests" classname="MOBA.Tests.EditMode.SimulationRegistryTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.004089" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1104" name="Register_AddsTickable_AndItGetsTickedOnTickAll" fullname="MOBA.Tests.EditMode.SimulationRegistryTests.Register_AddsTickable_AndItGetsTickedOnTickAll" methodname="Register_AddsTickable_AndItGetsTickedOnTickAll" classname="MOBA.Tests.EditMode.SimulationRegistryTests" runstate="Runnable" seed="1653236073" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.001123" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1111" name="Register_DifferentPhases_TickIndependently" fullname="MOBA.Tests.EditMode.SimulationRegistryTests.Register_DifferentPhases_TickIndependently" methodname="Register_DifferentPhases_TickIndependently" classname="MOBA.Tests.EditMode.SimulationRegistryTests" runstate="Runnable" seed="762708798" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000156" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1105" name="Register_DuplicateRegistration_OnlyTicksOnce" fullname="MOBA.Tests.EditMode.SimulationRegistryTests.Register_DuplicateRegistration_OnlyTicksOnce" methodname="Register_DuplicateRegistration_OnlyTicksOnce" classname="MOBA.Tests.EditMode.SimulationRegistryTests" runstate="Runnable" seed="1320469713" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000053" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1110" name="TickAll_EntityRegisteredToMultiplePhases_TicksOncePerPhase" fullname="MOBA.Tests.EditMode.SimulationRegistryTests.TickAll_EntityRegisteredToMultiplePhases_TicksOncePerPhase" methodname="TickAll_EntityRegisteredToMultiplePhases_TicksOncePerPhase" classname="MOBA.Tests.EditMode.SimulationRegistryTests" runstate="Runnable" seed="246232490" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000041" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1108" name="TickAll_PassesCurrentTick_ToTickable" fullname="MOBA.Tests.EditMode.SimulationRegistryTests.TickAll_PassesCurrentTick_ToTickable" methodname="TickAll_PassesCurrentTick_ToTickable" classname="MOBA.Tests.EditMode.SimulationRegistryTests" runstate="Runnable" seed="1044165015" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000048" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1107" name="TickAll_RunsPhasesInDeclaredOrder" fullname="MOBA.Tests.EditMode.SimulationRegistryTests.TickAll_RunsPhasesInDeclaredOrder" methodname="TickAll_RunsPhasesInDeclaredOrder" classname="MOBA.Tests.EditMode.SimulationRegistryTests" runstate="Runnable" seed="1964870923" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000762" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1109" name="TickAll_TickableUnregistersItselfMidTick_DoesNotSkipNeighbor" fullname="MOBA.Tests.EditMode.SimulationRegistryTests.TickAll_TickableUnregistersItselfMidTick_DoesNotSkipNeighbor" methodname="TickAll_TickableUnregistersItselfMidTick_DoesNotSkipNeighbor" classname="MOBA.Tests.EditMode.SimulationRegistryTests" runstate="Runnable" seed="657405269" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000145" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1106" name="Unregister_RemovesTickable_AndItStopsTicking" fullname="MOBA.Tests.EditMode.SimulationRegistryTests.Unregister_RemovesTickable_AndItStopsTicking" methodname="Unregister_RemovesTickable_AndItStopsTicking" classname="MOBA.Tests.EditMode.SimulationRegistryTests" runstate="Runnable" seed="149124951" result="Passed" start-time="2026-04-25 15:34:10Z" end-time="2026-04-25 15:34:10Z" duration="0.000038" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: /Users/vapronix/Library/Application Support/DefaultCompany/Csharp-HighPerf-MOBA-Core/TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

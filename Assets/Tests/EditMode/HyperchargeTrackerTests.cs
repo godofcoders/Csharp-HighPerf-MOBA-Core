@@ -154,9 +154,15 @@ namespace MOBA.Tests.EditMode
         public void Activate_NegativeDuration_AlsoFallsBackToFiveSecondsDefault()
         {
             // Same fallback path, different input — guard accepts <= 0.
+            // Tightened to check the boundary tick 149 too: if we only checked
+            // tick 150, the test would also pass under a buggy _endTick=149,
+            // giving us a false-positive green test.
             var tracker = new HyperchargeTracker();
             tracker.AddCharge(1f);
             tracker.Activate(startTick: 0, durationSeconds: -2f);
+
+            tracker.Tick(currentTick: 149, onDeactivate: null);
+            Assert.IsTrue(tracker.IsActive);
 
             tracker.Tick(currentTick: 150, onDeactivate: null);
             Assert.IsFalse(tracker.IsActive);
