@@ -48,10 +48,19 @@ namespace MOBA.Core.Simulation
         /// the simulation's actual TPS via SimulationClock.TickDeltaTime
         /// (previously hardcoded `* 30f`, which would break silently if the
         /// tick rate ever changed — same fix we made in HyperchargeTracker).
+        ///
+        /// Uses round-to-nearest (not truncation) to convert. SimulationClock.TickDeltaTime
+        /// is 1f/30f, which in IEEE float is ~0.033333335, so a naive
+        /// (uint)(seconds / TickDeltaTime) computes 29.999... and truncates to 29
+        /// for a 1-second input — designers typing "1.0s cooldown" would silently
+        /// get 29 ticks (~967ms) instead of 30 (1000ms). The +0.5f rounds away
+        /// the float artefact so the contract matches what the designer typed.
+        /// Pinned by BrawlerCooldownsTests.StartCooldown_ConvertsFractionalSeconds_ToTicks
+        /// and the per-slot assertions in the same fixture.
         /// </summary>
         public void StartCooldown(AbilityRuntimeSlot slot, uint currentTick, float cooldownSeconds)
         {
-            uint cooldownTicks = (uint)(cooldownSeconds / SimulationClock.TickDeltaTime);
+            uint cooldownTicks = (uint)(cooldownSeconds / SimulationClock.TickDeltaTime + 0.5f);
 
             switch (slot)
             {
