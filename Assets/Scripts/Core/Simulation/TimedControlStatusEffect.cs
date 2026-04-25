@@ -40,7 +40,7 @@ namespace MOBA.Core.Simulation
 
         public virtual void Merge(StatusEffectContext context, uint currentTick)
         {
-            uint durationTicks = (uint)(context.Duration * 30f);
+            uint durationTicks = SimulationClock.SecondsToTicks(context.Duration);
             uint newEndTick = currentTick + durationTicks;
 
             if (newEndTick > EndTick)

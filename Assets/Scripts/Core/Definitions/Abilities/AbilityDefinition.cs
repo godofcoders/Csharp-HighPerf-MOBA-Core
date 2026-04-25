@@ -65,7 +65,7 @@ namespace MOBA.Core.Definitions
 
         public uint GetCastDurationTicks()
         {
-            return (uint)(CastDurationSeconds * 30f);
+            return SimulationClock.SecondsToTicks(CastDurationSeconds);
         }
 
         public bool HasTag(AbilityTag tag)

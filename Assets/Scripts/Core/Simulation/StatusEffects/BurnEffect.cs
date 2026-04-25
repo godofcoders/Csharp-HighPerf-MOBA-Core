@@ -21,7 +21,7 @@ namespace MOBA.Core.Simulation
             _durationSeconds = durationSeconds;
 
             StartTick = currentTick;
-            EndTick = currentTick + (uint)(durationSeconds * 30f);
+            EndTick = currentTick + SimulationClock.SecondsToTicks(durationSeconds);
             _nextTickDamageTick = currentTick;
         }
 
@@ -34,7 +34,10 @@ namespace MOBA.Core.Simulation
             if (currentTick < _nextTickDamageTick)
                 return;
 
-            _nextTickDamageTick = currentTick + 30;
+            // Burn ticks for damage once per second. Routing through
+            // SecondsToTicks keeps this consistent with other duration math
+            // and decouples from the hardcoded 30 TPS magic number.
+            _nextTickDamageTick = currentTick + SimulationClock.SecondsToTicks(1f);
 
             // Route through DamageService so every pipeline step runs: incoming
             // modifiers, shields, lifesteal, DamageEventBus, combat log, and
@@ -80,7 +83,7 @@ namespace MOBA.Core.Simulation
 
         public void Merge(StatusEffectContext context, uint currentTick)
         {
-            uint durationTicks = (uint)(context.Duration * 30f);
+            uint durationTicks = SimulationClock.SecondsToTicks(context.Duration);
             uint newEndTick = currentTick + durationTicks;
 
             if (newEndTick > EndTick)
