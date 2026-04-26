@@ -72,9 +72,11 @@ namespace MOBA.Tests.EditMode
         // on inter-spy ordering ("Install A, Install B, Uninstall B, Uninstall A").
         private sealed class CallLog
         {
-            private readonly List<string> _events = new List<string>();
-            public IReadOnlyList<string> Events => _events;
-            public void Append(string e) => _events.Add(e);
+            // Concrete List<string> exposed deliberately: test-internal
+            // scaffolding, and we want IList<T>.IndexOf for ordering asserts.
+            // IReadOnlyList<T> doesn't carry IndexOf.
+            public readonly List<string> Events = new List<string>();
+            public void Append(string e) => Events.Add(e);
         }
 
         // SpyPassive deliberately does NOT call base.Uninstall — base reaches
