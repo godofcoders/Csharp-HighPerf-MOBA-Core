@@ -17,10 +17,10 @@
 ## Current State
 
 - **Phase:** 1
-- **Active session:** 4 (in progress — Barley super authored; super-charge pipeline authored; all three S4 known-gaps closed (dead `SuperChargeOnHit`, `BurnEffect` bypass, respawn loadout wipe); AIProfile assets still pending)
-- **Last completed session:** 3
-- **Next session target:** Finish Session 4 — AIProfile assets, Archetype fixes, verify BrawlerBuildResolver option-unlock logic. Then loadouts work. Stretch: remaining BrawlerState extractions, BrawlerController.Tick split.
-- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) are parked — gameplay integration for those substates is not in a testable state yet. The refactor is behavior-preserving, so this is not blocking further code work, just delayed verification.
+- **Active session:** 5 (in progress — testing curriculum kickoff: 159 unit tests across 6 fixtures, two precision bugs caught and fixed, `SimulationClock.SecondsToTicks` helper centralised across 13 production sites; earlier Session 5 work covered Archetype enum extension, BuildLayout wiring, resolver verification, DefaultBuild + AIProfile asset authoring)
+- **Last completed session:** 4 (continued)
+- **Next session target:** Open — more tier-3 testing (BrawlerStealth, BrawlerLoadout helpers, BrawlerBuildLayoutDefinition.IsSlotUnlocked), deferred deployable migrations (5 sites under pin-then-migrate), or back to gameplay/AI work (AIUtilityScorer Controller/Artillery cases). Akash to pick.
+- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) still parked. The new test fixtures provide much of what those smoke tests would have validated, but in-engine smoke is its own confidence check.
 
 ## Key Decisions Ledger
 
@@ -54,6 +54,15 @@
 | Per-brawler charge tuning | S4 | Each brawler ships their own `*DamageSuperCharge.asset` rather than sharing one global rate. Fraction-of-meter-per-damage varies by brawler so fast-rate/low-damage heroes don't hit super instantly and slow-throw heroes still charge at a pace that rewards landing shots. |
 | Push-based notification | S4 | Coordinator explicitly calls `NotifyDamageDealt` on the attacker after damage resolves, fanning out to every installed super-charge source runtime. Chosen over an event-bus listener because the damage pipeline already runs "direct call" style and every event-bus escape introduces a non-deterministic seam. |
 | Hook-override runtime base | S4 | Abstract `SuperChargeSourceRuntime` ships five no-op virtual hooks (`OnInstalled`, `OnUninstalled`, `Tick`, `OnDamageDealt`, `OnHealApplied`); each concrete subclass overrides only the hook it cares about. Lets the install loop ping every hook on every runtime without null checks inside the callers. |
+| POCO value testing | S5 | Testing a class that has no Unity dependencies, no static singletons, and no event-bus calls by constructing it directly with `new`, calling its methods, and asserting on its returned values or read-only properties. No fakes, no fixture setup beyond `new SUT()`. The cleanest possible unit test — applies to pure data/logic classes like `BrawlerActionStateMachine` and `BrawlerCooldowns`. |
+| Hand-rolled fake | S5 | A small purpose-built class implementing the SUT's collaborator interface, written by hand instead of using a mocking framework like Moq. Records calls into public fields the test can assert on; returns canned values from public setters. Cheaper to maintain than Moq when collaborators are small interfaces, and far easier to reason about than dynamic proxies. Used throughout S5 (FakeClock, FakeStatusTarget, SpyPassive, SpyRuntime, SpyStatusEffectInstance). |
+| Spy-on-hooks | S5 | Pattern where the SUT consumes an abstract base class with virtual hook methods (e.g. `PassiveDefinition.Install`/`Uninstall`); the test creates a subclass that overrides each hook to append a tagged string into a shared chronological `List<string>`. Asserting on the list verifies both *which* hooks fired and *in what order across multiple instances* — much stronger than per-instance call counters. Crucial for testing lifecycle pipelines like `BrawlerLoadout.InstallAll`/`UninstallAll`. |
+| Static-state isolation discipline | S5 | When the SUT touches static singletons (`ServiceProvider`, `StatusEffectEventBus`), `[SetUp]` must call `Clear()` then re-register fakes, and `[TearDown]` must unsubscribe handlers (saving the delegate instance — C# event removal silently no-ops on a different instance) and `Clear()` again. Without this, tests leak state across runs and fail intermittently depending on run order. The `_appliedHandler` field pattern in `StatusEffectServiceTests` is the canonical shape. |
+| State-machine table testing | S5 | For a state machine with N states and M transition methods, the test fixture walks every (state, transition, condition) cell — including the cells that should *not* transition. Built-in `[TestCase]` parameterization fans one method out across all values of the state enum so the table is exhaustive without copy-paste. Used in `BrawlerActionStateMachineTests` to cover all 8 `BrawlerActionStateType` values × 4 transition methods. |
+| Boundary-pair test | S5 | For any strict inequality in production (`currentTick < LockUntilTick`), one test method asserts both sides of the boundary in sequence — the inclusive side returns `true`, the exclusive side returns `false`, with `LockUntilTick - 1` and `LockUntilTick` adjacent. Catches `<` vs `<=` typos that single-side tests miss. Two boundary pairs in `BrawlerActionStateMachineTests` (active-vs-expired, in-state-vs-cleared). |
+| Crown jewel test | S5 | The 1–4 highest-value tests in a fixture, named explicitly in the fixture's doc-comment so future readers know which ones are load-bearing. Crown jewels are the tests that catch the bugs you actually fear — invariants like "merge path doesn't add a second instance" or "uninstall walks reverse order." If a refactor breaks a crown jewel, you stop and reconsider; if it breaks a peripheral test, you may just update the test. |
+| Pin-then-migrate | S5 | Refactor pattern: when introducing a new helper (e.g. `SimulationClock.SecondsToTicks`), first land the helper + a small focused test fixture proving its contract, then migrate call sites in a separate commit (or commits) so each migration is reviewable in isolation. Avoids the "big bang" risk where a helper bug takes down 13 sites at once. Used for the seconds-to-ticks centralisation in S5. |
+| Round-to-nearest tick conversion | S5 | The seconds → ticks helper computes `(uint)(seconds * tickRate + 0.5f)` rather than `(uint)(seconds * tickRate)` so 0.5s at 30Hz becomes 15 ticks, not 14. Fixes a class of off-by-one bugs (cooldowns 1 tick short, status effects expiring early) caused by truncation at the cast. The bug is invisible in playtest but caught by a single arithmetic test. |
 
 ## Sessions
 
@@ -418,5 +427,96 @@
 - Author 4 distinct AIProfile assets (Colt ranged-skirmisher, Byron hybrid-support, Jessie summoner-zoner, Barley area-zoner).
 - Populate GadgetOptions / StarPowerOptions for the 4 brawlers.
 - Unity test assembly bootstrap (#20).
+
+---
+
+### Session 5 (continued) — 2026-04-26 — Testing curriculum kickoff (6 fixtures, 159 tests, 2 precision bugs caught)
+
+**Goals**
+- Use the new EditMode test assembly (landed earlier in S5) to start a structured testing curriculum, with each fixture chosen to teach a distinct testing technique rather than just "cover code."
+- Catch real bugs along the way; treat any precision/contract bug surfaced by a test as a forcing function to fix production rather than work around in test.
+- Build a vocabulary of named patterns (POCO value testing, hand-rolled fakes, spy-on-hooks, static-state isolation, state-machine table testing, boundary-pair tests, crown jewels) Akash can apply to future fixtures unaided.
+
+**Work done**
+
+*BrawlerCooldownsTests (POCO value testing, baseline)*
+- Tests confirm `BrawlerCooldowns` is a pure data/logic class — `new BrawlerCooldowns()` is the entire setup. No fakes, no fixtures, no static state.
+- Covered: zero-tick reset, per-ability isolation (setting main-attack doesn't leak into super), `IsReady` boundary at the exact ready tick, multi-tick decay correctness.
+- Crown jewel: per-ability isolation — the regression most likely to break gameplay if someone refactors the underlying storage from one-field-per-ability to a dictionary.
+
+*HyperchargeTrackerTests + the 0.5s-at-30Hz precision bug*
+- Wrote tests against `HyperchargeTracker.RemainingSeconds` and `IsActive`.
+- A `Activate(0.5f)` test failed because `(uint)(0.5f * 30f)` truncated to 14, not 15. Production was off by one tick everywhere it converted seconds to ticks.
+- Fix landed in production: introduced `SimulationClock.SecondsToTicks(float seconds)` returning `(uint)(seconds * TickRate + 0.5f)`, then migrated 13 call sites under pin-then-migrate (helper + focused fixture first, then migrations).
+- Lesson surfaced: contract tests against published values *will* find truncation bugs that integration playtests never notice.
+
+*BrawlerLoadoutPassiveLifecycleTests (spy-on-hooks)*
+- 16 tests covering `BrawlerLoadout.InstallAll` / `UninstallAll`.
+- Built `SpyPassive : PassiveDefinition` and `SpyRuntime : IPassiveRuntime`, both writing tagged events into a shared `CallLog.Events : List<string>`.
+- Coverage: install cardinality, install order, runtime callback firing, install context propagation (target/owner threaded through `PassiveInstallContext`), unique source token per passive, uninstall reverse order (LIFO), uninstall reuses the same context object instance, runtime `OnUninstalled` fires *before* definition `Uninstall`, post-uninstall internal state cleared, empty loadout no-ops, dedupe semantics.
+- Three crown jewels named in the doc-comment: reverse-order uninstall, same context object preserved across install→uninstall, runtime-before-definition uninstall ordering.
+- Compile fix mid-flow: switched `CallLog.Events` from `IReadOnlyList<string>` to public `List<string>` so test assertions could call `IndexOf`.
+- Structural luck noted: `BrawlerLoadout.InstallAll`/`UninstallAll` only use target/owner to construct `PassiveInstallContext` (a struct that just passes them through), and the runtime callbacks are null-conditional, so passing `(null, null)` keeps the test isolated from the wide `BrawlerState` graph.
+
+*StatusEffectServiceTests (static-state isolation discipline)*
+- 14 tests covering `StatusEffectService.Apply` (apply-vs-merge orchestrator).
+- First fixture in the project to exercise the static-state isolation discipline: SUT touches four static surfaces (`ServiceProvider` for clock + combat log, `StatusEffectEventBus.OnStatusEffectApplied`, `IStatusTarget.ActiveStatusEffects`).
+- `[SetUp]` clears `ServiceProvider`, registers `FakeClock` + `CombatLogService`, saves the event handler delegate to a field (`_appliedHandler`), subscribes it to the static event, and constructs the service. `[TearDown]` unsubscribes the *same delegate instance* (C# event removal silently no-ops on a different instance) and clears `ServiceProvider` again.
+- Coverage: apply path (4 — adds instance, calls Apply on instance, fires event, logs), merge path (5 — invokes Merge on existing, doesn't add second instance, doesn't call Apply on new, doesn't fire event), apply-vs-merge decision branch, first-CanMerge-wins when multiple existing instances could merge, early-return guards (`CanReceiveStatusEffects()` false, `IsDead` true), real `SlowEffect.Merge` value contract (extends `EndTick` only when `newEndTick > EndTick`).
+- Three crown jewels: merge path doesn't add second instance (the central invariant of merge semantics); first-CanMerge-wins (deterministic ordering matters under rollback); early-return short-circuits cleanly without touching list/event/log (otherwise dead/immune brawlers would still fire ghost-apply events).
+- Skipped: "unknown StatusEffectType returns null" branch — `StatusEffectType` enum has no `None` value, so the branch isn't testable with normal enum values without polluting the enum for tests.
+
+*BrawlerActionStateMachineTests (state-machine table testing + boundary pairs)*
+- 19 test methods, 23 cases via `[TestCase]` parameterization. First fixture in the project to use NUnit `[TestCase]`.
+- Coverage walks the (state × transition × condition) table: construction (2), Enter (3 — including force-replace over a non-interruptible state), Clear (1), UpdateExpiry (4), IsActive (2 boundary-pair), IsInState (3), TryInterrupt (4 methods × 8 cases via fan-out across the three castable state types).
+- Two boundary-pair tests: `IsActive` at `LockUntilTick - 1` (true) vs `LockUntilTick` (false) — the strict `<` boundary; `IsInState` after entering then clearing.
+- Four crown jewels: Enter is force-replace even over non-interruptible states (so external systems like death/forced-move can always overwrite); `IsActive` boundary at `LockUntilTick` (strict `<`, not `<=`); `TryInterrupt` is tick-blind (only checks `IsInterruptible`, not whether the state has expired); struct-replace canary (Enter overwrites the whole `BrawlerActionStateData` struct rather than mutating fields, so all flags propagate atomically).
+- No fakes needed — `BrawlerActionStateMachine` is pure POCO with method-parameter ticks. This was the cleanest fixture to write and the highest case-density per line of test code.
+
+*Tests summary*
+- 6 fixtures, ~159 tests, all green.
+- 2 precision bugs caught and fixed in production (the 0.5s tick-truncation; surfaced by the HyperchargeTracker fixture and propagated via the new `SimulationClock.SecondsToTicks` helper).
+- 13 production sites migrated to `SimulationClock.SecondsToTicks` under pin-then-migrate.
+
+**Files touched (this continuation)**
+
+Production:
+- `Assets/Scripts/Core/Simulation/SimulationClock.cs` — added `public static uint SecondsToTicks(float seconds) => (uint)(seconds * TickRate + 0.5f);`
+- 13 call sites migrated to the helper (cooldowns, hypercharge, status-effect duration conversions, etc.)
+
+Tests (new):
+- `Assets/Tests/EditMode/BrawlerCooldownsTests.cs` (+ .meta)
+- `Assets/Tests/EditMode/HyperchargeTrackerTests.cs` (+ .meta)
+- `Assets/Tests/EditMode/SimulationClockTests.cs` (+ .meta) — focused fixture for the new helper
+- `Assets/Tests/EditMode/BrawlerLoadoutPassiveLifecycleTests.cs` (+ .meta) — guid 7ef0123456789abcdef01234567890ab
+- `Assets/Tests/EditMode/StatusEffectServiceTests.cs` (+ .meta) — guid 8f0123456789abcdef0123456789abcd
+- `Assets/Tests/EditMode/BrawlerActionStateMachineTests.cs` (+ .meta) — guid 90123456789abcdef0123456789abcde
+
+**Decisions made**
+- *Test against published contracts, not current implementation.* If a value gets recomputed differently internally, tests should still pass as long as the public contract holds. Conversely, if a test would only pass for the current implementation, it's coupled to internals and should be rewritten or deleted.
+- *Hand-rolled fakes over Moq.* For the small interfaces in this codebase (`ISimulationClock`, `ICombatLogService`, `IStatusTarget`, `IPassiveRuntime`), a 20-line POCO fake is easier to read and debug than a Moq setup chain. Defer Moq until/unless we hit a collaborator with 10+ methods.
+- *Spy-on-hooks over per-instance counters.* When testing pipelines that act on multiple instances in order, a single shared chronological log catches "out of order" bugs that per-instance counters miss.
+- *Static-state isolation in SetUp/TearDown is non-negotiable.* Any fixture that touches `ServiceProvider`, `StatusEffectEventBus`, or any other static singleton must clear in SetUp, register fakes, and undo in TearDown — including saving the event-handler delegate to a field so the unsubscribe targets the same instance.
+- *Crown jewels named in fixture doc-comments.* Top-of-file comment block lists the 1–4 tests that, if they break, mean "stop and think" rather than "update the test."
+- *Pin-then-migrate for new helpers.* Helper + focused fixture lands first; site migrations go in a follow-up commit (or commits) so each is reviewable in isolation.
+
+**Learnings covered**
+- POCO value testing as the cheapest, most maintainable form of unit test — preferred whenever the SUT has no static or Unity dependencies.
+- The hand-rolled fake idiom and when it's cheaper than a mocking framework.
+- Spy-on-hooks: shared chronological log + tagged appends from each overridden hook = strongest possible assertion of pipeline order across multiple instances.
+- Static-state isolation discipline, including the same-delegate-instance gotcha for C# events.
+- State-machine table testing — exhaustive (state × transition × condition) coverage via `[TestCase]` fan-out instead of copy-paste.
+- Boundary-pair tests for strict inequalities — assert both sides in one method so `<` vs `<=` typos can't slip through.
+- Crown jewel naming as living documentation of which tests are load-bearing.
+- Pin-then-migrate as a refactor pattern for new helpers — the helper proves itself in isolation before site migrations.
+- Round-to-nearest tick conversion (`+ 0.5f` before cast) as the standard fix for seconds → ticks truncation bugs.
+
+**Open questions**
+- `StatusEffectType` enum has no `None` value, so the "unknown type returns null" branch in `StatusEffectService.Apply` isn't easily testable without polluting the enum. Worth adding `None = 0`? Trade-off: defensive enum hygiene vs. risk that some `default(StatusEffectType)` site silently becomes `None`.
+- `BrawlerActionStateMachine` — should `TryInterrupt` actually check whether the state has expired (currently tick-blind)? Documented as a crown jewel observation rather than a bug, but worth a design conversation.
+- Some fixtures still want a Unity in-engine smoke pass (#37 status effects, #40 loadout) even though EditMode coverage is now strong. EditMode validates contracts; in-engine validates wiring (ScriptableObject GUIDs, actual subsystem boot order). Don't conflate the two.
+
+**Next session goal**
+- Pick from: more tier-3 testing (BrawlerStealth, rest of BrawlerLoadout helpers, `BrawlerBuildLayoutDefinition.IsSlotUnlocked`); deferred deployable migrations under pin-then-migrate (5 sites: DeployableController, DeployableState, BuffZone, Turret, HealingStation); or back to gameplay/AI work (AIUtilityScorer Controller/Artillery cases). Akash to choose.
 
 ---
