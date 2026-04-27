@@ -73,7 +73,7 @@ namespace MOBA.Core.Simulation
             };
 
             logic.Execute(_controller.AbilityUser, context);
-            _nextActionTick = currentTick + (uint)(_controller.Definition.ActionIntervalSeconds * 30f);
+            _nextActionTick = currentTick + SimulationClock.SecondsToTicks(_controller.Definition.ActionIntervalSeconds);
             Debug.Log($"[SCRAPPY] Firing at {target.name}");
         }
     }

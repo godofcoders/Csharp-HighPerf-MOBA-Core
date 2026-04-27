@@ -38,7 +38,7 @@ namespace MOBA.Core.Simulation
             _owner = request.Owner;
             _team = request.Team;
             _spawnTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
-            _expiryTick = _spawnTick + (uint)(_definition.LifetimeSeconds * 30f);
+            _expiryTick = _spawnTick + SimulationClock.SecondsToTicks(_definition.LifetimeSeconds);
             _currentHealth = _definition.MaxHealth;
             _abilityUser = new DeployableAbilityUser(this);
             _abilityLogic = _definition.AbilityDefinition != null

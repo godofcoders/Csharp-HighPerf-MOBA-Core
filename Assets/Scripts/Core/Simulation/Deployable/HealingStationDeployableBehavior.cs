@@ -26,7 +26,7 @@ namespace MOBA.Core.Simulation
                 return;
 
             Pulse(currentTick);
-            _nextPulseTick = currentTick + (uint)(_controller.Definition.PulseIntervalSeconds * 30f);
+            _nextPulseTick = currentTick + SimulationClock.SecondsToTicks(_controller.Definition.PulseIntervalSeconds);
         }
 
         private void Pulse(uint currentTick)

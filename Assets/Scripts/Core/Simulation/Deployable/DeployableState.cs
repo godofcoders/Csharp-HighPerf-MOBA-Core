@@ -46,7 +46,7 @@ namespace MOBA.Core.Simulation
             ShieldHealth = 0f;
 
             float lifetimeSeconds = definition != null ? definition.LifetimeSeconds : 0f;
-            ExpiryTick = spawnTick + (uint)(lifetimeSeconds * 30f);
+            ExpiryTick = spawnTick + SimulationClock.SecondsToTicks(lifetimeSeconds);
 
             ActiveStatusEffects = new List<IStatusEffectInstance>(8);
             IncomingDamageModifiers = new DamageModifierCollection();
