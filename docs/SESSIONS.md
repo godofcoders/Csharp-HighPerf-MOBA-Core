@@ -17,10 +17,11 @@
 ## Current State
 
 - **Phase:** 1
-- **Active session:** 5 (in progress — testing curriculum kickoff: 159 unit tests across 6 fixtures, two precision bugs caught and fixed, `SimulationClock.SecondsToTicks` helper centralised across 13 production sites; earlier Session 5 work covered Archetype enum extension, BuildLayout wiring, resolver verification, DefaultBuild + AIProfile asset authoring)
-- **Last completed session:** 4 (continued)
-- **Next session target:** Open — more tier-3 testing (BrawlerStealth, BrawlerLoadout helpers, BrawlerBuildLayoutDefinition.IsSlotUnlocked), deferred deployable migrations (5 sites under pin-then-migrate), or back to gameplay/AI work (AIUtilityScorer Controller/Artillery cases). Akash to pick.
-- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) still parked. The new test fixtures provide much of what those smoke tests would have validated, but in-engine smoke is its own confidence check.
+- **Active session:** 5 — closed for now (tier-3 testing arc complete: 238 tests across 8 fixtures, two precision bugs caught and fixed, `SimulationClock.SecondsToTicks` helper rolled out to 18 production sites total over the two parts of this session; AIUtilityScorer Controller/Artillery gap closed; deployable migrations completed; methodology one-pager `docs/TESTING.md` authored as living reference)
+- **Last completed session:** 5 (continued, day 2)
+- **Next session target:** Open. The standing-tasks queue is empty except the two parked Unity in-engine smokes (#37 status effects, #40 loadout) which need Akash in the editor. Future open candidates surfaced this session: (a) AIUtilityScorer test fixture (the most obvious next tier-3 target — 7 score methods × 7 archetypes is a big branchy decision surface, currently entirely unverified), (b) super-charge source lifecycle fixture parallel to the passive one, (c) `StatusEffectType.None` enum hygiene question, (d) BrawlerActionStateMachine.TryInterrupt design question (currently tick-blind).
+- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) still parked.
+- **Pacing note:** Akash flagged mid-session that the rate of new testing concepts had outpaced his ability to internalise them. Resolved by (1) authoring `docs/TESTING.md` as a permanent reference, (2) explicit no-new-patterns promise on the closing fixture (BrawlerLoadoutHelperTests reused only previously-introduced techniques), (3) future sessions should rebalance toward applying-what-we-have over introducing-new.
 
 ## Key Decisions Ledger
 
@@ -63,6 +64,14 @@
 | Crown jewel test | S5 | The 1–4 highest-value tests in a fixture, named explicitly in the fixture's doc-comment so future readers know which ones are load-bearing. Crown jewels are the tests that catch the bugs you actually fear — invariants like "merge path doesn't add a second instance" or "uninstall walks reverse order." If a refactor breaks a crown jewel, you stop and reconsider; if it breaks a peripheral test, you may just update the test. |
 | Pin-then-migrate | S5 | Refactor pattern: when introducing a new helper (e.g. `SimulationClock.SecondsToTicks`), first land the helper + a small focused test fixture proving its contract, then migrate call sites in a separate commit (or commits) so each migration is reviewable in isolation. Avoids the "big bang" risk where a helper bug takes down 13 sites at once. Used for the seconds-to-ticks centralisation in S5. |
 | Round-to-nearest tick conversion | S5 | The seconds → ticks helper computes `(uint)(seconds * tickRate + 0.5f)` rather than `(uint)(seconds * tickRate)` so 0.5s at 30Hz becomes 15 ticks, not 14. Fixes a class of off-by-one bugs (cooldowns 1 tick short, status effects expiring early) caused by truncation at the cast. The bug is invisible in playtest but caught by a single arithmetic test. |
+| Truth-table testing | S5d2 | For a predicate that's a logical AND/OR of K booleans, `[TestCase]` one method through all 2^K combinations. Exhaustive (not just "multiple cases"). Failure on multiple rows = louder regression than per-case methods when an operator gets flipped (AND → OR drops most rows simultaneously). Same family as state-machine table testing, applied to a yes/no question instead of a state graph. Examples: `BrawlerStealthTests.IsHidden_RequiresAllThreeConditions_TruthTable` (3 booleans, 8 rows), `BrawlerLoadoutHelperTests.HasAnyUnlockedGearSlot_TruthTable` (2 booleans, 4 rows). |
+| Non-strict boundary-pair test | S5d2 | Boundary-pair on `>=` (or `<=`) needs THREE points to pin which operator is correct, not two. For `powerLevel >= UnlockPowerLevel`: assert `Unlock - 1` locked, `Unlock` unlocked (the inclusive line), `Unlock + 1` unlocked. Three points distinguish `>=` from both wrong flips (`>` would lock at exactly Unlock; `==` would unlock only at exactly Unlock and re-lock above). Strict `<`/`>` only needs two points because there's only one common wrong flip (`<` vs `<=`). Example: `BrawlerBuildLayoutDefinitionTests.IsSlotUnlocked_BoundaryAtUnlockPowerLevel_InclusiveGreaterEqual`. |
+| ScriptableObject test lifecycle | S5d2 | When the SUT or a collaborator is a Unity `ScriptableObject`, EditMode tests need a `_spawned : List<Object>` field, a `Track<T>(T obj)` helper that adds and returns, and a `[TearDown]` that calls `Object.DestroyImmediate` on every tracked instance. Cannot use `new SO()` — must use `ScriptableObject.CreateInstance<T>()`. Without TearDown cleanup, native objects leak across tests and cause flakiness. Established pattern in the project: `BrawlerBuildResolverTests`, `BrawlerBuildValidatorTests`, `BrawlerBuildLayoutDefinitionTests`, `BrawlerLoadoutHelperTests`. |
+| Test-only abstract subclass | S5d2 | When `ScriptableObject.CreateInstance<X>()` fails with "cannot create instance of abstract class," the fix is a private nested `TestX : X` subclass with empty/null overrides for whatever abstract members exist, then call `CreateInstance<TestX>()`. The overrides don't have to do anything meaningful — null returns are fine if the helpers under test only store references rather than calling the abstract method. Caught the four `BrawlerLoadoutHelperTests` failures: `AbilityDefinition` and `GadgetDefinition` are both abstract with `CreateLogic()` as their abstract member. |
+| GUID-preserving file rename | S5d2 | Unity tracks asset references via the GUID inside each `.meta` file, not by filename. Renaming a `.cs` file is safe IF AND ONLY IF the `.cs` and `.cs.meta` move together, keeping the GUID unchanged. Renaming just the `.cs` makes Unity regenerate a new `.meta` with a new GUID, and every existing reference (prefab fields, scene assignments, inspector pointers) becomes a `(Missing)` script. Rule: always `mv` both files together; verify GUID inside `.meta` is unchanged after. Used to drop the doubled-name `BuffZoneDeployableBehavior`. |
+| SUT | S5d2 | "Subject Under Test" (sometimes "System Under Test"). The class/method the fixture exists to verify, distinguished from its *collaborators* (which get fakes/stubs/spies). Used in fixture doc-comments to make "what's verified vs. what's faked" unambiguous. |
+| Cheap-surface ladder | S5d2 | Mental model for picking how to test something. Climb to the lowest rung that still works: (1) POCO with method-parameter inputs (`new SUT()` is the entire setup); (2) POCO with constructor-injected collaborators (hand it fakes); (3) POCO touching static singletons (needs SetUp/TearDown discipline); (4) ScriptableObject + MonoBehaviour + scene fixtures (save for in-engine smoke tests, not unit tests). The lower the rung, the cheaper the test. |
+| Crown-jewel test naming | S5d2 | Convention: every fixture's top-of-file doc-comment names the 1–4 most load-bearing tests with one line each on why each matters. Future readers know which tests mean "stop and reconsider the change" if they break vs. "probably just update the test." Every fixture in the testing curriculum follows this convention. |
 
 ## Sessions
 
@@ -518,5 +527,112 @@ Tests (new):
 
 **Next session goal**
 - Pick from: more tier-3 testing (BrawlerStealth, rest of BrawlerLoadout helpers, `BrawlerBuildLayoutDefinition.IsSlotUnlocked`); deferred deployable migrations under pin-then-migrate (5 sites: DeployableController, DeployableState, BuffZone, Turret, HealingStation); or back to gameplay/AI work (AIUtilityScorer Controller/Artillery cases). Akash to choose.
+
+---
+
+### Session 5 (continued, day 2) — 2026-04-27 — Closed the tier-3 testing arc + deployable migrations + AI archetype gap (238 tests, 8 fixtures total)
+
+**Goals**
+- Close out the testing curriculum kicked off the previous day. Three fixtures left in the bucket: BrawlerStealth, BrawlerBuildLayoutDefinition.IsSlotUnlocked, BrawlerLoadout helpers.
+- Land the deferred deployable seconds-to-ticks migrations under the pin-then-migrate pattern.
+- Close the AIUtilityScorer Controller/Artillery gap (Option B from the original Session 5 entry — the proper fix, not "rely on AIProfile assets to override").
+- Watch for cognitive-load signals — yesterday introduced a lot of new patterns; today should consolidate.
+
+**Work done**
+
+*BrawlerStealthTests — truth-table testing pattern + known-gap-via-test*
+- 8 test methods, 15 cases via `[TestCase]` expansion. Pure POCO (no fakes — `BrawlerStealth.IsHidden(currentTick)` takes the tick as a method parameter).
+- Headline pattern: **truth-table testing**. `IsHidden` is a logical AND of three booleans (`IsInBush AND !IsRevealed AND !recentlyAttacked`); a single `[TestCase]`-parameterized method walks all 2^3 = 8 combinations. If anyone ever flips the AND to OR or drops one of the three checks, multiple rows fail simultaneously — much louder than per-case methods.
+- Boundary-pair on the strict `<` recently-attacked window (delta = `Window - 1` visible vs. delta = `Window` hidden again).
+- `RecentlyAttackedTicks` constant pinned at 60 (catches silent balance drift).
+- **Known-gap-via-test** introduced as a named pattern: `IsHidden_FreshBrawlerInBush_AppearsVisible_KnownGapDueToLastAttackTickDefault`. A brawler with `LastAttackTick = 0` (never attacked) is incorrectly treated as "recently attacked" in the first ~60 ticks because `(currentTick - 0) < 60`. Test pins current behavior with a comment naming the gap and proposing fixes (sentinel value, `HasEverAttacked` bool, or accept-the-gap). Real-world impact small but the implementation footgun should be a deliberate decision when fixed, not an accidental cleanup.
+- Three crown jewels named: truth-table contract, recently-attacked boundary-pair, known-gap pin.
+
+*BrawlerBuildLayoutDefinitionTests — first ScriptableObject-lifecycle fixture in the tier-3 arc + non-strict boundary-pair*
+- 13 test methods, 22 cases via `[TestCase]` expansion. Covers all 5 public surfaces: `Slots`, `CountSlots`, `HasSlotId`, `TryGetSlot`, `IsSlotUnlocked`.
+- Two new lessons layered: **(1) ScriptableObject lifecycle in EditMode** — first fixture in the curriculum to climb to rung 4 of the cheap-surface ladder. Required `Track<T>` + `[TearDown] DestroyImmediate` discipline (same shape as existing `BrawlerBuildResolverTests` / `BrawlerBuildValidatorTests`, so this lined up with house style). **(2) Boundary-pair on a NON-strict inequality** — `IsSlotUnlocked` returns `powerLevel >= UnlockPowerLevel` (note `>=`, not `<`). Unlike the strict-`<` boundary in BrawlerActionStateMachine, `>=` has THREE points to pin (Unlock-1 locked, Unlock unlocked at the inclusive line, Unlock+1 unlocked above). Three points distinguish `>=` from BOTH wrong flips: `>` (which would lock at exactly Unlock) and `==` (which would unlock only at exactly Unlock).
+- Out-param value-copy semantics test: mutate the original layout's slot AFTER the `out` returns and assert the copy is unaffected (struct snapshot semantics).
+- Null-Slots-array safety asserted on all four query methods (every public method has a `_WhenSlotsArrayIsNull` variant — load-bearing for asset-import safety since fresh SOs start with `Slots = null`).
+- Three crown jewels: the `>=` boundary triple-point, out-param value-copy, group-level null-Slots safety.
+
+*Concept-consolidation conversation — `docs/TESTING.md` authored*
+- Mid-day, Akash flagged that the rate of new testing concepts had outpaced his ability to internalise them. This was the right signal at the right time — flagging fatigue mid-curriculum is a strength, not a weakness.
+- Resolution: paused new-fixture work, walked through all 19 testing concepts (vocabulary, patterns, anti-patterns) in plain English with everyday analogies and tiny code snippets. Saved as `docs/TESTING.md` — the durable companion to the SESSIONS glossary.
+- Established explicit pacing rule for the rest of the session: the next fixture would reuse only previously-introduced patterns. No new techniques.
+- Akash asked clarifying questions about each "advanced" concept and self-graded his understanding; the response covered which ones were bullseye, partly-right-with-missing-piece, or off. This kind of self-quizzing-then-correction is the strongest signal that the concepts are actually sticking.
+
+*Deployable migrations — pin-then-migrate playthrough*
+- Five sites that were deferred from S5 day 1's `SimulationClock.SecondsToTicks` rollout, all doing the OLD `(uint)(seconds * 30f)` truncation pattern: `DeployableController` (LifetimeSeconds → expiry), `DeployableState` (lifetimeSeconds → expiry), `TurretDeployableBehavior` (ActionIntervalSeconds → next action), `BuffZoneDeployableBehavior` (PulseIntervalSeconds → next pulse), `HealingStationDeployableBehavior` (PulseIntervalSeconds → next pulse).
+- Each replaced with `SimulationClock.SecondsToTicks(...)`. Behavior-correcting (not behavior-preserving): old code truncates with hardcoded 30; new code rounds with centralized `TickDeltaTime`. For most authored values they match; at edge cases the new code is correct where the old was off by one.
+- The "pin" had already happened back in S5 day 1 when the helper landed with its `SimulationClockSecondsToTicksTests` fixture. This was the migration phase. Akash chose to land all 5 in a single commit rather than 5 atomic commits — pragmatic for mechanical 1-line substitutions where the helper is already pinned by tests.
+- Total `SecondsToTicks` rollout across both days: 18 production sites.
+
+*BuffZone file rename — drop the doubled class name*
+- `BuffZoneDeployableBehaviorBuffZoneDeployableBehavior.cs` (filename had the class name doubled; the `class` declaration inside was correctly named `BuffZoneDeployableBehavior`). Renamed both `.cs` and `.cs.meta` together. GUID `9c0a194f3ea414d109d9763a62ab410e` inside the `.meta` preserved, so all existing prefab/scene references resolve correctly.
+- Lesson pinned: Unity tracks asset references via the GUID inside `.meta`, not by filename. Renaming a `.cs` is safe IFF the `.cs` and `.cs.meta` move together. Renaming just the `.cs` makes Unity regenerate a new `.meta` with a new GUID, breaking every reference. Always `mv` both together; verify GUID inside `.meta` is unchanged after.
+
+*AIUtilityScorer Controller/Artillery extension*
+- Closes the gap noted in the original Session 5 entry. Previously the scorer had `IsSniper`, `IsTank`, `IsAssassin`, `IsSupport`, `IsFighter` booleans; Controller and Artillery brawlers were silently treated as Fighter (neutral 0 in every score method).
+- Added `IsController` and `IsArtillery` booleans, then per-scorer deltas across all 7 `Score*` methods (Retreat, UseSuper, HoldRange, Reposition, Approach, Regroup, Peel). Total: 14 new lines (7 × 2).
+- Calibrated relative to existing archetype ranges; no existing deltas changed. Headline signature deltas: **Controller `UseSuper +14`** (second only to Assassin's +15 — turret/zone supers reshape the fight more than other archetypes' supers when ready); **Artillery `Retreat +12`, `HoldRange +18`, `Approach -10`** (more rear-line than Sniper because of fragility + arcs).
+- `IsFighter` remains unused in any scorer — that's the pre-existing "neutral default" pattern; Fighter brawlers get scoring deltas only via the profile multipliers. Preserved as-is rather than padding with all-zero deltas.
+
+*BrawlerLoadoutHelperTests — closes the testing arc, no-new-patterns promise honored*
+- 22 test methods, ~32 cases via `[TestCase]` expansion. Covers the non-lifecycle public surface: construction defaults, `SetPowerLevel` clamp, `SetEquippedHypercharge`, `SetEquippedPassives` (replace + dedupe + null-skip), `RefreshRuntimeBuildUnlockState`, `ResetRuntimeState`, slot-unlock convenience reads, `GetCurrent*` lookups.
+- Out of scope (intentionally): `InstallAll`/`UninstallAll`/`TickPassives` (already covered by `BrawlerLoadoutPassiveLifecycleTests`); super-charge source lifecycle (would deserve its own fixture parallel to the passive one, future session).
+- Three crown jewels: `HyperchargeModifierSource` non-null-and-unique-per-instance (catches a tempting "static field" optimization that would cause cross-brawler modifier teardown collisions); `SetEquippedPassives_ReplacesPreviousList_NotAppends` (catches removing the `Clear()` at the top of the method); `HasAnyUnlockedGearSlot_TruthTable` (OR over two booleans, 4 rows).
+- **Honored the no-new-patterns promise**: every technique reused from previous fixtures (POCO value testing, ScriptableObject lifecycle with `Track<T>`, `[TestCase]` parameterization, truth-table testing, crown-jewel naming, test-against-contract). Nothing new introduced.
+- Initial run had 4 failures, all from one root cause — assumed `AbilityDefinition` and `GadgetDefinition` were concrete (because `StarPowerDefinition` is). Both are abstract with `CreateLogic()` as their abstract member. Fix: added `TestAbilityDefinition` and `TestGadgetDefinition` private nested subclasses with empty `(=> null)` overrides, same shape as the existing `TestGadgetDefinition` in `BrawlerBuildResolverTests`. Pattern documented in the new "test-only abstract subclass" glossary entry.
+
+*Tests summary across both days of S5 (continued)*
+- 8 EditMode fixtures total (BrawlerCooldowns, HyperchargeTracker, SimulationClockSecondsToTicks, BrawlerLoadoutPassiveLifecycle, StatusEffectService, BrawlerActionStateMachine, BrawlerStealth, BrawlerBuildLayoutDefinition, BrawlerLoadoutHelpers). 238 tests, all green.
+- 2 precision bugs caught and fixed (the 0.5s-at-30Hz tick truncation; rolled out to 18 production sites total via `SimulationClock.SecondsToTicks`).
+
+**Files touched (this day)**
+
+Production:
+- `Assets/Scripts/Core/Simulation/Deployable/DeployableController.cs` — `(uint)(LifetimeSeconds * 30f)` → `SimulationClock.SecondsToTicks(LifetimeSeconds)`.
+- `Assets/Scripts/Core/Simulation/Deployable/DeployableState.cs` — same shape.
+- `Assets/Scripts/Core/Simulation/Deployable/TurretDeployableBehavior.cs` — same shape.
+- `Assets/Scripts/Core/Simulation/Deployable/BuffZoneDeployableBehavior.cs` — same shape, plus filename change from `BuffZoneDeployableBehaviorBuffZoneDeployableBehavior.cs` (GUID preserved).
+- `Assets/Scripts/Core/Simulation/Deployable/HealingStationDeployableBehavior.cs` — same shape.
+- `Assets/Scripts/Core/Simulation/AI/AIUtilityScorer.cs` — added `IsController`/`IsArtillery` booleans, 14 new score deltas across 7 score methods.
+
+Tests (new):
+- `Assets/Tests/EditMode/BrawlerStealthTests.cs` (+ `.meta`).
+- `Assets/Tests/EditMode/BrawlerBuildLayoutDefinitionTests.cs` (+ `.meta`).
+- `Assets/Tests/EditMode/BrawlerLoadoutHelperTests.cs` (+ `.meta`).
+
+Docs:
+- `docs/TESTING.md` — new methodology one-page reference. Akash's original notes preserved verbatim on top; substantial "Additions" section covers vocabulary (SUT, cheap-surface ladder), every named pattern in the curriculum, hand-rolled-fake nuances, anti-patterns 3–7, the same-instance-discipline checklist (events / modifiers / source tokens), round-to-nearest tick conversion, when-to-break-the-rules section, and an 8-step decision tree for writing a new fixture.
+- `docs/SESSIONS.md` — this entry, plus glossary additions and Current State block update.
+
+**Decisions made**
+- *Pace over completeness when the human flags fatigue.* When Akash said the cognitive load was getting too high, the right move was to PAUSE the fixture-writing flow, consolidate via the concept-walkthrough conversation, author the durable reference doc, and explicitly cap new patterns for the rest of the day. NOT push through. The tier-3 arc closing was still possible because we deliberately chose a fixture (BrawlerLoadoutHelpers) that reused existing techniques.
+- *Layman-language references over technical jargon* in the consolidation doc. `docs/TESTING.md` uses everyday analogies (vending machine, light switch, security camera) alongside the technical names. Tested via Akash's self-quiz — the analogies are what made the patterns stick.
+- *Test-only abstract subclass over avoiding the abstract type.* When `CreateInstance<AbilityDefinition>()` failed, the alternative would have been "redesign tests to not need AbilityDefinition." That would have weakened the contract under test (the GetCurrent* lookups DO take AbilityDefinition arguments). Better to add minimal test subclasses and keep the test as written.
+- *Single commit for the 5 deployable migrations* despite the pin-then-migrate pattern's "atomic per-site" recommendation. Pragmatic call: each migration was a 1-line mechanical substitution of equivalent expressions, the helper was already pinned by tests, and the 5-commit overhead wasn't earning its keep. Pin-then-migrate's atomicity benefit is highest when migrations are non-trivial.
+- *Filename rename in a separate commit from the migration.* The BuffZone file rename happens AFTER the migration commit so the "what changed" diff for the migration is purely about the helper substitution, not entangled with the rename. Smaller, more reviewable diffs.
+
+**Learnings covered**
+- Truth-table testing as a named pattern (separate from state-machine table testing — applied to predicates rather than state graphs).
+- Boundary-pair on non-strict `>=` vs strict `<` — three points vs two points, and the underlying reason (different number of likely wrong flips).
+- ScriptableObject test lifecycle with `Track<T>` + `[TearDown] DestroyImmediate` — established pattern in the project.
+- Test-only abstract subclass when `CreateInstance` can't construct an abstract type. Pattern: empty private nested subclass with `=> null` for the abstract methods.
+- Known-gap-via-test as a deliberate practice — pin current behavior with a comment naming the gap and proposed fixes; future cleanup must face the test failure.
+- Pin-then-migrate playthrough end-to-end: helper + fixture in one S5 day-1 commit, 5 site migrations in one S5 day-2 commit. The pattern's atomicity recommendation is contextual, not absolute.
+- GUID-preserving file rename: `.cs` and `.cs.meta` move together; verify GUID unchanged.
+- Pacing as a first-class concern — when cognitive load signals are flagged, consolidating is worth more than completing.
+
+**Open questions / future candidates**
+- `AIUtilityScorer` is now the most obvious next tier-3 testing target. 7 score methods × 7 archetypes is a big branchy decision surface, currently entirely unverified. Behavior is contractual ("Sniper retreats more than Tank") and easy to assert as point-tests against `ScoreRetreat`/`ScoreApproach` etc.
+- Super-charge source lifecycle fixture (`BrawlerLoadoutSuperChargeSourceLifecycleTests`) parallel to the passive one — same spy-on-hooks pattern, applied to `InstallSuperChargeSources` / `UninstallAllSuperChargeSources` / `Tick` / `Notify*`.
+- `StatusEffectType` enum has no `None` value — the "unknown type returns null" branch in `StatusEffectService.Apply` isn't easily testable. Trade-off: defensive enum hygiene vs. risk that some `default(StatusEffectType)` site silently becomes `None`.
+- `BrawlerActionStateMachine.TryInterrupt` is currently tick-blind (named as a crown jewel observation, not a bug). Worth a design conversation: should an expired but non-interruptible state allow interrupt? Currently UpdateExpiry is the only path that clears non-interruptible states.
+- Unity in-engine smoke tests (#37 status effects, #40 loadout) still parked. EditMode coverage is now strong but in-engine smoke validates a different layer (ScriptableObject GUIDs, actual subsystem boot order). Don't conflate the two.
+- The two-day Session 5 (continued) is now closed. Future sessions should rebalance toward applying-what-we-have over introducing-new (per the pacing-conversation outcome).
+
+**Next session goal**
+- Open. Standing-tasks queue is empty except parked Unity smokes. Akash to pick from: AIUtilityScorer fixture, super-charge source lifecycle fixture, AIUtilityScorer + BrawlerAIProfile design discussion (the open questions above), or the Unity in-engine smokes if motivation is right.
 
 ---
