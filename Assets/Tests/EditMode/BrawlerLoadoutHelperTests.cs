@@ -68,12 +68,32 @@ namespace MOBA.Tests.EditMode
     public class BrawlerLoadoutHelperTests
     {
         // ---------- Test-only concrete subclasses ----------
-        // PassiveDefinition is abstract, so we need a concrete one to
-        // populate SetEquippedPassives. These are minimal — no overrides
-        // needed because the helpers under test only store the references,
-        // they don't call Install/CreateRuntime/Uninstall.
+        // Several SO base classes are abstract; we need concrete subclasses
+        // to call ScriptableObject.CreateInstance on them.
+        //
+        //   PassiveDefinition: abstract — TestStarPowerDefinition (empty
+        //     subclass; StarPowerDefinition itself is concrete).
+        //   AbilityDefinition: abstract, single abstract method
+        //     CreateLogic() — TestAbilityDefinition returns null.
+        //   GadgetDefinition: abstract (inherits CreateLogic from
+        //     AbilityDefinition) — TestGadgetDefinition returns null.
+        //
+        // None of these are exercised by the helpers under test (which
+        // only STORE references), so returning null from CreateLogic is
+        // safe. Same pattern as TestGadgetDefinition in
+        // BrawlerBuildResolverTests.
 
         private sealed class TestStarPowerDefinition : StarPowerDefinition { }
+
+        private sealed class TestAbilityDefinition : AbilityDefinition
+        {
+            public override IAbilityLogic CreateLogic() => null;
+        }
+
+        private sealed class TestGadgetDefinition : GadgetDefinition
+        {
+            public override IAbilityLogic CreateLogic() => null;
+        }
 
         // ---------- ScriptableObject lifecycle ----------
         // Same pattern as BrawlerBuildResolverTests / BrawlerBuildLayoutDefinitionTests.
@@ -105,8 +125,11 @@ namespace MOBA.Tests.EditMode
         private TestStarPowerDefinition MakePassive() =>
             Track(ScriptableObject.CreateInstance<TestStarPowerDefinition>());
 
-        private GadgetDefinition MakeGadget() =>
-            Track(ScriptableObject.CreateInstance<GadgetDefinition>());
+        private TestGadgetDefinition MakeGadget() =>
+            Track(ScriptableObject.CreateInstance<TestGadgetDefinition>());
+
+        private TestAbilityDefinition MakeAbility() =>
+            Track(ScriptableObject.CreateInstance<TestAbilityDefinition>());
 
         private HyperchargeDefinition MakeHypercharge() =>
             Track(ScriptableObject.CreateInstance<HyperchargeDefinition>());
@@ -490,8 +513,8 @@ namespace MOBA.Tests.EditMode
         public void GetCurrentMainAttackDefinition_ReturnsRuntimeKit_WhenSet()
         {
             var loadout = new BrawlerLoadout();
-            AbilityDefinition kitAttack = Track(ScriptableObject.CreateInstance<AbilityDefinition>());
-            AbilityDefinition defAttack = Track(ScriptableObject.CreateInstance<AbilityDefinition>());
+            AbilityDefinition kitAttack = MakeAbility();
+            AbilityDefinition defAttack = MakeAbility();
 
             loadout.RuntimeKit.SetMainAttack(kitAttack, null);
 
@@ -508,7 +531,7 @@ namespace MOBA.Tests.EditMode
             // Fresh loadout — RuntimeKit.MainAttackDefinition is null.
             // Lookup must fall through to the brawler definition's MainAttack.
             var loadout = new BrawlerLoadout();
-            AbilityDefinition defAttack = Track(ScriptableObject.CreateInstance<AbilityDefinition>());
+            AbilityDefinition defAttack = MakeAbility();
 
             BrawlerDefinition def = Track(ScriptableObject.CreateInstance<BrawlerDefinition>());
             def.MainAttack = defAttack;
