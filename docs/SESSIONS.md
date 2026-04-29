@@ -17,11 +17,11 @@
 ## Current State
 
 - **Phase:** 1
-- **Active session:** 5 — closed for now (tier-3 testing arc complete: 238 tests across 8 fixtures, two precision bugs caught and fixed, `SimulationClock.SecondsToTicks` helper rolled out to 18 production sites total over the two parts of this session; AIUtilityScorer Controller/Artillery gap closed; deployable migrations completed; methodology one-pager `docs/TESTING.md` authored as living reference)
-- **Last completed session:** 5 (continued, day 2)
-- **Next session target:** Open. The standing-tasks queue is empty except the two parked Unity in-engine smokes (#37 status effects, #40 loadout) which need Akash in the editor. Future open candidates surfaced this session: (a) AIUtilityScorer test fixture (the most obvious next tier-3 target — 7 score methods × 7 archetypes is a big branchy decision surface, currently entirely unverified), (b) super-charge source lifecycle fixture parallel to the passive one, (c) `StatusEffectType.None` enum hygiene question, (d) BrawlerActionStateMachine.TryInterrupt design question (currently tick-blind).
-- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) still parked.
-- **Pacing note:** Akash flagged mid-session that the rate of new testing concepts had outpaced his ability to internalise them. Resolved by (1) authoring `docs/TESTING.md` as a permanent reference, (2) explicit no-new-patterns promise on the closing fixture (BrawlerLoadoutHelperTests reused only previously-introduced techniques), (3) future sessions should rebalance toward applying-what-we-have over introducing-new.
+- **Active session:** 6 — closed for the day (plan reconciliation: discovered codebase is effectively through plan Session 9, updated `PHASE_1_PLAN.md` to reflect reality; loadout content authoring, star powers, hypercharges all already done out-of-order)
+- **Last completed session:** 6
+- **Next session target:** Plan Session 10 = full-brawler integration playtest (Akash in Unity editor; pairs naturally with the parked smoke tests #37 and #40), or skip ahead to Plan Sessions 11–12 = Gem Grab game mode scaffolding (gem-spawner, pickup, carrier state, cashout). The Gem Grab work is the biggest substantive remaining Phase 1 chunk (~4 sessions).
+- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) still parked. The integration playtest in Session 10 would naturally cover these.
+- **Phase 1 progress:** ~7 effective sessions done (5 numbered + 2 continueds); ~12 remaining (integration playtest, Gem Grab × 4, camera/input × 2, HUD × 2, game feel × 2, slice review). Tracking ~18–20 total sessions vs original 21-session projection.
 
 ## Key Decisions Ledger
 
@@ -634,5 +634,54 @@ Docs:
 
 **Next session goal**
 - Open. Standing-tasks queue is empty except parked Unity smokes. Akash to pick from: AIUtilityScorer fixture, super-charge source lifecycle fixture, AIUtilityScorer + BrawlerAIProfile design discussion (the open questions above), or the Unity in-engine smokes if motivation is right.
+
+---
+
+### Session 6 — 2026-04-28 — Plan reconciliation pass
+
+**Goals**
+- Begin plan Session 6 ("Gadgets pt. 1"): author 4 primary gadgets, one per brawler.
+
+**What actually happened**
+- Investigation immediately surfaced that the gadget content was already authored and wired. Then star powers. Then hypercharges. The codebase has run ahead of `PHASE_1_PLAN.md` by ~4 sessions of content-authoring scope.
+- Stopped the original session premise and recalibrated. Today became a documentation-reconciliation session: walk through actual state, update the plan to match reality, surface what's authored-but-unverified.
+
+**Findings (what's actually in the codebase)**
+- All 4 brawlers have 2 gadgets each authored AND wired (verified via GUID cross-reference between brawler `GadgetOptions` and the gadget `.asset` GUIDs). 8 total gadget assets:
+  - Colt: `Speedloader` (AmmoRefill, full reload — `RefillAmount: 0` is intentional, the tooltip on `AmmoRefillGadgetDefinition` says "0 or negative = full refill"), `Quick Step` (Dash, force 4.0).
+  - Byron: `Booster Shots` (AllyHealPulse, 500 heal / 4 radius), `Shot in the Arm` (HealBurst self 600).
+  - Jessie: `Power Surge` (SuperCharge +25%), `Energize` (AllyHealPulse, 400 heal / 4 radius).
+  - Barley: `Last Drop` (SuperCharge +20%), `Herbal Tonic` (HealBurst self 700).
+- All 4 brawlers have 2 star powers each authored and wired (8 total). Filenames use `_SP_` prefix which is why the initial `*StarPower*` glob missed them.
+- All 4 brawlers have 1 hypercharge each authored and wired.
+- The plan's mention of `GadgetChargeState` is stale terminology — that class doesn't exist by that name. Gadget charge tracking lives across `BrawlerCooldowns` / `BrawlerResources` / `BrawlerLoadout` after the Session 3 decomposition; functionality is fine.
+- `Blaze_*` archival files at the root of `Assets/Scriptables/` (flagged in Session 1's "deprecated, don't use as canonical") are still present. Confirmed not referenced by any current brawler (no GUID matches in any current asset). Safe to delete; left for a future session to keep this session scope-tight.
+
+**Updates landed**
+- `docs/PHASE_1_PLAN.md`:
+  - Added "Progress as of 2026-04-28" section near the top capturing what's authored, what's verified-vs-unverified, what cleanup is carried forward, remaining-work mapping.
+  - Added a Status column to the session-by-session table; marked Sessions 1–9 as ✅ done (some out-of-order), Session 10 as ⏳ next, Sessions 11–21 as ⏳ pending.
+  - Preserved the original Session 1 brawler-content audit as historical reference, added a new 2026-04-28 audit table beside it showing actual current contents (gadget names + types, star power names, hypercharge presence, AIProfile + archetype + DefaultBuild).
+  - Updated the "Known smells" list: marked the `HyperchargeTracker` 30-TPS smell as resolved (Session 2), kept `Blaze_*` cleanup as outstanding, added the parked Unity smoke tests as outstanding.
+- `docs/SESSIONS.md`:
+  - Current State block updated: active session bumped to 6, target is plan Session 10 (integration playtest) or jump to Gem Grab.
+  - This entry appended.
+
+**Decisions made**
+- *Don't delete the `Blaze_*` archival files this session.* Verified safe to delete (no GUID references anywhere) but kept this session tightly scoped to documentation reconciliation. Cleanup is its own task and pairs well with plan Session 10 (when Akash is already in the editor).
+- *Don't write GadgetLogic test fixtures this session.* Was on the option list. Deferred — yesterday's session ended with explicit pacing guidance ("rebalance toward applying-what-we-have over introducing-new") and this session's premise change already used the day's planning budget. Future-session candidate.
+- *Track plan-vs-actual via a Status column* in `PHASE_1_PLAN.md`'s session table rather than rewriting the table. Original plan rows preserved as historical record; "✅ done out-of-order" marker captures the out-of-sequence content authoring honestly.
+
+**Learnings covered**
+- The premise-check before plowing into a session. Today's intended session (gadget authoring) had a stale premise — the work was already done. Catching this in the FIRST 15 minutes of investigation rather than after authoring duplicate assets saved the day. The investigative pass before content work is worth the time.
+- Plan-vs-reality drift is normal in long-running projects. The fix is small periodic reconciliation passes, not a single perfect upfront plan.
+
+**Open questions / unchanged**
+- Same as end-of-S5d2: AIUtilityScorer test fixture, super-charge source lifecycle fixture, `StatusEffectType.None` enum hygiene question, `BrawlerActionStateMachine.TryInterrupt` tick-blindness design question.
+- Plus newly-flagged: `Blaze_*` archival cleanup.
+
+**Next session goal**
+- Plan Session 10: full-brawler integration playtest in the Unity editor. Pairs with parked smoke tests (#37 status effects, #40 loadout). Akash hands-on. Outcomes feed forward into Gem Grab tuning.
+- Alternative: skip integration playtest, start Gem Grab scaffolding directly (plan Sessions 11–12). The trade-off is whether to verify the kits feel distinct BEFORE building game-mode scoring around them, or to build the loop first and tune later.
 
 ---
