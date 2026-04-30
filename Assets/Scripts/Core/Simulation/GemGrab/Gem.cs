@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Infrastructure;
 
@@ -32,6 +33,14 @@ namespace MOBA.Core.Simulation
         [Tooltip("How many gems this world-object grants when picked up. Default 1.")]
         [Min(1)]
         [SerializeField] private int _value = 1;
+
+        [Tooltip("Pickup radius in world units. Brawlers within this distance get the gem.")]
+        [Min(0.1f)]
+        [SerializeField] private float _pickupRadius = 1.0f;
+
+        // Reusable scratch buffer for the proximity query so we don't alloc
+        // per tick. SpatialGrid.GetEntitiesInRadiusNonAlloc fills this.
+        private static readonly List<ISpatialEntity> _scratch = new List<ISpatialEntity>(8);
 
         public int Value => _value;
         public bool IsPickedUp { get; private set; }
@@ -73,8 +82,30 @@ namespace MOBA.Core.Simulation
 
         public override void Tick(uint currentTick)
         {
-            // Day 1: gems are passive — no per-tick behavior beyond existence.
-            // Day 2 may add proximity-scan-and-pickup or a despawn timer.
+            if (IsPickedUp)
+                return;
+
+            SpatialGrid grid = SimulationClock.Grid;
+            if (grid == null)
+                return;
+
+            // Find any brawler within the pickup radius. The grid already
+            // filters by distance and we just take the first live one — no
+            // tie-breaking needed because pickups are race-safe via
+            // IsPickedUp.
+            _scratch.Clear();
+            grid.GetEntitiesInRadiusNonAlloc(transform.position, _pickupRadius, _scratch);
+
+            for (int i = 0; i < _scratch.Count; i++)
+            {
+                if (_scratch[i] is BrawlerController brawler &&
+                    brawler.State != null &&
+                    !brawler.State.IsDead &&
+                    TryPickupBy(brawler.State))
+                {
+                    return; // gem consumed; bail
+                }
+            }
         }
     }
 }
