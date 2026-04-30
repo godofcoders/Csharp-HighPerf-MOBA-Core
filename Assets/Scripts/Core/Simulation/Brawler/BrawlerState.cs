@@ -119,6 +119,13 @@ namespace MOBA.Core.Simulation
         // owns.
         public BrawlerLoadout Loadout { get; private set; }
 
+        // Gem Grab: brawler's currently-carried gem count. POCO substate so
+        // it follows the same shape as Stats/Cooldowns/Loadout. Pass-through
+        // getter keeps the public API simple — external callers ask the
+        // brawler for CarriedGemCount, not CarriedGems.Count.
+        public BrawlerCarriedGems CarriedGems { get; private set; }
+        public int CarriedGemCount => CarriedGems.Count;
+
         public int CurrentPowerLevel => Loadout.CurrentPowerLevel;
         public IReadOnlyList<PassiveDefinition> EquippedPassives => Loadout.EquippedPassives;
         public HyperchargeDefinition EquippedHypercharge => Loadout.EquippedHypercharge;
@@ -153,6 +160,10 @@ namespace MOBA.Core.Simulation
             // token — one line replaces the four separate initializations
             // that used to live here.
             Loadout = new BrawlerLoadout();
+
+            // Gem Grab carrier state. Starts at zero; brawlers spawn empty-
+            // handed and earn gems by walking over them.
+            CarriedGems = new BrawlerCarriedGems();
 
             RefreshRuntimeBuildUnlockState();
             RefreshGadgetChargesFromRuntimeKit();
@@ -496,6 +507,10 @@ namespace MOBA.Core.Simulation
             // --- 3. Clear transient combat state.
             IsStunned = false;
             Stealth.Reset();
+            // Gem Grab: respawning brawlers spawn empty-handed. Death-drop
+            // spawning is the coordinator's job (needs position); this only
+            // clears the count.
+            CarriedGems.Clear();
             ThreatTracker.Clear();
             AssistTracker.Clear();
             Stats.ClearAllModifiers();        // incoming/outgoing damage mods, movement mods, shield

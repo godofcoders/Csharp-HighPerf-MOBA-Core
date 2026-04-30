@@ -1,0 +1,80 @@
+using UnityEngine;
+using MOBA.Core.Infrastructure;
+
+namespace MOBA.Core.Simulation
+{
+    /// <summary>
+    /// World-object representation of a single gem in Gem Grab. Spawned by
+    /// the gem-spawner system (Day 2 work) at gem-mine points; picked up
+    /// when a brawler walks over it; consumed when picked up.
+    ///
+    /// Design notes:
+    ///   - Inherits SimulationEntity so it auto-registers with the tick
+    ///     phase pipeline. Default phase is Movement (matches Deployables).
+    ///   - Value is configurable so dropped-on-death gems can carry the
+    ///     full count (e.g. a brawler with 3 gems dies → spawn 3 single-
+    ///     value gems, OR spawn 1 triple-value gem — design decision
+    ///     deferred to the death-drop work).
+    ///   - <see cref="IsPickedUp"/> guards against double-consumption
+    ///     (proximity ticks fire on multiple brawlers in the same frame).
+    ///   - <see cref="TryPickupBy"/> is the API surface for any pickup
+    ///     mechanism: a proximity-scan system, a trigger collider on the
+    ///     brawler, or a deterministic spatial-grid query during tick.
+    ///     Whichever wins the race, IsPickedUp ensures only one transfer
+    ///     happens.
+    ///
+    /// Day 1 scope: entity + pickup API. The actual proximity detection
+    /// system lands in Day 2 (spawner + pickup-on-overlap).
+    /// </summary>
+    public sealed class Gem : SimulationEntity
+    {
+        [Header("Tuning")]
+        [Tooltip("How many gems this world-object grants when picked up. Default 1.")]
+        [Min(1)]
+        [SerializeField] private int _value = 1;
+
+        public int Value => _value;
+        public bool IsPickedUp { get; private set; }
+
+        /// <summary>Convenience setter used by the gem-spawner / death-drop
+        /// pipelines to mint a multi-value gem inline.</summary>
+        public void SetValue(int value)
+        {
+            if (value < 1) value = 1;
+            _value = value;
+        }
+
+        /// <summary>
+        /// Attempts to transfer this gem's value into the supplied brawler's
+        /// CarriedGems. Returns true on a clean transfer; returns false if
+        /// the gem has already been picked up (race protection) or the
+        /// supplied carrier is null.
+        ///
+        /// On a successful pickup the gem self-destructs via
+        /// <see cref="Object.Destroy(Object)"/> so the spatial grid and
+        /// simulation registry release it on the next tick boundary.
+        /// </summary>
+        public bool TryPickupBy(BrawlerState carrier)
+        {
+            if (IsPickedUp || carrier == null || carrier.IsDead)
+                return false;
+
+            IsPickedUp = true;
+            carrier.CarriedGems.Add(_value);
+
+            // Hide immediately so any same-frame proximity check sees a
+            // visually-gone gem; Destroy hands off to Unity for the actual
+            // GameObject teardown.
+            gameObject.SetActive(false);
+            Object.Destroy(gameObject);
+
+            return true;
+        }
+
+        public override void Tick(uint currentTick)
+        {
+            // Day 1: gems are passive — no per-tick behavior beyond existence.
+            // Day 2 may add proximity-scan-and-pickup or a despawn timer.
+        }
+    }
+}
