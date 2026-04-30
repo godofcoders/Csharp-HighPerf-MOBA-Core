@@ -1,0 +1,177 @@
+using System.Collections.Generic;
+using UnityEngine;
+using MOBA.Core.Infrastructure;
+
+namespace MOBA.Core.Simulation
+{
+    /// <summary>
+    /// Coordinator for the Gem Grab game mode. Glues together the
+    /// per-brawler carrier state, the world-gem entities, and
+    /// MatchManager scoring.
+    ///
+    /// Three responsibilities (Day 3 scope):
+    ///   1. Death-drop. When a registered brawler dies with carried gems,
+    ///      spawn a single Gem at their last position carrying the full
+    ///      dropped count, then clear the brawler's carrier so the team
+    ///      total drops correctly.
+    ///   2. Team totals. Each tick, sum CarriedGemCount across each
+    ///      team's living brawlers.
+    ///   3. Win timer. When a team's total ≥ <see cref="_gemsToWin"/>,
+    ///      start a <see cref="_winTimerSeconds"/> countdown. If they
+    ///      drop below threshold, the timer resets. When the timer
+    ///      expires, end the match with that team as winner.
+    ///
+    /// Brawl Stars rules pinned:
+    ///   - 10 gems to win, 16-second hold timer (overrides PHASE_1_PLAN.md
+    ///     which said 60s — that note predates the game-mode pass).
+    ///   - Both teams holding ≥10 simultaneously: lower-total team's
+    ///     timer wins (i.e. whoever crossed first), not implemented here
+    ///     for Day 3 — defer to Day 4. For now the timer is single-team
+    ///     and resets if the leader changes.
+    ///
+    /// Discovery: brawlers are auto-discovered via FindObjectsOfType at
+    /// Start. If brawlers spawn dynamically post-Start, call
+    /// <see cref="RegisterBrawler"/> manually.
+    /// </summary>
+    public sealed class GemGrabMode : MonoBehaviour
+    {
+        [Header("Tuning")]
+        [Tooltip("Gem prefab to spawn when a brawler dies with carried gems. Required.")]
+        [SerializeField] private Gem _gemPrefab;
+
+        [Tooltip("Gem count threshold to start the win-countdown.")]
+        [Min(1)]
+        [SerializeField] private int _gemsToWin = 10;
+
+        [Tooltip("Seconds a team must hold ≥ GemsToWin gems for the match to end. Brawl Stars uses 16s.")]
+        [Min(1f)]
+        [SerializeField] private float _winTimerSeconds = 16f;
+
+        // Read-only views for HUD work in later sessions.
+        public int BlueTeamGems { get; private set; }
+        public int RedTeamGems { get; private set; }
+        public TeamType LeadingTeam { get; private set; } = TeamType.Blue; // arbitrary default; gated by HasLeader
+        public bool HasLeader { get; private set; }
+        public float WinTimerRemainingSeconds { get; private set; }
+
+        private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
+
+        private void Start()
+        {
+            BrawlerController[] discovered = FindObjectsOfType<BrawlerController>();
+            for (int i = 0; i < discovered.Length; i++)
+                RegisterBrawler(discovered[i]);
+        }
+
+        public void RegisterBrawler(BrawlerController brawler)
+        {
+            if (brawler == null || _brawlers.Contains(brawler))
+                return;
+
+            _brawlers.Add(brawler);
+
+            // Capture for the closure; subscribe to OnDeath so we can drop
+            // the brawler's gems at their last position. OnDeath fires
+            // BEFORE Reset() (which is the respawn path), so CarriedGemCount
+            // is still readable here.
+            BrawlerController captured = brawler;
+            if (captured.State != null)
+                captured.State.OnDeath += () => HandleDeath(captured);
+        }
+
+        private void HandleDeath(BrawlerController dying)
+        {
+            if (dying == null || dying.State == null)
+                return;
+
+            int dropped = dying.State.CarriedGemCount;
+            if (dropped <= 0)
+                return;
+
+            // Spawn a single multi-value gem at the last position. Day 4+
+            // can split into N scattered gems if the design wants the
+            // visual fan-out.
+            if (_gemPrefab != null)
+            {
+                Vector3 spawnPos = dying.transform.position;
+                Gem dropped_gem = Object.Instantiate(_gemPrefab, spawnPos, Quaternion.identity);
+                dropped_gem.SetValue(dropped);
+            }
+
+            // Clear the dying brawler's carrier immediately so the team
+            // total query below sees the post-drop state.
+            dying.State.CarriedGems.Clear();
+        }
+
+        private void Update()
+        {
+            if (MatchManager.Instance != null && MatchManager.Instance.CurrentState != MatchState.Active)
+                return;
+
+            UpdateTeamTotals();
+            UpdateWinTimer(Time.deltaTime);
+        }
+
+        private void UpdateTeamTotals()
+        {
+            int blue = 0;
+            int red = 0;
+
+            for (int i = 0; i < _brawlers.Count; i++)
+            {
+                BrawlerController b = _brawlers[i];
+                if (b == null || b.State == null || b.State.IsDead)
+                    continue;
+
+                int n = b.State.CarriedGemCount;
+                if (b.Team == TeamType.Blue) blue += n;
+                else if (b.Team == TeamType.Red) red += n;
+            }
+
+            BlueTeamGems = blue;
+            RedTeamGems = red;
+        }
+
+        private void UpdateWinTimer(float deltaTime)
+        {
+            // Determine current leader (if any has hit threshold).
+            bool blueQualifies = BlueTeamGems >= _gemsToWin;
+            bool redQualifies = RedTeamGems >= _gemsToWin;
+
+            TeamType newLeader;
+            bool newHasLeader;
+            if (blueQualifies && !redQualifies) { newLeader = TeamType.Blue; newHasLeader = true; }
+            else if (redQualifies && !blueQualifies) { newLeader = TeamType.Red; newHasLeader = true; }
+            else if (blueQualifies && redQualifies)
+            {
+                // Both qualify: pick whichever has more, tie → no leader.
+                if (BlueTeamGems > RedTeamGems) { newLeader = TeamType.Blue; newHasLeader = true; }
+                else if (RedTeamGems > BlueTeamGems) { newLeader = TeamType.Red; newHasLeader = true; }
+                else { newLeader = LeadingTeam; newHasLeader = false; }
+            }
+            else { newLeader = LeadingTeam; newHasLeader = false; }
+
+            // If leader identity changed (or leader dropped), reset timer.
+            if (!newHasLeader || newLeader != LeadingTeam)
+            {
+                WinTimerRemainingSeconds = newHasLeader ? _winTimerSeconds : 0f;
+            }
+
+            LeadingTeam = newLeader;
+            HasLeader = newHasLeader;
+
+            if (!HasLeader)
+                return;
+
+            WinTimerRemainingSeconds -= deltaTime;
+            if (WinTimerRemainingSeconds <= 0f)
+            {
+                // Win condition fires. Push enough score to MatchManager to
+                // trip its first-to-10 EndMatch path (it already handles
+                // OnStateChanged → Ended).
+                MatchManager.Instance?.AddScore(LeadingTeam, _gemsToWin);
+                WinTimerRemainingSeconds = 0f;
+            }
+        }
+    }
+}
