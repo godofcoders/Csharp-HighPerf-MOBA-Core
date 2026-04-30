@@ -17,7 +17,7 @@
 ## Current State
 
 - **Phase:** 1
-- **Active session:** 6 — closed for the day (plan reconciliation: discovered codebase is effectively through plan Session 9, updated `PHASE_1_PLAN.md` to reflect reality; loadout content authoring, star powers, hypercharges all already done out-of-order)
+- **Active session:** 6 — closed for the day (3 workstreams: plan reconciliation discovering codebase is effectively through plan Session 9; super-charge source lifecycle fixture closing yesterday's open candidate, 17 tests → 255 total green; Blaze_* archival cleanup, 20 files deleted)
 - **Last completed session:** 6
 - **Next session target:** Plan Session 10 = full-brawler integration playtest (Akash in Unity editor; pairs naturally with the parked smoke tests #37 and #40), or skip ahead to Plan Sessions 11–12 = Gem Grab game mode scaffolding (gem-spawner, pickup, carrier state, cashout). The Gem Grab work is the biggest substantive remaining Phase 1 chunk (~4 sessions).
 - **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) still parked. The integration playtest in Session 10 would naturally cover these.
@@ -685,3 +685,33 @@ Docs:
 - Alternative: skip integration playtest, start Gem Grab scaffolding directly (plan Sessions 11–12). The trade-off is whether to verify the kits feel distinct BEFORE building game-mode scoring around them, or to build the loop first and tune later.
 
 ---
+
+### Session 6 addendum — same day, two more workstreams
+
+After the plan-reconciliation phase above, two more workstreams landed in the same session:
+
+**Super-charge source lifecycle fixture** (closes the open candidate from S5d2)
+- New `BrawlerLoadoutSuperChargeSourceLifecycleTests.cs` — 17 test methods covering the `InstallSuperChargeSources` / `UninstallAllSuperChargeSources` / `TickSuperChargeSources` / `NotifyDamageDealt` / `NotifyHealApplied` pipeline introduced in Session 4.
+- Structural twin of `BrawlerLoadoutPassiveLifecycleTests`: same spy-on-hooks pattern, same shared `CallLog`, same `Track<T>` + `[TearDown] DestroyImmediate` discipline. Spy doubles: `SpySuperChargeSource : SuperChargeSourceDefinition` + `SpyChargeRuntime : SuperChargeSourceRuntime` overriding all 5 hooks (OnInstalled, OnUninstalled, Tick, OnDamageDealt, OnHealApplied).
+- Three crown jewels: reverse-order LIFO uninstall (parallel to passive fixture); `Enabled = false` gate is honoured (designer-facing kill switch); `NotifyDamageDealt` fans to all installed runtimes with provided args (the system's raison d'être).
+- **No new patterns introduced** per the post-S5d2 pacing rule — fixture deliberately reuses techniques the project already had. 255 tests green after this lands.
+
+**Blaze_* archival cleanup** (closes one of the carried-forward outstanding items)
+- Originally flagged as 4 files, turned out to be 10 — a complete abandoned 5th brawler scaffold: `Blaze_BrawlerDefinition`, `Blaze_MainAttack`, `Blaze_Super`, `Blaze_DamageSuperCharge`, `Blaze_DefaultBuild`, `Blaze_Gadget_Dash`, `Blaze_Gadget_HealBurst`, `Blaze_SP_Damage`, `Blaze_SP_Speed`, `Blaze_OverdriveHypercharge`. Plus their .meta files = 20 deletions.
+- All 10 GUIDs verified unreferenced across the project before deletion (no .asset / .prefab / .unity / .cs / .controller match).
+- `PHASE_1_PLAN.md` known-smells list updated to mark this resolved.
+
+**Decisions made (this addendum)**
+- *Treat both addendum workstreams as part of Session 6 rather than separate sessions.* The day's theme was "audit, verify, clean up after yesterday's heavy push" — three workstreams (plan reconciliation, parallel-fixture, archival cleanup) all fit that frame.
+- *Always verify the actual file count before mechanical cleanup.* My `PHASE_1_PLAN.md` note said 4 Blaze files; reality was 10. The pre-deletion `find` would have been a 30-second sanity check earlier. Lesson re-learned: even self-authored planning notes drift from reality.
+
+**Updated session totals**
+- 9 EditMode test fixtures (BrawlerCooldowns, HyperchargeTracker, SimulationClockSecondsToTicks, BrawlerLoadoutPassiveLifecycle, StatusEffectService, BrawlerActionStateMachine, BrawlerStealth, BrawlerBuildLayoutDefinition, BrawlerLoadoutHelpers, BrawlerLoadoutSuperChargeSourceLifecycle). 255 tests, all green.
+
+**Open candidates (unchanged)**
+- AIUtilityScorer test fixture (deferred from this session — the SUT's MonoBehaviour collaborators make it heavier than initial scope; needs reflection-setup OR an interface refactor first).
+- Plan Session 10: full-brawler integration playtest in Unity editor, which pairs with parked smoke tests #37 / #40.
+- Plan Sessions 11–12: Gem Grab game mode scaffolding — biggest substantive remaining Phase 1 chunk.
+- StatusEffectType.None enum hygiene question; BrawlerActionStateMachine.TryInterrupt design question.
+
+**Next session target (unchanged from main entry):** Plan Session 10 (integration playtest) or skip to Gem Grab.

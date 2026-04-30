@@ -139,7 +139,7 @@ All four brawlers carry the standard `StandardBrawlerBuildLayout` (gear_1 PL8, g
 
 **Known smells originally noted, status update:**
 - ✅ Resolved: `HyperchargeTracker.Activate()` hardcoded `30f` — fixed in Session 2; `SimulationClock.SecondsToTicks` helper introduced in Session 5 day 1; rolled out to 18 production sites total across S5 days 1–2.
-- ⏳ Outstanding: `Blaze_*` archival files at the root of `Assets/Scriptables/` (`Blaze_BrawlerDefinition.asset`, `Blaze_Gadget_Dash.asset`, `Blaze_Gadget_HealBurst.asset`, `Blaze_OverdriveHypercharge.asset`). Safe to delete — confirmed not referenced by any current brawler. Recommended cleanup in Session 10 or anytime convenient.
+- ✅ Resolved: `Blaze_*` archival files deleted in Session 6 (turned out to be 10 files — a complete abandoned 5th brawler scaffold including BrawlerDefinition, MainAttack, Super, DamageSuperCharge, DefaultBuild, 2 gadgets, 2 star powers, 1 hypercharge — plus their .meta files). All GUIDs verified unreferenced before deletion.
 - ⏳ Outstanding: Two parked Unity in-engine smoke tests (#37 status effects, #40 loadout). EditMode coverage is now strong but in-engine smoke validates a different layer.
 
 **Gear deferred** out of Phase 1; it's meta-game-adjacent and not required for the slice. Slot infrastructure (gear_1, gear_2) exists in `StandardBrawlerBuildLayout` for future hookup.
