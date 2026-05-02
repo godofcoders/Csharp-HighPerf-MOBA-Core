@@ -18,9 +18,27 @@ namespace MOBA.Core.Infrastructure
     /// </summary>
     public class CameraController : MonoBehaviour
     {
+        // Singleton so game-feel callers (damage handlers, super-cast, etc.)
+        // can do CameraController.Instance?.Shake(...) without holding a
+        // serialized reference. Null-safe; non-CameraController scenes (e.g.
+        // editmode tests) just no-op.
+        public static CameraController Instance { get; private set; }
+
         [SerializeField] private Transform _target;
         [SerializeField] private Vector3 _offset = new Vector3(0, 10, -5);
-        [SerializeField] private float _positionSmoothTime = 0.05f;
+
+        // Bumped from 0.05f → 0.15f. 0.05 tracks every micro-movement and
+        // produces visible jitter, especially when the target moves on a
+        // FixedUpdate/Rigidbody pulse and the camera reads in LateUpdate
+        // (camera sees the same position for several frames, then jumps).
+        // 0.15 is enough to absorb sub-frame desync without feeling laggy.
+        // Designer can tune lower per-scene; this is the safe default.
+        //
+        // Upstream tip: if jitter persists at 0.15, set
+        // Rigidbody.Interpolation = Interpolate on the brawler in the
+        // inspector — that's Unity's built-in fix for physics-vs-render
+        // desync.
+        [SerializeField] private float _positionSmoothTime = 0.15f;
 
         [Header("Dead Zone")]
         [Tooltip("Half-extents of the dead zone box on the XZ plane (world units). Target moves within this box before the camera re-engages follow.")]
@@ -38,6 +56,28 @@ namespace MOBA.Core.Infrastructure
         private float _shakeRemainingSeconds;
         private float _shakeDurationSeconds;
 
+        // Cached fixed rotation. Computed once from _offset because for a
+        // fixed-offset top-down camera the look direction never changes —
+        // recomputing via LookAt every frame just amplifies any positional
+        // jitter into rotational jitter.
+        private Quaternion _fixedRotation;
+        private bool _rotationCached;
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+            Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
         private void LateUpdate()
         {
             if (_target == null)
@@ -53,7 +93,18 @@ namespace MOBA.Core.Infrastructure
                 ref _positionVelocity,
                 _positionSmoothTime);
 
-            transform.LookAt(_anchor);
+            // Set rotation once: with a fixed offset the look direction
+            // (-offset.normalized) doesn't change. LookAt every frame would
+            // re-derive this from current camera position, which jitters
+            // because SmoothDamp doesn't reach the desired position
+            // instantly — so each frame's "look back at anchor" produces a
+            // slightly different rotation. Cache once, ship.
+            if (!_rotationCached)
+            {
+                _fixedRotation = Quaternion.LookRotation(-_offset.normalized, Vector3.up);
+                transform.rotation = _fixedRotation;
+                _rotationCached = true;
+            }
         }
 
         private void UpdateAnchor()
