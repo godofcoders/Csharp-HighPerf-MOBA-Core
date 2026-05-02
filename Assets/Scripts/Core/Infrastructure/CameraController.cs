@@ -44,6 +44,14 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Half-extents of the dead zone box on the XZ plane (world units). Target moves within this box before the camera re-engages follow.")]
         [SerializeField] private Vector2 _deadZoneHalfExtents = new Vector2(0.5f, 0.5f);
 
+        [Header("Bounds")]
+        [Tooltip("If true, the camera anchor is clamped to a designer-set XZ rectangle so the camera never frames outside the map.")]
+        [SerializeField] private bool _clampToBounds = false;
+        [Tooltip("Centre of the clamp rectangle in world space (XZ).")]
+        [SerializeField] private Vector2 _boundsCenterXZ = Vector2.zero;
+        [Tooltip("Half-extents of the clamp rectangle (XZ). Anchor cannot move outside center ± these.")]
+        [SerializeField] private Vector2 _boundsHalfExtentsXZ = new Vector2(20f, 20f);
+
         // The "anchor" — where the target was last seen at the centre of the
         // dead zone. Camera follow targets `_anchor + _offset`, NOT
         // `_target.position + _offset`, until the target leaves the box.
@@ -135,6 +143,22 @@ namespace MOBA.Core.Infrastructure
             // Y always tracks the target — vertical movement is rare in a
             // top-down arena and the dead zone is XZ-only.
             _anchor.y = targetPos.y;
+
+            // Bounds clamp: keep the anchor inside the designer-set XZ
+            // rectangle so the camera doesn't frame past the map edges.
+            // Clamp AFTER dead-zone update so dragging the player toward an
+            // edge doesn't fight the dead zone.
+            if (_clampToBounds)
+            {
+                float minX = _boundsCenterXZ.x - _boundsHalfExtentsXZ.x;
+                float maxX = _boundsCenterXZ.x + _boundsHalfExtentsXZ.x;
+                float minZ = _boundsCenterXZ.y - _boundsHalfExtentsXZ.y;
+                float maxZ = _boundsCenterXZ.y + _boundsHalfExtentsXZ.y;
+                if (_anchor.x < minX) _anchor.x = minX;
+                else if (_anchor.x > maxX) _anchor.x = maxX;
+                if (_anchor.z < minZ) _anchor.z = minZ;
+                else if (_anchor.z > maxZ) _anchor.z = maxZ;
+            }
         }
 
         private Vector3 ComputeShakeOffset()
