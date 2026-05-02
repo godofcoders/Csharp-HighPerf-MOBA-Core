@@ -56,6 +56,10 @@ namespace MOBA.Core.Simulation
         [Min(10f)]
         [SerializeField] private float _matchDurationSeconds = 150f;
 
+        [Tooltip("Radius around the death position over which dropped gems are scattered. Each gem is placed at an even angle around the ring at this radius.")]
+        [Min(0.1f)]
+        [SerializeField] private float _deathDropScatterRadius = 0.7f;
+
         // Read-only views for HUD work in later sessions.
         public int BlueTeamGems { get; private set; }
         public int RedTeamGems { get; private set; }
@@ -135,14 +139,24 @@ namespace MOBA.Core.Simulation
             if (dropped <= 0)
                 return;
 
-            // Spawn a single multi-value gem at the last position. Day 4+
-            // can split into N scattered gems if the design wants the
-            // visual fan-out.
-            if (_gemPrefab != null)
+            // Scatter N single-value gems on an evenly-spaced ring around
+            // the death position. Even angles → deterministic placement
+            // (no Random; future fixed-point determinism in Phase 2 stays
+            // intact). N=1 collapses to a single gem at angle 0.
+            if (_gemPrefab != null && dropped > 0)
             {
-                Vector3 spawnPos = dying.transform.position;
-                Gem dropped_gem = Object.Instantiate(_gemPrefab, spawnPos, Quaternion.identity);
-                dropped_gem.SetValue(dropped);
+                Vector3 center = dying.transform.position;
+                float angleStep = (Mathf.PI * 2f) / dropped;
+                for (int i = 0; i < dropped; i++)
+                {
+                    float angle = angleStep * i;
+                    Vector3 offset = new Vector3(
+                        Mathf.Cos(angle) * _deathDropScatterRadius,
+                        0f,
+                        Mathf.Sin(angle) * _deathDropScatterRadius);
+                    Gem g = Object.Instantiate(_gemPrefab, center + offset, Quaternion.identity);
+                    g.SetValue(1);
+                }
             }
 
             // Clear the dying brawler's carrier immediately so the team
