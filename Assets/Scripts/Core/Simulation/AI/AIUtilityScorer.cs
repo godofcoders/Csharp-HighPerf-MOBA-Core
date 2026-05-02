@@ -275,6 +275,14 @@ namespace MOBA.Core.Simulation.AI
             if (AITeamMemory.TryGetRecentHotspot(_self.Team, currentTick, _profile.SharedHotspotMemoryTicks, out _))
                 score += 20f;
 
+            // Gem Grab hunger: if there's an unpicked Gem within sensing
+            // range, sharply prioritise movement so the brawler explores
+            // toward it (rather than holding range or wandering). +35 is
+            // intentionally higher than the recent-memory bonus — a fresh
+            // gem in sight is more valuable than chasing an old hotspot.
+            if (Gem.HasAnyUnpickedWithin(_self.Position, 8f))
+                score += 35f;
+
             return new AIActionScore(AIActionType.Search, score * _profile.SearchWeight);
         }
 

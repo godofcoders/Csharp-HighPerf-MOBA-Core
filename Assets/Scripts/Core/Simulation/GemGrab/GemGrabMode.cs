@@ -269,10 +269,19 @@ namespace MOBA.Core.Simulation
             }
             else { newLeader = LeadingTeam; newHasLeader = false; }
 
-            // If leader identity changed (or leader dropped), reset timer.
-            if (!newHasLeader || newLeader != LeadingTeam)
+            // Reset timer in three cases:
+            //   1. No qualifying leader → timer = 0 (no countdown should run).
+            //   2. Just acquired threshold (HasLeader transitioned false→true) → fresh 16s.
+            //   3. Leader identity changed mid-countdown (e.g. Blue had it, now Red overtook) → fresh 16s.
+            // Otherwise (same leader still ≥ threshold), let the countdown
+            // continue from wherever it is.
+            if (!newHasLeader)
             {
-                WinTimerRemainingSeconds = newHasLeader ? _winTimerSeconds : 0f;
+                WinTimerRemainingSeconds = 0f;
+            }
+            else if (!HasLeader || newLeader != LeadingTeam)
+            {
+                WinTimerRemainingSeconds = _winTimerSeconds;
             }
 
             LeadingTeam = newLeader;

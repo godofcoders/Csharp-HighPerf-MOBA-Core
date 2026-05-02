@@ -42,6 +42,40 @@ namespace MOBA.Core.Simulation
         // per tick. SpatialGrid.GetEntitiesInRadiusNonAlloc fills this.
         private static readonly List<ISpatialEntity> _scratch = new List<ISpatialEntity>(8);
 
+        // Static registry of every live (unpicked) Gem in the scene. Used by
+        // AI gem-hunger scoring to detect "is there a gem near me?" without
+        // a FindObjectsOfType per scoring call.
+        private static readonly List<Gem> _all = new List<Gem>();
+        public static IReadOnlyList<Gem> All => _all;
+
+        /// <summary>True if any unpicked Gem exists within `radius` of `origin`.
+        /// Linear scan over <see cref="All"/>; cheap because there are only
+        /// a handful of live gems on the field at once.</summary>
+        public static bool HasAnyUnpickedWithin(Vector3 origin, float radius)
+        {
+            float r2 = radius * radius;
+            for (int i = 0; i < _all.Count; i++)
+            {
+                Gem g = _all[i];
+                if (g == null || g.IsPickedUp) continue;
+                if ((g.transform.position - origin).sqrMagnitude <= r2)
+                    return true;
+            }
+            return false;
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            if (!_all.Contains(this)) _all.Add(this);
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            _all.Remove(this);
+        }
+
         public int Value => _value;
         public bool IsPickedUp { get; private set; }
 
