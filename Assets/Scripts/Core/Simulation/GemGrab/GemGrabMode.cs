@@ -52,12 +52,21 @@ namespace MOBA.Core.Simulation
         [Min(1f)]
         [SerializeField] private float _winTimerSeconds = 16f;
 
+        [Tooltip("Total match length in seconds. On expiry, winner is decided by tiebreak (more gems → more team health → Blue). Brawl Stars uses 150s = 2:30.")]
+        [Min(10f)]
+        [SerializeField] private float _matchDurationSeconds = 150f;
+
         // Read-only views for HUD work in later sessions.
         public int BlueTeamGems { get; private set; }
         public int RedTeamGems { get; private set; }
         public TeamType LeadingTeam { get; private set; } = TeamType.Blue; // arbitrary default; gated by HasLeader
         public bool HasLeader { get; private set; }
         public float WinTimerRemainingSeconds { get; private set; }
+
+        /// <summary>Seconds left in the match. Counts down once MatchManager
+        /// is Active. On reaching 0, fires sudden-death tiebreak.</summary>
+        public float MatchTimeRemainingSeconds { get; private set; }
+        public bool MatchEndedByTimeout { get; private set; }
 
         private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
 
@@ -148,6 +157,63 @@ namespace MOBA.Core.Simulation
 
             UpdateTeamTotals();
             UpdateWinTimer(Time.deltaTime);
+            UpdateMatchTimer(Time.deltaTime);
+        }
+
+        private void UpdateMatchTimer(float deltaTime)
+        {
+            if (MatchEndedByTimeout)
+                return;
+
+            // Lazy-init on first Update once Active.
+            if (MatchTimeRemainingSeconds <= 0f && !MatchEndedByTimeout)
+            {
+                MatchTimeRemainingSeconds = _matchDurationSeconds;
+            }
+
+            MatchTimeRemainingSeconds -= deltaTime;
+            if (MatchTimeRemainingSeconds > 0f)
+                return;
+
+            // Time expired. If a team already won via the win-timer this
+            // tick, MatchManager is already Ended and the AddScore below
+            // is a no-op (its Active-state guard).
+            MatchEndedByTimeout = true;
+            MatchTimeRemainingSeconds = 0f;
+
+            TeamType winner = ResolveSuddenDeathWinner();
+            MatchManager.Instance?.AddScore(winner, _gemsToWin);
+        }
+
+        /// <summary>
+        /// Tiebreak chain: (1) more gems wins; (2) higher total team
+        /// remaining health wins; (3) Blue wins as a final deterministic
+        /// fallback. Pure function over current state — no side effects.
+        /// </summary>
+        private TeamType ResolveSuddenDeathWinner()
+        {
+            if (BlueTeamGems != RedTeamGems)
+                return BlueTeamGems > RedTeamGems ? TeamType.Blue : TeamType.Red;
+
+            float blueHealth = SumTeamHealth(TeamType.Blue);
+            float redHealth = SumTeamHealth(TeamType.Red);
+            if (blueHealth != redHealth)
+                return blueHealth > redHealth ? TeamType.Blue : TeamType.Red;
+
+            return TeamType.Blue;
+        }
+
+        private float SumTeamHealth(TeamType team)
+        {
+            float total = 0f;
+            for (int i = 0; i < _brawlers.Count; i++)
+            {
+                BrawlerController b = _brawlers[i];
+                if (b == null || b.State == null || b.Team != team || b.State.IsDead)
+                    continue;
+                total += b.State.CurrentHealth;
+            }
+            return total;
         }
 
         private void UpdateTeamTotals()
