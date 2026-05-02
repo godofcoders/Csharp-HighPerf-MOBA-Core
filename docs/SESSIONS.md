@@ -17,11 +17,11 @@
 ## Current State
 
 - **Phase:** 1
-- **Active session:** 6 — closed for the day (3 workstreams: plan reconciliation discovering codebase is effectively through plan Session 9; super-charge source lifecycle fixture closing yesterday's open candidate, 17 tests → 255 total green; Blaze_* archival cleanup, 20 files deleted)
-- **Last completed session:** 6
-- **Next session target:** Plan Session 10 = full-brawler integration playtest (Akash in Unity editor; pairs naturally with the parked smoke tests #37 and #40), or skip ahead to Plan Sessions 11–12 = Gem Grab game mode scaffolding (gem-spawner, pickup, carrier state, cashout). The Gem Grab work is the biggest substantive remaining Phase 1 chunk (~4 sessions).
-- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) still parked. The integration playtest in Session 10 would naturally cover these.
-- **Phase 1 progress:** ~7 effective sessions done (5 numbered + 2 continueds); ~12 remaining (integration playtest, Gem Grab × 4, camera/input × 2, HUD × 2, game feel × 2, slice review). Tracking ~18–20 total sessions vs original 21-session projection.
+- **Active session:** 7 — closed for the day (Gem Grab scaffolded end-to-end across 4 days: carrier substate + Gem entity + pickup detection + GemSpawner + GemGrabMode coordinator with death-drop + 16s win timer + AI gem awareness via 3 AIUtilityScorer boosts)
+- **Last completed session:** 7
+- **Next session target:** Plan Session 10 (full-brawler integration playtest in Unity editor — pairs with parked smokes #37, #40). Or jump straight to camera/input polish (plan Sessions 15–16). Gem Grab content is functionally complete; the next gap is "make it feel like a game."
+- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) still parked. Integration playtest would cover these. Plus: Gem Grab scaffold is code-complete but not yet playtested in-engine — that smoke is its own check.
+- **Phase 1 progress:** ~8 effective sessions done; ~6 remaining (integration playtest, camera/input × 2, HUD × 2, game feel × 2, slice review). Tracking ~14–16 total sessions vs original 21-session projection — well ahead because content authoring + Gem Grab compressed considerably.
 
 ## Key Decisions Ledger
 
@@ -715,3 +715,74 @@ After the plan-reconciliation phase above, two more workstreams landed in the sa
 - StatusEffectType.None enum hygiene question; BrawlerActionStateMachine.TryInterrupt design question.
 
 **Next session target (unchanged from main entry):** Plan Session 10 (integration playtest) or skip to Gem Grab.
+
+### Session 7 — 2026-05-01 — Gem Grab end-to-end (4 days compressed into 1)
+
+**Goal:** scaffold the entire Gem Grab game mode (plan Sessions 11–14) in one session.
+
+**Work done — 4 days, 4 files new + 2 files edited:**
+
+*Day 1 — Foundation*
+- `BrawlerCarriedGems` POCO substate (`Count`, `Add(int)`, `Clear() → int`).
+- Wired into `BrawlerState`: property + `CarriedGemCount` pass-through + ctor + `Reset()` clears so respawn = empty-handed.
+- `Gem` simulation entity (SimulationEntity, MonoBehaviour) — `Value`, `IsPickedUp`, `TryPickupBy(BrawlerState)`. Race-safe via `IsPickedUp`. Self-destructs on pickup.
+
+*Day 2 — Pickup detection + spawner*
+- `Gem.Tick` queries `SpatialGrid.GetEntitiesInRadiusNonAlloc` within `_pickupRadius` (default 1.0); first live `BrawlerController` wins. Static scratch buffer = zero alloc per tick.
+- `GemSpawner` SimulationEntity: instantiates Gem prefab on a tick-paced cooldown (`SimulationClock.SecondsToTicks` for the interval), `_maxActiveGems` cap, auto-prunes destroyed gem refs.
+
+*Day 3 — Mode coordinator (death-drop + win timer)*
+- `GemGrabMode` MonoBehaviour. Auto-discovers brawlers via `FindObjectsOfType<BrawlerController>` at Start; subscribes to each `BrawlerState.OnDeath`.
+- Death-drop: spawns a single multi-value Gem at the dying brawler's last position with `SetValue(carriedCount)`, then clears the carrier. (Day 4+ may scatter into N gems.)
+- Per-tick team totals across living brawlers (BlueTeamGems / RedTeamGems exposed for HUD).
+- 16s win-countdown when a team holds ≥10 gems (Brawl Stars rule; overrides plan's stale "60s" note). Resets on leader change, threshold drop, or both teams qualifying with same count. On expiry, calls `MatchManager.Instance.AddScore(LeadingTeam, _gemsToWin)` which trips the existing `EndMatch` path.
+
+*Day 4 — AI gem awareness*
+- `GemGrabMode.Instance` singleton (matches `MatchManager.Instance` shape) + `GetTeamGemCount(TeamType)` + `IsTeamBehind(TeamType)` queries.
+- 3 targeted `AIUtilityScorer` boosts, each null-safe so non-Gem-Grab matches and existing tests are unaffected:
+  1. `ScoreRetreat` +6 per gem the brawler is carrying — don't die with the loot.
+  2. `ScoreApproach` +8 when team is behind on gems — push the gem race.
+  3. `ScoreUseSuper` +5 per gem the *target* is carrying — burst fat carriers, scatter their gems.
+- Magnitudes calibrated against existing archetype deltas: a 3-gem carrier swings +18 retreat (bigger than any archetype delta); a 3-gem enemy carrier swings +15 super (matches Assassin baseline so even non-burst archetypes will swing at a fat carrier).
+
+**Files**
+
+New:
+- `Assets/Scripts/Core/Simulation/Brawler/BrawlerCarriedGems.cs`
+- `Assets/Scripts/Core/Simulation/GemGrab/Gem.cs`
+- `Assets/Scripts/Core/Simulation/GemGrab/GemSpawner.cs`
+- `Assets/Scripts/Core/Simulation/GemGrab/GemGrabMode.cs`
+
+Edited:
+- `Assets/Scripts/Core/Simulation/Brawler/BrawlerState.cs` — wire `CarriedGems` substate.
+- `Assets/Scripts/Core/Simulation/AI/AIUtilityScorer.cs` — 3 gem-awareness boosts.
+
+**Decisions made**
+- *Single multi-value Gem on death-drop, not N scattered gems.* Trade-off: simpler Day 3 scope vs Brawl Stars-faithful scatter. Visual scatter is Day 5+ if it's needed.
+- *16s win timer, not the plan's 60s.* Plan note predates research; Brawl Stars uses 16s. Documented in `GemGrabMode` doc-comment.
+- *Singleton pattern for GemGrabMode.Instance, mirroring MatchManager.* AI reads via `GemGrabMode.Instance?.IsTeamBehind(...)` with null-safety so unit tests and non-Gem-Grab modes don't trip on it. Avoids the heavier ServiceProvider registration path.
+- *Tie-breaking on win timer:* both teams qualifying with the same count → no leader, timer doesn't run. Higher count wins. Whoever crosses the threshold first holds the leader slot until they drop or are passed.
+
+**Unity wiring needed (Akash side)**
+1. Make a Gem prefab: GameObject with Gem component + collider + visual.
+2. Make a GemSpawner prefab: GameObject with GemSpawner component, assign Gem prefab to its `_gemPrefab` field.
+3. Drop one or more GemSpawner instances at gem-mine points in the scene.
+4. Drop a single GemGrabMode GameObject in the scene; assign Gem prefab to its `_gemPrefab` field.
+5. Ensure all 6 brawler slots (player + bots) have BrawlerController components in the scene before MatchManager.Active fires (auto-discovery happens at GemGrabMode.Start).
+
+**Out of scope (deferred)**
+- Visual win-timer countdown / team gem counts on HUD — fields exposed read-only on `GemGrabMode`; HUD work is plan Sessions 17–18.
+- Gem-scatter on death (currently 1 gem with Value=N). Defer to game-feel pass.
+- Test fixtures for the Gem Grab pieces. POCO portions (`BrawlerCarriedGems`) are trivially testable; `Gem.TryPickupBy` is testable with a fake BrawlerState; `GemGrabMode` is harder (MonoBehaviour, FindObjectsOfType, Update loop) — would benefit from a small refactor toward the IGemGrabMode interface idea floated in S6.
+- AI carrier-protection (boost ScorePeel when teammate carrier is under threat) — needs TeamCoordinator integration; deferred.
+- AI gem-hunger: scoring "approach the nearest live Gem". Currently AI navigates toward `AIObjectiveType.GemMine` points (set via per-brawler AIProfile). Live-gem-on-ground is more reactive — defer until playtest shows static-objective steering is insufficient.
+
+**Open questions / unchanged**
+- Same as end-of-Session-6: AIUtilityScorer test fixture (now even larger SUT after today), `StatusEffectType.None` enum hygiene, `BrawlerActionStateMachine.TryInterrupt` design question.
+- New from today: should death-drop scatter into N gems? Should GemSpawner randomise cadence within a band? Both are game-feel calls best made after first playtest.
+
+**Next session goal**
+- Plan Session 10 (full-brawler integration playtest in Unity editor; pairs with parked smokes #37 / #40), now also covering the Gem Grab smoke since the mode is code-complete but unplaytested.
+- Alternative: jump straight to camera/input polish (plan Sessions 15–16). Gem Grab is complete enough that the missing piece for "feels like a game" is no longer content but presentation.
+
+---

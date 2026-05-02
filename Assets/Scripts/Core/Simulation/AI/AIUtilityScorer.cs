@@ -109,6 +109,13 @@ namespace MOBA.Core.Simulation.AI
             if (IsController) score += 5f;
             if (IsArtillery) score += 12f;
 
+            // Gem Grab: every gem you carry makes retreat MORE attractive.
+            // Dying with gems hands them to the enemy. +6 per gem is enough
+            // that a 3-gem brawler gets a noticeable shift but a 1-gem
+            // brawler isn't yanked off objectives.
+            if (_self.State != null)
+                score += 6f * _self.State.CarriedGemCount;
+
             return new AIActionScore(AIActionType.Retreat, score * _profile.RetreatWeight);
         }
 
@@ -140,6 +147,18 @@ namespace MOBA.Core.Simulation.AI
             if (IsSniper) score += 4f;
             if (IsController) score += 14f;
             if (IsArtillery) score += 8f;
+
+            // Gem Grab: target carrying many gems → strong incentive to
+            // burst them down. Killing a 3-gem carrier scatters 3 gems back
+            // to the enemy (or your team if you grab them). +5 per gem
+            // means a 3-gem carrier gets +15 — same magnitude as the
+            // Assassin baseline, so even non-burst archetypes will swing
+            // their super at a fat carrier.
+            if (targetInfo.Target is BrawlerController carrierTarget &&
+                carrierTarget.State != null)
+            {
+                score += 5f * carrierTarget.State.CarriedGemCount;
+            }
 
             return new AIActionScore(AIActionType.UseSuper, score * _profile.SuperWeight);
         }
@@ -236,6 +255,12 @@ namespace MOBA.Core.Simulation.AI
             if (IsSupport) score -= 6f;
             if (IsController) score -= 3f;
             if (IsArtillery) score -= 10f;
+
+            // Gem Grab: behind on gems → push harder. The behind-ness check
+            // is null-safe so non-Gem-Grab matches and unit-test contexts
+            // skip this branch entirely.
+            if (GemGrabMode.Instance != null && GemGrabMode.Instance.IsTeamBehind(_self.Team))
+                score += 8f;
 
             return new AIActionScore(AIActionType.Approach, score * _profile.ApproachWeight);
         }

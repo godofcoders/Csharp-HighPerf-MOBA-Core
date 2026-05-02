@@ -35,6 +35,11 @@ namespace MOBA.Core.Simulation
     /// </summary>
     public sealed class GemGrabMode : MonoBehaviour
     {
+        // Singleton, same shape as MatchManager. AI reads this to factor
+        // gem-state into utility scoring; null-safe so non-Gem-Grab matches
+        // (or unit tests with no scene) just see "no leader, zero gems".
+        public static GemGrabMode Instance { get; private set; }
+
         [Header("Tuning")]
         [Tooltip("Gem prefab to spawn when a brawler dies with carried gems. Required.")]
         [SerializeField] private Gem _gemPrefab;
@@ -56,11 +61,44 @@ namespace MOBA.Core.Simulation
 
         private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
 
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
         private void Start()
         {
             BrawlerController[] discovered = FindObjectsOfType<BrawlerController>();
             for (int i = 0; i < discovered.Length; i++)
                 RegisterBrawler(discovered[i]);
+        }
+
+        /// <summary>Gem total for the supplied team. Used by AI scoring.</summary>
+        public int GetTeamGemCount(TeamType team)
+        {
+            if (team == TeamType.Blue) return BlueTeamGems;
+            if (team == TeamType.Red) return RedTeamGems;
+            return 0;
+        }
+
+        /// <summary>True if the supplied team has fewer gems than the
+        /// opposing team. AI uses this to decide whether to push for gems
+        /// vs play safe.</summary>
+        public bool IsTeamBehind(TeamType team)
+        {
+            int own = GetTeamGemCount(team);
+            int opp = team == TeamType.Blue ? RedTeamGems : BlueTeamGems;
+            return own < opp;
         }
 
         public void RegisterBrawler(BrawlerController brawler)
