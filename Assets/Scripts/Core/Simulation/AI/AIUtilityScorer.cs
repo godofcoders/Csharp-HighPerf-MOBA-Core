@@ -334,6 +334,13 @@ namespace MOBA.Core.Simulation.AI
                 ally != null)
             {
                 score += 40f;
+
+                // Gem Grab carrier protection: if the threatened ally is
+                // carrying gems, peel even harder. +8 per gem stacks on top
+                // of the base +40 — a 3-gem carrier under threat earns +64
+                // total, comfortably outranking most other actions.
+                if (ally.State != null && ally.State.CarriedGemCount > 0)
+                    score += 8f * ally.State.CarriedGemCount;
             }
 
             float teamplay = _self.Definition != null ? _self.Definition.TeamplayWeight : 1f;
