@@ -25,5 +25,11 @@ namespace MOBA.Core.Infrastructure
 
         // Optional landing/placement radius
         public float Radius;
+
+        // Spread fan: half-angle in degrees on each side of Direction. When
+        // > 0 the directional preview renders boundary lines at ±this angle
+        // so the player sees the actual hit cone (Shelly-style shotgun,
+        // Volley spread, etc.). 0 = single straight line.
+        public float SpreadHalfAngleDegrees;
     }
 }

@@ -12,6 +12,9 @@ namespace MOBA.Core.Definitions
         public float Range = 10f;
         public float Speed = 15f;
         public int ProjectileCount = 1;
+        [Tooltip("Total spread angle in degrees across all projectiles. 0 = single line. Used by aim preview to render a fan boundary; gameplay logic decides actual per-projectile spread.")]
+        [Min(0f)]
+        public float SpreadAngle = 0f;
         [Header("Presentation")]
         public ProjectilePresentationProfile PresentationProfile;
 

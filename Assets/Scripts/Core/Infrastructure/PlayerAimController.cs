@@ -138,6 +138,7 @@ namespace MOBA.Core.Infrastructure
                 default:
                     {
                         float directionalRange = ResolveDirectionalRange(ability);
+                        float spreadHalfAngle = ResolveSpreadHalfAngle(ability);
 
                         return new AimPreviewData
                         {
@@ -149,10 +150,24 @@ namespace MOBA.Core.Infrastructure
                             Range = directionalRange,
                             TargetPoint = playerCenter + (aimDirection * directionalRange),
                             ArcHeight = 0f,
-                            Radius = 0f
+                            Radius = 0f,
+                            SpreadHalfAngleDegrees = spreadHalfAngle
                         };
                     }
             }
+        }
+
+        // Half the total spread angle, in degrees. Returns 0 for non-spread
+        // abilities so the preview falls back to a single straight line.
+        private float ResolveSpreadHalfAngle(AbilityDefinition ability)
+        {
+            if (ability is ProjectileAbilityDefinition proj && proj.SpreadAngle > 0f)
+                return proj.SpreadAngle * 0.5f;
+
+            if (ability is VolleyProjectileAbilityDefinition volley && volley.SpreadAngle > 0f)
+                return volley.SpreadAngle * 0.5f;
+
+            return 0f;
         }
 
         private float ResolveDirectionalRange(AbilityDefinition ability)

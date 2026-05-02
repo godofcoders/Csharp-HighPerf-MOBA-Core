@@ -6,6 +6,10 @@ namespace MOBA.Core.Infrastructure
     {
         [Header("Directional")]
         [SerializeField] private LineRenderer _lineRenderer;
+        [Tooltip("Optional left edge line for spread-fan abilities. Active only when AimPreviewData.SpreadHalfAngleDegrees > 0.")]
+        [SerializeField] private LineRenderer _spreadLeftLine;
+        [Tooltip("Optional right edge line for spread-fan abilities. Active only when AimPreviewData.SpreadHalfAngleDegrees > 0.")]
+        [SerializeField] private LineRenderer _spreadRightLine;
 
         [Header("Throwable / Placement")]
         [SerializeField] private LineRenderer _arcRenderer;
@@ -55,7 +59,8 @@ namespace MOBA.Core.Infrastructure
         {
             HideAll();
 
-            Vector3 endPoint = data.Origin + (data.Direction.normalized * data.Range);
+            Vector3 dir = data.Direction.normalized;
+            Vector3 endPoint = data.Origin + (dir * data.Range);
 
             if (_lineRenderer != null)
             {
@@ -65,11 +70,37 @@ namespace MOBA.Core.Infrastructure
                 _lineRenderer.SetPosition(1, endPoint);
             }
 
+            // Spread fan: render boundary lines at ±SpreadHalfAngleDegrees
+            // around the centre direction. Rotation is in the XZ plane
+            // (around world up) which matches the top-down camera. Lines
+            // share the origin; their endpoints sit on a circular arc at
+            // distance Range.
+            if (data.SpreadHalfAngleDegrees > 0.01f)
+            {
+                Quaternion leftRot  = Quaternion.AngleAxis(-data.SpreadHalfAngleDegrees, Vector3.up);
+                Quaternion rightRot = Quaternion.AngleAxis( data.SpreadHalfAngleDegrees, Vector3.up);
+
+                Vector3 leftEnd  = data.Origin + (leftRot  * dir) * data.Range;
+                Vector3 rightEnd = data.Origin + (rightRot * dir) * data.Range;
+
+                SetEdgeLine(_spreadLeftLine,  data.Origin, leftEnd);
+                SetEdgeLine(_spreadRightLine, data.Origin, rightEnd);
+            }
+
             if (_endMarker != null)
             {
                 _endMarker.gameObject.SetActive(true);
                 _endMarker.position = endPoint;
             }
+        }
+
+        private void SetEdgeLine(LineRenderer lr, Vector3 a, Vector3 b)
+        {
+            if (lr == null) return;
+            lr.enabled = true;
+            lr.positionCount = 2;
+            lr.SetPosition(0, a);
+            lr.SetPosition(1, b);
         }
 
         private void ShowThrowable(AimPreviewData data)
@@ -164,6 +195,12 @@ namespace MOBA.Core.Infrastructure
         {
             if (_lineRenderer != null)
                 _lineRenderer.enabled = false;
+
+            if (_spreadLeftLine != null)
+                _spreadLeftLine.enabled = false;
+
+            if (_spreadRightLine != null)
+                _spreadRightLine.enabled = false;
 
             if (_arcRenderer != null)
                 _arcRenderer.enabled = false;
