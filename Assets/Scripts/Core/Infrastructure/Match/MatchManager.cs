@@ -15,6 +15,28 @@ namespace MOBA.Core.Infrastructure
         // Match State
         public MatchState CurrentState { get; private set; } = MatchState.Waiting;
 
+        // When the countdown began. -1 = no countdown active. HUD reads
+        // CountdownRemainingSeconds (computed from this + _countdownDuration).
+        private float _countdownStartTime = -1f;
+
+        /// <summary>Seconds left in the pre-match countdown. 0 outside of
+        /// the CountingDown state. Drives the 3-2-1-GO overlay.</summary>
+        public float CountdownRemainingSeconds
+        {
+            get
+            {
+                if (CurrentState != MatchState.CountingDown || _countdownStartTime < 0f)
+                    return 0f;
+                float elapsed = Time.time - _countdownStartTime;
+                float remaining = _countdownDuration - elapsed;
+                return remaining < 0f ? 0f : remaining;
+            }
+        }
+
+        /// <summary>Total countdown length authored on this MatchManager.
+        /// Public so the overlay can compute "GO!" hold duration etc.</summary>
+        public float CountdownDuration => _countdownDuration;
+
         // Scores
         private Dictionary<TeamType, int> _teamScores = new Dictionary<TeamType, int>();
 
@@ -38,8 +60,8 @@ namespace MOBA.Core.Infrastructure
 
         public void StartMatchFlow()
         {
+            _countdownStartTime = Time.time;
             ChangeState(MatchState.CountingDown);
-            // In a real project, you'd trigger a 3-2-1 UI animation here
             Invoke(nameof(BeginGameplay), _countdownDuration);
         }
 
