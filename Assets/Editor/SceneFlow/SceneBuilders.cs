@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using MOBA.Core.Infrastructure;
@@ -213,6 +214,45 @@ namespace MOBA.Editor
             SaveScene(s);
         }
 
+        // ---------- Card prefab builder ----------
+
+        [MenuItem("MOBA/Scene Flow/Build Brawler Card Prefab")]
+        public static void BuildBrawlerCardPrefab()
+        {
+            const string folder = "Assets/Prefabs/UI";
+            const string path = folder + "/BrawlerCard.prefab";
+
+            if (!AssetDatabase.IsValidFolder("Assets/Prefabs"))
+                AssetDatabase.CreateFolder("Assets", "Prefabs");
+            if (!AssetDatabase.IsValidFolder(folder))
+                AssetDatabase.CreateFolder("Assets/Prefabs", "UI");
+
+            // Root: RectTransform + Image + Button + LayoutElement.
+            GameObject root = new GameObject("BrawlerCard",
+                typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+
+            RectTransform rt = root.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(200, 240);
+
+            Image bg = root.GetComponent<Image>();
+            bg.color = new Color(0.18f, 0.22f, 0.32f);
+
+            LayoutElement le = root.GetComponent<LayoutElement>();
+            le.preferredWidth = 200;
+            le.preferredHeight = 240;
+
+            // Label child (Text). BrawlerSelectScreen sets .text = brawler.name.
+            CreateText(root.transform, "Label", "Brawler",
+                new Vector2(0, -100), new Vector2(180, 40), 22);
+
+            GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+
+            Debug.Log($"[SceneBuilders] Built {path}");
+            EditorGUIUtility.PingObject(prefabAsset);
+            Selection.activeObject = prefabAsset;
+        }
+
         // ====================================================================
         // Helpers
         // ====================================================================
@@ -261,9 +301,13 @@ namespace MOBA.Editor
 
         private static void CreateEventSystem()
         {
+            // Use InputSystemUIInputModule (not StandaloneInputModule) because
+            // the project's Player Settings have Active Input Handling set
+            // to "Input System Package". StandaloneInputModule throws
+            // InvalidOperationException at runtime in that mode.
             GameObject es = new GameObject("EventSystem");
             es.AddComponent<EventSystem>();
-            es.AddComponent<StandaloneInputModule>();
+            es.AddComponent<InputSystemUIInputModule>();
         }
 
         private static (Canvas canvas, CanvasScaler scaler) CreateCanvas(string name)
