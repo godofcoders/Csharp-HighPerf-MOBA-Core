@@ -185,17 +185,14 @@ namespace MOBA.Core.Infrastructure
         {
             int charges = state.RemainingGadgets;
 
-            // AbilityCooldownState only stores ReadyAtTick (no original
-            // duration), so we can't compute a true sweep ratio without
-            // knowing when the cooldown started. Binary fallback: overlay
-            // is full while on cooldown, empty when ready. Upgrade path:
-            // add DurationTicks to AbilityCooldownState and divide here.
+            // True radial sweep: GetProgress returns 1 at cooldown start,
+            // decaying linearly to 0 when the ability is ready.
             uint currentTick = 0;
             ISimulationClock clock = ServiceProvider.Get<ISimulationClock>();
             if (clock != null) currentTick = clock.CurrentTick;
 
-            bool onCooldown = !state.GadgetCooldown.IsReady(currentTick);
-            float cdRatio = onCooldown ? 1f : 0f;
+            float cdRatio = state.GadgetCooldown.GetProgress(currentTick);
+            bool onCooldown = cdRatio > 0.001f;
 
             if (_gadgetCooldownOverlay != null)
                 _gadgetCooldownOverlay.fillAmount = cdRatio;
