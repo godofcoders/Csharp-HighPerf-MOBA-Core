@@ -656,6 +656,10 @@ MonoBehaviour:
   _target: {fileID: 0}
   _offset: {x: 0, y: 10, z: -5}
   _positionSmoothTime: 0.05
+  _deadZoneHalfExtents: {x: 0.5, y: 0.5}
+  _clampToBounds: 0
+  _boundsCenterXZ: {x: 0, y: 0}
+  _boundsHalfExtentsXZ: {x: 20, y: 20}
 --- !u!1 &332644327
 GameObject:
   m_ObjectHideFlags: 0
