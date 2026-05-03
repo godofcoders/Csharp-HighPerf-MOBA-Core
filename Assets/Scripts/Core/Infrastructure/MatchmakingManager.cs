@@ -23,15 +23,19 @@ namespace MOBA.Core.Infrastructure
 
         private void Start()
         {
-            // For now, we auto-join the player on Start for testing.
-            // In a finished game, this would be called by a "Play" button.
-            if (_playerBrawler != null)
+            // Prefer the brawler picked on the BrawlerSelect screen
+            // (carried via SceneSelection static). Falls back to the
+            // inspector-assigned _playerBrawler so launching the Match
+            // scene directly (skipping the menu flow) still works for
+            // test play.
+            BrawlerDefinition brawler = SceneSelection.SelectedBrawler ?? _playerBrawler;
+            if (brawler != null)
             {
-                JoinLocalPlayer(_playerBrawler);
+                JoinLocalPlayer(brawler);
             }
             else
             {
-                Debug.LogError("[Lobby] No Player Brawler assigned in MatchmakingManager!");
+                Debug.LogError("[Lobby] No Player Brawler available (neither SceneSelection nor inspector fallback set).");
             }
         }
 
