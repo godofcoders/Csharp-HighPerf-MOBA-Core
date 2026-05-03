@@ -123,22 +123,32 @@ namespace MOBA.Core.Simulation
             if (grid == null)
                 return;
 
-            // Find any brawler within the pickup radius. The grid already
-            // filters by distance and we just take the first live one — no
-            // tie-breaking needed because pickups are race-safe via
-            // IsPickedUp.
+            // SpatialGrid uses 3D distance, but brawlers stand at chest
+            // height while gems sit on the ground — naive 3D distance
+            // would miss overlapping brawlers because of the Y gap. Query
+            // with a generous radius (covers up to 4m of vertical brawler
+            // height) and then filter by XZ-only distance for the actual
+            // pickup decision.
             _scratch.Clear();
-            grid.GetEntitiesInRadiusNonAlloc(transform.position, _pickupRadius, _scratch);
+            grid.GetEntitiesInRadiusNonAlloc(transform.position, _pickupRadius + 4f, _scratch);
+
+            float pickupRadiusSq = _pickupRadius * _pickupRadius;
+            Vector3 gemPos = transform.position;
 
             for (int i = 0; i < _scratch.Count; i++)
             {
-                if (_scratch[i] is BrawlerController brawler &&
-                    brawler.State != null &&
-                    !brawler.State.IsDead &&
-                    TryPickupBy(brawler.State))
-                {
-                    return; // gem consumed; bail
-                }
+                if (!(_scratch[i] is BrawlerController brawler) ||
+                    brawler.State == null || brawler.State.IsDead)
+                    continue;
+
+                Vector3 brawlerPos = brawler.Position;
+                float dx = brawlerPos.x - gemPos.x;
+                float dz = brawlerPos.z - gemPos.z;
+                if (dx * dx + dz * dz > pickupRadiusSq)
+                    continue;
+
+                if (TryPickupBy(brawler.State))
+                    return; // gem consumed
             }
         }
     }
