@@ -15,6 +15,10 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private List<Transform> _blueSpawnPoints;
         [SerializeField] private List<Transform> _redSpawnPoints;
         [SerializeField] private float _respawnDelay = 5.0f;
+
+        /// <summary>Seconds between death and respawn. Read by the death
+        /// overlay HUD to drive the countdown display.</summary>
+        public float RespawnDelaySeconds => _respawnDelay;
         [SerializeField] private CameraController _mainCameraController;
 
         public void SetPlayerTarget(Transform playerTransform)
