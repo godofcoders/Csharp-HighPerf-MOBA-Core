@@ -15,6 +15,16 @@ public class TestMatchStarter : MonoBehaviour
 
     private void Start()
     {
+        // Defer to MatchmakingManager if it's in the scene — that's the
+        // production path driven by SceneSelection.SelectedBrawler from
+        // the BrawlerSelectScreen. TestMatchStarter only runs when no
+        // MatchmakingManager is present (legacy/standalone-test scenes).
+        if (MatchmakingManager.Instance != null)
+        {
+            Debug.Log("[TestMatchStarter] Skipped — MatchmakingManager is in the scene and will drive the roster from SceneSelection.");
+            return;
+        }
+
         List<MatchParticipant> roster = new List<MatchParticipant>
         {
             new MatchParticipant("Player_Jessie", TeamType.Blue, _playerBrawler, false),
