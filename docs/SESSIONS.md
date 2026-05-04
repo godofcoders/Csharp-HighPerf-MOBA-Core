@@ -17,11 +17,11 @@
 ## Current State
 
 - **Phase:** 1
-- **Active session:** 7 — closed for the day (Gem Grab scaffolded end-to-end across 4 days: carrier substate + Gem entity + pickup detection + GemSpawner + GemGrabMode coordinator with death-drop + 16s win timer + AI gem awareness via 3 AIUtilityScorer boosts)
-- **Last completed session:** 7
-- **Next session target:** Plan Session 10 (full-brawler integration playtest in Unity editor — pairs with parked smokes #37, #40). Or jump straight to camera/input polish (plan Sessions 15–16). Gem Grab content is functionally complete; the next gap is "make it feel like a game."
-- **Blockers:** Unity smoke tests for status effects (#37) and loadout (#40) still parked. Integration playtest would cover these. Plus: Gem Grab scaffold is code-complete but not yet playtested in-engine — that smoke is its own check.
-- **Phase 1 progress:** ~8 effective sessions done; ~6 remaining (integration playtest, camera/input × 2, HUD × 2, game feel × 2, slice review). Tracking ~14–16 total sessions vs original 21-session projection — well ahead because content authoring + Gem Grab compressed considerably.
+- **Active session:** 8 — Gem Grab polish + full HUD + camera polish + scene flow end-to-end (Loading → MainMenu → BrawlerSelect → GameModeSelect → Match → Results) + multi-mode/multi-map prefab-into-slot architecture. Plus Editor builders that auto-construct the menu scenes.
+- **Last completed session:** 8
+- **Next session target:** Game feel pass (damage numbers, hit-stop, super-cast camera kick) — plan Sessions 19–20. Plus the open Unity-side wiring (Akash assembling map prefab, mode prefab, card prefab, hooking up scene-level GameObjects). Architecturally Phase 1 is essentially feature-complete; remaining work is content-authoring + polish.
+- **Blockers:** none — full menu→match→results loop wired in code; Akash wiring scene-level GameObjects per docs/SCENE_SETUP.md.
+- **Phase 1 progress:** ~9 effective sessions done; ~3 remaining (game feel × 2, slice review). Tracking ~12 total sessions vs original 21-projection. Far ahead.
 
 ## Key Decisions Ledger
 
@@ -784,5 +784,142 @@ Edited:
 **Next session goal**
 - Plan Session 10 (full-brawler integration playtest in Unity editor; pairs with parked smokes #37 / #40), now also covering the Gem Grab smoke since the mode is code-complete but unplaytested.
 - Alternative: jump straight to camera/input polish (plan Sessions 15–16). Gem Grab is complete enough that the missing piece for "feels like a game" is no longer content but presentation.
+
+---
+
+### Session 8 — 2026-05-04 → 2026-05-07 — HUD + camera + scene flow + Gem Grab polish (combined multi-day)
+
+**Goal:** make Phase 1 actually playable end-to-end — full menu→match→results loop, all the Brawl Stars-style HUD widgets, camera that doesn't jitter, and the architectural scaffolding for multi-mode + multi-map.
+
+Skipped per-day breakdown for token economy. Below is the big picture; git log is the record of order.
+
+**Gem Grab polish (continuation of Session 7)**
+- Match time limit + sudden-death tiebreak (chain: more gems → more team health → Blue) on `GemGrabMode`. 2:30 default per Brawl Stars.
+- Gem scatter on death — N single-value gems on a deterministic ring around death position, replacing the single multi-value gem.
+- Bug fix: win-timer drop-and-recover. Reset condition now triggers on `false→true HasLeader` transition, not only on leader-identity change. (Caught reading the code; no playtest needed.)
+- AI gem hunger: `Gem.All` static registry + `HasAnyUnpickedWithin(origin, radius)`; `AIUtilityScorer.ScoreSearch` +35 when an unpicked gem is within 8m.
+- AI carrier protection: `ScorePeel` +8 per gem when the threatened ally is carrying. Stacks on the existing +40 ally-under-threat bonus so a 3-gem carrier under threat earns +64 total.
+
+**Camera polish**
+- `CameraController` rewrite (same external API): dead zone (anchor-based follow with XZ box tolerance), shake hook (`Shake(magnitude, durationSeconds)` with override-vs-stack rule), bounds clamping (XZ rectangle).
+- Jitter fix: bumped `_positionSmoothTime` default 0.05f → 0.15f; replaced per-frame `LookAt(_anchor)` with one-time cached rotation (`Quaternion.LookRotation(-offset.normalized)`). Per-frame LookAt was amplifying positional jitter into rotational jitter.
+- `CameraController.Instance` static singleton so game-feel callers can `Shake(...)` without holding a serialized reference.
+
+**HUD widgets (six new MonoBehaviours)**
+- `MatchHUD` — reads `MatchManager` + `GemGrabMode` each frame; writes "Blue 3 / Red 7 — Hold 14.2s — Match 1:32" to a single TMP_Text or legacy Text. State-aware (pre-match / active / ended copy).
+- `BrawlerHealthBarView` — world-space, billboards toward camera each LateUpdate, color-codes by team, lerps toward red tint below 30% health, hides while dead.
+- `BrawlerCarrierBadgeView` — world-space gem icon + count above any brawler holding gems. Tints icon by team color once at Awake. Writes count text only on count-change for zero-alloc steady-state.
+- `PlayerHUD` — drives ammo dots (with partial-fill on the reloading bar), super-charge ring/bar, hypercharge bar, gadget UI (charges + radial cooldown sweep), gem-carrier badge. Auto-discovers locally-controlled brawler via `PlayerCommandSource`.
+- `MatchCountdownOverlay` — full-screen 3-2-1-GO. Detects `Active` edge internally (no event subscription), shows "GO!" hold for 0.6s.
+- `DeathOverlay` — full-screen "You died" + respawn countdown synced to `SpawnManager.RespawnDelaySeconds`. `SetKilledBy(string)` API exposed and waiting on a future kill-credit hookup.
+
+**Aim / preview improvements**
+- Spread/cone fan: `AimPreviewData.SpreadHalfAngleDegrees`, `ProjectileAbilityDefinition.SpreadAngle`, two new optional left/right-edge `LineRenderer`s on `AimIndicatorView`. Backward-compatible (spread=0 → original single line). Volley abilities (already had `SpreadAngle = 12`) get the fan automatically.
+- `AbilityCooldownState` extension: new `DurationTicks` field set at `StartCooldown`, plus `GetProgress(currentTick)` returning 1→0 for true radial-sweep cooldown overlays. PlayerHUD swapped from binary to true sweep.
+
+**Match infrastructure exposed for HUD consumption**
+- `MatchManager.CountdownRemainingSeconds` + `CountdownDuration` public properties; tracks `_countdownStartTime` set in `StartMatchFlow`.
+- `SpawnManager.RespawnDelaySeconds` public getter.
+
+**Scene flow (the "make it actually playable" workstream)**
+- New `Assets/Scripts/Core/Infrastructure/Flow/` package, eight files:
+  - `SceneId` enum (Loading, MainMenu, BrawlerSelect, GameModeSelect, Match, Results)
+  - `SceneSelection` static carrier (SelectedBrawler, SelectedMode) + `GameModeId` enum
+  - `SceneFlow` MonoBehaviour singleton (DontDestroyOnLoad, maps SceneId→scene name array, `LoadScene` + `ReturnToMainMenu`)
+  - `Screens/LoadingScreen` (coroutine timer + progress bar)
+  - `Screens/MainMenuScreen` (Play/Quit, resets selection)
+  - `Screens/BrawlerSelectScreen` (instantiates one card prefab per `BrawlerDefinition` in `_availableBrawlers`)
+  - `Screens/GameModeSelectScreen` (Phase 1: just Gem Grab)
+  - `Screens/ResultsScreen` + `MatchResultBoard` static carrier
+- `MatchEndRouter` — Match-scene MB; subscribes to `MatchManager.OnStateChanged`, on Ended captures `GemGrabMode` scores into `MatchResultBoard`, loads Results after configurable delay (1.5s default).
+- `MatchSceneSetupChecker` — diagnostic. Awake-time scan logs Errors / Warnings for missing required (`MatchManager`/`SpawnManager`/`MatchmakingManager`/`GemGrabMode`/`SimulationClock`) and recommended (`MatchEndRouter`/`SceneFlow`) components.
+- `MatchmakingManager.Start` patched to prefer `SceneSelection.SelectedBrawler` over inspector `_playerBrawler` (which becomes a fallback for direct Match-scene launches).
+- `TestMatchStarter` patched to defer to `MatchmakingManager` when present (no-op if MatchmakingManager.Instance exists). Production flow wins; legacy/standalone test scenes still work.
+- Bug fix: gem pickup now uses XZ-only distance after grid query (3D distance was missing brawlers because gem sits on ground at Y≈0, brawler chest is at Y≈1).
+
+**Editor scene builders (Phase 2 of scene flow)**
+- `Assets/Editor/SceneFlow/SceneBuilders.cs`: six `[MenuItem]` entries under **MOBA → Scene Flow → ...** that programmatically build each menu scene's hierarchy (Canvas, EventSystem with `InputSystemUIInputModule` for the InputSystem package, controller MonoBehaviours with field references auto-wired via `SerializedObject`). Plus `Setup Build Settings` that adds the 6 scene paths to Build Settings, and `Build Brawler Card Prefab` that emits `Assets/Prefabs/UI/BrawlerCard.prefab`.
+- `docs/SCENE_SETUP.md` — per-scene manual-wiring checklist, polish-pass guide, architecture notes (DontDestroyOnLoad rationale, static carriers, centralised scene-name mapping), future extensions list.
+
+**Multi-mode architecture (data-driven mode selection)**
+- `GameModeDefinition` SO — per-mode metadata + `ModePrefab` reference.
+- `GameModeCatalog` SO — listing of all modes + `Find(id)` lookup.
+- `GameModeLoader` MB — Match-scene; on Awake resolves `SceneSelection.SelectedMode` against the catalog and instantiates the matching `ModePrefab` into a `_modeRoot` slot. Falls back to inspector `_fallbackMode` for direct test launches.
+- Migration: bundle `GemGrabMode` + `GemSpawner`s into `Mode_GemGrab.prefab`, register in catalog. Adding modes (Knockout etc.) later is one new SO + one new prefab + catalog entry — no scene-flow code changes.
+
+**Multi-map architecture (map-prefab + spawn-points-as-list)**
+- `SpawnPointMarker` tag MB — placed on empty GameObjects inside map prefabs; `Team` enum field.
+- `MapLoader` MB — Match-scene; on Awake instantiates `_mapPrefab` into `_mapRoot` slot, walks for `SpawnPointMarker`s, hands bucketed Transforms to `SpawnManager.SetSpawnPoints(blue, red)`. Runs before `MatchmakingManager.Start` (Awake vs Start ordering) so spawn points are wired by the time `PrepareMatch` reads them.
+- `SpawnManager.SetSpawnPoints(blue, red)` — runtime replace API. Inspector `_blueSpawnPoints`/`_redSpawnPoints` stay as fallback for scenes without MapLoader.
+- Migration: bundle ground + walls + lighting + spawn-point empties into `Map_DefaultMap.prefab`; assign to MapLoader. (Phase 3+ when there are multiple maps: add `MapCatalog` SO mirroring `GameModeCatalog`.)
+
+**Misc fixes / chores**
+- `MOBA.Core.asmdef` — added `Unity.TextMeshPro` reference (MatchHUD uses `TMP_Text`).
+- `MatchCountdownOverlay` — added `using MOBA.Core.Simulation;` for `MatchState`.
+- `BrawlerLoadoutHelperTests` — added test-only concrete subclasses for abstract `AbilityDefinition` and `GadgetDefinition` (4 tests had been failing with "cannot create instance of abstract class").
+- `MatchEndRouter` integration in scene; `TestMatchStarter` polite-skip; `MatchSceneSetupChecker` introduced (caught the missing `MatchmakingManager` regression).
+
+**Files (new, ~25 across HUD + camera + scene flow + maps + modes)**
+
+HUD:
+- `Assets/Scripts/Core/Infrastructure/HUD/MatchHUD.cs`
+- `Assets/Scripts/Core/Infrastructure/HUD/BrawlerHealthBarView.cs`
+- `Assets/Scripts/Core/Infrastructure/HUD/BrawlerCarrierBadgeView.cs`
+- `Assets/Scripts/Core/Infrastructure/HUD/PlayerHUD.cs`
+- `Assets/Scripts/Core/Infrastructure/HUD/MatchCountdownOverlay.cs`
+- `Assets/Scripts/Core/Infrastructure/HUD/DeathOverlay.cs`
+
+Scene Flow:
+- `Assets/Scripts/Core/Infrastructure/Flow/SceneId.cs`
+- `Assets/Scripts/Core/Infrastructure/Flow/SceneSelection.cs`
+- `Assets/Scripts/Core/Infrastructure/Flow/SceneFlow.cs`
+- `Assets/Scripts/Core/Infrastructure/Flow/Screens/{LoadingScreen,MainMenuScreen,BrawlerSelectScreen,GameModeSelectScreen,ResultsScreen}.cs`
+- `Assets/Scripts/Core/Infrastructure/Flow/MatchEndRouter.cs`
+- `Assets/Scripts/Core/Infrastructure/Flow/MatchSceneSetupChecker.cs`
+- `Assets/Scripts/Core/Infrastructure/Flow/GameModeLoader.cs`
+
+Map / Mode SOs:
+- `Assets/Scripts/Core/Definitions/GameMode/{GameModeDefinition,GameModeCatalog}.cs`
+- `Assets/Scripts/Core/Infrastructure/Map/{SpawnPointMarker,MapLoader}.cs`
+
+Editor:
+- `Assets/Editor/SceneFlow/SceneBuilders.cs`
+
+Docs:
+- `docs/SCENE_SETUP.md`
+
+**Files (edited)**
+- `Assets/Scripts/Core/Infrastructure/CameraController.cs` — full rewrite for dead zone + shake + bounds + jitter fix + Instance.
+- `Assets/Scripts/Core/Infrastructure/AimIndicatorView.cs` — spread fan (two edge LineRenderers).
+- `Assets/Scripts/Core/Infrastructure/AimPreviewData.cs` — SpreadHalfAngleDegrees field.
+- `Assets/Scripts/Core/Infrastructure/PlayerAimController.cs` — populates SpreadHalfAngleDegrees from ProjectileAbilityDefinition / VolleyProjectileAbilityDefinition.
+- `Assets/Scripts/Core/Definitions/Abilities/Main/ProjectileAbilityDefinition.cs` — SpreadAngle field.
+- `Assets/Scripts/Core/Simulation/Abilities/AbilityCooldownState.cs` — DurationTicks field + GetProgress.
+- `Assets/Scripts/Core/Infrastructure/Match/MatchManager.cs` — CountdownRemainingSeconds + CountdownDuration.
+- `Assets/Scripts/Core/Infrastructure/Match/SpawnManager.cs` — RespawnDelaySeconds + SetSpawnPoints.
+- `Assets/Scripts/Core/Infrastructure/MatchmakingManager.cs` — preference for `SceneSelection.SelectedBrawler`.
+- `Assets/Scripts/Test/TestMatchStarter.cs` — defer to MatchmakingManager when present.
+- `Assets/Scripts/Core/Simulation/GemGrab/{Gem,GemGrabMode}.cs` — pickup XZ filter, scatter on death, match timer + sudden-death tiebreak, win-timer drop-and-recover fix, `GemGrabMode.Instance` singleton + helper queries.
+- `Assets/Scripts/Core/Simulation/AI/AIUtilityScorer.cs` — gem hunger (ScoreSearch +35) + carrier protection (ScorePeel +8/gem on threatened ally).
+- `Assets/Scripts/MOBA.Core.asmdef` — Unity.TextMeshPro reference.
+
+**Decisions made**
+- *Inspector fields stay as fallback after data-driven refactors.* `MatchmakingManager._playerBrawler` (vs SceneSelection), `SpawnManager._{blue,red}SpawnPoints` (vs MapLoader), `GameModeLoader._fallbackMode` (vs catalog). Pattern: code prefers the data path, falls back to inspector for direct test scenes. Zero-cost when empty; saves teardown of the test loop.
+- *Patch test scaffolding to be polite, don't delete it.* `TestMatchStarter` no-ops when `MatchmakingManager` is present rather than being deleted. Lets legacy test scenes keep working.
+- *One MatchScene with mode-prefab + map-prefab slots, not per-mode/per-map scenes.* AAA mobile-game pattern. Match scene is the stage; mode prefab is the rules; map prefab is the geometry. Three independent slots loaded at runtime.
+- *Camera shake uses Random.insideUnitCircle (non-deterministic) intentionally.* Visual-only, doesn't affect simulation state, safe under Phase 2's fixed-point determinism plan. Documented in code.
+- *Diagnostic-helper-MB pattern for setup errors.* `MatchSceneSetupChecker` logs missing required components on Awake. Catches "press play, nothing happens" before guessing. Cheap to add to any scene that has setup invariants.
+- *No SESSIONS.md updates for ~2 weeks.* Bad call in retrospect — losing context and risking limit-hit reconstruction. Lesson: doc updates need to be shorter+more frequent, not held until "everything's done."
+
+**Open candidates / known holes**
+- Game feel: damage numbers (world-space pop+rise+fade), hit-stop on big hits, super-cast camera kick — plan Sessions 19–20.
+- Kill credit: BrawlerState `LastDamageSource` field + DamageService write + BrawlerController.HandleDeath capture. Then `DeathOverlay.SetKilledBy(killerName)` actually fills in.
+- Multi-mode: only Gem Grab exists. Adding Knockout would exercise the GameModeLoader path.
+- Multi-map / Addressables: when there are ≥2 maps, MapCatalog SO + Addressables-async map loading.
+- AIUtilityScorer test fixture (deferred 4× now). Needs IAIScoringContext refactor to be tractable.
+- HUD: scoreboard (per-brawler stats end-of-match), end-of-match victory animation overlay.
+
+**Next session goal**
+- Game feel pass — damage numbers + hit-stop + super-cast camera kick. Then plan Session 21 (slice review, 90-second video). Phase 1 is essentially feature-complete; the missing piece is polish.
 
 ---
