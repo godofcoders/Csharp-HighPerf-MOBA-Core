@@ -51,7 +51,15 @@ namespace MOBA.Core.Infrastructure
                 Debug.LogError($"[SceneFlow] No mapping for SceneId.{id}");
                 return;
             }
-            SceneManager.LoadScene(_sceneNames[index]);
+
+            // Prefer the fade-transition path if SceneTransition is in the
+            // scene (production flow). Falls back to a hard cut if it
+            // isn't (e.g. EditMode tests, scenes loaded directly without
+            // going through Loading).
+            if (SceneTransition.Instance != null)
+                StartCoroutine(SceneTransition.Instance.TransitionTo(_sceneNames[index]));
+            else
+                SceneManager.LoadScene(_sceneNames[index]);
         }
 
         /// <summary>
