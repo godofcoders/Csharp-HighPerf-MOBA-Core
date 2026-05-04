@@ -54,6 +54,31 @@ namespace MOBA.Core.Infrastructure
             SceneManager.LoadScene(_sceneNames[index]);
         }
 
+        /// <summary>
+        /// Async scene load. Returns the AsyncOperation so the caller (e.g.
+        /// LoadingScreen) can poll <see cref="AsyncOperation.progress"/> for
+        /// a real progress bar.
+        ///
+        /// When <paramref name="allowActivation"/> is false, the new scene
+        /// loads but doesn't swap in until you set
+        /// <c>op.allowSceneActivation = true</c>. This lets you finish a
+        /// progress-bar animation before the scene visibly changes — Unity
+        /// caps <c>op.progress</c> at 0.9 until activation is allowed, so
+        /// scale your bar by <c>op.progress / 0.9f</c>.
+        /// </summary>
+        public AsyncOperation LoadSceneAsync(SceneId id, bool allowActivation = true)
+        {
+            int index = (int)id;
+            if (index < 0 || index >= _sceneNames.Length)
+            {
+                Debug.LogError($"[SceneFlow] No mapping for SceneId.{id}");
+                return null;
+            }
+            AsyncOperation op = SceneManager.LoadSceneAsync(_sceneNames[index]);
+            if (op != null) op.allowSceneActivation = allowActivation;
+            return op;
+        }
+
         /// <summary>Convenience: reset selection state and return to the
         /// main menu. Call from end-of-match flows.</summary>
         public void ReturnToMainMenu()
