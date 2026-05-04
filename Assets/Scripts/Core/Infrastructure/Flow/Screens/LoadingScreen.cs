@@ -50,20 +50,37 @@ namespace MOBA.Core.Infrastructure
             if (op == null)
             {
                 // No SceneFlow instance — synchronous fallback so we don't
-                // strand the player on the loading screen forever.
-                Debug.LogError("[LoadingScreen] SceneFlow.Instance is null. Make sure SceneFlow GameObject is in the Loading scene. Falling back to synchronous load.");
-                yield return new WaitForSeconds(_minDisplaySeconds);
+                // strand the player. Animate the bar fake-style so it's
+                // not silent; player still sees motion.
+                Debug.LogError("[LoadingScreen] SceneFlow.Instance is null. Make sure SceneFlow GameObject is in the Loading scene. Falling back to synchronous load with fake bar.");
+
+                float t = 0f;
+                while (t < _minDisplaySeconds)
+                {
+                    t += Time.deltaTime;
+                    float p = Mathf.Clamp01(t / _minDisplaySeconds);
+                    if (_progressFill != null) _progressFill.fillAmount = p;
+                    SetStatus(string.Format(_progressFormat, Mathf.FloorToInt(p * 100f)));
+                    yield return null;
+                }
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
                 yield break;
             }
 
             // Poll real progress. Unity caps op.progress at 0.9f while
             // allowSceneActivation is false; scale to 0..1 for the UI.
-            while (op.progress < 0.9f)
+            // Also smooth-step the visible value so empty/tiny scenes don't
+            // jump from 0 to 100% in one frame.
+            float visibleProgress = 0f;
+            while (op.progress < 0.9f || visibleProgress < 0.99f)
             {
-                float displayProgress = Mathf.Clamp01(op.progress / 0.9f);
-                if (_progressFill != null) _progressFill.fillAmount = displayProgress;
-                SetStatus(string.Format(_progressFormat, Mathf.FloorToInt(displayProgress * 100f)));
+                float targetProgress = Mathf.Clamp01(op.progress / 0.9f);
+                visibleProgress = Mathf.MoveTowards(visibleProgress, targetProgress, Time.deltaTime * 1.5f);
+                if (_progressFill != null) _progressFill.fillAmount = visibleProgress;
+                SetStatus(string.Format(_progressFormat, Mathf.FloorToInt(visibleProgress * 100f)));
+
+                // Once op.progress is past 0.9 AND we've caught up visually, exit.
+                if (op.progress >= 0.9f && visibleProgress >= 0.99f) break;
                 yield return null;
             }
 

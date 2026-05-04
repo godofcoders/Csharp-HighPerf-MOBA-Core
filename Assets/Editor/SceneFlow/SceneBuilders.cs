@@ -322,6 +322,19 @@ namespace MOBA.Editor
             return (c, cs);
         }
 
+        // Default Unity UI sprite. Without a sprite assigned, an Image with
+        // Type = Filled draws nothing (no quad to fill). Cache once.
+        private static Sprite _defaultUISprite;
+        private static Sprite DefaultUISprite
+        {
+            get
+            {
+                if (_defaultUISprite == null)
+                    _defaultUISprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+                return _defaultUISprite;
+            }
+        }
+
         private static void CreateBackground(Transform parent, Color color)
         {
             GameObject go = new GameObject("Background", typeof(RectTransform), typeof(Image));
@@ -331,7 +344,9 @@ namespace MOBA.Editor
             rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero;
             rt.offsetMax = Vector2.zero;
-            go.GetComponent<Image>().color = color;
+            Image img = go.GetComponent<Image>();
+            img.color = color;
+            img.sprite = DefaultUISprite;
         }
 
         private static GameObject CreateText(Transform parent, string name, string text, Vector2 anchoredPos, Vector2 size, int fontSize)
@@ -359,6 +374,7 @@ namespace MOBA.Editor
             rt.sizeDelta = size;
             Image img = go.GetComponent<Image>();
             img.color = new Color(0.20f, 0.30f, 0.50f);
+            img.sprite = DefaultUISprite;
 
             // Child text.
             CreateText(go.transform, "Label", label, Vector2.zero, size, Mathf.Max(18, (int)(size.y * 0.45f)));
@@ -373,7 +389,9 @@ namespace MOBA.Editor
             RectTransform rt = go.GetComponent<RectTransform>();
             rt.anchoredPosition = anchoredPos;
             rt.sizeDelta = size;
-            go.GetComponent<Image>().color = color;
+            Image img = go.GetComponent<Image>();
+            img.color = color;
+            img.sprite = DefaultUISprite;
             return go;
         }
     }

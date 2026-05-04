@@ -232,7 +232,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
   m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -327,7 +327,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -589,8 +589,11 @@ MonoBehaviour:
   _progressFill: {fileID: 719108244}
   _statusTextTmp: {fileID: 0}
   _statusTextLegacy: {fileID: 989364342}
-  _holdSeconds: 2
+  _minDisplaySeconds: 0.8
+  _completionHoldSeconds: 0.2
   _statusLabel: Loading...
+  _progressFormat: Loading... {0}%
+  _readyLabel: Ready
 --- !u!114 &1853308319
 MonoBehaviour:
   m_ObjectHideFlags: 0
