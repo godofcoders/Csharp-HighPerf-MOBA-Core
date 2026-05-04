@@ -21,6 +21,19 @@ namespace MOBA.Core.Infrastructure
         public float RespawnDelaySeconds => _respawnDelay;
         [SerializeField] private CameraController _mainCameraController;
 
+        /// <summary>
+        /// Replace the spawn-point lists at runtime. Called by MapLoader
+        /// after it instantiates a map prefab and discovers
+        /// SpawnPointMarker components within it. The inspector-assigned
+        /// fields stay as a fallback for direct Match-scene launches that
+        /// skip MapLoader.
+        /// </summary>
+        public void SetSpawnPoints(System.Collections.Generic.List<Transform> blue, System.Collections.Generic.List<Transform> red)
+        {
+            if (blue != null) _blueSpawnPoints = blue;
+            if (red != null) _redSpawnPoints = red;
+        }
+
         public void SetPlayerTarget(Transform playerTransform)
         {
             if (_mainCameraController != null)
