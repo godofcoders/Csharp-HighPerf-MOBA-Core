@@ -227,23 +227,64 @@ namespace MOBA.Editor
             if (!AssetDatabase.IsValidFolder(folder))
                 AssetDatabase.CreateFolder("Assets/Prefabs", "UI");
 
-            // Root: RectTransform + Image + Button + LayoutElement.
+            // Root: card frame (Image + Button + LayoutElement). BrawlerCardView
+            // wires the structured widgets below.
             GameObject root = new GameObject("BrawlerCard",
-                typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+                typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement),
+                typeof(BrawlerCardView));
 
             RectTransform rt = root.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(200, 240);
+            rt.sizeDelta = new Vector2(220, 320);
 
             Image bg = root.GetComponent<Image>();
-            bg.color = new Color(0.18f, 0.22f, 0.32f);
+            bg.color = new Color(0.14f, 0.17f, 0.24f);
+            bg.sprite = DefaultUISprite;
 
             LayoutElement le = root.GetComponent<LayoutElement>();
-            le.preferredWidth = 200;
-            le.preferredHeight = 240;
+            le.preferredWidth = 220;
+            le.preferredHeight = 320;
 
-            // Label child (Text). BrawlerSelectScreen sets .text = brawler.name.
-            CreateText(root.transform, "Label", "Brawler",
-                new Vector2(0, -100), new Vector2(180, 40), 22);
+            // Accent strip across the top (tinted by archetype at runtime).
+            GameObject accent = CreateImageRect(root.transform, "AccentStrip",
+                new Vector2(0, 145), new Vector2(220, 12), new Color(0.35f, 0.55f, 0.85f));
+
+            // Portrait area — large square in upper half.
+            GameObject portrait = CreateImageRect(root.transform, "Portrait",
+                new Vector2(0, 50), new Vector2(180, 160), Color.white);
+
+            // Name label — under portrait.
+            GameObject nameGo = CreateText(root.transform, "NameText", "Brawler",
+                new Vector2(0, -55), new Vector2(200, 36), 22);
+
+            // Archetype label — small, below name.
+            GameObject archetypeGo = CreateText(root.transform, "ArchetypeText", "ARCHETYPE",
+                new Vector2(0, -82), new Vector2(200, 22), 14);
+            Text archetypeText = archetypeGo.GetComponent<Text>();
+            archetypeText.color = new Color(0.65f, 0.75f, 0.90f);
+
+            // Stat strip (HP + DMG) at bottom.
+            GameObject hpLabel = CreateText(root.transform, "HpLabel", "HP",
+                new Vector2(-50, -120), new Vector2(40, 18), 12);
+            hpLabel.GetComponent<Text>().color = new Color(0.6f, 0.6f, 0.6f);
+            GameObject hpValue = CreateText(root.transform, "HpValue", "3000",
+                new Vector2(-50, -140), new Vector2(60, 22), 16);
+
+            GameObject dmgLabel = CreateText(root.transform, "DmgLabel", "DMG",
+                new Vector2(50, -120), new Vector2(40, 18), 12);
+            dmgLabel.GetComponent<Text>().color = new Color(0.6f, 0.6f, 0.6f);
+            GameObject dmgValue = CreateText(root.transform, "DmgValue", "500",
+                new Vector2(50, -140), new Vector2(60, 22), 16);
+
+            // Wire BrawlerCardView's serialised fields.
+            BrawlerCardView view = root.GetComponent<BrawlerCardView>();
+            SerializedObject so = new SerializedObject(view);
+            so.FindProperty("_portraitImage").objectReferenceValue = portrait.GetComponent<Image>();
+            so.FindProperty("_accentImage").objectReferenceValue = accent.GetComponent<Image>();
+            so.FindProperty("_nameTextLegacy").objectReferenceValue = nameGo.GetComponent<Text>();
+            so.FindProperty("_archetypeTextLegacy").objectReferenceValue = archetypeText;
+            so.FindProperty("_healthValueLegacy").objectReferenceValue = hpValue.GetComponent<Text>();
+            so.FindProperty("_damageValueLegacy").objectReferenceValue = dmgValue.GetComponent<Text>();
+            so.ApplyModifiedProperties();
 
             GameObject prefabAsset = PrefabUtility.SaveAsPrefabAsset(root, path);
             Object.DestroyImmediate(root);

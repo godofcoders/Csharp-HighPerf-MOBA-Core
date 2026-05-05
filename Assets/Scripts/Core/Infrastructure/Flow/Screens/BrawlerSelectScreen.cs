@@ -53,13 +53,25 @@ namespace MOBA.Core.Infrastructure
 
                 GameObject card = Instantiate(_cardPrefab, _cardContainer);
 
-                // Label: prefer TMP, fall back to legacy.
-                TMP_Text labelTmp = card.GetComponentInChildren<TMP_Text>();
-                if (labelTmp != null) labelTmp.text = def.name;
+                // Prefer the structured BrawlerCardView binding (portrait,
+                // archetype, stat strip). Fall back to a generic
+                // GetComponentInChildren<Text> if the prefab doesn't carry
+                // the view component (legacy minimal cards still work).
+                BrawlerCardView view = card.GetComponent<BrawlerCardView>();
+                if (view == null) view = card.GetComponentInChildren<BrawlerCardView>();
+                if (view != null)
+                {
+                    view.Bind(def);
+                }
                 else
                 {
-                    Text labelLegacy = card.GetComponentInChildren<Text>();
-                    if (labelLegacy != null) labelLegacy.text = def.name;
+                    TMP_Text labelTmp = card.GetComponentInChildren<TMP_Text>();
+                    if (labelTmp != null) labelTmp.text = def.name;
+                    else
+                    {
+                        Text labelLegacy = card.GetComponentInChildren<Text>();
+                        if (labelLegacy != null) labelLegacy.text = def.name;
+                    }
                 }
 
                 Button btn = card.GetComponent<Button>();

@@ -11,6 +11,9 @@ namespace MOBA.Core.Definitions
         public string BrawlerName;
         public GameObject ModelPrefab;
 
+        [Tooltip("Portrait sprite shown on brawler-select cards and in-match HUD slots. Optional; if null, the card's portrait Image is hidden.")]
+        public Sprite Portrait;
+
         [Header("Base Stats")]
         public float BaseHealth = 3000f;
         public float BaseMoveSpeed = 5.0f;
