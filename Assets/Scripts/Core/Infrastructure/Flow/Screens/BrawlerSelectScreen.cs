@@ -6,15 +6,16 @@ using MOBA.Core.Definitions;
 namespace MOBA.Core.Infrastructure
 {
     /// <summary>
-    /// Brawler-pick screen. Designer drops the available BrawlerDefinitions
-    /// into _availableBrawlers; the screen instantiates one button-card per
-    /// brawler from a prefab. Clicking a card stores the choice in
-    /// SceneSelection and advances to game-mode select.
+    /// Brawler-pick screen. AAA-style two-pane layout:
+    ///   - Card grid on one side (compact card per BrawlerDefinition).
+    ///   - Detail panel on the other side, populated when the player
+    ///     clicks a card (preview).
+    ///   - Confirm button commits the previewed brawler into
+    ///     SceneSelection and advances to GameModeSelect.
     ///
-    /// The card prefab is expected to have a Button + (optional) TMP_Text
-    /// label that this script populates. For Phase 1 we keep card visuals
-    /// simple — just the brawler's display name. Portraits / archetype
-    /// icons are a polish pass.
+    /// Backward-compatible: if _detailPanel and _confirmButton are unwired,
+    /// the screen falls back to the original "card click commits
+    /// immediately" flow so simple/minimal scenes still work.
     /// </summary>
     public class BrawlerSelectScreen : MonoBehaviour
     {
@@ -23,23 +24,48 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerDefinition[] _availableBrawlers;
 
         [Header("Card spawning")]
-        [Tooltip("Prefab for one brawler card. Must have a Button at root + optional TMP_Text child for the label.")]
+        [Tooltip("Prefab for one compact card. Should carry a BrawlerCardView and a Button at the root.")]
         [SerializeField] private GameObject _cardPrefab;
-        [Tooltip("Container under which the cards spawn (e.g. a HorizontalLayoutGroup).")]
+        [Tooltip("Container under which the cards spawn (e.g. a HorizontalLayoutGroup or GridLayoutGroup).")]
         [SerializeField] private Transform _cardContainer;
+
+        [Header("Detail preview (optional)")]
+        [Tooltip("Big detail-panel BrawlerCardView. Updated when the player clicks a card.")]
+        [SerializeField] private BrawlerCardView _detailPanel;
+        [Tooltip("Confirm button. When clicked, commits the previewed brawler and advances.")]
+        [SerializeField] private Button _confirmButton;
+        [Tooltip("If true, auto-preview the first available brawler on Start so the detail panel isn't empty initially.")]
+        [SerializeField] private bool _autoPreviewFirst = true;
 
         [Header("Navigation")]
         [SerializeField] private Button _backButton;
+
+        private BrawlerDefinition _previewed;
 
         private void Start()
         {
             BuildCards();
             if (_backButton != null) _backButton.onClick.AddListener(OnBack);
+            if (_confirmButton != null) _confirmButton.onClick.AddListener(OnConfirm);
+            UpdateConfirmButtonInteractable();
+
+            if (_autoPreviewFirst && _availableBrawlers != null && _availableBrawlers.Length > 0)
+            {
+                for (int i = 0; i < _availableBrawlers.Length; i++)
+                {
+                    if (_availableBrawlers[i] != null)
+                    {
+                        SetPreview(_availableBrawlers[i]);
+                        break;
+                    }
+                }
+            }
         }
 
         private void OnDestroy()
         {
             if (_backButton != null) _backButton.onClick.RemoveListener(OnBack);
+            if (_confirmButton != null) _confirmButton.onClick.RemoveListener(OnConfirm);
         }
 
         private void BuildCards()
@@ -53,10 +79,6 @@ namespace MOBA.Core.Infrastructure
 
                 GameObject card = Instantiate(_cardPrefab, _cardContainer);
 
-                // Prefer the structured BrawlerCardView binding (portrait,
-                // archetype, stat strip). Fall back to a generic
-                // GetComponentInChildren<Text> if the prefab doesn't carry
-                // the view component (legacy minimal cards still work).
                 BrawlerCardView view = card.GetComponent<BrawlerCardView>();
                 if (view == null) view = card.GetComponentInChildren<BrawlerCardView>();
                 if (view != null)
@@ -78,15 +100,43 @@ namespace MOBA.Core.Infrastructure
                 if (btn != null)
                 {
                     BrawlerDefinition captured = def;
-                    btn.onClick.AddListener(() => OnPick(captured));
+                    btn.onClick.AddListener(() => OnCardClicked(captured));
                 }
             }
         }
 
-        private void OnPick(BrawlerDefinition def)
+        private void OnCardClicked(BrawlerDefinition def)
+        {
+            // Two flows depending on whether detail panel is wired:
+            //   - With detail panel: click previews; Confirm button commits.
+            //   - Without detail panel: click commits directly (legacy).
+            if (_detailPanel != null)
+                SetPreview(def);
+            else
+                Commit(def);
+        }
+
+        private void SetPreview(BrawlerDefinition def)
+        {
+            _previewed = def;
+            if (_detailPanel != null) _detailPanel.Bind(def);
+            UpdateConfirmButtonInteractable();
+        }
+
+        private void OnConfirm()
+        {
+            if (_previewed != null) Commit(_previewed);
+        }
+
+        private void Commit(BrawlerDefinition def)
         {
             SceneSelection.SelectedBrawler = def;
             SceneFlow.Instance?.LoadScene(SceneId.GameModeSelect);
+        }
+
+        private void UpdateConfirmButtonInteractable()
+        {
+            if (_confirmButton != null) _confirmButton.interactable = (_previewed != null);
         }
 
         private void OnBack() => SceneFlow.Instance?.LoadScene(SceneId.MainMenu);

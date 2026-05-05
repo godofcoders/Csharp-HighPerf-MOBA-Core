@@ -38,6 +38,27 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private TMP_Text _damageValueTmp;
         [SerializeField] private Text _damageValueLegacy;
 
+        [SerializeField] private TMP_Text _moveSpeedValueTmp;
+        [SerializeField] private Text _moveSpeedValueLegacy;
+
+        [Header("Detail-panel extras (optional — used by the bigger select-screen panel)")]
+        [SerializeField] private TMP_Text _superNameTmp;
+        [SerializeField] private Text _superNameLegacy;
+
+        [SerializeField] private TMP_Text _gadgetCountTmp;
+        [SerializeField] private Text _gadgetCountLegacy;
+
+        [SerializeField] private TMP_Text _starPowerCountTmp;
+        [SerializeField] private Text _starPowerCountLegacy;
+
+        [SerializeField] private TMP_Text _hyperchargeNameTmp;
+        [SerializeField] private Text _hyperchargeNameLegacy;
+
+        [Tooltip("Optional Filled Image (Horizontal). Driven by Aggression / 2 to display a 0..1 bar for the role-tuning meter.")]
+        [SerializeField] private Image _aggressionBar;
+        [SerializeField] private Image _survivalBar;
+        [SerializeField] private Image _teamplayBar;
+
         [Header("Archetype palette")]
         [Tooltip("Tint applied to the accent strip per archetype. Order: Tank, Assassin, Sniper, Support, Fighter, Controller, Artillery.")]
         [SerializeField] private Color[] _archetypeColors = new Color[]
@@ -83,6 +104,24 @@ namespace MOBA.Core.Infrastructure
             // Stat strip — integer rendering for snappier glance.
             SetText(_healthValueTmp, _healthValueLegacy, Mathf.RoundToInt(def.BaseHealth).ToString());
             SetText(_damageValueTmp, _damageValueLegacy, Mathf.RoundToInt(def.BaseDamage).ToString());
+            SetText(_moveSpeedValueTmp, _moveSpeedValueLegacy, def.BaseMoveSpeed.ToString("0.0"));
+
+            // Detail-panel extras — silently skipped on compact cards
+            // where these fields aren't wired.
+            SetText(_superNameTmp, _superNameLegacy,
+                def.SuperAbility != null ? def.SuperAbility.name : "—");
+            SetText(_gadgetCountTmp, _gadgetCountLegacy,
+                (def.GadgetOptions != null ? def.GadgetOptions.Length : 0).ToString());
+            SetText(_starPowerCountTmp, _starPowerCountLegacy,
+                (def.StarPowerOptions != null ? def.StarPowerOptions.Length : 0).ToString());
+            SetText(_hyperchargeNameTmp, _hyperchargeNameLegacy,
+                def.Hypercharge != null ? def.Hypercharge.name : "—");
+
+            // Role-tuning bars. Aggression/Survival/Teamplay are typically
+            // 0..2 floats (1 = baseline). Halve to map into a 0..1 fill.
+            if (_aggressionBar != null) _aggressionBar.fillAmount = Mathf.Clamp01(def.Aggression * 0.5f);
+            if (_survivalBar != null) _survivalBar.fillAmount = Mathf.Clamp01(def.SurvivalInstinct * 0.5f);
+            if (_teamplayBar != null) _teamplayBar.fillAmount = Mathf.Clamp01(def.TeamplayWeight * 0.5f);
         }
 
         private Color ResolveArchetypeColor(BrawlerArchetype a)
