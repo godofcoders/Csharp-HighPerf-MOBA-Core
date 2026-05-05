@@ -301,7 +301,8 @@ RectTransform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 616374801}
   m_Father: {fileID: 1978525873}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
@@ -335,6 +336,85 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &616374800
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 616374801}
+  - component: {fileID: 616374802}
+  m_Layer: 0
+  m_Name: BrawlerCardView
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &616374801
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 616374800}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 508935457}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 360, y: 500}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &616374802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 616374800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8456789012abcdef9012345678abcdef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _portraitImage: {fileID: 0}
+  _accentImage: {fileID: 0}
+  _nameTextTmp: {fileID: 0}
+  _nameTextLegacy: {fileID: 0}
+  _archetypeTextTmp: {fileID: 0}
+  _archetypeTextLegacy: {fileID: 0}
+  _healthValueTmp: {fileID: 0}
+  _healthValueLegacy: {fileID: 0}
+  _damageValueTmp: {fileID: 0}
+  _damageValueLegacy: {fileID: 0}
+  _moveSpeedValueTmp: {fileID: 0}
+  _moveSpeedValueLegacy: {fileID: 0}
+  _superNameTmp: {fileID: 0}
+  _superNameLegacy: {fileID: 0}
+  _gadgetCountTmp: {fileID: 0}
+  _gadgetCountLegacy: {fileID: 0}
+  _starPowerCountTmp: {fileID: 0}
+  _starPowerCountLegacy: {fileID: 0}
+  _hyperchargeNameTmp: {fileID: 0}
+  _hyperchargeNameLegacy: {fileID: 0}
+  _aggressionBar: {fileID: 0}
+  _survivalBar: {fileID: 0}
+  _teamplayBar: {fileID: 0}
+  _archetypeColors:
+  - {r: 0.85, g: 0.3, b: 0.3, a: 1}
+  - {r: 0.55, g: 0.2, b: 0.65, a: 1}
+  - {r: 0.2, g: 0.55, b: 0.85, a: 1}
+  - {r: 0.3, g: 0.8, b: 0.4, a: 1}
+  - {r: 0.85, g: 0.6, b: 0.2, a: 1}
+  - {r: 0.4, g: 0.6, b: 0.8, a: 1}
+  - {r: 0.85, g: 0.45, b: 0.2, a: 1}
 --- !u!1 &1457913332
 GameObject:
   m_ObjectHideFlags: 0
@@ -653,6 +733,9 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b1f5e71c3af374589a4e5dee979f4c60, type: 2}
   _cardPrefab: {fileID: 614544048855934574, guid: eff843c18cec344548006aa756e644d8, type: 3}
   _cardContainer: {fileID: 508935457}
+  _detailPanel: {fileID: 616374802}
+  _confirmButton: {fileID: 0}
+  _autoPreviewFirst: 1
   _backButton: {fileID: 1850608306}
 --- !u!114 &1978525870
 MonoBehaviour:
