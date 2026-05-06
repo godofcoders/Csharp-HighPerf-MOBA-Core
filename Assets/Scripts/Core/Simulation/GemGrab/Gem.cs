@@ -105,6 +105,10 @@ namespace MOBA.Core.Simulation
             IsPickedUp = true;
             carrier.CarriedGems.Add(_value);
 
+            // Fire pickup event so MatchStatsTracker can attribute
+            // GemsCollected per brawler.
+            GemEventBus.OnGemPickedUp?.Invoke(carrier, _value);
+
             // Hide immediately so any same-frame proximity check sees a
             // visually-gone gem; Destroy hands off to Unity for the actual
             // GameObject teardown.
