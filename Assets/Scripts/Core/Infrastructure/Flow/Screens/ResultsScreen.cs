@@ -20,6 +20,14 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private TMP_Text _scoreTextTmp;
         [SerializeField] private Text _scoreTextLegacy;
 
+        [Header("MVP (optional)")]
+        [Tooltip("Root toggled on/off depending on whether MatchResultBoard has MVP data. Hidden when no MatchStatsTracker was in the scene.")]
+        [SerializeField] private GameObject _mvpRoot;
+        [SerializeField] private TMP_Text _mvpNameTmp;
+        [SerializeField] private Text _mvpNameLegacy;
+        [SerializeField] private TMP_Text _mvpStatsTmp;
+        [SerializeField] private Text _mvpStatsLegacy;
+
         [Header("Buttons")]
         [SerializeField] private Button _continueButton;
         [SerializeField] private Button _rematchButton;
@@ -36,6 +44,22 @@ namespace MOBA.Core.Infrastructure
 
             if (_scoreTextTmp != null) _scoreTextTmp.text = scoreStr;
             else if (_scoreTextLegacy != null) _scoreTextLegacy.text = scoreStr;
+
+            // MVP block — show only if MatchResultBoard has a name set.
+            bool hasMvp = !string.IsNullOrWhiteSpace(MatchResultBoard.MvpName);
+            if (_mvpRoot != null) _mvpRoot.SetActive(hasMvp);
+            if (hasMvp)
+            {
+                MatchStats s = MatchResultBoard.MvpStats;
+                string nameLine = "MVP: " + MatchResultBoard.MvpName;
+                string statsLine = $"{s.GemsCollected} gems   {s.Kills} kills   {s.Deaths} deaths";
+
+                if (_mvpNameTmp != null) _mvpNameTmp.text = nameLine;
+                else if (_mvpNameLegacy != null) _mvpNameLegacy.text = nameLine;
+
+                if (_mvpStatsTmp != null) _mvpStatsTmp.text = statsLine;
+                else if (_mvpStatsLegacy != null) _mvpStatsLegacy.text = statsLine;
+            }
 
             if (_continueButton != null) _continueButton.onClick.AddListener(OnContinue);
             if (_rematchButton != null) _rematchButton.onClick.AddListener(OnRematch);
@@ -61,6 +85,11 @@ namespace MOBA.Core.Infrastructure
         public static int BlueScore;
         public static int RedScore;
 
+        // MVP snapshot, written by MatchEndRouter from MatchStatsTracker.
+        // Empty / 0 if no stats tracker was in the scene.
+        public static string MvpName;
+        public static MatchStats MvpStats;
+
         public static void Capture(TeamType winner, int blue, int red)
         {
             WinnerKnown = true;
@@ -69,12 +98,22 @@ namespace MOBA.Core.Infrastructure
             RedScore = red;
         }
 
+        /// <summary>Optional MVP snapshot — call alongside Capture when a
+        /// MatchStatsTracker is in the scene.</summary>
+        public static void CaptureMvp(string name, MatchStats stats)
+        {
+            MvpName = name;
+            MvpStats = stats;
+        }
+
         public static void Reset()
         {
             WinnerKnown = false;
             Winner = TeamType.Blue;
             BlueScore = 0;
             RedScore = 0;
+            MvpName = string.Empty;
+            MvpStats = default;
         }
     }
 }
