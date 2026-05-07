@@ -54,6 +54,20 @@ namespace MOBA.Core.Infrastructure
             }
 
             MatchResultBoard.Capture(_capturedWinner, blue, red);
+
+            // MVP snapshot, if a MatchStatsTracker was in the scene.
+            if (MatchStatsTracker.Instance != null)
+            {
+                BrawlerController mvp = MatchStatsTracker.Instance.FindMVP();
+                if (mvp != null)
+                {
+                    string mvpName = mvp.Definition != null && !string.IsNullOrWhiteSpace(mvp.Definition.BrawlerName)
+                        ? mvp.Definition.BrawlerName
+                        : (mvp.Definition != null ? mvp.Definition.name : "Unknown");
+                    MatchResultBoard.CaptureMvp(mvpName, MatchStatsTracker.Instance.GetStats(mvp));
+                }
+            }
+
             Invoke(nameof(GoToResults), _delayBeforeResultsSeconds);
         }
 
