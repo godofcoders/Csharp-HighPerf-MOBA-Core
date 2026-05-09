@@ -118,9 +118,20 @@ namespace MOBA.Core.Infrastructure
         private void HandleDeath(BrawlerController dying)
         {
             if (dying == null || !_stats.ContainsKey(dying)) return;
+
             MatchStats s = _stats[dying];
             s.Deaths += 1;
             _stats[dying] = s;
+
+            // Kill credit. LastAttacker was stamped by DamageService.
+            // Self-kill (no attacker) doesn't credit anyone.
+            BrawlerController killer = dying.State != null ? dying.State.LastAttacker : null;
+            if (killer != null && killer != dying && _stats.ContainsKey(killer))
+            {
+                MatchStats ks = _stats[killer];
+                ks.Kills += 1;
+                _stats[killer] = ks;
+            }
         }
 
         /// <summary>Look up a brawler's current stats. Returns default

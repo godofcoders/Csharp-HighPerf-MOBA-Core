@@ -82,6 +82,11 @@ namespace MOBA.Core.Simulation
                 ctx.Target.TakeDamage(workingDamage);
             }
 
+            // Kill-credit: stamp the attacker on the victim BEFORE the
+            // OnDeath fires so MatchStatsTracker can attribute it.
+            if (targetBrawler != null && targetBrawler.State != null && ctx.Attacker != null)
+                targetBrawler.State.LastAttacker = ctx.Attacker;
+
             bool wasFatal = false;
 
             if (targetBrawler != null && targetBrawler.State != null)

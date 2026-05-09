@@ -71,6 +71,13 @@ namespace MOBA.Core.Simulation
         }
 
         public BrawlerController Owner { get; set; }
+
+        // Most recent attacker that landed damage on this brawler. Set by
+        // DamageService.ApplyDamage. Read by MatchStatsTracker on death to
+        // award the kill, and by DeathOverlay for "Killed by X". Cleared on
+        // Reset (respawn). May be null if death was self-inflicted (e.g.
+        // environmental hazard with no Attacker).
+        public BrawlerController LastAttacker;
         public MovementModifierCollection IncomingMovementModifiers => Stats.IncomingMovementModifiers;
 
         // Session 3 refactor: the active status-effect list and its pure
