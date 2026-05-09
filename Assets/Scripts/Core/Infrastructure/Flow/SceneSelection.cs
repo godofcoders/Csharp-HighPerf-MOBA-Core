@@ -18,7 +18,9 @@ namespace MOBA.Core.Infrastructure
 
         public static void Reset()
         {
-            SelectedBrawler = null;
+            // Note: SelectedBrawler PERSISTS across reset so MainMenu can
+            // keep showing the player's last pick. Only mode is wiped (so
+            // post-match flow re-asks rather than auto-rematching).
             SelectedMode = GameModeId.GemGrab;
         }
     }
