@@ -100,7 +100,18 @@ namespace MOBA.Core.Infrastructure
 
             // Edge transitions: capture death time on false→true; clear on
             // true→false. Cheap state machine.
-            if (dead && !_wasDead) _deathTime = Time.time;
+            if (dead && !_wasDead)
+            {
+                _deathTime = Time.time;
+                BrawlerController killer = _localBrawler.State.LastAttacker;
+                if (killer != null && killer != _localBrawler && killer.Definition != null)
+                {
+                    string killerName = !string.IsNullOrWhiteSpace(killer.Definition.BrawlerName)
+                        ? killer.Definition.BrawlerName
+                        : killer.Definition.name;
+                    SetKilledBy(killerName);
+                }
+            }
             else if (!dead && _wasDead)
             {
                 _deathTime = -1f;
