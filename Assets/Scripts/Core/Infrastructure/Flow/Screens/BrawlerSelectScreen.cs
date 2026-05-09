@@ -131,6 +131,17 @@ namespace MOBA.Core.Infrastructure
         private void Commit(BrawlerDefinition def)
         {
             SceneSelection.SelectedBrawler = def;
+
+            // If MainMenu opened the picker just to swap the showcased
+            // brawler, return to MainMenu and clear the flag instead of
+            // advancing the play flow.
+            if (SceneSelection.PickerReturnsToMainMenu)
+            {
+                SceneSelection.PickerReturnsToMainMenu = false;
+                SceneFlow.Instance?.LoadScene(SceneId.MainMenu);
+                return;
+            }
+
             SceneFlow.Instance?.LoadScene(SceneId.GameModeSelect);
         }
 

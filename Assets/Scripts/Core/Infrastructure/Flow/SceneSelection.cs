@@ -16,6 +16,12 @@ namespace MOBA.Core.Infrastructure
         public static BrawlerDefinition SelectedBrawler;
         public static GameModeId SelectedMode = GameModeId.GemGrab;
 
+        /// <summary>True when the brawler-select screen was opened from
+        /// MainMenu's preview tap (just to swap the showcased brawler).
+        /// On confirm, BrawlerSelectScreen routes back to MainMenu instead
+        /// of advancing to GameModeSelect, then clears this flag.</summary>
+        public static bool PickerReturnsToMainMenu;
+
         public static void Reset()
         {
             // Note: SelectedBrawler PERSISTS across reset so MainMenu can
