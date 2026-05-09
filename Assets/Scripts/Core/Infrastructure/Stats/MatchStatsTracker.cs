@@ -27,6 +27,7 @@ namespace MOBA.Core.Infrastructure
         // Cached delegates so we can unsubscribe the SAME instance on
         // OnDisable (event-bus same-delegate-instance discipline).
         private Action<BrawlerState, int> _gemHandler;
+        private Action<DamageResultContext> _damageHandler;
         private readonly List<Action> _deathHandlers = new List<Action>(8);
 
         public IReadOnlyDictionary<BrawlerController, MatchStats> Stats => _stats;
@@ -58,6 +59,9 @@ namespace MOBA.Core.Infrastructure
             // remove the SAME instance on Disable.
             _gemHandler = HandleGemPickedUp;
             GemEventBus.OnGemPickedUp += _gemHandler;
+
+            _damageHandler = HandleDamageApplied;
+            DamageEventBus.OnDamageApplied += _damageHandler;
         }
 
         private void OnDisable()
@@ -66,6 +70,11 @@ namespace MOBA.Core.Infrastructure
             {
                 GemEventBus.OnGemPickedUp -= _gemHandler;
                 _gemHandler = null;
+            }
+            if (_damageHandler != null)
+            {
+                DamageEventBus.OnDamageApplied -= _damageHandler;
+                _damageHandler = null;
             }
             // Death handlers are per-instance lambdas; the BrawlerState
             // references die with the scene so leaks are bounded to Match.
@@ -112,6 +121,28 @@ namespace MOBA.Core.Infrastructure
                     _stats[kvp.Key] = s;
                     return;
                 }
+            }
+        }
+
+        private void HandleDamageApplied(DamageResultContext result)
+        {
+            float dealt = result.FinalDamageApplied;
+            if (dealt <= 0f) return;
+
+            BrawlerController attacker = result.Damage.Attacker;
+            BrawlerController victim = result.Damage.Target as BrawlerController;
+
+            if (attacker != null && _stats.ContainsKey(attacker))
+            {
+                MatchStats s = _stats[attacker];
+                s.DamageDealt += dealt;
+                _stats[attacker] = s;
+            }
+            if (victim != null && _stats.ContainsKey(victim))
+            {
+                MatchStats s = _stats[victim];
+                s.DamageTaken += dealt;
+                _stats[victim] = s;
             }
         }
 
