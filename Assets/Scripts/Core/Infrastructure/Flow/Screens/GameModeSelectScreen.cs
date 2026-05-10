@@ -36,13 +36,13 @@ namespace MOBA.Core.Infrastructure
         private void OnGemGrab()
         {
             SceneSelection.SelectedMode = GameModeId.GemGrab;
-            SceneFlow.Instance?.LoadScene(SceneId.Match);
+            SceneFlow.Instance?.LoadScene(SceneId.MapSelect);
         }
 
         private void OnKnockout()
         {
             SceneSelection.SelectedMode = GameModeId.Knockout;
-            SceneFlow.Instance?.LoadScene(SceneId.Match);
+            SceneFlow.Instance?.LoadScene(SceneId.MapSelect);
         }
 
         private void OnBack() => SceneFlow.Instance?.LoadScene(SceneId.BrawlerSelect);

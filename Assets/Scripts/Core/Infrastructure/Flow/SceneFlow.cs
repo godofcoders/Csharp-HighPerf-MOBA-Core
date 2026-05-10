@@ -29,7 +29,8 @@ namespace MOBA.Core.Infrastructure
             "BrawlerSelect",
             "GameModeSelect",
             "Match",
-            "Results"
+            "Results",
+            "MapSelect"
         };
 
         private void Awake()

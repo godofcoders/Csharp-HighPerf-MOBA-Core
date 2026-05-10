@@ -13,6 +13,7 @@ namespace MOBA.Core.Infrastructure
         BrawlerSelect = 2,
         GameModeSelect = 3,
         Match = 4,
-        Results = 5
+        Results = 5,
+        MapSelect = 6
     }
 }

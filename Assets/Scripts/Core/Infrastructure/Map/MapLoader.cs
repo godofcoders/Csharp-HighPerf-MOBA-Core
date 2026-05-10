@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Simulation;
+using MOBA.Core.Definitions;
 
 namespace MOBA.Core.Infrastructure
 {
@@ -34,7 +35,7 @@ namespace MOBA.Core.Infrastructure
     public class MapLoader : MonoBehaviour
     {
         [Header("Map")]
-        [Tooltip("Map prefab to instantiate. Should contain ground geometry, walls, lighting, and SpawnPointMarker children.")]
+        [Tooltip("Inspector fallback map prefab. Used only when SceneSelection.SelectedMap is null (e.g. direct Match-scene launches without going through map-select).")]
         [SerializeField] private GameObject _mapPrefab;
 
         [Tooltip("Slot under which the spawned map will be parented. If null, this GameObject is used.")]
@@ -44,15 +45,21 @@ namespace MOBA.Core.Infrastructure
 
         private void Awake()
         {
-            if (_mapPrefab == null)
+            // Prefer the player's selected map (set by MapSelect UI). Fall
+            // back to inspector _mapPrefab for direct Match launches.
+            GameObject prefab = SceneSelection.SelectedMap != null && SceneSelection.SelectedMap.MapPrefab != null
+                ? SceneSelection.SelectedMap.MapPrefab
+                : _mapPrefab;
+
+            if (prefab == null)
             {
-                Debug.LogError("[MapLoader] No _mapPrefab assigned — map will not spawn and SpawnManager will use its inspector fallback spawn points.");
+                Debug.LogError("[MapLoader] No map prefab available (SceneSelection.SelectedMap and _mapPrefab both null). SpawnManager will use its inspector fallback spawn points.");
                 return;
             }
 
             Transform parent = _mapRoot != null ? _mapRoot : transform;
-            SpawnedMapInstance = Instantiate(_mapPrefab, parent);
-            SpawnedMapInstance.name = _mapPrefab.name;
+            SpawnedMapInstance = Instantiate(prefab, parent);
+            SpawnedMapInstance.name = prefab.name;
 
             HandSpawnPointsToSpawnManager();
         }

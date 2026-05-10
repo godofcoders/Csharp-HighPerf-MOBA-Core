@@ -1,4 +1,5 @@
 using MOBA.Core.Definitions;
+// MapDefinition lives in MOBA.Core.Definitions too — same namespace, no extra using needed.
 
 namespace MOBA.Core.Infrastructure
 {
@@ -15,6 +16,9 @@ namespace MOBA.Core.Infrastructure
     {
         public static BrawlerDefinition SelectedBrawler;
         public static GameModeId SelectedMode = GameModeId.GemGrab;
+        /// <summary>Picked on the map-select UI. MapLoader prefers this
+        /// over its inspector _mapPrefab fallback when set.</summary>
+        public static MapDefinition SelectedMap;
 
         /// <summary>True when the brawler-select screen was opened from
         /// MainMenu's preview tap (just to swap the showcased brawler).
