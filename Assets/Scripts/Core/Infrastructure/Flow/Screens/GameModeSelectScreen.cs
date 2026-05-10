@@ -13,6 +13,7 @@ namespace MOBA.Core.Infrastructure
     {
         [Header("Mode buttons")]
         [SerializeField] private Button _gemGrabButton;
+        [SerializeField] private Button _knockoutButton;
 
         [Header("Navigation")]
         [SerializeField] private Button _backButton;
@@ -20,18 +21,27 @@ namespace MOBA.Core.Infrastructure
         private void OnEnable()
         {
             if (_gemGrabButton != null) _gemGrabButton.onClick.AddListener(OnGemGrab);
+            if (_knockoutButton != null) _knockoutButton.onClick.AddListener(OnKnockout);
             if (_backButton != null) _backButton.onClick.AddListener(OnBack);
+
         }
 
         private void OnDisable()
         {
             if (_gemGrabButton != null) _gemGrabButton.onClick.RemoveListener(OnGemGrab);
+            if (_knockoutButton != null) _knockoutButton.onClick.RemoveListener(OnKnockout);
             if (_backButton != null) _backButton.onClick.RemoveListener(OnBack);
         }
 
         private void OnGemGrab()
         {
             SceneSelection.SelectedMode = GameModeId.GemGrab;
+            SceneFlow.Instance?.LoadScene(SceneId.Match);
+        }
+
+        private void OnKnockout()
+        {
+            SceneSelection.SelectedMode = GameModeId.Knockout;
             SceneFlow.Instance?.LoadScene(SceneId.Match);
         }
 
