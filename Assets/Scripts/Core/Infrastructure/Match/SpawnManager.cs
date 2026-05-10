@@ -47,9 +47,27 @@ namespace MOBA.Core.Infrastructure
             Instance = this;
         }
 
+        /// <summary>When false, RequestRespawn is a no-op. Set to false by
+        /// modes that suppress mid-round respawns (e.g. Knockout) and
+        /// re-enabled at round transitions.</summary>
+        public bool AllowAutoRespawn = true;
+
         public void RequestRespawn(BrawlerController brawler, TeamType team)
         {
+            if (!AllowAutoRespawn) return;
             StartCoroutine(RespawnRoutine(brawler, team));
+        }
+
+        /// <summary>Force-respawn a brawler at one of their team's spawn
+        /// points, bypassing the AllowAutoRespawn gate. Used by Knockout
+        /// at round start.</summary>
+        public void ForceRespawn(BrawlerController brawler, TeamType team)
+        {
+            var list = team == TeamType.Blue ? _blueSpawnPoints : _redSpawnPoints;
+            if (list == null || list.Count == 0 || brawler == null) return;
+            Transform pt = list[0];
+            brawler.gameObject.SetActive(true);
+            brawler.Respawn(pt.position);
         }
 
         private IEnumerator RespawnRoutine(BrawlerController brawler, TeamType team)

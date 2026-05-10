@@ -37,5 +37,6 @@ namespace MOBA.Core.Infrastructure
     public enum GameModeId
     {
         GemGrab = 0,
+        Knockout = 1,
     }
 }
