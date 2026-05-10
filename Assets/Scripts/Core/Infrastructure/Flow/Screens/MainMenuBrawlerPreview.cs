@@ -49,17 +49,22 @@ namespace MOBA.Core.Infrastructure
         /// player swaps brawlers (e.g. returns from BrawlerSelect).</summary>
         public void Refresh()
         {
+            Debug.Log("[MMBP] Refresh start. SelectedBrawler=" + (SceneSelection.SelectedBrawler != null ? SceneSelection.SelectedBrawler.name : "null") + " fallback=" + (_fallbackBrawler != null ? _fallbackBrawler.name : "null"));
+
             BrawlerDefinition def = SceneSelection.SelectedBrawler ?? _fallbackBrawler;
-            if (def == _currentDef && _spawned != null) return;
+            if (def == _currentDef && _spawned != null) { Debug.Log("[MMBP] same def + spawned, early-out"); return; }
 
             if (_spawned != null) Destroy(_spawned);
             _currentDef = def;
 
-            if (def == null || def.ModelPrefab == null || _modelAnchor == null) return;
+            if (def == null) { Debug.LogWarning("[MMBP] def null"); return; }
+            if (def.ModelPrefab == null) { Debug.LogWarning("[MMBP] def.ModelPrefab null on " + def.name); return; }
+            if (_modelAnchor == null) { Debug.LogWarning("[MMBP] _modelAnchor null"); return; }
 
             _spawned = Instantiate(def.ModelPrefab, _modelAnchor);
             _spawned.transform.localPosition = Vector3.zero;
             _spawned.transform.localRotation = Quaternion.Euler(0f, _initialYaw, 0f);
+            Debug.Log("[MMBP] spawned " + _spawned.name + " under " + _modelAnchor.name + " at world " + _spawned.transform.position);
 
             StripGameplayComponents(_spawned);
             UpdateInfoText(def);
