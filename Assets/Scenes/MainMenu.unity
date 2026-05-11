@@ -405,6 +405,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _playButton: {fileID: 1182603573}
   _quitButton: {fileID: 0}
+  _defaultBrawler: {fileID: 11400000, guid: c6cbcf818157b45e0b07a58637e4cc5d, type: 2}
+  _defaultMap: {fileID: 11400000, guid: 660280807461f4c428e30b3647f820bb, type: 2}
+  _defaultMode: 0
 --- !u!114 &798400149
 MonoBehaviour:
   m_ObjectHideFlags: 0
