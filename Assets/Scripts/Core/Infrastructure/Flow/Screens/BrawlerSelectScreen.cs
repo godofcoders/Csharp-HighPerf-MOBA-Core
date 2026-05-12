@@ -40,6 +40,10 @@ namespace MOBA.Core.Infrastructure
         [Header("Navigation")]
         [SerializeField] private Button _backButton;
 
+        [Header("Temporary Flow")]
+        [SerializeField]
+        private bool _commitImmediatelyOnCardClick = true;
+
         private BrawlerDefinition _previewed;
 
         private void Start()
@@ -60,6 +64,20 @@ namespace MOBA.Core.Infrastructure
                     }
                 }
             }
+        }
+
+        private void OnCardClicked(BrawlerDefinition def)
+        {
+            // Normal AAA preview flow
+            if (_detailPanel != null)
+                SetPreview(def);
+            else
+                Commit(def);
+
+            // Temporary shortcut flow:
+            // instantly commit after previewing.
+            if (_commitImmediatelyOnCardClick)
+                Commit(def);
         }
 
         private void OnDestroy()
@@ -105,16 +123,7 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
-        private void OnCardClicked(BrawlerDefinition def)
-        {
-            // Two flows depending on whether detail panel is wired:
-            //   - With detail panel: click previews; Confirm button commits.
-            //   - Without detail panel: click commits directly (legacy).
-            if (_detailPanel != null)
-                SetPreview(def);
-            else
-                Commit(def);
-        }
+
 
         private void SetPreview(BrawlerDefinition def)
         {
