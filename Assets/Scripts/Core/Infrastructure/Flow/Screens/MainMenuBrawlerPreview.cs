@@ -6,28 +6,25 @@ using MOBA.Core.Definitions;
 
 namespace MOBA.Core.Infrastructure
 {
-    /// <summary>
-    /// MainMenu 3D brawler showcase. Instantiates the current
-    /// SceneSelection.SelectedBrawler's ModelPrefab at an anchor and
-    /// supports drag-to-rotate around Y. Falls back to a designer-assigned
-    /// _fallbackBrawler when no selection exists yet.
-    ///
-    /// Setup:
-    ///   1. Add a Transform on stage where the model should appear.
-    ///   2. Add this component anywhere; assign _modelAnchor + _fallbackBrawler.
-    ///   3. Drop an Image (full-screen, transparent) over the showcase area
-    ///      that has this component as its drag-event handler — or attach
-    ///      this directly to the Image.
-    /// </summary>
     public class MainMenuBrawlerPreview : MonoBehaviour, IDragHandler, IPointerClickHandler
     {
         [SerializeField] private Transform _modelAnchor;
         [SerializeField] private BrawlerDefinition _fallbackBrawler;
+
+        [Header("Rotation")]
         [Min(0.01f)]
         [SerializeField] private float _rotateSensitivity = 0.4f;
+
+        [Tooltip("How quickly inertial rotation slows down.")]
+        [SerializeField] private float _rotationDamping = 6f;
+
+        [Tooltip("Maximum spin speed.")]
+        [SerializeField] private float _maxRotationVelocity = 500f;
+
         [Tooltip("Initial Y rotation of the spawned model.")]
         [SerializeField] private float _initialYaw = 180f;
-        [Tooltip("Drag distance threshold (in screen pixels) above which a pointer-up is treated as a drag instead of a click. Prevents tap-to-open firing during a rotate.")]
+
+        [Tooltip("Drag distance threshold (in screen pixels) above which a pointer-up is treated as a drag instead of a click.")]
         [Min(0f)]
         [SerializeField] private float _clickDragThreshold = 8f;
 
@@ -36,93 +33,194 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Text _nameTextLegacy;
         [SerializeField] private TMP_Text _levelTextTmp;
         [SerializeField] private Text _levelTextLegacy;
+
         [Tooltip("Format string for the power-level display. {0} = level number.")]
         [SerializeField] private string _levelFormat = "Power Level {0}";
 
         private GameObject _spawned;
         private BrawlerDefinition _currentDef;
+
         private float _accumulatedDragMagnitude;
+
+        // Inertial rotation state
+        private float _rotationVelocity;
 
         private void Start() => Refresh();
 
-        /// <summary>Re-spawn the showcased model. Call this after the
-        /// player swaps brawlers (e.g. returns from BrawlerSelect).</summary>
+        private void Update()
+        {
+            if (_spawned == null)
+                return;
+
+            // Apply inertial rotation
+            if (Mathf.Abs(_rotationVelocity) > 0.01f)
+            {
+                _spawned.transform.Rotate(
+                    0f,
+                    _rotationVelocity * Time.deltaTime,
+                    0f,
+                    Space.World);
+
+                // Smooth damping
+                _rotationVelocity = Mathf.Lerp(
+                    _rotationVelocity,
+                    0f,
+                    _rotationDamping * Time.deltaTime);
+            }
+            else
+            {
+                _rotationVelocity = 0f;
+            }
+        }
+
         public void Refresh()
         {
-            Debug.Log("[MMBP] Refresh start. SelectedBrawler=" + (SceneSelection.SelectedBrawler != null ? SceneSelection.SelectedBrawler.name : "null") + " fallback=" + (_fallbackBrawler != null ? _fallbackBrawler.name : "null"));
+            Debug.Log("[MMBP] Refresh start. SelectedBrawler=" +
+                      (SceneSelection.SelectedBrawler != null
+                          ? SceneSelection.SelectedBrawler.name
+                          : "null") +
+                      " fallback=" +
+                      (_fallbackBrawler != null
+                          ? _fallbackBrawler.name
+                          : "null"));
 
-            BrawlerDefinition def = SceneSelection.SelectedBrawler ?? _fallbackBrawler;
-            if (def == _currentDef && _spawned != null) { Debug.Log("[MMBP] same def + spawned, early-out"); return; }
+            BrawlerDefinition def =
+                SceneSelection.SelectedBrawler ?? _fallbackBrawler;
 
-            if (_spawned != null) Destroy(_spawned);
+            if (def == _currentDef && _spawned != null)
+            {
+                Debug.Log("[MMBP] same def + spawned, early-out");
+                return;
+            }
+
+            if (_spawned != null)
+                Destroy(_spawned);
+
             _currentDef = def;
 
-            if (def == null) { Debug.LogWarning("[MMBP] def null"); return; }
-            if (def.ModelPrefab == null) { Debug.LogWarning("[MMBP] def.ModelPrefab null on " + def.name); return; }
-            if (_modelAnchor == null) { Debug.LogWarning("[MMBP] _modelAnchor null"); return; }
+            if (def == null)
+            {
+                Debug.LogWarning("[MMBP] def null");
+                return;
+            }
+
+            if (def.ModelPrefab == null)
+            {
+                Debug.LogWarning("[MMBP] def.ModelPrefab null on " + def.name);
+                return;
+            }
+
+            if (_modelAnchor == null)
+            {
+                Debug.LogWarning("[MMBP] _modelAnchor null");
+                return;
+            }
 
             _spawned = Instantiate(def.ModelPrefab, _modelAnchor);
+
             _spawned.transform.localPosition = Vector3.zero;
-            _spawned.transform.localRotation = Quaternion.Euler(0f, _initialYaw, 0f);
-            Debug.Log("[MMBP] spawned " + _spawned.name + " under " + _modelAnchor.name + " at world " + _spawned.transform.position);
+            _spawned.transform.localRotation =
+                Quaternion.Euler(0f, _initialYaw, 0f);
+
+            Debug.Log("[MMBP] spawned " + _spawned.name +
+                      " under " + _modelAnchor.name +
+                      " at world " + _spawned.transform.position);
 
             StripGameplayComponents(_spawned);
             UpdateInfoText(def);
+
+            _rotationVelocity = 0f;
         }
 
-        // The brawler model prefab usually carries gameplay components
-        // (BrawlerController, AI controllers, colliders, rigidbodies). On
-        // a MainMenu showcase we want pure visuals — strip everything that
-        // isn't a renderer / animator / particle / transform.
         private void StripGameplayComponents(GameObject root)
         {
-            MonoBehaviour[] scripts = root.GetComponentsInChildren<MonoBehaviour>(true);
+            MonoBehaviour[] scripts =
+                root.GetComponentsInChildren<MonoBehaviour>(true);
+
             for (int i = 0; i < scripts.Length; i++)
             {
                 MonoBehaviour s = scripts[i];
-                if (s == null) continue;
-                // Whitelist a couple of pure-visual MonoBehaviours.
-                if (s is Animator) continue;
+
+                if (s == null)
+                    continue;
+
+                if (s is Animator)
+                    continue;
+
                 Destroy(s);
             }
-            Collider[] colliders = root.GetComponentsInChildren<Collider>(true);
-            for (int i = 0; i < colliders.Length; i++) Destroy(colliders[i]);
-            Rigidbody[] bodies = root.GetComponentsInChildren<Rigidbody>(true);
-            for (int i = 0; i < bodies.Length; i++) Destroy(bodies[i]);
+
+            Collider[] colliders =
+                root.GetComponentsInChildren<Collider>(true);
+
+            for (int i = 0; i < colliders.Length; i++)
+                Destroy(colliders[i]);
+
+            Rigidbody[] bodies =
+                root.GetComponentsInChildren<Rigidbody>(true);
+
+            for (int i = 0; i < bodies.Length; i++)
+                Destroy(bodies[i]);
         }
 
         private void UpdateInfoText(BrawlerDefinition def)
         {
-            string nm = !string.IsNullOrWhiteSpace(def.BrawlerName) ? def.BrawlerName : def.name;
-            if (_nameTextTmp != null) _nameTextTmp.text = nm;
-            else if (_nameTextLegacy != null) _nameTextLegacy.text = nm;
+            string nm =
+                !string.IsNullOrWhiteSpace(def.BrawlerName)
+                    ? def.BrawlerName
+                    : def.name;
+
+            if (_nameTextTmp != null)
+                _nameTextTmp.text = nm;
+            else if (_nameTextLegacy != null)
+                _nameTextLegacy.text = nm;
 
             int level = PlayerBrawlerProgress.GetLevel(def);
+
             string levelStr = string.Format(_levelFormat, level);
-            if (_levelTextTmp != null) _levelTextTmp.text = levelStr;
-            else if (_levelTextLegacy != null) _levelTextLegacy.text = levelStr;
+
+            if (_levelTextTmp != null)
+                _levelTextTmp.text = levelStr;
+            else if (_levelTextLegacy != null)
+                _levelTextLegacy.text = levelStr;
         }
 
         public void OnDrag(PointerEventData eventData)
         {
-            if (_spawned == null) return;
-            float yaw = -eventData.delta.x * _rotateSensitivity;
-            _spawned.transform.Rotate(0f, yaw, 0f, Space.World);
-            _accumulatedDragMagnitude += eventData.delta.magnitude;
+            if (_spawned == null)
+                return;
+
+            float deltaYaw =
+                -eventData.delta.x * _rotateSensitivity;
+
+            // Immediate response while dragging
+            _spawned.transform.Rotate(
+                0f,
+                deltaYaw,
+                0f,
+                Space.World);
+
+            // Feed inertia velocity
+            _rotationVelocity =
+                Mathf.Clamp(
+                    deltaYaw / Mathf.Max(Time.unscaledDeltaTime, 0.0001f),
+                    -_maxRotationVelocity,
+                    _maxRotationVelocity);
+
+            _accumulatedDragMagnitude +=
+                eventData.delta.magnitude;
         }
 
         public void OnPointerClick(PointerEventData eventData)
         {
-            // Distinguish click from drag: if the user moved more than the
-            // threshold during the press, treat as a rotate, not a tap.
             if (_accumulatedDragMagnitude > _clickDragThreshold)
             {
                 _accumulatedDragMagnitude = 0f;
                 return;
             }
+
             _accumulatedDragMagnitude = 0f;
 
-            // Open BrawlerSelect with the return-to-MainMenu flag set.
             SceneSelection.PickerReturnsToMainMenu = true;
             SceneFlow.Instance?.LoadScene(SceneId.BrawlerSelect);
         }
