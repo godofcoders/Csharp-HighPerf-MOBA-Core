@@ -184,6 +184,55 @@ namespace MOBA.Editor
             SaveScene(s);
         }
 
+        [MenuItem("MOBA/Scene Flow/Build MapSelect Scene")]
+        public static void BuildMapSelectScene()
+        {
+            Scene s = NewScene("MapSelect");
+            CreateEventSystem();
+
+            (Canvas canvas, _) = CreateCanvas("Canvas");
+            CreateBackground(canvas.transform, new Color(0.10f, 0.12f, 0.18f));
+
+            CreateText(canvas.transform, "TitleText", "Choose a Map",
+                new Vector2(0, 280), new Vector2(900, 80), 48);
+
+            // Card container with HorizontalLayoutGroup. MapSelectScreen
+            // instantiates the assigned card prefab into this container.
+            GameObject container = new GameObject("CardContainer", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            container.transform.SetParent(canvas.transform, false);
+            RectTransform crt = container.GetComponent<RectTransform>();
+            crt.sizeDelta = new Vector2(1000, 280);
+            crt.anchoredPosition = new Vector2(0, 60);
+            HorizontalLayoutGroup hlg = container.GetComponent<HorizontalLayoutGroup>();
+            hlg.spacing = 20;
+            hlg.childAlignment = TextAnchor.MiddleCenter;
+            hlg.childForceExpandWidth = false;
+            hlg.childForceExpandHeight = false;
+
+            // Detail preview: simple icon + name (centred below the grid).
+            GameObject previewIconGo = CreateImageRect(canvas.transform, "PreviewIcon",
+                new Vector2(0, -150), new Vector2(220, 140), new Color(0.18f, 0.22f, 0.32f));
+            GameObject previewNameGo = CreateText(canvas.transform, "PreviewName", "—",
+                new Vector2(0, -250), new Vector2(800, 50), 28);
+
+            Button confirm = CreateButton(canvas.transform, "ConfirmButton", "Play",
+                new Vector2(280, -340), new Vector2(220, 70));
+            Button back = CreateButton(canvas.transform, "BackButton", "Back",
+                new Vector2(-280, -340), new Vector2(160, 60));
+
+            MapSelectScreen mss = canvas.gameObject.AddComponent<MapSelectScreen>();
+            SerializedObject so = new SerializedObject(mss);
+            so.FindProperty("_cardContainer").objectReferenceValue = container.transform;
+            so.FindProperty("_backButton").objectReferenceValue = back;
+            so.FindProperty("_confirmButton").objectReferenceValue = confirm;
+            so.FindProperty("_previewIcon").objectReferenceValue = previewIconGo.GetComponent<Image>();
+            so.FindProperty("_previewNameLegacy").objectReferenceValue = previewNameGo.GetComponent<Text>();
+            // _catalog and _cardPrefab → designer wires manually.
+            so.ApplyModifiedProperties();
+
+            SaveScene(s);
+        }
+
         [MenuItem("MOBA/Scene Flow/Build Results Scene")]
         public static void BuildResultsScene()
         {
