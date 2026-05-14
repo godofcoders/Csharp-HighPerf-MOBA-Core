@@ -22,16 +22,26 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Scene name mapping (parallel to SceneId enum)")]
         [Tooltip("Index = SceneId enum value. Each entry is the scene asset name (without .unity) added to Build Settings.")]
-        [SerializeField] private string[] _sceneNames = new[]
-        {
-            "Loading",
-            "MainMenu",
-            "BrawlerSelect",
-            "GameModeSelect",
-            "Match",
-            "Results",
-            "MapSelect"
-        };
+        [SerializeField]
+        private readonly string[] _sceneNames =
+{
+
+    "Loading",
+
+    "MainMenu",
+
+    "BrawlerSelect",
+
+    "GameModeSelect",
+
+    "Match",
+
+    "Results",
+
+    "MapSelect"
+
+};
+
 
         private void Awake()
         {
@@ -49,7 +59,7 @@ namespace MOBA.Core.Infrastructure
             int index = (int)id;
             if (index < 0 || index >= _sceneNames.Length)
             {
-                Debug.LogError($"[SceneFlow] No mapping for SceneId.{id}");
+                Debug.LogError($"[SceneFlow] No mapping for SceneId.{index}");
                 return;
             }
 

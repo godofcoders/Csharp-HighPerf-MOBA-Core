@@ -13,11 +13,13 @@ namespace MOBA.Core.Infrastructure
     {
         [Header("Buttons")]
         [SerializeField] private Button _playButton;
-        [SerializeField] private Button _quitButton;
+        [SerializeField] private Button _mapSelectButton;
+
 
         [Header("Defaults (used if nothing was picked yet)")]
         [SerializeField] private BrawlerDefinition _defaultBrawler;
         [SerializeField] private MapDefinition _defaultMap;
+
         [SerializeField] private GameModeId _defaultMode = GameModeId.GemGrab;
 
         private void OnEnable()
@@ -28,13 +30,13 @@ namespace MOBA.Core.Infrastructure
             // when Play goes straight to Match with the current selection.
 
             if (_playButton != null) _playButton.onClick.AddListener(OnPlay);
-            if (_quitButton != null) _quitButton.onClick.AddListener(OnQuit);
+            if (_mapSelectButton != null) _mapSelectButton.onClick.AddListener(OnMapSelect);
         }
 
         private void OnDisable()
         {
             if (_playButton != null) _playButton.onClick.RemoveListener(OnPlay);
-            if (_quitButton != null) _quitButton.onClick.RemoveListener(OnQuit);
+            if (_mapSelectButton != null) _mapSelectButton.onClick.RemoveListener(OnMapSelect);
         }
 
         private void OnPlay()
@@ -47,6 +49,10 @@ namespace MOBA.Core.Infrastructure
             SceneFlow.Instance?.LoadScene(SceneId.Match);
         }
 
-        private void OnQuit() => Application.Quit();
+        private void OnMapSelect()
+        {
+            Debug.Log("[MainMenuScreen] Map Select clicked" + SceneId.MapSelect);
+            SceneFlow.Instance?.LoadScene((SceneId.MapSelect));
+        }
     }
 }
