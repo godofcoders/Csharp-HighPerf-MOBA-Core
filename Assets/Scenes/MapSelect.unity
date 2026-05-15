@@ -548,6 +548,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _catalog: {fileID: 11400000, guid: 796b99b2c8b7148d785e451e268c8615, type: 2}
+  _defaultBrawler: {fileID: 11400000, guid: c6cbcf818157b45e0b07a58637e4cc5d, type: 2}
   _cardPrefab: {fileID: 8944002273400419348, guid: 7d7df835d566f4040b03bc4f94035b02, type: 3}
   _cardContainer: {fileID: 1353082811}
   _previewNameTmp: {fileID: 0}
