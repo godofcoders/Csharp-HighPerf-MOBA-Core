@@ -19,6 +19,10 @@ namespace MOBA.Core.Infrastructure
         [Header("Catalog")]
         [SerializeField] private MapCatalog _catalog;
 
+        [Header("Defaults (used if nothing was picked yet)")]
+        [Tooltip("Used when SceneSelection.SelectedBrawler is null on Confirm — happens when the player skipped BrawlerSelect (e.g. tapped Play directly).")]
+        [SerializeField] private BrawlerDefinition _defaultBrawler;
+
         [Header("Card spawning")]
         [SerializeField] private GameObject _cardPrefab;
         [SerializeField] private Transform _cardContainer;
@@ -109,6 +113,9 @@ namespace MOBA.Core.Infrastructure
         {
             if (_previewed == null) return;
             SceneSelection.SelectedMap = _previewed;
+            // Backfill brawler default so Match doesn't NRE when the player
+            // skipped BrawlerSelect (Play → GameModeSelect → MapSelect path).
+            if (SceneSelection.SelectedBrawler == null) SceneSelection.SelectedBrawler = _defaultBrawler;
             SceneFlow.Instance?.LoadScene(SceneId.Match);
         }
 
