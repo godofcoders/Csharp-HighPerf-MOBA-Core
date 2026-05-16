@@ -45,10 +45,10 @@ namespace MOBA.Core.Simulation.AI
             ScoreAndReplace(ref best, ScoreReposition(targetInfo));
             ScoreAndReplace(ref best, ScoreApproach(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScorePeel(currentTick));
-            ScoreAndReplace(ref best, ScoreRegroup(currentTick));
+            ScoreAndReplace(ref best, ScoreRegroup(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScoreSearch(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScoreWander());
-            ScoreAndReplace(ref best, ScoreObjective());
+            ScoreAndReplace(ref best, ScoreObjective(targetInfo));
 
             return best;
         }
@@ -63,10 +63,10 @@ namespace MOBA.Core.Simulation.AI
             results.Add(ScoreReposition(targetInfo));
             results.Add(ScoreApproach(targetInfo, currentTick));
             results.Add(ScorePeel(currentTick));
-            results.Add(ScoreRegroup(currentTick));
+            results.Add(ScoreRegroup(targetInfo, currentTick));
             results.Add(ScoreSearch(targetInfo, currentTick));
             results.Add(ScoreWander());
-            results.Add(ScoreObjective());
+            results.Add(ScoreObjective(targetInfo));
         }
 
         private void ScoreAndReplace(ref AIActionScore best, AIActionScore candidate)
@@ -291,42 +291,68 @@ namespace MOBA.Core.Simulation.AI
             return new AIActionScore(AIActionType.Wander, 5f * _profile.WanderWeight);
         }
 
-        private AIActionScore ScoreObjective()
+        private AIActionScore ScoreObjective(AITargetInfo targetInfo)
         {
-            if (_objectiveMemory == null)
-                return new AIActionScore(AIActionType.Wander, 0f);
+            if (_objectiveMemory == null || !_objectiveMemory.HasAnyObjectives())
+                return new AIActionScore(AIActionType.Search, 0f);
 
-            var objective = _objectiveMemory.GetBestObjective(_self.Position, _profile.PreferredObjective);
+            var objective = _objectiveMemory.GetBestObjective(
+                _self.Position,
+                _profile.PreferredObjective);
+
             if (objective == null)
-                return new AIActionScore(AIActionType.Wander, 0f);
+                return new AIActionScore(AIActionType.Search, 0f);
 
-            float score = 35f * _profile.ObjectiveWeight;
+            float score = 40f;
 
-            if (!_objectiveMemory.HasAnyObjectives())
-                score = 0f;
+            // No combat target?
+            // Strongly encourage objective movement.
+            if (!targetInfo.HasLiveTarget)
+                score += 35f;
+
+            float dist = Vector3.Distance(
+                _self.Position,
+                objective.transform.position);
+
+            // Encourage advancing across the map.
+            if (dist > 4f)
+                score += 15f;
+
+            score *= Mathf.Max(0.25f, _profile.ObjectiveWeight);
+
             return new AIActionScore(AIActionType.Search, score);
         }
 
-        private AIActionScore ScoreRegroup(uint currentTick)
+        private AIActionScore ScoreRegroup(
+     AITargetInfo targetInfo,
+     uint currentTick)
         {
-            float score = 0f;
+            if (_teamCoordinator == null)
+                return new AIActionScore(AIActionType.Regroup, 0f);
 
-            if (_teamCoordinator != null && _teamCoordinator.TryGetRegroupPoint(currentTick, out _))
-            {
-                score += 8f;
-            }
+            // Never regroup during active combat.
+            if (targetInfo.HasLiveTarget)
+                return new AIActionScore(AIActionType.Regroup, 0f);
 
-            float teamplay = _self.Definition != null ? _self.Definition.TeamplayWeight : 1f;
+            if (!_teamCoordinator.TryGetRegroupPoint(currentTick, out _))
+                return new AIActionScore(AIActionType.Regroup, 0f);
+
+            float score = 3f;
+
+            float teamplay = _self.Definition != null
+                ? _self.Definition.TeamplayWeight
+                : 1f;
+
             score *= teamplay;
 
-            if (IsSupport) score += 10f;
-            if (IsSniper) score += 6f;
-            if (IsTank) score -= 6f;
-            if (IsController) score += 8f;
-            if (IsArtillery) score += 8f;
+            if (IsSupport) score += 4f;
+            if (IsController) score += 3f;
 
-            return new AIActionScore(AIActionType.Regroup, score * _profile.RegroupWeight);
+            return new AIActionScore(
+                AIActionType.Regroup,
+                score * Mathf.Max(0.25f, _profile.RegroupWeight));
         }
+
 
         private AIActionScore ScorePeel(uint currentTick)
         {

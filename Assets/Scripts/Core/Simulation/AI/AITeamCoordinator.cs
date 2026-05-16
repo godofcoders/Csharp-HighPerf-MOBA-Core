@@ -9,7 +9,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerController _self;
 
         private const uint FocusMemoryTicks = 90;
-        private const uint RegroupMemoryTicks = 120;
+        private const uint RegroupMemoryTicks = 30;
         private const uint PeelMemoryTicks = 60;
 
         public AITeamCoordinator(BrawlerController self)
@@ -57,5 +57,7 @@ namespace MOBA.Core.Simulation.AI
         {
             return AITeamBlackboard.TryGetAllyUnderThreat(_self.Team, currentTick, PeelMemoryTicks, out ally);
         }
+
+
     }
 }
