@@ -51,5 +51,16 @@ namespace MOBA.Core.Simulation.AI
 
             return best;
         }
+
+        public bool HasAnyObjectives()
+        {
+            for (int i = 0; i < _points.Count; i++)
+            {
+                if (_points[i] != null)
+                    return true;
+            }
+
+            return false;
+        }
     }
 }

@@ -233,7 +233,7 @@ namespace MOBA.Core.Simulation.AI
                     ObjectiveWeight = 45f;
 
                     FocusFireWeight = 28f;
-                    RegroupWeight = 30f;
+                    RegroupWeight = 5f;
                     PeelWeight = 25f;
                     RegroupHealthThreshold = 0.35f;
                     AllySupportRange = 8.5f;

@@ -300,7 +300,10 @@ namespace MOBA.Core.Simulation.AI
             if (objective == null)
                 return new AIActionScore(AIActionType.Wander, 0f);
 
-            float score = _profile.ObjectiveWeight;
+            float score = 35f * _profile.ObjectiveWeight;
+
+            if (!_objectiveMemory.HasAnyObjectives())
+                score = 0f;
             return new AIActionScore(AIActionType.Search, score);
         }
 
@@ -310,7 +313,7 @@ namespace MOBA.Core.Simulation.AI
 
             if (_teamCoordinator != null && _teamCoordinator.TryGetRegroupPoint(currentTick, out _))
             {
-                score += 25f;
+                score += 8f;
             }
 
             float teamplay = _self.Definition != null ? _self.Definition.TeamplayWeight : 1f;

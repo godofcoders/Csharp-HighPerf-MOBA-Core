@@ -54,7 +54,14 @@ namespace MOBA.Core.Infrastructure
         public override void Tick(uint currentTick)
         {
             if (!CanRunAI())
+            {
+                if (currentTick % 30 == 0)
+                    Debug.Log($"[AI-{(_brawler != null ? _brawler.name : "?")}] CanRunAI=false brain={_brainInitialized} brawlerNull={_brawler==null} stateNull={(_brawler==null?"?":(_brawler.State==null).ToString())} dead={(_brawler==null||_brawler.State==null?"?":_brawler.State.IsDead.ToString())} gridNull={SimulationClock.Grid==null}");
                 return;
+            }
+
+            if (currentTick % 30 == 0)
+                Debug.Log($"[AI-{_brawler.name}] tick ok hasTarget={_targetInfo.HasLiveTarget} action={_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}");
 
             if (_brawler.State.HasStatus(StatusEffectType.Stun))
             {
