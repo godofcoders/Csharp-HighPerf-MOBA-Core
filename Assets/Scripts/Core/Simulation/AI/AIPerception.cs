@@ -37,10 +37,19 @@ namespace MOBA.Core.Simulation.AI
 
             CompactAndFilterTargets(self);
 
+            Debug.Log(
+    $"[{self.name}] " +
+    $"NearbyEntities={_nearbyBuffer.Count}");
+
             ISpatialEntity bestTarget = _targetScorer.SelectBestTarget(_nearbyBuffer, memory, currentTick);
 
             if (bestTarget != null)
             {
+                Debug.Log(
+
+    $"[{self.name}] " +
+
+    $"TargetAcquired={bestTarget.EntityID}");
                 memory.Remember(bestTarget, currentTick);
                 AITeamMemory.ReportEnemySighting(self.Team, bestTarget.Position, currentTick);
                 return;
@@ -55,6 +64,7 @@ namespace MOBA.Core.Simulation.AI
             {
                 memory.Clear();
             }
+
         }
 
         private void CompactAndFilterTargets(BrawlerController self)

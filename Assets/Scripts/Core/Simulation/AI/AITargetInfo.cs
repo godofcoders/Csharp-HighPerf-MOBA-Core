@@ -1,5 +1,6 @@
 using UnityEngine;
 using MOBA.Core.Simulation;
+using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation.AI
 {
@@ -9,7 +10,22 @@ namespace MOBA.Core.Simulation.AI
         public Vector3 LastKnownPosition { get; private set; }
         public uint LastSeenTick { get; private set; }
 
-        public bool HasLiveTarget => Target != null;
+        public bool HasLiveTarget
+        {
+            get
+            {
+                if (Target == null)
+                    return false;
+
+                if (Target is BrawlerController bc)
+                {
+                    return bc.State != null &&
+                           !bc.State.IsDead;
+                }
+
+                return true;
+            }
+        }
 
         public void Remember(ISpatialEntity target, uint currentTick)
         {
@@ -33,6 +49,9 @@ namespace MOBA.Core.Simulation.AI
 
         public bool HasRecentMemory(uint currentTick, uint memoryDurationTicks)
         {
+            if (LastSeenTick == 0)
+                return false;
+
             return (currentTick - LastSeenTick) <= memoryDurationTicks;
         }
 

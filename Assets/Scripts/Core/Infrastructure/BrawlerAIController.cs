@@ -56,7 +56,7 @@ namespace MOBA.Core.Infrastructure
             if (!CanRunAI())
             {
                 if (currentTick % 30 == 0)
-                    Debug.Log($"[AI-{(_brawler != null ? _brawler.name : "?")}] CanRunAI=false brain={_brainInitialized} brawlerNull={_brawler==null} stateNull={(_brawler==null?"?":(_brawler.State==null).ToString())} dead={(_brawler==null||_brawler.State==null?"?":_brawler.State.IsDead.ToString())} gridNull={SimulationClock.Grid==null}");
+                    Debug.Log($"[AI-{(_brawler != null ? _brawler.name : "?")}] CanRunAI=false brain={_brainInitialized} brawlerNull={_brawler == null} stateNull={(_brawler == null ? "?" : (_brawler.State == null).ToString())} dead={(_brawler == null || _brawler.State == null ? "?" : _brawler.State.IsDead.ToString())} gridNull={SimulationClock.Grid == null}");
                 return;
             }
 
@@ -170,6 +170,7 @@ namespace MOBA.Core.Infrastructure
 
         private void TryInitializeBrain()
         {
+
             if (_brainInitialized || _brawler == null || _brawler.Definition == null)
                 return;
 
@@ -193,6 +194,8 @@ namespace MOBA.Core.Infrastructure
             _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory, _teamCoordinator, _commandSource);
 
             var objectivePoints = FindObjectsOfType<AIObjectivePoint>();
+            Debug.Log(
+$"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             for (int i = 0; i < objectivePoints.Length; i++)
             {
                 _objectiveMemory.Register(objectivePoints[i]);
