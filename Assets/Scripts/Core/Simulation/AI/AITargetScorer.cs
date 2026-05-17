@@ -46,12 +46,12 @@ namespace MOBA.Core.Simulation.AI
                 return float.MinValue;
 
             Vector3 delta = target.Position - _self.Position;
-            float distSq = delta.sqrMagnitude;
+            float dist = delta.sqrMagnitude;
 
             float score = 0f;
 
             // 1. Distance matters
-            score -= distSq * Mathf.Max(0.01f, _profile.DistanceWeight);
+            score -= dist * Mathf.Max(0.01f, _profile.DistanceWeight);
 
             // 2. Prefer keeping current target a bit
             if (memory.HasLiveTarget && memory.Target != null && memory.Target.EntityID == target.EntityID)
@@ -72,7 +72,7 @@ namespace MOBA.Core.Simulation.AI
                 }
 
                 // Close enemies are more urgent
-                score += Mathf.Clamp01(1f - (Mathf.Sqrt(distSq) / Mathf.Max(1f, _profile.ThreatRange))) * _profile.ThreatBonus;
+                score += Mathf.Clamp01(1f - (Mathf.Sqrt(dist) / Mathf.Max(1f, _profile.ThreatRange))) * _profile.ThreatBonus;
 
                 // STATUS-AWARE TARGETING
                 if (targetBrawler.State.HasStatus(StatusEffectType.Stun))

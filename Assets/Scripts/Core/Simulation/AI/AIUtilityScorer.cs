@@ -191,6 +191,9 @@ namespace MOBA.Core.Simulation.AI
             if (IsController) score += 12f;
             if (IsArtillery) score += 18f;
 
+            Debug.Log(
+                $"[{_self.name}] HoldRange dist={dist} attackRange={attackRange} preferred={preferredRange}");
+
             return new AIActionScore(AIActionType.HoldRange, score * _profile.HoldRangeWeight);
         }
 
@@ -262,28 +265,43 @@ namespace MOBA.Core.Simulation.AI
             if (GemGrabMode.Instance != null && GemGrabMode.Instance.IsTeamBehind(_self.Team))
                 score += 8f;
 
+            Debug.Log(
+$"[{_self.name}] " +
+$"ApproachCheck dist={dist:0.00} " +
+$"attackRange={attackRange:0.00}");
+
             return new AIActionScore(AIActionType.Approach, score * _profile.ApproachWeight);
         }
 
         private AIActionScore ScoreSearch(AITargetInfo targetInfo, uint currentTick)
         {
+            // NEVER SEARCH DURING ACTIVE COMBAT
+            if (targetInfo.HasLiveTarget)
+                return new AIActionScore(AIActionType.Search, 0f);
+
             float score = 0f;
 
-            if (targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
+            if (!targetInfo.HasLiveTarget &&
+    targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
+            {
                 score += 30f;
+            }
 
-            if (AITeamMemory.TryGetRecentHotspot(_self.Team, currentTick, _profile.SharedHotspotMemoryTicks, out _))
+            if (AITeamMemory.TryGetRecentHotspot(
+                _self.Team,
+                currentTick,
+                _profile.SharedHotspotMemoryTicks,
+                out _))
+            {
                 score += 20f;
+            }
 
-            // Gem Grab hunger: if there's an unpicked Gem within sensing
-            // range, sharply prioritise movement so the brawler explores
-            // toward it (rather than holding range or wandering). +35 is
-            // intentionally higher than the recent-memory bonus — a fresh
-            // gem in sight is more valuable than chasing an old hotspot.
             if (Gem.HasAnyUnpickedWithin(_self.Position, 8f))
                 score += 35f;
 
-            return new AIActionScore(AIActionType.Search, score * _profile.SearchWeight);
+            return new AIActionScore(
+                AIActionType.Search,
+                score * _profile.SearchWeight);
         }
 
         private AIActionScore ScoreWander()
@@ -294,33 +312,36 @@ namespace MOBA.Core.Simulation.AI
         private AIActionScore ScoreObjective(AITargetInfo targetInfo)
         {
             if (_objectiveMemory == null || !_objectiveMemory.HasAnyObjectives())
-                return new AIActionScore(AIActionType.Search, 0f);
+                return new AIActionScore(AIActionType.Objective, 0f);
+
+            // Never prioritize objectives during active combat.
+            if (targetInfo.HasLiveTarget)
+                return new AIActionScore(AIActionType.Objective, 0f);
 
             var objective = _objectiveMemory.GetBestObjective(
                 _self.Position,
                 _profile.PreferredObjective);
 
             if (objective == null)
-                return new AIActionScore(AIActionType.Search, 0f);
+                return new AIActionScore(AIActionType.Objective, 0f);
 
             float score = 40f;
-
-            // No combat target?
-            // Strongly encourage objective movement.
-            if (!targetInfo.HasLiveTarget)
-                score += 35f;
 
             float dist = Vector3.Distance(
                 _self.Position,
                 objective.transform.position);
 
-            // Encourage advancing across the map.
+            // Encourage moving across map.
             if (dist > 4f)
                 score += 15f;
 
+            // Slight reduction if already close.
+            if (dist < 2.5f)
+                score -= 20f;
+
             score *= Mathf.Max(0.25f, _profile.ObjectiveWeight);
 
-            return new AIActionScore(AIActionType.Search, score);
+            return new AIActionScore(AIActionType.Objective, score);
         }
 
         private AIActionScore ScoreRegroup(
