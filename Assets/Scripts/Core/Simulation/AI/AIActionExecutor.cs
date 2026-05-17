@@ -87,10 +87,44 @@ namespace MOBA.Core.Simulation.AI
                     RunPeel(currentTick, attackRange, idealRange, superRange);
                     break;
 
+                case AIActionType.Objective:
+                    RunObjective(targetInfo);
+                    break;
+
                 default:
                     _navAgent.Stop();
                     break;
             }
+        }
+
+        private void RunObjective(AITargetInfo targetInfo)
+        {
+            // Combat always overrides objective movement.
+            if (targetInfo.HasLiveTarget)
+            {
+                _navAgent.Stop();
+                return;
+            }
+
+            if (_objectiveMemory == null)
+            {
+                _navAgent.Stop();
+                return;
+            }
+
+            var objective = _objectiveMemory.GetBestObjective(
+                _brawler.Position,
+                _profile.PreferredObjective);
+
+            if (objective == null)
+            {
+                _navAgent.Stop();
+                return;
+            }
+
+            _navAgent.RequestDestination(
+                objective.transform.position,
+                1f);
         }
 
         private void RunApproach(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)
@@ -205,27 +239,48 @@ namespace MOBA.Core.Simulation.AI
 
         private void RunSearch(AITargetInfo targetInfo, uint currentTick)
         {
+            Debug.Log($"[{_brawler.name}] RunSearch");
+
             if (targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
             {
+                Debug.Log($"[{_brawler.name}] Search -> LastKnownPosition");
+
                 _navAgent.RequestDestination(targetInfo.LastKnownPosition, 1.0f);
                 return;
             }
 
-            if (AITeamMemory.TryGetRecentHotspot(_brawler.Team, currentTick, _profile.SharedHotspotMemoryTicks, out var destination))
+            if (AITeamMemory.TryGetRecentHotspot(
+                _brawler.Team,
+                currentTick,
+                _profile.SharedHotspotMemoryTicks,
+                out var destination))
             {
+                Debug.Log($"[{_brawler.name}] Search -> Hotspot");
+
                 _navAgent.RequestDestination(destination, 1.0f);
                 return;
             }
 
             if (_objectiveMemory != null)
             {
-                var objective = _objectiveMemory.GetBestObjective(_brawler.Position, _profile.PreferredObjective);
+                var objective = _objectiveMemory.GetBestObjective(
+                    _brawler.Position,
+                    _profile.PreferredObjective);
+
                 if (objective != null)
                 {
-                    _navAgent.RequestDestination(objective.transform.position, 1.0f);
+                    Debug.Log(
+                        $"[{_brawler.name}] Search -> Objective: {objective.name}");
+
+                    _navAgent.RequestDestination(
+                        objective.transform.position,
+                        1.0f);
+
                     return;
                 }
             }
+
+            Debug.Log($"[{_brawler.name}] Search -> Stop");
 
             _navAgent.Stop();
         }

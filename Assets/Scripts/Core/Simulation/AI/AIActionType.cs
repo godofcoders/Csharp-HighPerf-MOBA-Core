@@ -11,6 +11,7 @@ namespace MOBA.Core.Simulation.AI
         Retreat,
         UseSuper,
         Regroup,
-        Peel
+        Peel,
+        Objective
     }
 }
