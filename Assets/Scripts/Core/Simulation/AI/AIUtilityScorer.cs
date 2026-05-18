@@ -23,6 +23,10 @@ namespace MOBA.Core.Simulation.AI
         private bool IsController => _self.Definition != null && _self.Definition.Archetype == BrawlerArchetype.Controller;
         private bool IsArtillery => _self.Definition != null && _self.Definition.Archetype == BrawlerArchetype.Artillery;
 
+        private const float MinActionScore = 0f;
+        private const float MaxNormalActionScore = 100f;
+        private const float MaxEmergencyActionScore = 120f;
+
         public AIUtilityScorer(
             BrawlerController self,
             BrawlerAIProfile profile,
@@ -75,6 +79,44 @@ namespace MOBA.Core.Simulation.AI
                 best = candidate;
         }
 
+        private AIActionScore MakeScore(
+    AIActionType actionType,
+    float rawScore,
+    float weight = 1f,
+    bool allowEmergencyScore = false)
+        {
+            float weightedScore = rawScore * Mathf.Max(0f, weight);
+
+            float maxScore = allowEmergencyScore
+                ? MaxEmergencyActionScore
+                : MaxNormalActionScore;
+
+            return new AIActionScore(
+                actionType,
+                Mathf.Clamp(weightedScore, MinActionScore, maxScore));
+        }
+
+        private float AddArchetypeBias(
+            float score,
+            float sniper = 0f,
+            float tank = 0f,
+            float assassin = 0f,
+            float support = 0f,
+            float fighter = 0f,
+            float controller = 0f,
+            float artillery = 0f)
+        {
+            if (IsSniper) score += sniper;
+            if (IsTank) score += tank;
+            if (IsAssassin) score += assassin;
+            if (IsSupport) score += support;
+            if (IsFighter) score += fighter;
+            if (IsController) score += controller;
+            if (IsArtillery) score += artillery;
+
+            return score;
+        }
+
         private AIActionScore ScoreRetreat(AITargetInfo targetInfo)
         {
             if (_self.State == null)
@@ -116,7 +158,11 @@ namespace MOBA.Core.Simulation.AI
             if (_self.State != null)
                 score += 6f * _self.State.CarriedGemCount;
 
-            return new AIActionScore(AIActionType.Retreat, score * _profile.RetreatWeight);
+            return MakeScore(
+    AIActionType.Retreat,
+    score,
+    _profile.RetreatWeight,
+    allowEmergencyScore: true);
         }
 
         private AIActionScore ScoreUseSuper(AITargetInfo targetInfo)
@@ -160,7 +206,11 @@ namespace MOBA.Core.Simulation.AI
                 score += 5f * carrierTarget.State.CarriedGemCount;
             }
 
-            return new AIActionScore(AIActionType.UseSuper, score * _profile.SuperWeight);
+            return MakeScore(
+     AIActionType.UseSuper,
+     score,
+     _profile.SuperWeight,
+     allowEmergencyScore: true);
         }
 
         private AIActionScore ScoreHoldRange(AITargetInfo targetInfo)
@@ -191,10 +241,10 @@ namespace MOBA.Core.Simulation.AI
             if (IsController) score += 12f;
             if (IsArtillery) score += 18f;
 
-            Debug.Log(
-                $"[{_self.name}] HoldRange dist={dist} attackRange={attackRange} preferred={preferredRange}");
-
-            return new AIActionScore(AIActionType.HoldRange, score * _profile.HoldRangeWeight);
+            return MakeScore(
+      AIActionType.HoldRange,
+      score,
+      _profile.HoldRangeWeight);
         }
 
         private AIActionScore ScoreReposition(AITargetInfo targetInfo)
@@ -217,7 +267,10 @@ namespace MOBA.Core.Simulation.AI
             if (IsController) score += 10f;
             if (IsArtillery) score += 14f;
 
-            return new AIActionScore(AIActionType.Reposition, score * _profile.RepositionWeight);
+            return MakeScore(
+     AIActionType.Reposition,
+     score,
+     _profile.RepositionWeight);
         }
 
         private AIActionScore ScoreApproach(AITargetInfo targetInfo, uint currentTick)
@@ -265,12 +318,10 @@ namespace MOBA.Core.Simulation.AI
             if (GemGrabMode.Instance != null && GemGrabMode.Instance.IsTeamBehind(_self.Team))
                 score += 8f;
 
-            Debug.Log(
-$"[{_self.name}] " +
-$"ApproachCheck dist={dist:0.00} " +
-$"attackRange={attackRange:0.00}");
-
-            return new AIActionScore(AIActionType.Approach, score * _profile.ApproachWeight);
+            return MakeScore(
+     AIActionType.Approach,
+     score,
+     _profile.ApproachWeight);
         }
 
         private AIActionScore ScoreSearch(AITargetInfo targetInfo, uint currentTick)
@@ -299,9 +350,10 @@ $"attackRange={attackRange:0.00}");
             if (Gem.HasAnyUnpickedWithin(_self.Position, 8f))
                 score += 35f;
 
-            return new AIActionScore(
-                AIActionType.Search,
-                score * _profile.SearchWeight);
+            return MakeScore(
+      AIActionType.Search,
+      score,
+      _profile.SearchWeight);
         }
 
         private AIActionScore ScoreWander()
@@ -314,7 +366,8 @@ $"attackRange={attackRange:0.00}");
             if (_objectiveMemory == null || !_objectiveMemory.HasAnyObjectives())
                 return new AIActionScore(AIActionType.Objective, 0f);
 
-            // Never prioritize objectives during active combat.
+            // Combat always overrides objective movement.
+            // Objective is a map-control fallback, not a replacement for fighting.
             if (targetInfo.HasLiveTarget)
                 return new AIActionScore(AIActionType.Objective, 0f);
 
@@ -325,23 +378,41 @@ $"attackRange={attackRange:0.00}");
             if (objective == null)
                 return new AIActionScore(AIActionType.Objective, 0f);
 
-            float score = 40f;
-
             float dist = Vector3.Distance(
                 _self.Position,
                 objective.transform.position);
 
-            // Encourage moving across map.
-            if (dist > 4f)
-                score += 15f;
+            float score = 45f;
 
-            // Slight reduction if already close.
+            // Far from objective: moving toward it is useful.
+            if (dist > 4f)
+                score += 20f;
+
+            // Already near objective: no need to over-prioritize objective movement.
             if (dist < 2.5f)
                 score -= 20f;
 
-            score *= Mathf.Max(0.25f, _profile.ObjectiveWeight);
+            // Archetype shaping.
+            // Tanks/controllers/artillery like objective pressure more.
+            // Assassins prefer side pressure instead of sitting center.
+            score = AddArchetypeBias(
+                score,
+                sniper: -5f,
+                tank: 10f,
+                assassin: -8f,
+                support: 0f,
+                fighter: 2f,
+                controller: 8f,
+                artillery: 5f);
 
-            return new AIActionScore(AIActionType.Objective, score);
+            // Gem Grab: if behind, encourage objective/map pressure slightly.
+            if (GemGrabMode.Instance != null && GemGrabMode.Instance.IsTeamBehind(_self.Team))
+                score += 8f;
+
+            return MakeScore(
+                AIActionType.Objective,
+                score,
+                _profile.ObjectiveWeight);
         }
 
         private AIActionScore ScoreRegroup(
@@ -358,7 +429,7 @@ $"attackRange={attackRange:0.00}");
             if (!_teamCoordinator.TryGetRegroupPoint(currentTick, out _))
                 return new AIActionScore(AIActionType.Regroup, 0f);
 
-            float score = 3f;
+            float score = 45f;
 
             float teamplay = _self.Definition != null
                 ? _self.Definition.TeamplayWeight
@@ -366,12 +437,32 @@ $"attackRange={attackRange:0.00}");
 
             score *= teamplay;
 
-            if (IsSupport) score += 4f;
-            if (IsController) score += 3f;
+            score = AddArchetypeBias(
+                score,
+                sniper: 8f,
+                tank: -8f,
+                assassin: -12f,
+                support: 10f,
+                fighter: 0f,
+                controller: 6f,
+                artillery: 8f);
 
-            return new AIActionScore(
+            if (_self.State != null)
+            {
+                float healthRatio = _self.State.CurrentHealth /
+                                    Mathf.Max(1f, _self.State.MaxHealth.Value);
+
+                if (healthRatio <= _profile.RegroupHealthThreshold)
+                    score += 20f;
+
+                // Gem carriers should regroup more safely.
+                score += 5f * _self.State.CarriedGemCount;
+            }
+
+            return MakeScore(
                 AIActionType.Regroup,
-                score * Mathf.Max(0.25f, _profile.RegroupWeight));
+                score,
+                _profile.RegroupWeight);
         }
 
 
@@ -385,10 +476,6 @@ $"attackRange={attackRange:0.00}");
             {
                 score += 40f;
 
-                // Gem Grab carrier protection: if the threatened ally is
-                // carrying gems, peel even harder. +8 per gem stacks on top
-                // of the base +40 — a 3-gem carrier under threat earns +64
-                // total, comfortably outranking most other actions.
                 if (ally.State != null && ally.State.CarriedGemCount > 0)
                     score += 8f * ally.State.CarriedGemCount;
             }
@@ -402,7 +489,11 @@ $"attackRange={attackRange:0.00}");
             if (IsController) score += 15f;
             if (IsArtillery) score += 10f;
 
-            return new AIActionScore(AIActionType.Peel, score * _profile.PeelWeight);
+            return MakeScore(
+                AIActionType.Peel,
+                score,
+                _profile.PeelWeight,
+                allowEmergencyScore: true);
         }
 
         private float GetAbilityIdealRange()
