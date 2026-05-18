@@ -73,12 +73,12 @@ namespace MOBA.Core.Simulation.AI
 
         [Header("Objective Preference")]
         public AIObjectiveType PreferredObjective = AIObjectiveType.MidControl;
-        public float ObjectiveWeight = 35f;
+        public float ObjectiveWeight = 1f;
 
         [Header("Team Tactics")]
-        public float FocusFireWeight = 25f;
-        public float RegroupWeight = 30f;
-        public float PeelWeight = 20f;
+        public float FocusFireWeight = 20f;
+        public float RegroupWeight = 1f;
+        public float PeelWeight = 1f;
         public float RegroupHealthThreshold = 0.35f;
         public float AllySupportRange = 8f;
 
@@ -112,11 +112,11 @@ namespace MOBA.Core.Simulation.AI
                     SuperWeight = 1.1f;
 
                     PreferredObjective = AIObjectiveType.MidControl;
-                    ObjectiveWeight = 45f;
+                    ObjectiveWeight = 1f;
 
-                    FocusFireWeight = 30f;
-                    RegroupWeight = 35f;
-                    PeelWeight = 15f;
+                    FocusFireWeight = 25f;
+                    RegroupWeight = 1.2f;
+                    PeelWeight = 0.8f;
                     RegroupHealthThreshold = 0.45f;
                     AllySupportRange = 9f;
 
@@ -141,11 +141,11 @@ namespace MOBA.Core.Simulation.AI
                     SuperWeight = 1.0f;
 
                     PreferredObjective = AIObjectiveType.HotZone;
-                    ObjectiveWeight = 50f;
+                    ObjectiveWeight = 1.25f;
 
-                    FocusFireWeight = 20f;
-                    RegroupWeight = 18f;
-                    PeelWeight = 35f;
+                    FocusFireWeight = 18f;
+                    RegroupWeight = 0.8f;
+                    PeelWeight = 1.35f;
                     RegroupHealthThreshold = 0.20f;
                     AllySupportRange = 10f;
 
@@ -170,11 +170,11 @@ namespace MOBA.Core.Simulation.AI
                     SuperWeight = 1.25f;
 
                     PreferredObjective = AIObjectiveType.LanePressure;
-                    ObjectiveWeight = 40f;
+                    ObjectiveWeight = 0.85f;
 
-                    FocusFireWeight = 28f;
-                    RegroupWeight = 15f;
-                    PeelWeight = 10f;
+                    FocusFireWeight = 25f;
+                    RegroupWeight = 0.7f;
+                    PeelWeight = 0.65f;
                     RegroupHealthThreshold = 0.25f;
                     AllySupportRange = 7f;
 
@@ -199,11 +199,11 @@ namespace MOBA.Core.Simulation.AI
                     SuperWeight = 1.15f;
 
                     PreferredObjective = AIObjectiveType.GemMine;
-                    ObjectiveWeight = 42f;
+                    ObjectiveWeight = 1.0f;
 
-                    FocusFireWeight = 22f;
-                    RegroupWeight = 30f;
-                    PeelWeight = 40f;
+                    FocusFireWeight = 18f;
+                    RegroupWeight = 1.15f;
+                    PeelWeight = 1.4f;
                     RegroupHealthThreshold = 0.40f;
                     AllySupportRange = 11f;
 
@@ -230,11 +230,11 @@ namespace MOBA.Core.Simulation.AI
                     SuperWeight = 1.3f;
 
                     PreferredObjective = AIObjectiveType.HotZone;
-                    ObjectiveWeight = 45f;
+                    ObjectiveWeight = 1.2f;
 
-                    FocusFireWeight = 28f;
-                    RegroupWeight = 5f;
-                    PeelWeight = 25f;
+                    FocusFireWeight = 24f;
+                    RegroupWeight = 0.9f;
+                    PeelWeight = 1.05f;
                     RegroupHealthThreshold = 0.35f;
                     AllySupportRange = 8.5f;
 
@@ -264,13 +264,13 @@ namespace MOBA.Core.Simulation.AI
                     SuperWeight = 1.2f;
 
                     PreferredObjective = AIObjectiveType.HotZone;
-                    ObjectiveWeight = 50f;
+                    ObjectiveWeight = 1.15f;
 
                     ClusterTargetBonus = 16f;
 
-                    FocusFireWeight = 22f;
-                    RegroupWeight = 30f;
-                    PeelWeight = 30f;
+                    FocusFireWeight = 18f;
+                    RegroupWeight = 1.05f;
+                    PeelWeight = 1f;
                     RegroupHealthThreshold = 0.3f;
                     AllySupportRange = 8f;
 
@@ -296,11 +296,11 @@ namespace MOBA.Core.Simulation.AI
                     SuperWeight = 1.0f;
 
                     PreferredObjective = AIObjectiveType.MidControl;
-                    ObjectiveWeight = 35f;
+                    ObjectiveWeight = 1.0f;
 
-                    FocusFireWeight = 25f;
-                    RegroupWeight = 30f;
-                    PeelWeight = 20f;
+                    FocusFireWeight = 22f;
+                    RegroupWeight = 1.0f;
+                    PeelWeight = 1.0f;
                     RegroupHealthThreshold = 0.35f;
                     AllySupportRange = 8f;
 
