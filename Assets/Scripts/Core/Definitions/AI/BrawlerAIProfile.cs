@@ -88,6 +88,25 @@ namespace MOBA.Core.Simulation.AI
         public float HoldRangePositionRefreshTicks = 20f;
         public float PreferredCombatOffset = 0.75f;
 
+        [Header("Action Commitment")]
+        [Tooltip("Minimum score needed before an action can be committed. Prevents tiny scores from controlling the bot.")]
+        public float MinimumCommittedActionScore = 8f;
+
+        [Tooltip("How much better a new action must be before replacing the current action.")]
+        public float ActionSwitchScoreMargin = 12f;
+
+        [Tooltip("Ticks to keep combat actions unless another action is clearly better.")]
+        public uint CombatActionCommitmentTicks = 8;
+
+        [Tooltip("Ticks to keep non-combat actions unless another action is clearly better.")]
+        public uint NonCombatActionCommitmentTicks = 18;
+
+        [Tooltip("Score where urgent actions can override commitment immediately.")]
+        public float EmergencyOverrideScore = 90f;
+
+        [Tooltip("If true, prints action switch decisions for AI debugging.")]
+        public bool LogActionCommitment = false;
+
         public float GetPreferredAttackRange(float idealRange)
         {
             return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);

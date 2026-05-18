@@ -66,3 +66,9 @@ MonoBehaviour:
   AllyAvoidanceWeight: 2
   HoldRangePositionRefreshTicks: 20
   PreferredCombatOffset: 1.2
+  MinimumCommittedActionScore: 8
+  ActionSwitchScoreMargin: 12
+  CombatActionCommitmentTicks: 8
+  NonCombatActionCommitmentTicks: 18
+  EmergencyOverrideScore: 90
+  LogActionCommitment: 1

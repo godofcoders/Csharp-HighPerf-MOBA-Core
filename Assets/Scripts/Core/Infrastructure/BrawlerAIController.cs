@@ -22,6 +22,7 @@ namespace MOBA.Core.Infrastructure
         private AIAbilityDecider _abilityDecider;
         private AISuperDecider _superDecider;
         private AIUtilityScorer _utilityScorer;
+        private AIActionCommitment _actionCommitment;
         private AIActionExecutor _actionExecutor;
         private AIObjectiveMemory _objectiveMemory;
         private AITeamCoordinator _teamCoordinator;
@@ -55,8 +56,11 @@ namespace MOBA.Core.Infrastructure
         {
             if (!CanRunAI())
             {
+                _actionCommitment?.Reset();
+
                 if (currentTick % 30 == 0)
                     Debug.Log($"[AI-{(_brawler != null ? _brawler.name : "?")}] CanRunAI=false brain={_brainInitialized} brawlerNull={_brawler == null} stateNull={(_brawler == null ? "?" : (_brawler.State == null).ToString())} dead={(_brawler == null || _brawler.State == null ? "?" : _brawler.State.IsDead.ToString())} gridNull={SimulationClock.Grid == null}");
+
                 return;
             }
 
@@ -65,6 +69,7 @@ namespace MOBA.Core.Infrastructure
 
             if (_brawler.State.HasStatus(StatusEffectType.Stun))
             {
+                _actionCommitment?.Reset();
                 _commandSource?.QueueMove(Vector3.zero);
                 return;
             }
@@ -79,11 +84,15 @@ namespace MOBA.Core.Infrastructure
 
             _utilityScorer.CollectActionScores(_targetInfo, currentTick, _debugScores);
 
-            AIActionScore bestAction = _utilityScorer.ScoreBestAction(_targetInfo, currentTick);
-            _lastChosenAction = bestAction;
+            AIActionScore chosenAction = _actionCommitment.SelectAction(
+                _debugScores,
+                currentTick,
+                _brawler.name);
+
+            _lastChosenAction = chosenAction;
 
             _actionExecutor.Execute(
-                bestAction.ActionType,
+                chosenAction.ActionType,
                 _targetInfo,
                 currentTick,
                 GetAbilityMaxRange(),
@@ -103,7 +112,8 @@ namespace MOBA.Core.Infrastructure
             _debugSnapshot.ClearLists();
 
             _debugSnapshot.BrawlerName = _brawler.Definition != null ? _brawler.Definition.BrawlerName : _brawler.name;
-            _debugSnapshot.CurrentAction = _lastChosenAction.ActionType.ToString();
+            _debugSnapshot.CurrentAction =
+     $"{_lastChosenAction.ActionType} ({_lastChosenAction.Score:0.0})";
             _debugSnapshot.Health = _brawler.State.CurrentHealth;
             _debugSnapshot.MaxHealth = _brawler.State.MaxHealth.Value;
             _debugSnapshot.Position = _brawler.Position;
@@ -191,6 +201,7 @@ namespace MOBA.Core.Infrastructure
             _superDecider = new AISuperDecider(_brawler, _profile, _commandSource);
 
             _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory, _teamCoordinator);
+            _actionCommitment = new AIActionCommitment(_profile);
             _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory, _teamCoordinator, _commandSource);
 
             var objectivePoints = FindObjectsOfType<AIObjectivePoint>();
