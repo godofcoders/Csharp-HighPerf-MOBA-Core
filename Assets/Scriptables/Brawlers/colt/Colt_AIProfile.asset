@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 100fa30d2c78d4094b9cb6cd0594c58f, type: 3}
   m_Name: Colt_AIProfile
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   DetectionRadius: 10
   MemoryDurationTicks: 90
   IdleSenseIntervalTicks: 10
@@ -55,11 +55,11 @@ MonoBehaviour:
   SearchWeight: 1
   WanderWeight: 0.8
   SuperWeight: 1.2
-  PreferredObjective: 1
-  ObjectiveWeight: 45
-  FocusFireWeight: 30
-  RegroupWeight: 35
-  PeelWeight: 15
+  PreferredObjective: 7
+  ObjectiveWeight: 1
+  FocusFireWeight: 25
+  RegroupWeight: 1.2
+  PeelWeight: 0.8
   RegroupHealthThreshold: 0.45
   AllySupportRange: 9
   AllyAvoidanceRadius: 3.5

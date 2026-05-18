@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 100fa30d2c78d4094b9cb6cd0594c58f, type: 3}
   m_Name: Jessie_AIProfile
-  m_EditorClassIdentifier:
+  m_EditorClassIdentifier: 
   DetectionRadius: 10
   MemoryDurationTicks: 90
   IdleSenseIntervalTicks: 10
@@ -56,10 +56,10 @@ MonoBehaviour:
   WanderWeight: 0.9
   SuperWeight: 1.3
   PreferredObjective: 5
-  ObjectiveWeight: 45
-  FocusFireWeight: 28
-  RegroupWeight: 30
-  PeelWeight: 25
+  ObjectiveWeight: 1.2
+  FocusFireWeight: 24
+  RegroupWeight: 0.9
+  PeelWeight: 1.05
   RegroupHealthThreshold: 0.35
   AllySupportRange: 8.5
   AllyAvoidanceRadius: 2.5
