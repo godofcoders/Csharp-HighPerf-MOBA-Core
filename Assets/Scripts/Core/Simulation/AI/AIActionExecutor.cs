@@ -243,25 +243,39 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
-        private void RunReposition(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)
+        private void RunReposition(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            float attackRange,
+            float idealRange,
+            float superRange)
         {
-            if (!targetInfo.HasLiveTarget)
+            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
             {
+                _lastTacticalMovementIntent = AITacticalMovementIntent.None;
                 _navAgent.Stop();
                 return;
             }
 
-            float desiredRange = Mathf.Max(idealRange * 0.85f, _profile.GetPreferredAttackRange(idealRange));
-            Vector3 repositionPoint = _spacingUtility.GetPreferredRangePosition(
-                targetInfo.Target.Position,
-                desiredRange,
-                _profile.AllyAvoidanceRadius,
-                _profile.AllyAvoidanceWeight);
-
-            _navAgent.RequestDestination(repositionPoint, 0.4f);
-
+            // Reposition is still a combat action.
+            // The bot should keep attacking/using abilities while moving to a better angle.
             _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
+            _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
+
+            if (CanRetargetTacticalMove(currentTick) || !_navAgent.HasDestination)
+            {
+                Vector3 destination = BuildTacticalRepositionDestination(
+                    targetInfo,
+                    currentTick,
+                    idealRange);
+
+                _navAgent.RequestDestination(destination, 0.45f);
+            }
+            else
+            {
+                _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.45f);
+            }
         }
 
         private void RunRetreat(AITargetInfo targetInfo)
@@ -514,6 +528,81 @@ namespace MOBA.Core.Simulation.AI
                 intent = AITacticalMovementIntent.Strafe;
                 destination =
                     selfPos +
+                    side * _profile.TacticalStrafeDistance;
+            }
+
+            CommitTacticalMove(intent, destination, currentTick);
+            return destination;
+        }
+
+        private Vector3 BuildTacticalRepositionDestination(
+    AITargetInfo targetInfo,
+    uint currentTick,
+    float idealRange)
+        {
+            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
+                return _brawler.Position;
+
+            Vector3 selfPos = _brawler.Position;
+            Vector3 targetPos = targetInfo.Target.Position;
+
+            Vector3 awayFromTarget = selfPos - targetPos;
+            awayFromTarget.y = 0f;
+
+            if (awayFromTarget.sqrMagnitude < 0.01f)
+                awayFromTarget = -_brawler.transform.forward;
+
+            awayFromTarget.Normalize();
+
+            Vector3 toTarget = -awayFromTarget;
+            Vector3 side = new Vector3(toTarget.z, 0f, -toTarget.x) * GetStableStrafeSide();
+
+            float dist = Vector3.Distance(selfPos, targetPos);
+            float preferredRange =
+                GetTacticalPreferredRange(idealRange) +
+                _profile.PreferredCombatOffset;
+
+            AITacticalMovementIntent intent;
+            Vector3 destination;
+
+            if (IsFragileArchetype())
+            {
+                // Fragile brawlers should reposition backward + sideways.
+                intent = AITacticalMovementIntent.RepositionAngle;
+
+                destination =
+                    selfPos +
+                    awayFromTarget * (_profile.TacticalKiteDistance * 0.9f) +
+                    side * (_profile.TacticalStrafeDistance * 0.8f);
+            }
+            else if (_profile.Archetype == BrawlerArchetype.Tank)
+            {
+                // Tanks should not run too far away. They mostly side-step to keep pressure.
+                intent = AITacticalMovementIntent.RepositionAngle;
+
+                destination =
+                    selfPos +
+                    awayFromTarget * (_profile.TacticalKiteDistance * 0.25f) +
+                    side * (_profile.TacticalStrafeDistance * 0.8f);
+            }
+            else if (_profile.Archetype == BrawlerArchetype.Assassin)
+            {
+                // Assassins prefer side/flank angles instead of backing off.
+                intent = AITacticalMovementIntent.RepositionAngle;
+
+                destination =
+                    targetPos -
+                    awayFromTarget * Mathf.Max(1.2f, preferredRange * 0.65f) +
+                    side * (_profile.TacticalStrafeDistance * 1.4f);
+            }
+            else
+            {
+                // General fighter/controller behavior: back-side reposition.
+                intent = AITacticalMovementIntent.RepositionAngle;
+
+                destination =
+                    selfPos +
+                    awayFromTarget * (_profile.TacticalKiteDistance * 0.55f) +
                     side * _profile.TacticalStrafeDistance;
             }
 
