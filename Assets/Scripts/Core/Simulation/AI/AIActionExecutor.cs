@@ -31,6 +31,15 @@ namespace MOBA.Core.Simulation.AI
         public Vector3 LastObjectiveSlot => _lastObjectiveSlot;
         public Vector3 LastObjectiveDestination => _lastObjectiveDestination;
         public string LastObjectiveName => _lastObjectiveName;
+        private AITacticalMovementIntent _lastTacticalMovementIntent;
+        private Vector3 _lastTacticalMoveDestination;
+        private uint _nextTacticalMoveRetargetTick;
+        private int _lastStrafeSide = 1;
+        public AITacticalMovementIntent LastTacticalMovementIntent => _lastTacticalMovementIntent;
+        public Vector3 LastTacticalMoveDestination => _lastTacticalMoveDestination;
+
+
+
 
         public AIActionExecutor(
             BrawlerController brawler,
@@ -178,52 +187,59 @@ namespace MOBA.Core.Simulation.AI
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
         }
 
-        private void RunHoldRange(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)
+        private void RunHoldRange(
+     AITargetInfo targetInfo,
+     uint currentTick,
+     float attackRange,
+     float idealRange,
+     float superRange)
         {
-            if (!targetInfo.HasLiveTarget)
+            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
             {
+                _lastTacticalMovementIntent = AITacticalMovementIntent.None;
                 _navAgent.Stop();
                 return;
             }
 
+            // Combat usage stays the same.
             _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
             _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
 
-            float preferredRange = _profile.GetPreferredAttackRange(idealRange) + _profile.PreferredCombatOffset;
-
+            // If strafe is disabled, still use your existing preferred-range logic.
             if (!_profile.UseStrafe)
             {
+                float preferredRange =
+                    GetTacticalPreferredRange(idealRange) +
+                    _profile.PreferredCombatOffset;
+
                 Vector3 preferredPoint = _spacingUtility.GetPreferredRangePosition(
                     targetInfo.Target.Position,
                     preferredRange,
                     _profile.AllyAvoidanceRadius,
                     _profile.AllyAvoidanceWeight);
+
+                _lastTacticalMovementIntent = AITacticalMovementIntent.HoldPosition;
+                _lastTacticalMoveDestination = preferredPoint;
 
                 _navAgent.RequestDestination(preferredPoint, 0.5f);
                 return;
             }
 
-            if (currentTick >= _nextStrafeTick || !_navAgent.HasDestination)
+            // Tactical retargeting:
+            // Do not pick a new micro-position every frame.
+            if (CanRetargetTacticalMove(currentTick) || !_navAgent.HasDestination)
             {
-                Vector3 toTarget = (targetInfo.Target.Position - _brawler.Position).normalized;
-                Vector3 right = new Vector3(toTarget.z, 0f, -toTarget.x);
+                Vector3 tacticalDestination = BuildTacticalCombatDestination(
+                    targetInfo,
+                    currentTick,
+                    idealRange);
 
-                if (right.sqrMagnitude < 0.0001f)
-                    right = _brawler.transform.right;
-
-                float side = Random.value < 0.5f ? -1f : 1f;
-
-                Vector3 preferredPoint = _spacingUtility.GetPreferredRangePosition(
-                    targetInfo.Target.Position,
-                    preferredRange,
-                    _profile.AllyAvoidanceRadius,
-                    _profile.AllyAvoidanceWeight);
-
-                Vector3 strafePoint = preferredPoint + (right * side * _profile.StrafeDistance);
-
-                _navAgent.RequestDestination(strafePoint, 0.4f);
-                _nextStrafeTick = currentTick + _profile.StrafeRetargetTicks;
+                _navAgent.RequestDestination(tacticalDestination, 0.4f);
+            }
+            else
+            {
+                _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.4f);
             }
         }
 
@@ -392,6 +408,117 @@ namespace MOBA.Core.Simulation.AI
             }
 
             _navAgent.RequestDestination(ally.Position, 1.0f);
+        }
+
+        private bool CanRetargetTacticalMove(uint currentTick)
+        {
+            return currentTick >= _nextTacticalMoveRetargetTick;
+        }
+
+        private void CommitTacticalMove(
+     AITacticalMovementIntent intent,
+     Vector3 destination,
+     uint currentTick)
+        {
+            _lastTacticalMovementIntent = intent;
+            _lastTacticalMoveDestination = destination;
+
+            uint retargetTicks = _profile.TacticalMoveRetargetTicks == 0
+                ? 1u
+                : _profile.TacticalMoveRetargetTicks;
+
+            _nextTacticalMoveRetargetTick = currentTick + retargetTicks;
+
+            if (_profile.LogTacticalMovement)
+            {
+                Debug.Log(
+                    $"[AITacticalMove-{_brawler.name}] " +
+                    $"Intent={intent} " +
+                    $"Dest={destination}");
+            }
+        }
+
+        private bool IsFragileArchetype()
+        {
+            return _profile.Archetype == BrawlerArchetype.Sniper ||
+                   _profile.Archetype == BrawlerArchetype.Support ||
+                   _profile.Archetype == BrawlerArchetype.Artillery;
+        }
+
+        private float GetTacticalPreferredRange(float idealRange)
+        {
+            float preferred = _profile.GetPreferredAttackRange(idealRange);
+
+            if (IsFragileArchetype())
+                preferred += _profile.FragileRangePadding;
+
+            return preferred;
+        }
+
+        private int GetStableStrafeSide()
+        {
+            // Keep side stable, but split bots by identity.
+            if (_lastStrafeSide == 0)
+                _lastStrafeSide = (_brawler.EntityID % 2u == 0u) ? 1 : -1;
+
+            return _lastStrafeSide;
+        }
+
+        private Vector3 BuildTacticalCombatDestination(
+    AITargetInfo targetInfo,
+    uint currentTick,
+    float idealRange)
+        {
+            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
+                return _brawler.Position;
+
+            Vector3 selfPos = _brawler.Position;
+            Vector3 targetPos = targetInfo.Target.Position;
+
+            Vector3 awayFromTarget = selfPos - targetPos;
+            awayFromTarget.y = 0f;
+
+            if (awayFromTarget.sqrMagnitude < 0.01f)
+                awayFromTarget = -_brawler.transform.forward;
+
+            awayFromTarget.Normalize();
+
+            Vector3 toTarget = -awayFromTarget;
+            Vector3 side = new Vector3(toTarget.z, 0f, -toTarget.x) * GetStableStrafeSide();
+
+            float dist = Vector3.Distance(selfPos, targetPos);
+            float tooCloseDistance = _profile.GetTooCloseDistance(idealRange);
+            float preferredRange = GetTacticalPreferredRange(idealRange);
+
+            AITacticalMovementIntent intent;
+            Vector3 destination;
+
+            // 1. Too close: kite away.
+            if (dist < tooCloseDistance || dist < preferredRange * 0.65f)
+            {
+                intent = AITacticalMovementIntent.Kite;
+                destination = selfPos + awayFromTarget * _profile.TacticalKiteDistance;
+            }
+            // 2. Slightly inside ideal range: back-step + strafe.
+            else if (dist < preferredRange)
+            {
+                intent = AITacticalMovementIntent.RepositionAngle;
+                destination =
+                    selfPos +
+                    awayFromTarget * (_profile.TacticalKiteDistance * 0.5f) +
+                    side * (_profile.TacticalStrafeDistance * 0.75f);
+            }
+            // 3. Good range: strafe sideways, do not walk into target.
+            else
+            {
+                intent = AITacticalMovementIntent.Strafe;
+                destination =
+                    selfPos +
+                    side * _profile.TacticalStrafeDistance;
+            }
+
+            CommitTacticalMove(intent, destination, currentTick);
+            return destination;
         }
     }
 }

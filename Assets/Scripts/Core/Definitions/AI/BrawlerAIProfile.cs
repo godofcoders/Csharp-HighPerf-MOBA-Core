@@ -113,6 +113,22 @@ namespace MOBA.Core.Simulation.AI
         [Header("Objective Debug")]
         public bool LogObjectiveDebug = false;
 
+        [Header("Tactical Movement")]
+        [Tooltip("How far the bot can side-step while holding range.")]
+        public float TacticalStrafeDistance = 1.8f;
+
+        [Tooltip("How far the bot backs up when kiting.")]
+        public float TacticalKiteDistance = 2.5f;
+
+        [Tooltip("How often the bot is allowed to pick a new tactical combat destination.")]
+        public uint TacticalMoveRetargetTicks = 10;
+
+        [Tooltip("Extra distance fragile brawlers try to keep from enemies.")]
+        public float FragileRangePadding = 0.75f;
+
+        [Tooltip("If true, logs tactical movement decisions.")]
+        public bool LogTacticalMovement = false;
+
         public float GetPreferredAttackRange(float idealRange)
         {
             return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);
@@ -154,6 +170,11 @@ namespace MOBA.Core.Simulation.AI
                     GadgetLowHealthThreshold = 0.55f;
                     GadgetEnemyDistanceThreshold = 5f;
                     GadgetCooldownTicks = 120;
+
+                    TacticalStrafeDistance = 2.2f;
+                    TacticalKiteDistance = 3.0f;
+                    TacticalMoveRetargetTicks = 12;
+                    FragileRangePadding = 1.0f;
                     break;
 
                 case BrawlerArchetype.Tank:
@@ -183,6 +204,11 @@ namespace MOBA.Core.Simulation.AI
                     GadgetLowHealthThreshold = 0.35f;
                     GadgetEnemyDistanceThreshold = 3.5f;
                     GadgetCooldownTicks = 75;
+
+                    TacticalStrafeDistance = 1.2f;
+                    TacticalKiteDistance = 1.6f;
+                    TacticalMoveRetargetTicks = 10;
+                    FragileRangePadding = 0.0f;
                     break;
 
                 case BrawlerArchetype.Assassin:
@@ -212,6 +238,11 @@ namespace MOBA.Core.Simulation.AI
                     GadgetLowHealthThreshold = 0.40f;
                     GadgetEnemyDistanceThreshold = 4.5f;
                     GadgetCooldownTicks = 60;
+
+                    TacticalStrafeDistance = 1.8f;
+                    TacticalKiteDistance = 2.0f;
+                    TacticalMoveRetargetTicks = 8;
+                    FragileRangePadding = 0.2f;
                     break;
 
                 case BrawlerArchetype.Support:
@@ -241,6 +272,11 @@ namespace MOBA.Core.Simulation.AI
                     GadgetLowHealthThreshold = 0.50f;
                     GadgetEnemyDistanceThreshold = 4f;
                     GadgetCooldownTicks = 105;
+
+                    TacticalStrafeDistance = 2.0f;
+                    TacticalKiteDistance = 2.8f;
+                    TacticalMoveRetargetTicks = 12;
+                    FragileRangePadding = 0.85f;
                     break;
 
                 case BrawlerArchetype.Controller:
@@ -272,6 +308,11 @@ namespace MOBA.Core.Simulation.AI
                     GadgetLowHealthThreshold = 0.45f;
                     GadgetEnemyDistanceThreshold = 4f;
                     GadgetCooldownTicks = 100;
+
+                    TacticalStrafeDistance = 1.8f;
+                    TacticalKiteDistance = 2.4f;
+                    TacticalMoveRetargetTicks = 11;
+                    FragileRangePadding = 0.5f;
                     break;
 
                 case BrawlerArchetype.Artillery:
@@ -308,6 +349,11 @@ namespace MOBA.Core.Simulation.AI
                     GadgetLowHealthThreshold = 0.45f;
                     GadgetEnemyDistanceThreshold = 4f;
                     GadgetCooldownTicks = 100;
+
+                    TacticalStrafeDistance = 2.2f;
+                    TacticalKiteDistance = 3.2f;
+                    TacticalMoveRetargetTicks = 14;
+                    FragileRangePadding = 1.2f;
                     break;
 
                 case BrawlerArchetype.Fighter:
@@ -338,6 +384,11 @@ namespace MOBA.Core.Simulation.AI
                     GadgetLowHealthThreshold = 0.45f;
                     GadgetEnemyDistanceThreshold = 4f;
                     GadgetCooldownTicks = 90;
+
+                    TacticalStrafeDistance = 1.8f;
+                    TacticalKiteDistance = 2.5f;
+                    TacticalMoveRetargetTicks = 10;
+                    FragileRangePadding = 0.4f;
                     break;
             }
         }
