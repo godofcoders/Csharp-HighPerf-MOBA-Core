@@ -122,8 +122,15 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
+            Vector3 objectivePosition = objective.transform.position;
+
+            Vector3 slotPosition = AIObjectiveSlotUtility.GetObjectiveSlotPosition(
+                _brawler,
+                _profile,
+                objectivePosition);
+
             _navAgent.RequestDestination(
-                objective.transform.position,
+                slotPosition,
                 1f);
         }
 

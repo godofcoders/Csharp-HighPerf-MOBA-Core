@@ -26,6 +26,7 @@ namespace MOBA.Core.Simulation.AI
         private const float MinActionScore = 0f;
         private const float MaxNormalActionScore = 100f;
         private const float MaxEmergencyActionScore = 120f;
+        private readonly List<ISpatialEntity> _nearbyAllyBuffer = new List<ISpatialEntity>(16);
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -378,9 +379,11 @@ namespace MOBA.Core.Simulation.AI
             if (objective == null)
                 return new AIActionScore(AIActionType.Objective, 0f);
 
+            Vector3 objectivePosition = objective.transform.position;
+
             float dist = Vector3.Distance(
                 _self.Position,
-                objective.transform.position);
+                objectivePosition);
 
             float score = 45f;
 
@@ -391,6 +394,14 @@ namespace MOBA.Core.Simulation.AI
             // Already near objective: no need to over-prioritize objective movement.
             if (dist < 2.5f)
                 score -= 20f;
+
+            // Decision-layer anti-clumping:
+            // If allies are already near the objective, reduce desire to also go there.
+            float allyPressure = CalculateNearbyAllyPressure(
+                objectivePosition,
+                4.5f);
+
+            score -= allyPressure * GetObjectiveCrowdingPenalty();
 
             // Archetype shaping.
             // Tanks/controllers/artillery like objective pressure more.
@@ -506,6 +517,73 @@ namespace MOBA.Core.Simulation.AI
         {
             var attack = _self.Definition?.MainAttack;
             return attack != null ? attack.GetAIMaxRange() : 6f;
+        }
+
+        private float CalculateNearbyAllyPressure(Vector3 position, float radius)
+        {
+            if (SimulationClock.Grid == null)
+                return 0f;
+
+            _nearbyAllyBuffer.Clear();
+
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                position,
+                radius,
+                _nearbyAllyBuffer);
+
+            float pressure = 0f;
+
+            for (int i = 0; i < _nearbyAllyBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _nearbyAllyBuffer[i];
+
+                if (entity == null)
+                    continue;
+
+                if (entity == _self)
+                    continue;
+
+                if (entity.Team != _self.Team)
+                    continue;
+
+                if (!(entity is BrawlerController other))
+                    continue;
+
+                if (other.State == null || other.State.IsDead)
+                    continue;
+
+                float dist = Vector3.Distance(position, other.Position);
+                float closeness = 1f - Mathf.Clamp01(dist / radius);
+
+                pressure += closeness;
+            }
+
+            return pressure;
+        }
+        private float GetObjectiveCrowdingPenalty()
+        {
+            if (IsTank)
+                return 5f;
+
+            if (IsFighter)
+                return 7f;
+
+            if (IsController)
+                return 8f;
+
+            if (IsSupport)
+                return 10f;
+
+            if (IsSniper)
+                return 12f;
+
+            if (IsArtillery)
+                return 12f;
+
+            if (IsAssassin)
+                return 14f;
+
+            return 10f;
         }
     }
 }

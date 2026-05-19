@@ -6,6 +6,9 @@ namespace MOBA.Core.Simulation.AI
     [CreateAssetMenu(fileName = "BrawlerAIProfile", menuName = "MOBA/AI/Brawler AI Profile")]
     public class BrawlerAIProfile : ScriptableObject
     {
+        [Header("Brawler Role")]
+        public BrawlerArchetype Archetype = BrawlerArchetype.Fighter;
+
         [Header("Perception")]
         public float DetectionRadius = 10f;
         public uint MemoryDurationTicks = 90;
