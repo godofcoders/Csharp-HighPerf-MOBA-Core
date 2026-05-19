@@ -164,27 +164,38 @@ namespace MOBA.Core.Simulation.AI
                 1f);
         }
 
-        private void RunApproach(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)
+        private void RunApproach(
+       AITargetInfo targetInfo,
+       uint currentTick,
+       float attackRange,
+       float idealRange,
+       float superRange)
         {
-            if (!targetInfo.HasLiveTarget)
+            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
             {
+                _lastTacticalMovementIntent = AITacticalMovementIntent.None;
                 _navAgent.Stop();
                 return;
             }
 
-            float preferredRange = _profile.GetPreferredAttackRange(idealRange) + _profile.PreferredCombatOffset;
-
-            Vector3 destination = _spacingUtility.GetPreferredRangePosition(
-                targetInfo.Target.Position,
-                preferredRange,
-                _profile.AllyAvoidanceRadius,
-                _profile.AllyAvoidanceWeight);
-
-            _navAgent.RequestDestination(destination, 0.8f);
-
+            // Even while approaching, try abilities if the target becomes valid.
             _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
             _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
+
+            if (CanRetargetTacticalMove(currentTick) || !_navAgent.HasDestination)
+            {
+                Vector3 destination = BuildTacticalApproachDestination(
+                    targetInfo,
+                    currentTick,
+                    idealRange);
+
+                _navAgent.RequestDestination(destination, 0.5f);
+            }
+            else
+            {
+                _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.5f);
+            }
         }
 
         private void RunHoldRange(
@@ -604,6 +615,82 @@ namespace MOBA.Core.Simulation.AI
                     selfPos +
                     awayFromTarget * (_profile.TacticalKiteDistance * 0.55f) +
                     side * _profile.TacticalStrafeDistance;
+            }
+
+            CommitTacticalMove(intent, destination, currentTick);
+            return destination;
+        }
+
+        private Vector3 BuildTacticalApproachDestination(
+    AITargetInfo targetInfo,
+    uint currentTick,
+    float idealRange)
+        {
+            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
+                return _brawler.Position;
+
+            Vector3 selfPos = _brawler.Position;
+            Vector3 targetPos = targetInfo.Target.Position;
+
+            Vector3 awayFromTarget = selfPos - targetPos;
+            awayFromTarget.y = 0f;
+
+            if (awayFromTarget.sqrMagnitude < 0.01f)
+                awayFromTarget = -_brawler.transform.forward;
+
+            awayFromTarget.Normalize();
+
+            Vector3 toTarget = -awayFromTarget;
+            Vector3 side = new Vector3(toTarget.z, 0f, -toTarget.x) * GetStableStrafeSide();
+
+            float preferredRange =
+                GetTacticalPreferredRange(idealRange) +
+                _profile.PreferredCombatOffset;
+
+            AITacticalMovementIntent intent;
+            Vector3 destination;
+
+            if (_profile.Archetype == BrawlerArchetype.Assassin)
+            {
+                // Assassin: approach from an angle, not straight down the middle.
+                intent = AITacticalMovementIntent.CloseGap;
+
+                destination =
+                    targetPos -
+                    awayFromTarget * Mathf.Max(1.0f, preferredRange * 0.7f) +
+                    side * (_profile.TacticalStrafeDistance * 1.5f);
+            }
+            else if (_profile.Archetype == BrawlerArchetype.Tank)
+            {
+                // Tank: more direct pressure, but still slightly angled.
+                intent = AITacticalMovementIntent.CloseGap;
+
+                destination =
+                    targetPos -
+                    awayFromTarget * Mathf.Max(0.8f, preferredRange * 0.55f) +
+                    side * (_profile.TacticalStrafeDistance * 0.35f);
+            }
+            else if (IsFragileArchetype())
+            {
+                // Sniper / Support / Artillery:
+                // approach only to a safer outer range and use a side angle.
+                intent = AITacticalMovementIntent.CloseGap;
+
+                destination =
+                    targetPos -
+                    awayFromTarget * preferredRange +
+                    side * (_profile.TacticalStrafeDistance * 0.9f);
+            }
+            else
+            {
+                // Fighter / Controller:
+                // balanced angled approach.
+                intent = AITacticalMovementIntent.CloseGap;
+
+                destination =
+                    targetPos -
+                    awayFromTarget * Mathf.Max(1.0f, preferredRange * 0.8f) +
+                    side * (_profile.TacticalStrafeDistance * 0.75f);
             }
 
             CommitTacticalMove(intent, destination, currentTick);
