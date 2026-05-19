@@ -20,6 +20,18 @@ namespace MOBA.Core.Simulation.AI
         private uint _nextStrafeTick;
         private Vector3 _fallbackWanderPoint;
 
+        private Vector3 _lastObjectiveCenter;
+        private Vector3 _lastObjectiveSlot;
+        private Vector3 _lastObjectiveDestination;
+        private string _lastObjectiveName;
+        private bool _hasObjectiveDebug;
+
+        public bool HasObjectiveDebug => _hasObjectiveDebug;
+        public Vector3 LastObjectiveCenter => _lastObjectiveCenter;
+        public Vector3 LastObjectiveSlot => _lastObjectiveSlot;
+        public Vector3 LastObjectiveDestination => _lastObjectiveDestination;
+        public string LastObjectiveName => _lastObjectiveName;
+
         public AIActionExecutor(
             BrawlerController brawler,
             BrawlerAIProfile profile,
@@ -102,12 +114,14 @@ namespace MOBA.Core.Simulation.AI
             // Combat always overrides objective movement.
             if (targetInfo.HasLiveTarget)
             {
+                _hasObjectiveDebug = false;
                 _navAgent.Stop();
                 return;
             }
 
             if (_objectiveMemory == null)
             {
+                _hasObjectiveDebug = false;
                 _navAgent.Stop();
                 return;
             }
@@ -118,6 +132,7 @@ namespace MOBA.Core.Simulation.AI
 
             if (objective == null)
             {
+                _hasObjectiveDebug = false;
                 _navAgent.Stop();
                 return;
             }
@@ -128,6 +143,12 @@ namespace MOBA.Core.Simulation.AI
                 _brawler,
                 _profile,
                 objectivePosition);
+
+            _lastObjectiveCenter = objectivePosition;
+            _lastObjectiveSlot = slotPosition;
+            _lastObjectiveDestination = slotPosition;
+            _lastObjectiveName = objective.name;
+            _hasObjectiveDebug = true;
 
             _navAgent.RequestDestination(
                 slotPosition,

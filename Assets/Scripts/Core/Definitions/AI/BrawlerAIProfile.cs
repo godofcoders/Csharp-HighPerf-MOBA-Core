@@ -110,6 +110,9 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("If true, prints action switch decisions for AI debugging.")]
         public bool LogActionCommitment = false;
 
+        [Header("Objective Debug")]
+        public bool LogObjectiveDebug = false;
+
         public float GetPreferredAttackRange(float idealRange)
         {
             return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);

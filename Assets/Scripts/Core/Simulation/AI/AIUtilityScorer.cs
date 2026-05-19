@@ -28,6 +28,18 @@ namespace MOBA.Core.Simulation.AI
         private const float MaxEmergencyActionScore = 120f;
         private readonly List<ISpatialEntity> _nearbyAllyBuffer = new List<ISpatialEntity>(16);
 
+        private float _lastObjectiveAllyPressure;
+        private float _lastObjectiveCrowdingPenalty;
+        private float _lastObjectiveRawScore;
+        private float _lastObjectiveFinalScore;
+        private string _lastObjectiveScoreReason;
+
+        public float LastObjectiveAllyPressure => _lastObjectiveAllyPressure;
+        public float LastObjectiveCrowdingPenalty => _lastObjectiveCrowdingPenalty;
+        public float LastObjectiveRawScore => _lastObjectiveRawScore;
+        public float LastObjectiveFinalScore => _lastObjectiveFinalScore;
+        public string LastObjectiveScoreReason => _lastObjectiveScoreReason;
+
         public AIUtilityScorer(
             BrawlerController self,
             BrawlerAIProfile profile,
@@ -364,20 +376,35 @@ namespace MOBA.Core.Simulation.AI
 
         private AIActionScore ScoreObjective(AITargetInfo targetInfo)
         {
+            _lastObjectiveAllyPressure = 0f;
+            _lastObjectiveCrowdingPenalty = 0f;
+            _lastObjectiveRawScore = 0f;
+            _lastObjectiveFinalScore = 0f;
+            _lastObjectiveScoreReason = "not_evaluated";
+
             if (_objectiveMemory == null || !_objectiveMemory.HasAnyObjectives())
+            {
+                _lastObjectiveScoreReason = "no_objectives";
                 return new AIActionScore(AIActionType.Objective, 0f);
+            }
 
             // Combat always overrides objective movement.
             // Objective is a map-control fallback, not a replacement for fighting.
             if (targetInfo.HasLiveTarget)
+            {
+                _lastObjectiveScoreReason = "combat_target_exists";
                 return new AIActionScore(AIActionType.Objective, 0f);
+            }
 
             var objective = _objectiveMemory.GetBestObjective(
                 _self.Position,
                 _profile.PreferredObjective);
 
             if (objective == null)
+            {
+                _lastObjectiveScoreReason = "no_best_objective";
                 return new AIActionScore(AIActionType.Objective, 0f);
+            }
 
             Vector3 objectivePosition = objective.transform.position;
 
@@ -386,14 +413,21 @@ namespace MOBA.Core.Simulation.AI
                 objectivePosition);
 
             float score = 45f;
+            _lastObjectiveScoreReason = "base_45";
 
             // Far from objective: moving toward it is useful.
             if (dist > 4f)
+            {
                 score += 20f;
+                _lastObjectiveScoreReason += "|far_+20";
+            }
 
             // Already near objective: no need to over-prioritize objective movement.
             if (dist < 2.5f)
+            {
                 score -= 20f;
+                _lastObjectiveScoreReason += "|near_-20";
+            }
 
             // Decision-layer anti-clumping:
             // If allies are already near the objective, reduce desire to also go there.
@@ -401,7 +435,17 @@ namespace MOBA.Core.Simulation.AI
                 objectivePosition,
                 4.5f);
 
-            score -= allyPressure * GetObjectiveCrowdingPenalty();
+            float crowdingPenalty = allyPressure * GetObjectiveCrowdingPenalty();
+
+            _lastObjectiveAllyPressure = allyPressure;
+            _lastObjectiveCrowdingPenalty = crowdingPenalty;
+
+            score -= crowdingPenalty;
+
+            if (crowdingPenalty > 0.01f)
+                _lastObjectiveScoreReason += $"|crowding_-{crowdingPenalty:0.0}";
+
+            float beforeArchetype = score;
 
             // Archetype shaping.
             // Tanks/controllers/artillery like objective pressure more.
@@ -416,14 +460,27 @@ namespace MOBA.Core.Simulation.AI
                 controller: 8f,
                 artillery: 5f);
 
+            float archetypeDelta = score - beforeArchetype;
+            if (Mathf.Abs(archetypeDelta) > 0.01f)
+                _lastObjectiveScoreReason += $"|archetype_{archetypeDelta:+0.0;-0.0}";
+
             // Gem Grab: if behind, encourage objective/map pressure slightly.
             if (GemGrabMode.Instance != null && GemGrabMode.Instance.IsTeamBehind(_self.Team))
+            {
                 score += 8f;
+                _lastObjectiveScoreReason += "|behind_+8";
+            }
 
-            return MakeScore(
+            _lastObjectiveRawScore = score;
+
+            AIActionScore finalScore = MakeScore(
                 AIActionType.Objective,
                 score,
                 _profile.ObjectiveWeight);
+
+            _lastObjectiveFinalScore = finalScore.Score;
+
+            return finalScore;
         }
 
         private AIActionScore ScoreRegroup(

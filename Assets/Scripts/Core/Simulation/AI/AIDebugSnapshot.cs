@@ -26,6 +26,7 @@ namespace MOBA.Core.Simulation.AI
 
         public readonly List<AIActionScore> ActionScores = new List<AIActionScore>(16);
         public readonly List<string> ActiveStatuses = new List<string>(8);
+        public string ObjectiveDebug;
 
         public void ClearLists()
         {

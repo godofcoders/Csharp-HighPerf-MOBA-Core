@@ -36,6 +36,36 @@ namespace MOBA.Core.Infrastructure
         private readonly System.Collections.Generic.List<AIActionScore> _debugScores = new System.Collections.Generic.List<AIActionScore>(16);
         private AIActionScore _lastChosenAction;
 
+        public bool HasObjectiveDebug =>
+      _actionExecutor != null && _actionExecutor.HasObjectiveDebug;
+
+        public Vector3 LastObjectiveCenter =>
+            _actionExecutor != null ? _actionExecutor.LastObjectiveCenter : Vector3.zero;
+
+        public Vector3 LastObjectiveSlot =>
+            _actionExecutor != null ? _actionExecutor.LastObjectiveSlot : Vector3.zero;
+
+        public Vector3 LastObjectiveDestination =>
+            _actionExecutor != null ? _actionExecutor.LastObjectiveDestination : Vector3.zero;
+
+        public string LastObjectiveName =>
+            _actionExecutor != null ? _actionExecutor.LastObjectiveName : string.Empty;
+
+        public float LastObjectiveAllyPressure =>
+            _utilityScorer != null ? _utilityScorer.LastObjectiveAllyPressure : 0f;
+
+        public float LastObjectiveCrowdingPenalty =>
+            _utilityScorer != null ? _utilityScorer.LastObjectiveCrowdingPenalty : 0f;
+
+        public float LastObjectiveRawScore =>
+            _utilityScorer != null ? _utilityScorer.LastObjectiveRawScore : 0f;
+
+        public float LastObjectiveFinalScore =>
+            _utilityScorer != null ? _utilityScorer.LastObjectiveFinalScore : 0f;
+
+        public string LastObjectiveScoreReason =>
+            _utilityScorer != null ? _utilityScorer.LastObjectiveScoreReason : string.Empty;
+
         public void SetTarget(BrawlerController brawler)
         {
             _brawler = brawler;
@@ -175,6 +205,29 @@ namespace MOBA.Core.Infrastructure
                 _debugSnapshot.ActiveStatuses.Add(_brawler.State.ActiveStatusEffects[i].Type.ToString());
             }
 
+            if (HasObjectiveDebug)
+            {
+                _debugSnapshot.ObjectiveDebug =
+                    $"Obj={LastObjectiveName} " +
+                    $"Center={FormatVector(LastObjectiveCenter)} " +
+                    $"Slot={FormatVector(LastObjectiveSlot)} " +
+                    $"Dest={FormatVector(LastObjectiveDestination)} " +
+                    $"Pressure={LastObjectiveAllyPressure:0.00} " +
+                    $"Penalty={LastObjectiveCrowdingPenalty:0.0} " +
+                    $"Raw={LastObjectiveRawScore:0.0} " +
+                    $"Final={LastObjectiveFinalScore:0.0} " +
+                    $"Reason={LastObjectiveScoreReason}";
+            }
+            else
+            {
+                _debugSnapshot.ObjectiveDebug =
+                    $"Pressure={LastObjectiveAllyPressure:0.00} " +
+                    $"Penalty={LastObjectiveCrowdingPenalty:0.0} " +
+                    $"Raw={LastObjectiveRawScore:0.0} " +
+                    $"Final={LastObjectiveFinalScore:0.0} " +
+                    $"Reason={LastObjectiveScoreReason}";
+            }
+
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }
 
@@ -295,6 +348,24 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             Gizmos.color = Color.green;
             Gizmos.DrawLine(_brawler.Position, snapshot.TargetPosition.Value);
             Gizmos.DrawSphere(snapshot.TargetPosition.Value, 0.25f);
+
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+                return;
+
+            if (!HasObjectiveDebug)
+                return;
+
+            Gizmos.DrawWireSphere(LastObjectiveCenter, 0.35f);
+            Gizmos.DrawWireSphere(LastObjectiveSlot, 0.45f);
+            Gizmos.DrawLine(LastObjectiveCenter, LastObjectiveSlot);
+#endif
         }
+
+        private string FormatVector(Vector3 value)
+        {
+            return $"({value.x:0.0},{value.y:0.0},{value.z:0.0})";
+        }
+
     }
 }
