@@ -106,6 +106,16 @@ _actionExecutor != null
                 ? _actionExecutor.LastTacticalMoveReason
                 : string.Empty;
 
+        public int CurrentTargetFocusCount =>
+_teamCoordinator != null &&
+_targetInfo != null &&
+_targetInfo.HasLiveTarget &&
+_targetInfo.Target != null
+? _teamCoordinator.GetTargetFocusCount(_targetInfo.Target.EntityID)
+: 0;
+
+        /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
         public void SetTarget(BrawlerController brawler)
         {
             _brawler = brawler;
@@ -127,6 +137,7 @@ _actionExecutor != null
             if (!CanRunAI())
             {
                 _actionCommitment?.Reset();
+                _teamCoordinator?.ClearTargetFocusCount();
 
                 if (currentTick % 30 == 0)
                     Debug.Log($"[AI-{(_brawler != null ? _brawler.name : "?")}] CanRunAI=false brain={_brainInitialized} brawlerNull={_brawler == null} stateNull={(_brawler == null ? "?" : (_brawler.State == null).ToString())} dead={(_brawler == null || _brawler.State == null ? "?" : _brawler.State.IsDead.ToString())} gridNull={SimulationClock.Grid == null}");
@@ -140,6 +151,7 @@ _actionExecutor != null
             if (_brawler.State.HasStatus(StatusEffectType.Stun))
             {
                 _actionCommitment?.Reset();
+                _teamCoordinator?.ClearTargetFocusCount();
                 _commandSource?.QueueMove(Vector3.zero);
                 return;
             }
@@ -151,6 +163,7 @@ _actionExecutor != null
             }
 
             _teamCoordinator.UpdateTeamSignals(_targetInfo, currentTick);
+            ReportCurrentTargetFocus();
 
             _utilityScorer.CollectActionScores(_targetInfo, currentTick, _debugScores);
 
@@ -173,6 +186,8 @@ _actionExecutor != null
 
             _navAgent.Tick();
         }
+
+
 
         private void UpdateDebugSnapshot(uint currentTick)
         {
@@ -208,6 +223,7 @@ _actionExecutor != null
                 _debugSnapshot.CurrentTargetId = 0;
                 _debugSnapshot.TargetPosition = null;
             }
+            _debugSnapshot.CurrentTargetFocusCount = CurrentTargetFocusCount;
 
             if (_teamCoordinator != null)
             {
@@ -258,14 +274,6 @@ _actionExecutor != null
                     $"Final={LastObjectiveFinalScore:0.0} " +
                     $"Reason={LastObjectiveScoreReason}";
 
-                _debugSnapshot.TacticalMovementDebug =
-$"Intent={LastTacticalMovementIntent} " +
-$"Dest={FormatVector(LastTacticalMoveDestination)} " +
-$"Dist={LastTacticalTargetDistance:0.0} " +
-$"Preferred={LastTacticalPreferredRange:0.0} " +
-$"TooClose={LastTacticalTooCloseDistance:0.0} " +
-$"Retarget={LastTacticalRetargetTick}->{NextTacticalMoveRetargetTick} " +
-$"Reason={LastTacticalMoveReason}";
             }
             else
             {
@@ -276,6 +284,14 @@ $"Reason={LastTacticalMoveReason}";
                     $"Final={LastObjectiveFinalScore:0.0} " +
                     $"Reason={LastObjectiveScoreReason}";
             }
+            _debugSnapshot.TacticalMovementDebug =
+$"Intent={LastTacticalMovementIntent} " +
+$"Dest={FormatVector(LastTacticalMoveDestination)} " +
+$"Dist={LastTacticalTargetDistance:0.0} " +
+$"Preferred={LastTacticalPreferredRange:0.0} " +
+$"TooClose={LastTacticalTooCloseDistance:0.0} " +
+$"Retarget={LastTacticalRetargetTick}->{NextTacticalMoveRetargetTick} " +
+$"Reason={LastTacticalMoveReason}";
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }
@@ -379,6 +395,8 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
         {
             base.OnDisable();
 
+            _teamCoordinator?.ClearTargetFocusCount();
+
             if (_brawler != null)
             {
                 AIDebugTracker.Unregister(_brawler);
@@ -409,6 +427,20 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
         private string FormatVector(Vector3 value)
         {
             return $"({value.x:0.0},{value.y:0.0},{value.z:0.0})";
+        }
+
+        private void ReportCurrentTargetFocus()
+        {
+            if (_teamCoordinator == null || _targetInfo == null)
+                return;
+
+            if (_targetInfo.HasLiveTarget && _targetInfo.Target != null)
+            {
+                _teamCoordinator.ReportTargetFocusCount(_targetInfo.Target.EntityID);
+                return;
+            }
+
+            _teamCoordinator.ClearTargetFocusCount();
         }
 
     }

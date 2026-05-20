@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
@@ -16,6 +17,9 @@ namespace MOBA.Core.Simulation.AI
 
             public BrawlerController AllyUnderThreat;
             public uint PeelTick;
+
+            public Dictionary<int, int> FocusCounts;
+            public Dictionary<int, int> BotFocusTargets;
         }
 
         private static TeamData _blue;
@@ -88,6 +92,93 @@ namespace MOBA.Core.Simulation.AI
 
             ally = null;
             return false;
+        }
+
+        public static void ReportTargetFocusCount(
+            TeamType team,
+            int botEntityId,
+            int targetEntityId)
+        {
+            if (botEntityId == 0)
+                return;
+
+            ref TeamData data = ref GetData(team);
+            EnsureFocusMaps(ref data);
+
+            ClearTargetFocusCountInternal(ref data, botEntityId);
+
+            if (targetEntityId == 0)
+                return;
+
+            data.BotFocusTargets[botEntityId] = targetEntityId;
+
+            if (!data.FocusCounts.ContainsKey(targetEntityId))
+                data.FocusCounts[targetEntityId] = 0;
+
+            data.FocusCounts[targetEntityId]++;
+        }
+
+        public static void ClearTargetFocusCount(TeamType team, int botEntityId)
+        {
+            if (botEntityId == 0)
+                return;
+
+            ref TeamData data = ref GetData(team);
+            EnsureFocusMaps(ref data);
+
+            ClearTargetFocusCountInternal(ref data, botEntityId);
+        }
+
+        public static int GetTargetFocusCount(TeamType team, int targetEntityId)
+        {
+            if (targetEntityId == 0)
+                return 0;
+
+            ref TeamData data = ref GetData(team);
+            EnsureFocusMaps(ref data);
+
+            return data.FocusCounts.TryGetValue(targetEntityId, out int count)
+                ? count
+                : 0;
+        }
+
+        public static void ClearTeamFocusCounts(TeamType team)
+        {
+            ref TeamData data = ref GetData(team);
+            EnsureFocusMaps(ref data);
+
+            data.FocusCounts.Clear();
+            data.BotFocusTargets.Clear();
+        }
+
+        private static void EnsureFocusMaps(ref TeamData data)
+        {
+            if (data.FocusCounts == null)
+                data.FocusCounts = new Dictionary<int, int>(16);
+
+            if (data.BotFocusTargets == null)
+                data.BotFocusTargets = new Dictionary<int, int>(16);
+        }
+
+        private static void ClearTargetFocusCountInternal(ref TeamData data, int botEntityId)
+        {
+            if (data.BotFocusTargets == null || data.FocusCounts == null)
+                return;
+
+            if (!data.BotFocusTargets.TryGetValue(botEntityId, out int previousTargetId))
+                return;
+
+            data.BotFocusTargets.Remove(botEntityId);
+
+            if (!data.FocusCounts.TryGetValue(previousTargetId, out int count))
+                return;
+
+            count--;
+
+            if (count <= 0)
+                data.FocusCounts.Remove(previousTargetId);
+            else
+                data.FocusCounts[previousTargetId] = count;
         }
 
         private static ref TeamData GetData(TeamType team)

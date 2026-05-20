@@ -9,6 +9,7 @@ namespace MOBA.Core.Simulation.AI
         public string CurrentAction;
         public string CurrentTargetName;
         public int CurrentTargetId;
+        public int CurrentTargetFocusCount;
 
         public float Health;
         public float MaxHealth;

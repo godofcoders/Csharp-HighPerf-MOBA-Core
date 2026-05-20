@@ -58,6 +58,37 @@ namespace MOBA.Core.Simulation.AI
             return AITeamBlackboard.TryGetAllyUnderThreat(_self.Team, currentTick, PeelMemoryTicks, out ally);
         }
 
+        public void ReportTargetFocusCount(int targetEntityId)
+        {
+            if (_self == null)
+                return;
+
+            AITeamBlackboard.ReportTargetFocusCount(
+                _self.Team,
+                _self.EntityID,
+                targetEntityId);
+        }
+
+        public void ClearTargetFocusCount()
+        {
+            if (_self == null)
+                return;
+
+            AITeamBlackboard.ClearTargetFocusCount(
+                _self.Team,
+                _self.EntityID);
+        }
+
+        public int GetTargetFocusCount(int targetEntityId)
+        {
+            if (_self == null)
+                return 0;
+
+            return AITeamBlackboard.GetTargetFocusCount(
+                _self.Team,
+                targetEntityId);
+        }
+
 
     }
 }
