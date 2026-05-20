@@ -17,7 +17,6 @@ namespace MOBA.Core.Simulation.AI
         private readonly AICommandSource _commandSource;
 
         private uint _nextFallbackWanderTick;
-        private uint _nextStrafeTick;
         private Vector3 _fallbackWanderPoint;
 
         private Vector3 _lastObjectiveCenter;
@@ -38,8 +37,18 @@ namespace MOBA.Core.Simulation.AI
         public AITacticalMovementIntent LastTacticalMovementIntent => _lastTacticalMovementIntent;
         public Vector3 LastTacticalMoveDestination => _lastTacticalMoveDestination;
 
+        private float _lastTacticalTargetDistance;
+        private float _lastTacticalPreferredRange;
+        private float _lastTacticalTooCloseDistance;
+        private uint _lastTacticalRetargetTick;
+        private string _lastTacticalMoveReason;
 
-
+        public float LastTacticalTargetDistance => _lastTacticalTargetDistance;
+        public float LastTacticalPreferredRange => _lastTacticalPreferredRange;
+        public float LastTacticalTooCloseDistance => _lastTacticalTooCloseDistance;
+        public uint LastTacticalRetargetTick => _lastTacticalRetargetTick;
+        public uint NextTacticalMoveRetargetTick => _nextTacticalMoveRetargetTick;
+        public string LastTacticalMoveReason => _lastTacticalMoveReason;
 
         public AIActionExecutor(
             BrawlerController brawler,
@@ -308,12 +317,8 @@ namespace MOBA.Core.Simulation.AI
 
         private void RunSearch(AITargetInfo targetInfo, uint currentTick)
         {
-            Debug.Log($"[{_brawler.name}] RunSearch");
-
             if (targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
             {
-                Debug.Log($"[{_brawler.name}] Search -> LastKnownPosition");
-
                 _navAgent.RequestDestination(targetInfo.LastKnownPosition, 1.0f);
                 return;
             }
@@ -324,8 +329,6 @@ namespace MOBA.Core.Simulation.AI
                 _profile.SharedHotspotMemoryTicks,
                 out var destination))
             {
-                Debug.Log($"[{_brawler.name}] Search -> Hotspot");
-
                 _navAgent.RequestDestination(destination, 1.0f);
                 return;
             }
@@ -338,9 +341,6 @@ namespace MOBA.Core.Simulation.AI
 
                 if (objective != null)
                 {
-                    Debug.Log(
-                        $"[{_brawler.name}] Search -> Objective: {objective.name}");
-
                     _navAgent.RequestDestination(
                         objective.transform.position,
                         1.0f);
@@ -348,9 +348,6 @@ namespace MOBA.Core.Simulation.AI
                     return;
                 }
             }
-
-            Debug.Log($"[{_brawler.name}] Search -> Stop");
-
             _navAgent.Stop();
         }
 
@@ -443,10 +440,13 @@ namespace MOBA.Core.Simulation.AI
         private void CommitTacticalMove(
      AITacticalMovementIntent intent,
      Vector3 destination,
-     uint currentTick)
+     uint currentTick,
+     string reason = "")
         {
             _lastTacticalMovementIntent = intent;
             _lastTacticalMoveDestination = destination;
+            _lastTacticalRetargetTick = currentTick;
+            _lastTacticalMoveReason = reason;
 
             uint retargetTicks = _profile.TacticalMoveRetargetTicks == 0
                 ? 1u
@@ -459,7 +459,9 @@ namespace MOBA.Core.Simulation.AI
                 Debug.Log(
                     $"[AITacticalMove-{_brawler.name}] " +
                     $"Intent={intent} " +
-                    $"Dest={destination}");
+                    $"Dest={destination} " +
+                    $"Reason={reason} " +
+                    $"NextRetarget={_nextTacticalMoveRetargetTick}");
             }
         }
 
@@ -513,18 +515,28 @@ namespace MOBA.Core.Simulation.AI
 
             float dist = Vector3.Distance(selfPos, targetPos);
             float tooCloseDistance = _profile.GetTooCloseDistance(idealRange);
-            float preferredRange = GetTacticalPreferredRange(idealRange);
+            float preferredRange =
+    GetTacticalPreferredRange(idealRange) +
+    _profile.PreferredCombatOffset;
+
+            _lastTacticalTargetDistance = dist;
+            _lastTacticalPreferredRange = preferredRange;
+            _lastTacticalTooCloseDistance = tooCloseDistance;
 
             AITacticalMovementIntent intent;
             Vector3 destination;
 
-            // 1. Too close: kite away.
             if (dist < tooCloseDistance || dist < preferredRange * 0.65f)
             {
                 intent = AITacticalMovementIntent.Kite;
                 destination = selfPos + awayFromTarget * _profile.TacticalKiteDistance;
+
+                CommitTacticalMove(
+                    intent,
+                    destination,
+                    currentTick,
+                    $"combat_too_close dist={dist:0.0} preferred={preferredRange:0.0}");
             }
-            // 2. Slightly inside ideal range: back-step + strafe.
             else if (dist < preferredRange)
             {
                 intent = AITacticalMovementIntent.RepositionAngle;
@@ -532,24 +544,34 @@ namespace MOBA.Core.Simulation.AI
                     selfPos +
                     awayFromTarget * (_profile.TacticalKiteDistance * 0.5f) +
                     side * (_profile.TacticalStrafeDistance * 0.75f);
+
+                CommitTacticalMove(
+                    intent,
+                    destination,
+                    currentTick,
+                    $"combat_inside_preferred dist={dist:0.0} preferred={preferredRange:0.0}");
             }
-            // 3. Good range: strafe sideways, do not walk into target.
             else
             {
                 intent = AITacticalMovementIntent.Strafe;
                 destination =
                     selfPos +
                     side * _profile.TacticalStrafeDistance;
+
+                CommitTacticalMove(
+                    intent,
+                    destination,
+                    currentTick,
+                    $"combat_good_range dist={dist:0.0} preferred={preferredRange:0.0}");
             }
 
-            CommitTacticalMove(intent, destination, currentTick);
             return destination;
         }
 
         private Vector3 BuildTacticalRepositionDestination(
-    AITargetInfo targetInfo,
-    uint currentTick,
-    float idealRange)
+      AITargetInfo targetInfo,
+      uint currentTick,
+      float idealRange)
         {
             if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
                 return _brawler.Position;
@@ -569,16 +591,24 @@ namespace MOBA.Core.Simulation.AI
             Vector3 side = new Vector3(toTarget.z, 0f, -toTarget.x) * GetStableStrafeSide();
 
             float dist = Vector3.Distance(selfPos, targetPos);
+
             float preferredRange =
                 GetTacticalPreferredRange(idealRange) +
                 _profile.PreferredCombatOffset;
+
+            float tooCloseDistance = _profile.GetTooCloseDistance(idealRange);
+
+            _lastTacticalTargetDistance = dist;
+            _lastTacticalPreferredRange = preferredRange;
+            _lastTacticalTooCloseDistance = tooCloseDistance;
 
             AITacticalMovementIntent intent;
             Vector3 destination;
 
             if (IsFragileArchetype())
             {
-                // Fragile brawlers should reposition backward + sideways.
+                // Sniper / Support / Artillery:
+                // create safer distance while also changing angle.
                 intent = AITacticalMovementIntent.RepositionAngle;
 
                 destination =
@@ -588,7 +618,8 @@ namespace MOBA.Core.Simulation.AI
             }
             else if (_profile.Archetype == BrawlerArchetype.Tank)
             {
-                // Tanks should not run too far away. They mostly side-step to keep pressure.
+                // Tank:
+                // do not run too far away; mostly side-step while keeping pressure.
                 intent = AITacticalMovementIntent.RepositionAngle;
 
                 destination =
@@ -598,7 +629,8 @@ namespace MOBA.Core.Simulation.AI
             }
             else if (_profile.Archetype == BrawlerArchetype.Assassin)
             {
-                // Assassins prefer side/flank angles instead of backing off.
+                // Assassin:
+                // prefer side/flank angle instead of backing off.
                 intent = AITacticalMovementIntent.RepositionAngle;
 
                 destination =
@@ -608,7 +640,8 @@ namespace MOBA.Core.Simulation.AI
             }
             else
             {
-                // General fighter/controller behavior: back-side reposition.
+                // Fighter / Controller:
+                // balanced back-side reposition.
                 intent = AITacticalMovementIntent.RepositionAngle;
 
                 destination =
@@ -617,14 +650,19 @@ namespace MOBA.Core.Simulation.AI
                     side * _profile.TacticalStrafeDistance;
             }
 
-            CommitTacticalMove(intent, destination, currentTick);
+            CommitTacticalMove(
+                intent,
+                destination,
+                currentTick,
+                $"reposition_{_profile.Archetype} dist={dist:0.0} preferred={preferredRange:0.0} tooClose={tooCloseDistance:0.0}");
+
             return destination;
         }
 
         private Vector3 BuildTacticalApproachDestination(
-    AITargetInfo targetInfo,
-    uint currentTick,
-    float idealRange)
+      AITargetInfo targetInfo,
+      uint currentTick,
+      float idealRange)
         {
             if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
                 return _brawler.Position;
@@ -643,16 +681,25 @@ namespace MOBA.Core.Simulation.AI
             Vector3 toTarget = -awayFromTarget;
             Vector3 side = new Vector3(toTarget.z, 0f, -toTarget.x) * GetStableStrafeSide();
 
+            float dist = Vector3.Distance(selfPos, targetPos);
+
             float preferredRange =
                 GetTacticalPreferredRange(idealRange) +
                 _profile.PreferredCombatOffset;
+
+            float tooCloseDistance = _profile.GetTooCloseDistance(idealRange);
+
+            _lastTacticalTargetDistance = dist;
+            _lastTacticalPreferredRange = preferredRange;
+            _lastTacticalTooCloseDistance = tooCloseDistance;
 
             AITacticalMovementIntent intent;
             Vector3 destination;
 
             if (_profile.Archetype == BrawlerArchetype.Assassin)
             {
-                // Assassin: approach from an angle, not straight down the middle.
+                // Assassin:
+                // approach from an angle, not straight down the middle.
                 intent = AITacticalMovementIntent.CloseGap;
 
                 destination =
@@ -662,7 +709,8 @@ namespace MOBA.Core.Simulation.AI
             }
             else if (_profile.Archetype == BrawlerArchetype.Tank)
             {
-                // Tank: more direct pressure, but still slightly angled.
+                // Tank:
+                // more direct pressure, but still slightly angled.
                 intent = AITacticalMovementIntent.CloseGap;
 
                 destination =
@@ -693,7 +741,12 @@ namespace MOBA.Core.Simulation.AI
                     side * (_profile.TacticalStrafeDistance * 0.75f);
             }
 
-            CommitTacticalMove(intent, destination, currentTick);
+            CommitTacticalMove(
+                intent,
+                destination,
+                currentTick,
+                $"approach_{_profile.Archetype} dist={dist:0.0} preferred={preferredRange:0.0} tooClose={tooCloseDistance:0.0}");
+
             return destination;
         }
     }

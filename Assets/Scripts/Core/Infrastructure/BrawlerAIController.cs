@@ -66,6 +66,46 @@ namespace MOBA.Core.Infrastructure
         public string LastObjectiveScoreReason =>
             _utilityScorer != null ? _utilityScorer.LastObjectiveScoreReason : string.Empty;
 
+        public AITacticalMovementIntent LastTacticalMovementIntent =>
+_actionExecutor != null
+    ? _actionExecutor.LastTacticalMovementIntent
+    : AITacticalMovementIntent.None;
+
+        public Vector3 LastTacticalMoveDestination =>
+            _actionExecutor != null
+                ? _actionExecutor.LastTacticalMoveDestination
+                : Vector3.zero;
+
+        public float LastTacticalTargetDistance =>
+            _actionExecutor != null
+                ? _actionExecutor.LastTacticalTargetDistance
+                : 0f;
+
+        public float LastTacticalPreferredRange =>
+            _actionExecutor != null
+                ? _actionExecutor.LastTacticalPreferredRange
+                : 0f;
+
+        public float LastTacticalTooCloseDistance =>
+            _actionExecutor != null
+                ? _actionExecutor.LastTacticalTooCloseDistance
+                : 0f;
+
+        public uint LastTacticalRetargetTick =>
+            _actionExecutor != null
+                ? _actionExecutor.LastTacticalRetargetTick
+                : 0u;
+
+        public uint NextTacticalMoveRetargetTick =>
+            _actionExecutor != null
+                ? _actionExecutor.NextTacticalMoveRetargetTick
+                : 0u;
+
+        public string LastTacticalMoveReason =>
+            _actionExecutor != null
+                ? _actionExecutor.LastTacticalMoveReason
+                : string.Empty;
+
         public void SetTarget(BrawlerController brawler)
         {
             _brawler = brawler;
@@ -217,6 +257,15 @@ namespace MOBA.Core.Infrastructure
                     $"Raw={LastObjectiveRawScore:0.0} " +
                     $"Final={LastObjectiveFinalScore:0.0} " +
                     $"Reason={LastObjectiveScoreReason}";
+
+                _debugSnapshot.TacticalMovementDebug =
+$"Intent={LastTacticalMovementIntent} " +
+$"Dest={FormatVector(LastTacticalMoveDestination)} " +
+$"Dist={LastTacticalTargetDistance:0.0} " +
+$"Preferred={LastTacticalPreferredRange:0.0} " +
+$"TooClose={LastTacticalTooCloseDistance:0.0} " +
+$"Retarget={LastTacticalRetargetTick}->{NextTacticalMoveRetargetTick} " +
+$"Reason={LastTacticalMoveReason}";
             }
             else
             {
@@ -336,31 +385,26 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             }
         }
 
+#if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
-            if (_brawler == null)
-                return;
-
-            var snapshot = AIDebugTracker.GetSnapshot(_brawler.EntityID);
-            if (snapshot == null || !snapshot.TargetPosition.HasValue)
-                return;
-
-            Gizmos.color = Color.green;
-            Gizmos.DrawLine(_brawler.Position, snapshot.TargetPosition.Value);
-            Gizmos.DrawSphere(snapshot.TargetPosition.Value, 0.25f);
-
-#if UNITY_EDITOR
             if (!Application.isPlaying)
                 return;
 
-            if (!HasObjectiveDebug)
-                return;
+            if (HasObjectiveDebug)
+            {
+                Gizmos.DrawWireSphere(LastObjectiveCenter, 0.35f);
+                Gizmos.DrawWireSphere(LastObjectiveSlot, 0.45f);
+                Gizmos.DrawLine(LastObjectiveCenter, LastObjectiveSlot);
+            }
 
-            Gizmos.DrawWireSphere(LastObjectiveCenter, 0.35f);
-            Gizmos.DrawWireSphere(LastObjectiveSlot, 0.45f);
-            Gizmos.DrawLine(LastObjectiveCenter, LastObjectiveSlot);
-#endif
+            if (LastTacticalMovementIntent != AITacticalMovementIntent.None)
+            {
+                Gizmos.DrawWireSphere(LastTacticalMoveDestination, 0.3f);
+                Gizmos.DrawLine(transform.position, LastTacticalMoveDestination);
+            }
         }
+#endif
 
         private string FormatVector(Vector3 value)
         {
