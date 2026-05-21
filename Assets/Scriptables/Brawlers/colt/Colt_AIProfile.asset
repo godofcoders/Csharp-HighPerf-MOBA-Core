@@ -69,6 +69,13 @@ MonoBehaviour:
   AllyAvoidanceWeight: 2
   HoldRangePositionRefreshTicks: 20
   PreferredCombatOffset: 1.2
+  TacticalStrafeDistance: 2.2
+  TacticalKiteDistance: 3
+  TacticalMoveRetargetTicks: 12
+  TacticalMoveHeartbeatTicks: 18
+  TacticalDestinationStaleDistance: 1.25
+  TacticalMinimumStepDistance: 0.8
+  FragileRangePadding: 1
   MinimumCommittedActionScore: 8
   ActionSwitchScoreMargin: 12
   CombatActionCommitmentTicks: 8

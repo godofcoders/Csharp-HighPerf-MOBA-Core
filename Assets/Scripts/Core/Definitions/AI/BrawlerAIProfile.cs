@@ -129,6 +129,15 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("How often the bot is allowed to pick a new tactical combat destination.")]
         public uint TacticalMoveRetargetTicks = 10;
 
+        [Tooltip("If a bot has reached its tactical combat point, refresh after this many ticks so it keeps footwork alive.")]
+        public uint TacticalMoveHeartbeatTicks = 18;
+
+        [Tooltip("Retarget tactical movement early when the enemy has moved this far from the position used by the last tactical plan.")]
+        public float TacticalDestinationStaleDistance = 1.25f;
+
+        [Tooltip("Minimum distance a tactical move should ask the bot to travel. Prevents tiny stale destinations from turning into stationary aim.")]
+        public float TacticalMinimumStepDistance = 0.75f;
+
         [Tooltip("Extra distance fragile brawlers try to keep from enemies.")]
         public float FragileRangePadding = 0.75f;
 
@@ -183,6 +192,9 @@ namespace MOBA.Core.Simulation.AI
                     TacticalStrafeDistance = 2.2f;
                     TacticalKiteDistance = 3.0f;
                     TacticalMoveRetargetTicks = 12;
+                    TacticalMoveHeartbeatTicks = 18;
+                    TacticalDestinationStaleDistance = 1.25f;
+                    TacticalMinimumStepDistance = 0.8f;
                     FragileRangePadding = 1.0f;
                     break;
 
@@ -220,6 +232,9 @@ namespace MOBA.Core.Simulation.AI
                     TacticalStrafeDistance = 1.2f;
                     TacticalKiteDistance = 1.6f;
                     TacticalMoveRetargetTicks = 10;
+                    TacticalMoveHeartbeatTicks = 20;
+                    TacticalDestinationStaleDistance = 1.4f;
+                    TacticalMinimumStepDistance = 0.55f;
                     FragileRangePadding = 0.0f;
                     break;
 
@@ -257,6 +272,9 @@ namespace MOBA.Core.Simulation.AI
                     TacticalStrafeDistance = 1.8f;
                     TacticalKiteDistance = 2.0f;
                     TacticalMoveRetargetTicks = 8;
+                    TacticalMoveHeartbeatTicks = 14;
+                    TacticalDestinationStaleDistance = 1.5f;
+                    TacticalMinimumStepDistance = 0.85f;
                     FragileRangePadding = 0.2f;
                     break;
 
@@ -294,6 +312,9 @@ namespace MOBA.Core.Simulation.AI
                     TacticalStrafeDistance = 2.0f;
                     TacticalKiteDistance = 2.8f;
                     TacticalMoveRetargetTicks = 12;
+                    TacticalMoveHeartbeatTicks = 18;
+                    TacticalDestinationStaleDistance = 1.25f;
+                    TacticalMinimumStepDistance = 0.75f;
                     FragileRangePadding = 0.85f;
                     break;
 
@@ -333,6 +354,9 @@ namespace MOBA.Core.Simulation.AI
                     TacticalStrafeDistance = 1.8f;
                     TacticalKiteDistance = 2.4f;
                     TacticalMoveRetargetTicks = 11;
+                    TacticalMoveHeartbeatTicks = 17;
+                    TacticalDestinationStaleDistance = 1.3f;
+                    TacticalMinimumStepDistance = 0.7f;
                     FragileRangePadding = 0.5f;
                     break;
 
@@ -377,6 +401,9 @@ namespace MOBA.Core.Simulation.AI
                     TacticalStrafeDistance = 2.2f;
                     TacticalKiteDistance = 3.2f;
                     TacticalMoveRetargetTicks = 14;
+                    TacticalMoveHeartbeatTicks = 20;
+                    TacticalDestinationStaleDistance = 1.2f;
+                    TacticalMinimumStepDistance = 0.85f;
                     FragileRangePadding = 1.2f;
                     break;
 
@@ -415,6 +442,9 @@ namespace MOBA.Core.Simulation.AI
                     TacticalStrafeDistance = 1.8f;
                     TacticalKiteDistance = 2.5f;
                     TacticalMoveRetargetTicks = 10;
+                    TacticalMoveHeartbeatTicks = 16;
+                    TacticalDestinationStaleDistance = 1.3f;
+                    TacticalMinimumStepDistance = 0.7f;
                     FragileRangePadding = 0.4f;
                     break;
             }

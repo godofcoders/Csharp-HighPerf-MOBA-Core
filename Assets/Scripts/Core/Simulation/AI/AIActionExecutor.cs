@@ -32,6 +32,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastObjectiveName => _lastObjectiveName;
         private AITacticalMovementIntent _lastTacticalMovementIntent;
         private Vector3 _lastTacticalMoveDestination;
+        private Vector3 _lastTacticalTargetPosition;
         private uint _nextTacticalMoveRetargetTick;
         private int _lastStrafeSide = 1;
         public AITacticalMovementIntent LastTacticalMovementIntent => _lastTacticalMovementIntent;
@@ -42,6 +43,7 @@ namespace MOBA.Core.Simulation.AI
         private float _lastTacticalTooCloseDistance;
         private uint _lastTacticalRetargetTick;
         private string _lastTacticalMoveReason;
+        private string _pendingTacticalRefreshReason;
 
         public float LastTacticalTargetDistance => _lastTacticalTargetDistance;
         public float LastTacticalPreferredRange => _lastTacticalPreferredRange;
@@ -192,8 +194,10 @@ namespace MOBA.Core.Simulation.AI
             _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
 
-            if (CanRetargetTacticalMove(currentTick) || !_navAgent.HasDestination)
+            if (ShouldRefreshTacticalMove(targetInfo, currentTick, out string refreshReason))
             {
+                BeginTacticalRefresh(refreshReason);
+
                 Vector3 destination = BuildTacticalApproachDestination(
                     targetInfo,
                     currentTick,
@@ -248,8 +252,10 @@ namespace MOBA.Core.Simulation.AI
 
             // Tactical retargeting:
             // Do not pick a new micro-position every frame.
-            if (CanRetargetTacticalMove(currentTick) || !_navAgent.HasDestination)
+            if (ShouldRefreshTacticalMove(targetInfo, currentTick, out string refreshReason))
             {
+                BeginTacticalRefresh(refreshReason);
+
                 Vector3 tacticalDestination = BuildTacticalCombatDestination(
                     targetInfo,
                     currentTick,
@@ -283,8 +289,10 @@ namespace MOBA.Core.Simulation.AI
             _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
 
-            if (CanRetargetTacticalMove(currentTick) || !_navAgent.HasDestination)
+            if (ShouldRefreshTacticalMove(targetInfo, currentTick, out string refreshReason))
             {
+                BeginTacticalRefresh(refreshReason);
+
                 Vector3 destination = BuildTacticalRepositionDestination(
                     targetInfo,
                     currentTick,
@@ -446,9 +454,60 @@ namespace MOBA.Core.Simulation.AI
             _navAgent.RequestDestination(ally.Position, 1.0f);
         }
 
-        private bool CanRetargetTacticalMove(uint currentTick)
+        private bool ShouldRefreshTacticalMove(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            out string refreshReason)
         {
-            return currentTick >= _nextTacticalMoveRetargetTick;
+            refreshReason = string.Empty;
+
+            if (!_navAgent.HasDestination)
+            {
+                refreshReason = "missing_destination";
+                return true;
+            }
+
+            if (currentTick >= _nextTacticalMoveRetargetTick)
+            {
+                refreshReason = "retarget_window";
+                return true;
+            }
+
+            if (targetInfo.HasLiveTarget && targetInfo.Target != null)
+            {
+                float staleDistance = Mathf.Max(0.25f, _profile.TacticalDestinationStaleDistance);
+                float targetMoveSq = (targetInfo.Target.Position - _lastTacticalTargetPosition).sqrMagnitude;
+
+                if (targetMoveSq >= staleDistance * staleDistance)
+                {
+                    refreshReason = $"target_moved_{Mathf.Sqrt(targetMoveSq):0.0}";
+                    return true;
+                }
+            }
+
+            uint heartbeatTicks = _profile.TacticalMoveHeartbeatTicks == 0
+                ? 1u
+                : _profile.TacticalMoveHeartbeatTicks;
+
+            if ((currentTick - _lastTacticalRetargetTick) >= heartbeatTicks &&
+                IsNearLastTacticalDestination())
+            {
+                refreshReason = "movement_heartbeat";
+                return true;
+            }
+
+            return false;
+        }
+
+        private void BeginTacticalRefresh(string refreshReason)
+        {
+            _pendingTacticalRefreshReason = refreshReason;
+
+            if (refreshReason == "movement_heartbeat" ||
+                refreshReason == "missing_destination")
+            {
+                _lastStrafeSide = -GetStableStrafeSide();
+            }
         }
 
         private void CommitTacticalMove(
@@ -457,10 +516,15 @@ namespace MOBA.Core.Simulation.AI
      uint currentTick,
      string reason = "")
         {
+            destination = EnsureMeaningfulTacticalDestination(destination, intent);
+
             _lastTacticalMovementIntent = intent;
             _lastTacticalMoveDestination = destination;
             _lastTacticalRetargetTick = currentTick;
-            _lastTacticalMoveReason = reason;
+            _lastTacticalMoveReason = string.IsNullOrEmpty(_pendingTacticalRefreshReason)
+                ? reason
+                : $"{reason}|refresh={_pendingTacticalRefreshReason}";
+            _pendingTacticalRefreshReason = string.Empty;
 
             uint retargetTicks = _profile.TacticalMoveRetargetTicks == 0
                 ? 1u
@@ -474,9 +538,72 @@ namespace MOBA.Core.Simulation.AI
                     $"[AITacticalMove-{_brawler.name}] " +
                     $"Intent={intent} " +
                     $"Dest={destination} " +
-                    $"Reason={reason} " +
+                    $"Reason={_lastTacticalMoveReason} " +
                     $"NextRetarget={_nextTacticalMoveRetargetTick}");
             }
+        }
+
+        private bool IsNearLastTacticalDestination()
+        {
+            float minimumStep = Mathf.Max(0.25f, _profile.TacticalMinimumStepDistance);
+            float distSq = (_lastTacticalMoveDestination - _brawler.Position).sqrMagnitude;
+            return distSq <= minimumStep * minimumStep;
+        }
+
+        private Vector3 EnsureMeaningfulTacticalDestination(
+            Vector3 destination,
+            AITacticalMovementIntent intent)
+        {
+            Vector3 offset = destination - _brawler.Position;
+            offset.y = 0f;
+
+            float minimumStep = Mathf.Max(0.25f, _profile.TacticalMinimumStepDistance);
+            if (offset.sqrMagnitude >= minimumStep * minimumStep)
+                return destination;
+
+            Vector3 direction;
+            if (intent == AITacticalMovementIntent.Kite ||
+                intent == AITacticalMovementIntent.EmergencyRetreat)
+            {
+                direction = offset.sqrMagnitude > 0.001f
+                    ? offset.normalized
+                    : -_brawler.transform.forward;
+            }
+            else
+            {
+                direction = GetLastTacticalSideDirection();
+            }
+
+            Vector3 adjusted = _brawler.Position + direction * minimumStep;
+            adjusted.y = _brawler.Position.y;
+
+            AppendPendingTacticalRefreshReason("min_step");
+
+            return adjusted;
+        }
+
+        private void AppendPendingTacticalRefreshReason(string reason)
+        {
+            if (string.IsNullOrEmpty(reason))
+                return;
+
+            _pendingTacticalRefreshReason = string.IsNullOrEmpty(_pendingTacticalRefreshReason)
+                ? reason
+                : $"{_pendingTacticalRefreshReason}+{reason}";
+        }
+
+        private Vector3 GetLastTacticalSideDirection()
+        {
+            Vector3 toTarget = _lastTacticalTargetPosition - _brawler.Position;
+            toTarget.y = 0f;
+
+            if (toTarget.sqrMagnitude <= 0.001f)
+                toTarget = _brawler.transform.forward;
+
+            toTarget.Normalize();
+
+            Vector3 side = new Vector3(toTarget.z, 0f, -toTarget.x) * GetStableStrafeSide();
+            return side.sqrMagnitude > 0.001f ? side.normalized : _brawler.transform.right;
         }
 
         private bool IsFragileArchetype()
@@ -515,6 +642,7 @@ namespace MOBA.Core.Simulation.AI
 
             Vector3 selfPos = _brawler.Position;
             Vector3 targetPos = targetInfo.Target.Position;
+            _lastTacticalTargetPosition = targetPos;
 
             Vector3 awayFromTarget = selfPos - targetPos;
             awayFromTarget.y = 0f;
@@ -592,6 +720,7 @@ namespace MOBA.Core.Simulation.AI
 
             Vector3 selfPos = _brawler.Position;
             Vector3 targetPos = targetInfo.Target.Position;
+            _lastTacticalTargetPosition = targetPos;
 
             Vector3 awayFromTarget = selfPos - targetPos;
             awayFromTarget.y = 0f;
@@ -683,6 +812,7 @@ namespace MOBA.Core.Simulation.AI
 
             Vector3 selfPos = _brawler.Position;
             Vector3 targetPos = targetInfo.Target.Position;
+            _lastTacticalTargetPosition = targetPos;
 
             Vector3 awayFromTarget = selfPos - targetPos;
             awayFromTarget.y = 0f;
