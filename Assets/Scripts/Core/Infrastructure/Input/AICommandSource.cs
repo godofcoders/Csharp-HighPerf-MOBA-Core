@@ -9,12 +9,16 @@ namespace MOBA.Core.Simulation
         private bool _moveQueued;
 
         private Vector3 _mainAttackDirection;
+        private Vector3 _mainAttackTargetPoint;
+        private bool _mainAttackHasTargetPoint;
         private bool _mainAttackQueued;
 
         private Vector3 _gadgetDirection;
         private bool _gadgetQueued;
 
         private Vector3 _superDirection;
+        private Vector3 _superTargetPoint;
+        private bool _superHasTargetPoint;
         private bool _superQueued;
 
         private bool _hyperchargeQueued;
@@ -34,10 +38,17 @@ namespace MOBA.Core.Simulation
 
         public void QueueMainAttack(Vector3 direction)
         {
+            QueueMainAttack(direction, Vector3.zero, false);
+        }
+
+        public void QueueMainAttack(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
+        {
             if (direction.sqrMagnitude <= 0.01f)
                 return;
 
             _mainAttackDirection = direction.normalized;
+            _mainAttackTargetPoint = targetPoint;
+            _mainAttackHasTargetPoint = hasTargetPoint;
             _mainAttackQueued = true;
         }
 
@@ -52,10 +63,17 @@ namespace MOBA.Core.Simulation
 
         public void QueueSuper(Vector3 direction)
         {
+            QueueSuper(direction, Vector3.zero, false);
+        }
+
+        public void QueueSuper(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
+        {
             if (direction.sqrMagnitude <= 0.01f)
                 return;
 
             _superDirection = direction.normalized;
+            _superTargetPoint = targetPoint;
+            _superHasTargetPoint = hasTargetPoint;
             _superQueued = true;
         }
 
@@ -83,9 +101,13 @@ namespace MOBA.Core.Simulation
                 {
                     Type = BrawlerCommandType.MainAttack,
                     Direction = _mainAttackDirection,
+                    TargetPoint = _mainAttackTargetPoint,
+                    HasTargetPoint = _mainAttackHasTargetPoint,
                     Tick = currentTick
                 });
                 _mainAttackQueued = false;
+                _mainAttackTargetPoint = Vector3.zero;
+                _mainAttackHasTargetPoint = false;
             }
 
             if (_gadgetQueued)
@@ -105,9 +127,13 @@ namespace MOBA.Core.Simulation
                 {
                     Type = BrawlerCommandType.Super,
                     Direction = _superDirection,
+                    TargetPoint = _superTargetPoint,
+                    HasTargetPoint = _superHasTargetPoint,
                     Tick = currentTick
                 });
                 _superQueued = false;
+                _superTargetPoint = Vector3.zero;
+                _superHasTargetPoint = false;
             }
 
             if (_hyperchargeQueued)

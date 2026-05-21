@@ -16,5 +16,15 @@ namespace MOBA.Core.Definitions
         {
             return new EffectAbilityLogic(this);
         }
+
+        public override float GetAIIdealRange()
+        {
+            return PreviewRange * 0.85f;
+        }
+
+        public override float GetAIMaxRange()
+        {
+            return PreviewRange;
+        }
     }
 }

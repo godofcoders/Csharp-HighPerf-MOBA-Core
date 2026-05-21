@@ -9,6 +9,7 @@ namespace MOBA.Core.Simulation
         void Register(DeployableController controller);
         void Unregister(DeployableController controller);
         DeployableController GetActiveOwnedDeployable(BrawlerController owner, DeployableDefinition definition);
+        bool TryGetMostWoundedOwnedDeployable(BrawlerController owner, out DeployableController deployable);
     }
 
     public sealed class DeployableRegistry : IDeployableRegistry
@@ -68,6 +69,37 @@ namespace MOBA.Core.Simulation
             }
 
             return null;
+        }
+
+        public bool TryGetMostWoundedOwnedDeployable(BrawlerController owner, out DeployableController deployable)
+        {
+            deployable = null;
+
+            if (owner == null)
+                return false;
+
+            if (!_byOwner.TryGetValue(owner.EntityID, out List<DeployableController> list))
+                return false;
+
+            float lowestHealthRatio = float.MaxValue;
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                DeployableController candidate = list[i];
+                if (candidate == null || candidate.State == null || candidate.State.IsDead)
+                    continue;
+
+                float maxHealth = UnityEngine.Mathf.Max(1f, candidate.State.MaxHealth);
+                float healthRatio = candidate.State.CurrentHealth / maxHealth;
+
+                if (healthRatio < lowestHealthRatio)
+                {
+                    lowestHealthRatio = healthRatio;
+                    deployable = candidate;
+                }
+            }
+
+            return deployable != null;
         }
     }
 }

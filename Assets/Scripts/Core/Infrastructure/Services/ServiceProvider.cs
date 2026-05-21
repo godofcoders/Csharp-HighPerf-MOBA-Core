@@ -30,6 +30,19 @@ namespace MOBA.Core.Infrastructure
             throw new Exception($"Service of type {type} not registered.");
         }
 
+        public static bool TryGet<T>(out T service)
+        {
+            var type = typeof(T);
+            if (_services.TryGetValue(type, out var registeredService))
+            {
+                service = (T)registeredService;
+                return true;
+            }
+
+            service = default;
+            return false;
+        }
+
         public static void Clear() => _services.Clear();
     }
 }

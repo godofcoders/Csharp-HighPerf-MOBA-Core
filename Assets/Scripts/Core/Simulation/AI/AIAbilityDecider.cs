@@ -10,6 +10,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerController _self;
         private readonly BrawlerAIProfile _profile;
         private readonly AICommandSource _commandSource;
+        private readonly AIAbilitySpecialistPlanner _specialistPlanner;
 
         private uint _nextPrimaryAttackTick;
         private uint _nextGadgetTick;
@@ -19,6 +20,7 @@ namespace MOBA.Core.Simulation.AI
             _self = self;
             _profile = profile;
             _commandSource = commandSource;
+            _specialistPlanner = new AIAbilitySpecialistPlanner(self);
         }
 
         public void TryUseMainAttack(ISpatialEntity target, uint currentTick, float maxRange)
@@ -29,11 +31,19 @@ namespace MOBA.Core.Simulation.AI
             if (currentTick < _nextPrimaryAttackTick)
                 return;
 
-            Vector3 toTarget = target.Position - _self.Position;
-            if (toTarget.sqrMagnitude > (maxRange * maxRange))
+            if (!_specialistPlanner.TryBuildMainAttackPlan(
+                    target,
+                    maxRange,
+                    out AIAbilityCastPlan plan))
+            {
                 return;
+            }
 
-            _commandSource?.QueueMainAttack(toTarget.normalized);
+            _commandSource?.QueueMainAttack(
+                plan.Direction,
+                plan.TargetPoint,
+                plan.HasTargetPoint);
+
             _nextPrimaryAttackTick = currentTick + _profile.AttackCadenceTicks;
         }
 

@@ -167,6 +167,53 @@ namespace MOBA.Core.Simulation.AI
                 }
             }
 
+            if (attack is ChainProjectileAbilityDefinition chain)
+            {
+                int bounceTargets = CountEnemiesNear(target.Position, chain.BounceRadius, _self.Team);
+                if (bounceTargets > 1)
+                {
+                    return (bounceTargets - 1) * _profile.ClusterTargetBonus;
+                }
+            }
+
+            if (attack is ThrownHybridAoEAbilityDefinition thrown)
+            {
+                int clusterCount = CountEnemiesNear(target.Position, thrown.ImpactRadius * 1.35f, _self.Team);
+                if (clusterCount > 1)
+                {
+                    return (clusterCount - 1) * _profile.ClusterTargetBonus;
+                }
+            }
+
+            if (attack is ThrownVolleyAoEAbilityDefinition volley)
+            {
+                int clusterCount = CountEnemiesNear(target.Position, volley.ImpactRadius * 1.75f, _self.Team);
+                if (clusterCount > 1)
+                {
+                    return (clusterCount - 1) * _profile.ClusterTargetBonus;
+                }
+            }
+
+            if (attack is BurstSequenceProjectileAbilityDefinition burst)
+            {
+                int lineTargets = CountEnemiesAlongLine(target.Position, burst.Range, 1.5f);
+                if (lineTargets > 1)
+                {
+                    return (lineTargets - 1) * (_profile.InRangeTargetBonus * 0.75f);
+                }
+
+                float distance = Vector3.Distance(_self.Position, target.Position);
+                float normalized = 1f - Mathf.Clamp01(distance / Mathf.Max(1f, burst.Range));
+                return normalized * _profile.InRangeTargetBonus;
+            }
+
+            if (attack is HybridProjectileAbilityDefinition hybrid)
+            {
+                float distance = Vector3.Distance(_self.Position, target.Position);
+                float normalized = 1f - Mathf.Clamp01(distance / Mathf.Max(1f, hybrid.Range));
+                return normalized * _profile.InRangeTargetBonus;
+            }
+
             // Straight projectile users prefer more reachable targets.
             if (attack is ProjectileAbilityDefinition projectile)
             {
@@ -195,6 +242,48 @@ namespace MOBA.Core.Simulation.AI
                     continue;
 
                 count++;
+            }
+
+            return count;
+        }
+
+        private int CountEnemiesAlongLine(Vector3 targetPosition, float range, float width)
+        {
+            if (SimulationClock.Grid == null)
+                return 0;
+
+            Vector3 direction = targetPosition - _self.Position;
+            direction.y = 0f;
+
+            if (direction.sqrMagnitude <= 0.001f)
+                return 0;
+
+            direction.Normalize();
+
+            _clusterBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(_self.Position, range, _clusterBuffer);
+
+            int count = 0;
+
+            for (int i = 0; i < _clusterBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _clusterBuffer[i];
+                if (entity == null || entity.Team == _self.Team)
+                    continue;
+
+                if (entity is BrawlerController bc && (bc.State == null || bc.State.IsDead))
+                    continue;
+
+                Vector3 toEntity = entity.Position - _self.Position;
+                toEntity.y = 0f;
+
+                float forwardDistance = Vector3.Dot(toEntity, direction);
+                if (forwardDistance <= 0f || forwardDistance > range)
+                    continue;
+
+                Vector3 closestPoint = _self.Position + direction * forwardDistance;
+                if (Vector3.Distance(closestPoint, entity.Position) <= width)
+                    count++;
             }
 
             return count;

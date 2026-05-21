@@ -11,6 +11,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerController _self;
         private readonly BrawlerAIProfile _profile;
         private readonly AICommandSource _commandSource;
+        private readonly AIAbilitySpecialistPlanner _specialistPlanner;
         private readonly List<ISpatialEntity> _clusterBuffer;
 
         private uint _nextSuperDecisionTick;
@@ -20,6 +21,7 @@ namespace MOBA.Core.Simulation.AI
             _self = self;
             _profile = profile;
             _commandSource = commandSource;
+            _specialistPlanner = new AIAbilitySpecialistPlanner(self);
             _clusterBuffer = new List<ISpatialEntity>(bufferCapacity);
         }
 
@@ -37,21 +39,51 @@ namespace MOBA.Core.Simulation.AI
             if (currentTick < _nextSuperDecisionTick)
                 return;
 
-            Vector3 toTarget = target.Position - _self.Position;
+            if (_specialistPlanner.ShouldHoldSuperForSpecialistValue())
+                return;
+
+            AIAbilityCastPlan plan;
+            bool hasSpecialistPlan = _specialistPlanner.TryBuildSuperPlan(
+                target,
+                superRange,
+                out plan);
+
+            Vector3 aimPoint = hasSpecialistPlan && plan.HasTargetPoint
+                ? plan.TargetPoint
+                : target.Position;
+
+            Vector3 toTarget = aimPoint - _self.Position;
             float distance = toTarget.magnitude;
 
             float minRange = Mathf.Max(1f, superRange * _profile.SuperMinRangeRatio);
             float maxRange = Mathf.Max(minRange, superRange * _profile.SuperMaxRangeMultiplier);
 
-            if (distance < minRange || distance > maxRange)
+            if (distance > maxRange)
                 return;
 
-            bool shouldUse = ShouldUseSuperOnTarget(target, superRange);
+            if (distance < minRange && !(hasSpecialistPlan && plan.ForceUse))
+                return;
+
+            bool shouldUse = hasSpecialistPlan && plan.ForceUse
+                ? true
+                : ShouldUseSuperOnTarget(target, superRange);
 
             if (!shouldUse)
                 return;
 
-            _commandSource?.QueueSuper(toTarget.normalized);
+            if (!hasSpecialistPlan)
+            {
+                plan = AIAbilityCastPlan.Directional(
+                    target,
+                    toTarget,
+                    "default_super");
+            }
+
+            _commandSource?.QueueSuper(
+                plan.Direction,
+                plan.TargetPoint,
+                plan.HasTargetPoint);
+
             _nextSuperDecisionTick = currentTick + _profile.SuperDecisionCooldownTicks;
         }
 

@@ -22,5 +22,15 @@ namespace MOBA.Core.Definitions
         {
             return new MOBA.Core.Simulation.HybridProjectileLogic(this);
         }
+
+        public override float GetAIIdealRange()
+        {
+            return Range * 0.85f;
+        }
+
+        public override float GetAIMaxRange()
+        {
+            return Range;
+        }
     }
 }

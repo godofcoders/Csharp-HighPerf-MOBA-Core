@@ -49,5 +49,15 @@ namespace MOBA.Core.Definitions
         {
             return new MOBA.Core.Simulation.Abilities.ThrownVolleyAoEAbilityLogic(this);
         }
+
+        public override float GetAIIdealRange()
+        {
+            return ThrowRange * 0.85f;
+        }
+
+        public override float GetAIMaxRange()
+        {
+            return ThrowRange;
+        }
     }
 }
