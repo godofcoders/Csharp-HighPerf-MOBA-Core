@@ -34,14 +34,19 @@ namespace MOBA.Core.Simulation.AI
             if (snapshot == null)
                 return;
 
-            GUILayout.BeginArea(new Rect(20, 20, 420, 520), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(20, 20, 520, 600), GUI.skin.box);
 
             GUILayout.Label($"AI DEBUG: {snapshot.BrawlerName}");
             GUILayout.Label($"Action: {snapshot.CurrentAction}");
             GUILayout.Label($"Target: {snapshot.CurrentTargetName} ({snapshot.CurrentTargetId})");
+            GUILayout.Label(
+                $"Target Focus: team={snapshot.CurrentTargetFocusCount} " +
+                $"allies={snapshot.CurrentTargetAllyFocusCount} " +
+                $"penalty={snapshot.CurrentTargetOverFocusPenalty:0.0}");
             GUILayout.Label($"HP: {snapshot.Health:0}/{snapshot.MaxHealth:0}");
             GUILayout.Label($"Position: {snapshot.Position}");
             GUILayout.Label($"Team Tactic: {snapshot.TeamTactic}");
+            GUILayout.Label($"Team Signals: {snapshot.TeamSignalDebug}");
             GUILayout.Label($"Objective: {snapshot.ObjectiveName}");
 
             GUILayout.Space(8);
@@ -93,8 +98,12 @@ namespace MOBA.Core.Simulation.AI
                 Debug.Log(
                     $"[AI DEBUG] {snapshot.BrawlerName} | " +
                     $"Action={snapshot.CurrentAction} | " +
-                    $"Target={snapshot.CurrentTargetName} | " +
+                    $"Target={snapshot.CurrentTargetName} " +
+                    $"Focus={snapshot.CurrentTargetFocusCount} " +
+                    $"AllyFocus={snapshot.CurrentTargetAllyFocusCount} " +
+                    $"OverFocusPenalty={snapshot.CurrentTargetOverFocusPenalty:0.0} | " +
                     $"HP={snapshot.Health:0}/{snapshot.MaxHealth:0} | " +
+                    $"TeamSignals={snapshot.TeamSignalDebug} | " +
                     $"Statuses={string.Join(", ", snapshot.ActiveStatuses)}");
             }
         }

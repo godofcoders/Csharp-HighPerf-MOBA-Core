@@ -84,6 +84,12 @@ namespace MOBA.Core.Simulation.AI
         public float PeelWeight = 1f;
         public float RegroupHealthThreshold = 0.35f;
         public float AllySupportRange = 8f;
+        [Tooltip("How many allies can already focus a target before this bot starts preferring other viable targets.")]
+        public int TargetFocusSoftLimit = 1;
+        [Tooltip("Target score removed for each allied focus beyond TargetFocusSoftLimit.")]
+        public float OverFocusedTargetPenaltyPerAlly = 16f;
+        [Tooltip("Maximum target score removed for over-focused targets. Keeps focus-fire possible for urgent kills.")]
+        public float MaxOverFocusedTargetPenalty = 36f;
 
         [Header("Spacing / Anti-Clump")]
         public float AllyAvoidanceRadius = 2.5f;
@@ -160,6 +166,9 @@ namespace MOBA.Core.Simulation.AI
                     PeelWeight = 0.8f;
                     RegroupHealthThreshold = 0.45f;
                     AllySupportRange = 9f;
+                    TargetFocusSoftLimit = 1;
+                    OverFocusedTargetPenaltyPerAlly = 18f;
+                    MaxOverFocusedTargetPenalty = 40f;
 
                     AllyAvoidanceRadius = 3.5f;
                     AllyAvoidanceWeight = 2.0f;
@@ -194,6 +203,9 @@ namespace MOBA.Core.Simulation.AI
                     PeelWeight = 1.35f;
                     RegroupHealthThreshold = 0.20f;
                     AllySupportRange = 10f;
+                    TargetFocusSoftLimit = 1;
+                    OverFocusedTargetPenaltyPerAlly = 12f;
+                    MaxOverFocusedTargetPenalty = 28f;
 
                     AllyAvoidanceRadius = 2.0f;
                     AllyAvoidanceWeight = 0.8f;
@@ -228,6 +240,9 @@ namespace MOBA.Core.Simulation.AI
                     PeelWeight = 0.65f;
                     RegroupHealthThreshold = 0.25f;
                     AllySupportRange = 7f;
+                    TargetFocusSoftLimit = 1;
+                    OverFocusedTargetPenaltyPerAlly = 20f;
+                    MaxOverFocusedTargetPenalty = 44f;
 
                     AllyAvoidanceRadius = 2.3f;
                     AllyAvoidanceWeight = 1.1f;
@@ -262,6 +277,9 @@ namespace MOBA.Core.Simulation.AI
                     PeelWeight = 1.4f;
                     RegroupHealthThreshold = 0.40f;
                     AllySupportRange = 11f;
+                    TargetFocusSoftLimit = 1;
+                    OverFocusedTargetPenaltyPerAlly = 18f;
+                    MaxOverFocusedTargetPenalty = 40f;
 
                     AllyAvoidanceRadius = 3.0f;
                     AllyAvoidanceWeight = 1.8f;
@@ -298,6 +316,9 @@ namespace MOBA.Core.Simulation.AI
                     PeelWeight = 1.05f;
                     RegroupHealthThreshold = 0.35f;
                     AllySupportRange = 8.5f;
+                    TargetFocusSoftLimit = 1;
+                    OverFocusedTargetPenaltyPerAlly = 16f;
+                    MaxOverFocusedTargetPenalty = 36f;
 
                     AllyAvoidanceRadius = 2.5f;
                     AllyAvoidanceWeight = 1.5f;
@@ -339,6 +360,9 @@ namespace MOBA.Core.Simulation.AI
                     PeelWeight = 1f;
                     RegroupHealthThreshold = 0.3f;
                     AllySupportRange = 8f;
+                    TargetFocusSoftLimit = 1;
+                    OverFocusedTargetPenaltyPerAlly = 18f;
+                    MaxOverFocusedTargetPenalty = 40f;
 
                     AllyAvoidanceRadius = 3f;
                     AllyAvoidanceWeight = 1.7f;
@@ -374,6 +398,9 @@ namespace MOBA.Core.Simulation.AI
                     PeelWeight = 1.0f;
                     RegroupHealthThreshold = 0.35f;
                     AllySupportRange = 8f;
+                    TargetFocusSoftLimit = 1;
+                    OverFocusedTargetPenaltyPerAlly = 16f;
+                    MaxOverFocusedTargetPenalty = 36f;
 
                     AllyAvoidanceRadius = 2.5f;
                     AllyAvoidanceWeight = 1.5f;

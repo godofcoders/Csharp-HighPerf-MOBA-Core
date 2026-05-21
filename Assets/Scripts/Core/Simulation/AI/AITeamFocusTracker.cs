@@ -16,6 +16,9 @@ namespace MOBA.Core.Simulation.AI
 
         public void ReportFocus(int botEntityId, int targetEntityId)
         {
+            if (botEntityId == 0)
+                return;
+
             ClearFocus(botEntityId);
 
             if (targetEntityId == 0)
@@ -31,6 +34,9 @@ namespace MOBA.Core.Simulation.AI
 
         public void ClearFocus(int botEntityId)
         {
+            if (botEntityId == 0)
+                return;
+
             if (!_botToTarget.TryGetValue(botEntityId, out int previousTargetId))
                 return;
 
@@ -55,6 +61,22 @@ namespace MOBA.Core.Simulation.AI
             return _focusCounts.TryGetValue(targetEntityId, out int count)
                 ? count
                 : 0;
+        }
+
+        public int GetFocusCountExcluding(int targetEntityId, int excludedBotEntityId)
+        {
+            int count = GetFocusCount(targetEntityId);
+
+            if (count <= 0 || excludedBotEntityId == 0)
+                return count;
+
+            if (_botToTarget.TryGetValue(excludedBotEntityId, out int botTargetId) &&
+                botTargetId == targetEntityId)
+            {
+                count--;
+            }
+
+            return count > 0 ? count : 0;
         }
 
         public void Clear()

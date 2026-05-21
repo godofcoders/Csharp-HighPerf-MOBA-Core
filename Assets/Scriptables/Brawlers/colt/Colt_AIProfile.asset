@@ -62,6 +62,9 @@ MonoBehaviour:
   PeelWeight: 0.8
   RegroupHealthThreshold: 0.45
   AllySupportRange: 9
+  TargetFocusSoftLimit: 1
+  OverFocusedTargetPenaltyPerAlly: 18
+  MaxOverFocusedTargetPenalty: 40
   AllyAvoidanceRadius: 3.5
   AllyAvoidanceWeight: 2
   HoldRangePositionRefreshTicks: 20

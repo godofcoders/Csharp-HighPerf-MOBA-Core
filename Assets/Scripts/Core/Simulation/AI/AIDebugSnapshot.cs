@@ -10,6 +10,8 @@ namespace MOBA.Core.Simulation.AI
         public string CurrentTargetName;
         public int CurrentTargetId;
         public int CurrentTargetFocusCount;
+        public int CurrentTargetAllyFocusCount;
+        public float CurrentTargetOverFocusPenalty;
 
         public float Health;
         public float MaxHealth;
@@ -23,6 +25,7 @@ namespace MOBA.Core.Simulation.AI
         public Vector3? TargetPosition;
 
         public string TeamTactic;
+        public string TeamSignalDebug;
         public string ObjectiveName;
 
         public readonly List<AIActionScore> ActionScores = new List<AIActionScore>(16);

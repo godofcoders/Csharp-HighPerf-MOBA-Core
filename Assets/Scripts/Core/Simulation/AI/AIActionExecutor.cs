@@ -323,6 +323,20 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetThreatCenter(currentTick, out var threatCenter, out _))
+            {
+                _navAgent.RequestDestination(threatCenter, 1.0f);
+                return;
+            }
+
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetEnemyHotspot(currentTick, out var enemyHotspot, out _))
+            {
+                _navAgent.RequestDestination(enemyHotspot, 1.0f);
+                return;
+            }
+
             if (AITeamMemory.TryGetRecentHotspot(
                 _brawler.Team,
                 currentTick,

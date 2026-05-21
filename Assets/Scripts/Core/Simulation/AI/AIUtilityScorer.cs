@@ -360,6 +360,17 @@ namespace MOBA.Core.Simulation.AI
                 score += 20f;
             }
 
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetThreatCenter(currentTick, out _, out float threatPressure))
+            {
+                score += Mathf.Clamp(threatPressure * 5f, 6f, 18f);
+            }
+            else if (_teamCoordinator != null &&
+                     _teamCoordinator.TryGetEnemyHotspot(currentTick, out _, out float hotspotPressure))
+            {
+                score += Mathf.Clamp(hotspotPressure * 4f, 4f, 14f);
+            }
+
             if (Gem.HasAnyUnpickedWithin(_self.Position, 8f))
                 score += 35f;
 

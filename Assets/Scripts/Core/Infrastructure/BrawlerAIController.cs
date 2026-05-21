@@ -107,12 +107,50 @@ _actionExecutor != null
                 : string.Empty;
 
         public int CurrentTargetFocusCount =>
-_teamCoordinator != null &&
-_targetInfo != null &&
-_targetInfo.HasLiveTarget &&
-_targetInfo.Target != null
-? _teamCoordinator.GetTargetFocusCount(_targetInfo.Target.EntityID)
-: 0;
+            _teamCoordinator != null &&
+            _targetInfo != null &&
+            _targetInfo.HasLiveTarget &&
+            _targetInfo.Target != null
+                ? _teamCoordinator.GetTargetFocusCount(_targetInfo.Target.EntityID)
+                : 0;
+
+        public int CurrentTargetAllyFocusCount
+        {
+            get
+            {
+                if (_targetScorer == null ||
+                    _targetInfo == null ||
+                    !_targetInfo.HasLiveTarget ||
+                    _targetInfo.Target == null)
+                {
+                    return 0;
+                }
+
+                _targetScorer.CalculateOverFocusedTargetPenalty(
+                    _targetInfo.Target.EntityID,
+                    out int alliedFocusCount);
+
+                return alliedFocusCount;
+            }
+        }
+
+        public float CurrentTargetOverFocusPenalty
+        {
+            get
+            {
+                if (_targetScorer == null ||
+                    _targetInfo == null ||
+                    !_targetInfo.HasLiveTarget ||
+                    _targetInfo.Target == null)
+                {
+                    return 0f;
+                }
+
+                return _targetScorer.CalculateOverFocusedTargetPenalty(
+                    _targetInfo.Target.EntityID,
+                    out _);
+            }
+        }
 
         /// ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -197,8 +235,7 @@ _targetInfo.Target != null
             _debugSnapshot.ClearLists();
 
             _debugSnapshot.BrawlerName = _brawler.Definition != null ? _brawler.Definition.BrawlerName : _brawler.name;
-            _debugSnapshot.CurrentAction =
-     $"{_lastChosenAction.ActionType} ({_lastChosenAction.Score:0.0})";
+            _debugSnapshot.CurrentAction = $"{_lastChosenAction.ActionType} ({_lastChosenAction.Score:0.0})";
             _debugSnapshot.Health = _brawler.State.CurrentHealth;
             _debugSnapshot.MaxHealth = _brawler.State.MaxHealth.Value;
             _debugSnapshot.Position = _brawler.Position;
@@ -224,6 +261,8 @@ _targetInfo.Target != null
                 _debugSnapshot.TargetPosition = null;
             }
             _debugSnapshot.CurrentTargetFocusCount = CurrentTargetFocusCount;
+            _debugSnapshot.CurrentTargetAllyFocusCount = CurrentTargetAllyFocusCount;
+            _debugSnapshot.CurrentTargetOverFocusPenalty = CurrentTargetOverFocusPenalty;
 
             if (_teamCoordinator != null)
             {
@@ -243,10 +282,27 @@ _targetInfo.Target != null
                 {
                     _debugSnapshot.TeamTactic = "None";
                 }
+
+                string threatSignal = _teamCoordinator.TryGetThreatCenter(
+                    currentTick,
+                    out var threatCenter,
+                    out float threatPressure)
+                    ? $"Threat={FormatVector(threatCenter)} p={threatPressure:0.0}"
+                    : "Threat=None";
+
+                string hotspotSignal = _teamCoordinator.TryGetEnemyHotspot(
+                    currentTick,
+                    out var enemyHotspot,
+                    out float hotspotPressure)
+                    ? $"Hotspot={FormatVector(enemyHotspot)} p={hotspotPressure:0.0}"
+                    : "Hotspot=None";
+
+                _debugSnapshot.TeamSignalDebug = $"{threatSignal} {hotspotSignal}";
             }
             else
             {
                 _debugSnapshot.TeamTactic = "None";
+                _debugSnapshot.TeamSignalDebug = "Threat=None Hotspot=None";
             }
 
             _debugSnapshot.ObjectiveName = _profile != null ? _profile.PreferredObjective.ToString() : "None";

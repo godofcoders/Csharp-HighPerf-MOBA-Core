@@ -112,10 +112,43 @@ namespace MOBA.Core.Simulation.AI
                 score += _profile.FocusFireWeight;
             }
 
-            // 6. Ability-aware bonus
+            // 6. Team anti-overfocus penalty.
+            // Count allies excluding this bot so retargeting is not biased by
+            // the bot's previous focus report from an earlier tick.
+            float overFocusPenalty = CalculateOverFocusedTargetPenalty(
+                target.EntityID,
+                out _);
+
+            score -= overFocusPenalty;
+
+            // 7. Ability-aware bonus
             score += ScoreByAbilityShape(target);
 
             return score;
+        }
+
+        public float CalculateOverFocusedTargetPenalty(
+            int targetEntityId,
+            out int alliedFocusCount)
+        {
+            alliedFocusCount = 0;
+
+            if (targetEntityId == 0 || _self == null || _profile == null)
+                return 0f;
+
+            alliedFocusCount = AITeamBlackboard.GetTargetFocusCountExcluding(
+                _self.Team,
+                targetEntityId,
+                _self.EntityID);
+
+            int softLimit = Mathf.Max(0, _profile.TargetFocusSoftLimit);
+            int excessFocus = alliedFocusCount - softLimit;
+
+            if (excessFocus <= 0)
+                return 0f;
+
+            float rawPenalty = excessFocus * Mathf.Max(0f, _profile.OverFocusedTargetPenaltyPerAlly);
+            return Mathf.Min(rawPenalty, Mathf.Max(0f, _profile.MaxOverFocusedTargetPenalty));
         }
 
         private float ScoreByAbilityShape(ISpatialEntity target)
