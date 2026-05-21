@@ -42,11 +42,12 @@ namespace MOBA.Core.Simulation.AI
 
         public float ScoreTarget(ISpatialEntity target, AITargetInfo memory, uint currentTick)
         {
-            if (target == null)
+            if (!SpatialEntityUtility.IsAlive(target))
                 return float.MinValue;
 
             Vector3 delta = target.Position - _self.Position;
             float dist = delta.sqrMagnitude;
+            int targetEntityId = target.EntityID;
 
             float score = 0f;
 
@@ -54,7 +55,9 @@ namespace MOBA.Core.Simulation.AI
             score -= dist * Mathf.Max(0.01f, _profile.DistanceWeight);
 
             // 2. Prefer keeping current target a bit
-            if (memory.HasLiveTarget && memory.Target != null && memory.Target.EntityID == target.EntityID)
+            if (memory.HasLiveTarget &&
+                SpatialEntityUtility.IsAlive(memory.Target) &&
+                memory.Target.EntityID == targetEntityId)
             {
                 score += _profile.CurrentTargetStickiness;
             }
@@ -94,11 +97,11 @@ namespace MOBA.Core.Simulation.AI
             // 4. My own remembered threat memory
             if (_self.State != null && _self.State.ThreatTracker != null)
             {
-                float rememberedThreat = _self.State.ThreatTracker.GetThreat(target.EntityID, currentTick, _threatForgetTicks);
+                float rememberedThreat = _self.State.ThreatTracker.GetThreat(targetEntityId, currentTick, _threatForgetTicks);
                 score += rememberedThreat * 0.75f;
 
                 int topThreatId = _self.State.ThreatTracker.GetHighestThreatTarget(currentTick, _threatForgetTicks);
-                if (topThreatId != 0 && topThreatId == target.EntityID)
+                if (topThreatId != 0 && topThreatId == targetEntityId)
                 {
                     score += 30f;
                 }
@@ -106,8 +109,8 @@ namespace MOBA.Core.Simulation.AI
 
             // 5. Team focus-fire bonus
             if (AITeamBlackboard.TryGetFocusTarget(_self.Team, currentTick, 90, out var focusTarget) &&
-                focusTarget != null &&
-                focusTarget.EntityID == target.EntityID)
+                SpatialEntityUtility.IsAlive(focusTarget) &&
+                focusTarget.EntityID == targetEntityId)
             {
                 score += _profile.FocusFireWeight;
             }
@@ -116,7 +119,7 @@ namespace MOBA.Core.Simulation.AI
             // Count allies excluding this bot so retargeting is not biased by
             // the bot's previous focus report from an earlier tick.
             float overFocusPenalty = CalculateOverFocusedTargetPenalty(
-                target.EntityID,
+                targetEntityId,
                 out _);
 
             score -= overFocusPenalty;
@@ -153,6 +156,9 @@ namespace MOBA.Core.Simulation.AI
 
         private float ScoreByAbilityShape(ISpatialEntity target)
         {
+            if (!SpatialEntityUtility.IsAlive(target))
+                return 0f;
+
             AbilityDefinition attack = _self.Definition?.MainAttack;
             if (attack == null || SimulationClock.Grid == null)
                 return 0f;
@@ -235,7 +241,7 @@ namespace MOBA.Core.Simulation.AI
             for (int i = 0; i < _clusterBuffer.Count; i++)
             {
                 ISpatialEntity entity = _clusterBuffer[i];
-                if (entity == null || entity.Team == selfTeam)
+                if (!SpatialEntityUtility.IsAlive(entity) || entity.Team == selfTeam)
                     continue;
 
                 if (entity is BrawlerController bc && (bc.State == null || bc.State.IsDead))
@@ -268,7 +274,7 @@ namespace MOBA.Core.Simulation.AI
             for (int i = 0; i < _clusterBuffer.Count; i++)
             {
                 ISpatialEntity entity = _clusterBuffer[i];
-                if (entity == null || entity.Team == _self.Team)
+                if (!SpatialEntityUtility.IsAlive(entity) || entity.Team == _self.Team)
                     continue;
 
                 if (entity is BrawlerController bc && (bc.State == null || bc.State.IsDead))

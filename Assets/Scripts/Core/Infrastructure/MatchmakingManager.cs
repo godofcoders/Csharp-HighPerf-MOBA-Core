@@ -15,8 +15,12 @@ namespace MOBA.Core.Infrastructure
         [Header("Match Settings")]
         [SerializeField] private int _teamSize = 3;
         [SerializeField] private BrawlerDefinition _defaultBotBrawler;
+        [SerializeField] private BrawlerDefinition[] _botBrawlerPool;
+        [SerializeField] private bool _avoidDuplicateBotBrawlersUntilPoolExhausted = true;
 
         private List<MatchParticipant> _roster = new List<MatchParticipant>();
+        private readonly List<BrawlerDefinition> _botPickBag = new List<BrawlerDefinition>(8);
+
         public bool IsLobbyFull => _roster.Count >= _teamSize * 2;
 
         private void Awake() => Instance = this;
@@ -50,15 +54,86 @@ namespace MOBA.Core.Infrastructure
         private void FillWithBots()
         {
             int totalSlots = _teamSize * 2;
+            List<BrawlerDefinition> botPool = BuildBotPool();
+
+            if (botPool.Count == 0)
+            {
+                Debug.LogError("[Lobby] Cannot fill bot roster: no bot brawlers are assigned.");
+                return;
+            }
+
             while (_roster.Count < totalSlots)
             {
                 // Fill Team Blue first, then Team Red
                 TeamType team = (_roster.Count < _teamSize) ? TeamType.Blue : TeamType.Red;
-                _roster.Add(new MatchParticipant($"Bot {_roster.Count}", team, _defaultBotBrawler, true));
+                BrawlerDefinition botBrawler = PickBotBrawler(botPool);
+                string botName = $"Bot {_roster.Count} ({botBrawler.BrawlerName})";
+                _roster.Add(new MatchParticipant(botName, team, botBrawler, true));
             }
 
             Debug.Log("[Lobby] Roster full. Initializing Spawn Sequence...");
             StartMatch();
+        }
+
+        private List<BrawlerDefinition> BuildBotPool()
+        {
+            List<BrawlerDefinition> pool = new List<BrawlerDefinition>(8);
+
+            AddUniqueBot(pool, _defaultBotBrawler);
+
+            if (_botBrawlerPool != null)
+            {
+                for (int i = 0; i < _botBrawlerPool.Length; i++)
+                {
+                    AddUniqueBot(pool, _botBrawlerPool[i]);
+                }
+            }
+
+            return pool;
+        }
+
+        private static void AddUniqueBot(List<BrawlerDefinition> pool, BrawlerDefinition candidate)
+        {
+            if (candidate == null || pool.Contains(candidate))
+                return;
+
+            pool.Add(candidate);
+        }
+
+        private BrawlerDefinition PickBotBrawler(List<BrawlerDefinition> pool)
+        {
+            if (pool.Count == 1 || !_avoidDuplicateBotBrawlersUntilPoolExhausted)
+            {
+                return pool[UnityEngine.Random.Range(0, pool.Count)];
+            }
+
+            if (_botPickBag.Count == 0)
+            {
+                RefillBotPickBag(pool);
+            }
+
+            int index = _botPickBag.Count - 1;
+            BrawlerDefinition picked = _botPickBag[index];
+            _botPickBag.RemoveAt(index);
+            return picked;
+        }
+
+        private void RefillBotPickBag(List<BrawlerDefinition> pool)
+        {
+            _botPickBag.Clear();
+
+            for (int i = 0; i < pool.Count; i++)
+            {
+                _botPickBag.Add(pool[i]);
+            }
+
+            for (int i = _botPickBag.Count - 1; i > 0; i--)
+            {
+                int swapIndex = UnityEngine.Random.Range(0, i + 1);
+                BrawlerDefinition temp = _botPickBag[i];
+                _botPickBag[i] = _botPickBag[swapIndex];
+                _botPickBag[swapIndex] = temp;
+            }
         }
 
         private void StartMatch()

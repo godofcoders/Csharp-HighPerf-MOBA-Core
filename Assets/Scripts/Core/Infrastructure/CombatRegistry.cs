@@ -9,7 +9,7 @@ namespace MOBA.Core.Infrastructure
 
         public static void Register(ISpatialEntity entity)
         {
-            if (entity == null)
+            if (!SpatialEntityUtility.IsAlive(entity))
                 return;
 
             _entities[entity.EntityID] = entity;
@@ -20,20 +20,36 @@ namespace MOBA.Core.Infrastructure
             if (entity == null)
                 return;
 
+            if (!SpatialEntityUtility.IsAlive(entity))
+                return;
+
             _entities.Remove(entity.EntityID);
         }
 
         public static ISpatialEntity GetEntity(int entityId)
         {
             if (_entities.TryGetValue(entityId, out var entity))
-                return entity;
+            {
+                if (SpatialEntityUtility.IsAlive(entity))
+                    return entity;
+
+                _entities.Remove(entityId);
+            }
 
             return null;
         }
 
         public static bool TryGetEntity(int entityId, out ISpatialEntity entity)
         {
-            return _entities.TryGetValue(entityId, out entity);
+            if (!_entities.TryGetValue(entityId, out entity))
+                return false;
+
+            if (SpatialEntityUtility.IsAlive(entity))
+                return true;
+
+            _entities.Remove(entityId);
+            entity = null;
+            return false;
         }
     }
 }

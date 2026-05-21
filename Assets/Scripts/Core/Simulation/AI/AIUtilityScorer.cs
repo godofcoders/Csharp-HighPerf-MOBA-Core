@@ -309,7 +309,7 @@ namespace MOBA.Core.Simulation.AI
 
             if (_teamCoordinator != null &&
                 _teamCoordinator.TryGetFocusTarget(currentTick, out var focusTarget) &&
-                focusTarget != null &&
+                SpatialEntityUtility.IsAlive(focusTarget) &&
                 targetInfo.Target.EntityID == focusTarget.EntityID)
             {
                 score += _profile.FocusFireWeight;

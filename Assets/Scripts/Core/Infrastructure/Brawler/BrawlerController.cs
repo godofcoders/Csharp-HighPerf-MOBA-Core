@@ -45,6 +45,7 @@ namespace MOBA.Core.Infrastructure
         private IBrawlerCommandSource _commandSource;
 
         private readonly BrawlerDebugSnapshot _debugSnapshot = new BrawlerDebugSnapshot();
+        private int _entityId;
 
         public BrawlerDefinition Definition => _definition;
         public BrawlerState State { get; private set; }
@@ -53,11 +54,12 @@ namespace MOBA.Core.Infrastructure
         public Vector3 Position => transform.position;
         public Vector3 CurrentPosition => transform.position;
         public float CollisionRadius => 0.5f;
-        public int EntityID => gameObject.GetInstanceID();
+        public int EntityID => _entityId != 0 ? _entityId : gameObject.GetInstanceID();
         public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
 
         protected override void Awake()
         {
+            _entityId = gameObject.GetInstanceID();
             base.Awake();
 
             // Generic shell flow:

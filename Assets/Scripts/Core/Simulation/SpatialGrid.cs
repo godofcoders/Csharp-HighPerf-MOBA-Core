@@ -19,9 +19,13 @@ namespace MOBA.Core.Simulation
 
         public void Add(ISpatialEntity entity)
         {
+            if (!SpatialEntityUtility.IsAlive(entity))
+                return;
+
             var cell = GetCellCoords(entity.Position);
             if (!_cells.ContainsKey(cell)) _cells[cell] = new List<ISpatialEntity>();
-            _cells[cell].Add(entity);
+            if (!_cells[cell].Contains(entity))
+                _cells[cell].Add(entity);
         }
 
         public void Remove(ISpatialEntity entity, Vector3 lastKnownPos)
@@ -35,6 +39,12 @@ namespace MOBA.Core.Simulation
 
         public void UpdateEntity(ISpatialEntity entity, Vector3 oldPos, Vector3 newPos)
         {
+            if (!SpatialEntityUtility.IsAlive(entity))
+            {
+                Remove(entity, oldPos);
+                return;
+            }
+
             Vector2Int oldCell = GetCellCoords(oldPos);
             Vector2Int newCell = GetCellCoords(newPos);
 
@@ -65,6 +75,12 @@ namespace MOBA.Core.Simulation
                         for (int i = 0; i < entities.Count; i++)
                         {
                             var target = entities[i];
+                            if (!SpatialEntityUtility.IsAlive(target))
+                            {
+                                entities.RemoveAt(i);
+                                i--;
+                                continue;
+                            }
 
                             bool sameTeam = target.Team == attackerTeam;
 
@@ -114,6 +130,13 @@ namespace MOBA.Core.Simulation
                         for (int i = 0; i < entities.Count; i++)
                         {
                             var entity = entities[i];
+                            if (!SpatialEntityUtility.IsAlive(entity))
+                            {
+                                entities.RemoveAt(i);
+                                i--;
+                                continue;
+                            }
+
                             float distSq = (entity.Position - position).sqrMagnitude;
                             if (distSq <= radiusSq)
                             {

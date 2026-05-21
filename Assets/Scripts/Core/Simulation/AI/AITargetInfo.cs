@@ -14,7 +14,7 @@ namespace MOBA.Core.Simulation.AI
         {
             get
             {
-                if (Target == null)
+                if (!SpatialEntityUtility.IsAlive(Target))
                     return false;
 
                 if (Target is BrawlerController bc)
@@ -29,6 +29,12 @@ namespace MOBA.Core.Simulation.AI
 
         public void Remember(ISpatialEntity target, uint currentTick)
         {
+            if (!SpatialEntityUtility.IsAlive(target))
+            {
+                Clear();
+                return;
+            }
+
             Target = target;
             LastKnownPosition = target.Position;
             LastSeenTick = currentTick;
@@ -36,7 +42,11 @@ namespace MOBA.Core.Simulation.AI
 
         public void RefreshLastKnownPosition(uint currentTick)
         {
-            if (Target == null) return;
+            if (!SpatialEntityUtility.IsAlive(Target))
+            {
+                LoseLiveTarget();
+                return;
+            }
 
             LastKnownPosition = Target.Position;
             LastSeenTick = currentTick;

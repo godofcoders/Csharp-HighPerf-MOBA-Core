@@ -14,6 +14,7 @@ namespace MOBA.Core.Simulation
         private float _currentHealth;
         private IDeployableBehavior _behavior;
         private DeployableState _state;
+        private int _entityId;
         public DeployableState State => _state;
 
         public DeployableDefinition Definition => _definition;
@@ -22,7 +23,7 @@ namespace MOBA.Core.Simulation
         public Vector3 Position => transform.position;
         public Vector3 CurrentPosition => transform.position;
         public float CollisionRadius => 0.5f;
-        public int EntityID => gameObject.GetInstanceID();
+        public int EntityID => _entityId != 0 ? _entityId : gameObject.GetInstanceID();
         public bool IsExpired(uint currentTick) => currentTick >= _expiryTick;
         public bool IsDead => _currentHealth <= 0f;
 
@@ -31,6 +32,12 @@ namespace MOBA.Core.Simulation
 
         public DeployableAbilityUser AbilityUser => _abilityUser;
         public IAbilityLogic AbilityLogic => _abilityLogic;
+
+        protected override void Awake()
+        {
+            _entityId = gameObject.GetInstanceID();
+            base.Awake();
+        }
 
         public void Initialize(DeployableSpawnRequest request)
         {

@@ -90,7 +90,7 @@ namespace MOBA.Core.Simulation.AI
 
         private bool IsValidTarget(BrawlerController self, ISpatialEntity entity)
         {
-            if (entity == null)
+            if (!SpatialEntityUtility.IsAlive(entity))
                 return false;
 
             if (entity.EntityID == self.EntityID)
