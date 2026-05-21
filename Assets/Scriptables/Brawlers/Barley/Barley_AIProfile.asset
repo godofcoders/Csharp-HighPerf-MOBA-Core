@@ -12,6 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 100fa30d2c78d4094b9cb6cd0594c58f, type: 3}
   m_Name: Barley_AIProfile
   m_EditorClassIdentifier: 
+  Archetype: 6
+  Difficulty: 1
+  Personality: 0
+  ReactionDelayTicks: 0
+  AimErrorDegrees: 0
   DetectionRadius: 10
   MemoryDurationTicks: 90
   IdleSenseIntervalTicks: 10

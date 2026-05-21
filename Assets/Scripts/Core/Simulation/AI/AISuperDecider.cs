@@ -79,6 +79,11 @@ namespace MOBA.Core.Simulation.AI
                     "default_super");
             }
 
+            plan = AIAimAccuracyUtility.ApplyAimError(
+                plan,
+                _self.Position,
+                _profile.AimErrorDegrees);
+
             _commandSource?.QueueSuper(
                 plan.Direction,
                 plan.TargetPoint,

@@ -9,6 +9,14 @@ namespace MOBA.Core.Simulation.AI
         [Header("Brawler Role")]
         public BrawlerArchetype Archetype = BrawlerArchetype.Fighter;
 
+        [Header("Difficulty / Personality")]
+        public AIDifficultyLevel Difficulty = AIDifficultyLevel.Normal;
+        public AIPersonalityType Personality = AIPersonalityType.Balanced;
+        [Tooltip("Additional ticks added to perception scheduling. Higher values feel slower to react.")]
+        public uint ReactionDelayTicks = 0;
+        [Tooltip("Random yaw/placement error applied to AI casts. 0 means perfect AI aim.")]
+        public float AimErrorDegrees = 0f;
+
         [Header("Perception")]
         public float DetectionRadius = 10f;
         public uint MemoryDurationTicks = 90;

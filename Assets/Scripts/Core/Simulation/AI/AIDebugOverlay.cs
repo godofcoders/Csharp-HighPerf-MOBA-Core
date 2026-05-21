@@ -38,6 +38,10 @@ namespace MOBA.Core.Simulation.AI
 
             GUILayout.Label($"AI DEBUG: {snapshot.BrawlerName}");
             GUILayout.Label($"Action: {snapshot.CurrentAction}");
+            GUILayout.Label(
+                $"Tuning: {snapshot.Difficulty}/{snapshot.Personality} " +
+                $"reaction={snapshot.ReactionDelayTicks} " +
+                $"aimErr={snapshot.AimErrorDegrees:0.0}");
             GUILayout.Label($"Target: {snapshot.CurrentTargetName} ({snapshot.CurrentTargetId})");
             GUILayout.Label(
                 $"Target Focus: team={snapshot.CurrentTargetFocusCount} " +
@@ -98,6 +102,9 @@ namespace MOBA.Core.Simulation.AI
                 Debug.Log(
                     $"[AI DEBUG] {snapshot.BrawlerName} | " +
                     $"Action={snapshot.CurrentAction} | " +
+                    $"Tuning={snapshot.Difficulty}/{snapshot.Personality} " +
+                    $"Reaction={snapshot.ReactionDelayTicks} " +
+                    $"AimErr={snapshot.AimErrorDegrees:0.0} | " +
                     $"Target={snapshot.CurrentTargetName} " +
                     $"Focus={snapshot.CurrentTargetFocusCount} " +
                     $"AllyFocus={snapshot.CurrentTargetAllyFocusCount} " +

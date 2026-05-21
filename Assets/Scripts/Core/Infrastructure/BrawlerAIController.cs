@@ -14,6 +14,8 @@ namespace MOBA.Core.Infrastructure
         protected override TickPhase Phase => TickPhase.InputApply;
 
         [SerializeField] private BrawlerController _brawler;
+        [SerializeField] private AIDifficultyLevel _difficulty = AIDifficultyLevel.Normal;
+        [SerializeField] private AIPersonalityType _personality = AIPersonalityType.Balanced;
 
         private NavigationAgent _navAgent;
         private AIPerception _perception;
@@ -105,6 +107,9 @@ _actionExecutor != null
             _actionExecutor != null
                 ? _actionExecutor.LastTacticalMoveReason
                 : string.Empty;
+
+        public AIDifficultyLevel Difficulty => _profile != null ? _profile.Difficulty : _difficulty;
+        public AIPersonalityType Personality => _profile != null ? _profile.Personality : _personality;
 
         public int CurrentTargetFocusCount =>
             _teamCoordinator != null &&
@@ -236,6 +241,10 @@ _actionExecutor != null
 
             _debugSnapshot.BrawlerName = _brawler.Definition != null ? _brawler.Definition.BrawlerName : _brawler.name;
             _debugSnapshot.CurrentAction = $"{_lastChosenAction.ActionType} ({_lastChosenAction.Score:0.0})";
+            _debugSnapshot.Difficulty = Difficulty.ToString();
+            _debugSnapshot.Personality = Personality.ToString();
+            _debugSnapshot.ReactionDelayTicks = _profile != null ? _profile.ReactionDelayTicks : 0u;
+            _debugSnapshot.AimErrorDegrees = _profile != null ? _profile.AimErrorDegrees : 0f;
             _debugSnapshot.Health = _brawler.State.CurrentHealth;
             _debugSnapshot.MaxHealth = _brawler.State.MaxHealth.Value;
             _debugSnapshot.Position = _brawler.Position;
@@ -394,24 +403,30 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
 
         private BrawlerAIProfile ResolveAIProfile(BrawlerDefinition definition)
         {
-            // Authored AIProfile: used AS-IS. Do NOT mutate at runtime — a
-            // ScriptableObject asset is shared across all brawler instances
-            // referencing it, and in the Unity Editor Play-mode mutations can
-            // bleed into the saved asset on disk. Archetype defaults are
-            // applied in the Editor via the BrawlerAIProfile custom inspector
-            // ("Apply archetype defaults" button), not here.
+            BrawlerAIProfile baseProfile = null;
+
             if (definition != null && definition.AIProfile != null)
-                return definition.AIProfile;
+            {
+                baseProfile = definition.AIProfile;
+            }
+            else
+            {
+                Debug.LogWarning($"Brawler '{definition?.BrawlerName}' has no AIProfile assigned. Using emergency fallback values.");
 
-            Debug.LogWarning($"Brawler '{definition?.BrawlerName}' has no AIProfile assigned. Using emergency fallback values.");
+                baseProfile = ScriptableObject.CreateInstance<BrawlerAIProfile>();
+                if (definition != null)
+                    baseProfile.ApplyArchetypeDefaults(definition.Archetype);
+            }
 
-            // Emergency fallback only: the instance is freshly constructed, not
-            // a shared asset, so stamping archetype defaults here is safe and
-            // gives the brawler a sensible starting configuration.
-            BrawlerAIProfile fallback = ScriptableObject.CreateInstance<BrawlerAIProfile>();
-            if (definition != null)
-                fallback.ApplyArchetypeDefaults(definition.Archetype);
-            return fallback;
+            BrawlerAIProfile runtimeProfile = Instantiate(baseProfile);
+            runtimeProfile.name = $"{baseProfile.name}_Runtime_{_difficulty}_{_personality}";
+
+            AIProfileTuningUtility.ApplyRuntimeTuning(
+                runtimeProfile,
+                _difficulty,
+                _personality);
+
+            return runtimeProfile;
         }
 
         private bool CanRunAI()
@@ -426,7 +441,8 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
         private void ScheduleNextSense(uint currentTick)
         {
             bool hot = _targetInfo.HasLiveTarget;
-            _nextSenseTick = currentTick + (hot ? _profile.CombatSenseIntervalTicks : _profile.IdleSenseIntervalTicks);
+            uint baseInterval = hot ? _profile.CombatSenseIntervalTicks : _profile.IdleSenseIntervalTicks;
+            _nextSenseTick = currentTick + baseInterval + _profile.ReactionDelayTicks;
         }
 
         private float GetAbilityIdealRange()

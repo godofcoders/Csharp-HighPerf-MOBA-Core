@@ -7,6 +7,10 @@ namespace MOBA.Core.Simulation.AI
     {
         public string BrawlerName;
         public string CurrentAction;
+        public string Difficulty;
+        public string Personality;
+        public uint ReactionDelayTicks;
+        public float AimErrorDegrees;
         public string CurrentTargetName;
         public int CurrentTargetId;
         public int CurrentTargetFocusCount;
