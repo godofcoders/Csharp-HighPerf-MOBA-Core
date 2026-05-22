@@ -52,11 +52,29 @@ namespace MOBA.Core.Infrastructure
         public BrawlerState State { get; private set; }
 
         public TeamType Team => _team;
-        public Vector3 Position => this != null ? transform.position : _lastKnownPosition;
+        public Vector3 Position => this != null ? GetLivePosition() : _lastKnownPosition;
         public Vector3 CurrentPosition => Position;
         public float CollisionRadius => 0.5f;
-        public int EntityID => _entityId != 0 ? _entityId : gameObject.GetInstanceID();
+        public int EntityID => GetEntityId();
         public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
+
+        private int GetEntityId()
+        {
+            if (_entityId != 0)
+                return _entityId;
+
+            if (this == null)
+                return 0;
+
+            _entityId = gameObject.GetInstanceID();
+            return _entityId;
+        }
+
+        private Vector3 GetLivePosition()
+        {
+            _lastKnownPosition = transform.position;
+            return _lastKnownPosition;
+        }
 
         protected override void Awake()
         {

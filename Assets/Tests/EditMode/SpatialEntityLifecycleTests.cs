@@ -13,10 +13,28 @@ namespace MOBA.Tests.EditMode
             private int _entityId;
             private Vector3 _lastKnownPosition;
 
-            public int EntityID => _entityId != 0 ? _entityId : gameObject.GetInstanceID();
-            public Vector3 Position => this != null ? transform.position : _lastKnownPosition;
+            public int EntityID => GetEntityId();
+            public Vector3 Position => this != null ? GetLivePosition() : _lastKnownPosition;
             public float CollisionRadius => 0.5f;
             public TeamType Team { get; set; }
+
+            private int GetEntityId()
+            {
+                if (_entityId != 0)
+                    return _entityId;
+
+                if (this == null)
+                    return 0;
+
+                _entityId = gameObject.GetInstanceID();
+                return _entityId;
+            }
+
+            private Vector3 GetLivePosition()
+            {
+                _lastKnownPosition = transform.position;
+                return _lastKnownPosition;
+            }
 
             private void Awake()
             {

@@ -22,10 +22,10 @@ namespace MOBA.Core.Simulation
         public DeployableDefinition Definition => _definition;
         public BrawlerController Owner => _owner;
         public TeamType Team => _team;
-        public Vector3 Position => this != null ? transform.position : _lastKnownPosition;
+        public Vector3 Position => this != null ? GetLivePosition() : _lastKnownPosition;
         public Vector3 CurrentPosition => Position;
         public float CollisionRadius => 0.5f;
-        public int EntityID => _entityId != 0 ? _entityId : gameObject.GetInstanceID();
+        public int EntityID => GetEntityId();
         public bool IsExpired(uint currentTick) => currentTick >= _expiryTick;
         public bool IsDead => _state != null ? _state.IsDead : _currentHealth <= 0f;
 
@@ -34,6 +34,24 @@ namespace MOBA.Core.Simulation
 
         public DeployableAbilityUser AbilityUser => _abilityUser;
         public IAbilityLogic AbilityLogic => _abilityLogic;
+
+        private int GetEntityId()
+        {
+            if (_entityId != 0)
+                return _entityId;
+
+            if (this == null)
+                return 0;
+
+            _entityId = gameObject.GetInstanceID();
+            return _entityId;
+        }
+
+        private Vector3 GetLivePosition()
+        {
+            _lastKnownPosition = transform.position;
+            return _lastKnownPosition;
+        }
 
         protected override void Awake()
         {
