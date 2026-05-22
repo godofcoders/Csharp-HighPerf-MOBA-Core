@@ -19,12 +19,15 @@ namespace MOBA.Core.Simulation
 
         public static CombatLogEntry CreateDamage(uint tick, DamageResultContext result)
         {
+            int sourceEntityId = result.Damage.Attacker != null ? result.Damage.Attacker.EntityID : 0;
+            SpatialEntityUtility.TryGetEntityIdEvenIfDestroyed(result.Damage.Target, out int targetEntityId);
+
             return new CombatLogEntry
             {
                 EventType = CombatLogEventType.Damage,
                 Tick = tick,
-                SourceEntityId = result.Damage.Attacker != null ? result.Damage.Attacker.EntityID : 0,
-                TargetEntityId = result.Damage.Target != null ? result.Damage.Target.EntityID : 0,
+                SourceEntityId = sourceEntityId,
+                TargetEntityId = targetEntityId,
                 Value = result.FinalDamageApplied,
                 DamageType = result.Damage.Type,
                 StatusEffectType = default,
@@ -35,12 +38,15 @@ namespace MOBA.Core.Simulation
 
         public static CombatLogEntry CreateStatusApplied(uint tick, StatusEffectResult result)
         {
+            int sourceEntityId = result.Context.Source != null ? result.Context.Source.EntityID : 0;
+            int targetEntityId = result.Context.Target != null ? result.Context.Target.EntityID : 0;
+
             return new CombatLogEntry
             {
                 EventType = CombatLogEventType.StatusApplied,
                 Tick = tick,
-                SourceEntityId = result.Context.Source != null ? result.Context.Source.EntityID : 0,
-                TargetEntityId = result.Context.Target != null ? result.Context.Target.EntityID : 0,
+                SourceEntityId = sourceEntityId,
+                TargetEntityId = targetEntityId,
                 Value = result.Context.Magnitude,
                 DamageType = default,
                 StatusEffectType = result.Context.Type,
@@ -51,12 +57,15 @@ namespace MOBA.Core.Simulation
 
         public static CombatLogEntry CreateStatusRemoved(uint tick, StatusEffectResult result)
         {
+            int sourceEntityId = result.Context.Source != null ? result.Context.Source.EntityID : 0;
+            int targetEntityId = result.Context.Target != null ? result.Context.Target.EntityID : 0;
+
             return new CombatLogEntry
             {
                 EventType = CombatLogEventType.StatusRemoved,
                 Tick = tick,
-                SourceEntityId = result.Context.Source != null ? result.Context.Source.EntityID : 0,
-                TargetEntityId = result.Context.Target != null ? result.Context.Target.EntityID : 0,
+                SourceEntityId = sourceEntityId,
+                TargetEntityId = targetEntityId,
                 Value = result.Context.Magnitude,
                 DamageType = default,
                 StatusEffectType = result.Context.Type,

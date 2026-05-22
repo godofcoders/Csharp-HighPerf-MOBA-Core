@@ -43,7 +43,7 @@ namespace MOBA.Core.Simulation.AI
 
             ISpatialEntity bestTarget = _targetScorer.SelectBestTarget(_nearbyBuffer, memory, currentTick);
 
-            if (bestTarget != null)
+            if (SpatialEntityUtility.IsAlive(bestTarget))
             {
                 Debug.Log(
 

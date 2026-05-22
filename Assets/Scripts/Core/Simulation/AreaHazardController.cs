@@ -77,7 +77,8 @@ namespace MOBA.Core.Simulation
                 if (target == null || target.State == null || target.State.IsDead)
                     continue;
 
-                Vector3 delta = target.Position - transform.position;
+                Vector3 targetPosition = target.Position;
+                Vector3 delta = targetPosition - transform.position;
                 delta.y = 0f;
 
                 if (delta.sqrMagnitude > sqrRadius)
@@ -92,7 +93,7 @@ namespace MOBA.Core.Simulation
                     Target = target,
                     Damage = _definition.DamagePerTick,
                     Type = DamageType.AoE,
-                    HitPosition = target.Position,
+                    HitPosition = targetPosition,
                     Direction = delta.sqrMagnitude > 0.001f ? delta.normalized : Vector3.forward,
                     SourceAbility = _sourceAbility,
                     IsSuper = _isSuper
@@ -105,7 +106,7 @@ namespace MOBA.Core.Simulation
                     Target = target,
                     AbilityDefinition = _sourceAbility,
                     SlotType = _slotType,
-                    Position = target.Position,
+                    Position = targetPosition,
                     Direction = delta.sqrMagnitude > 0.001f ? delta.normalized : Vector3.forward,
                     Value = _definition.DamagePerTick,
                     IsSuper = _isSuper

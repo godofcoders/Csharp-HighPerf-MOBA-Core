@@ -62,11 +62,18 @@ namespace MOBA.Core.Simulation
             {
                 DeployableController controller = list[i];
                 if (controller == null)
+                {
+                    list.RemoveAt(i);
+                    i--;
                     continue;
+                }
 
                 if (controller.Definition == definition && controller.State != null && !controller.State.IsDead)
                     return controller;
             }
+
+            if (list.Count == 0)
+                _byOwner.Remove(owner.EntityID);
 
             return null;
         }
@@ -87,7 +94,15 @@ namespace MOBA.Core.Simulation
             {
                 DeployableController candidate = list[i];
                 if (candidate == null || candidate.State == null || candidate.State.IsDead)
+                {
+                    if (candidate == null)
+                    {
+                        list.RemoveAt(i);
+                        i--;
+                    }
+
                     continue;
+                }
 
                 float maxHealth = UnityEngine.Mathf.Max(1f, candidate.State.MaxHealth);
                 float healthRatio = candidate.State.CurrentHealth / maxHealth;
@@ -98,6 +113,9 @@ namespace MOBA.Core.Simulation
                     deployable = candidate;
                 }
             }
+
+            if (list.Count == 0)
+                _byOwner.Remove(owner.EntityID);
 
             return deployable != null;
         }

@@ -15,17 +15,19 @@ namespace MOBA.Core.Simulation
         private IDeployableBehavior _behavior;
         private DeployableState _state;
         private int _entityId;
+        private Vector3 _lastKnownPosition;
+        private bool _isDespawning;
         public DeployableState State => _state;
 
         public DeployableDefinition Definition => _definition;
         public BrawlerController Owner => _owner;
         public TeamType Team => _team;
-        public Vector3 Position => transform.position;
-        public Vector3 CurrentPosition => transform.position;
+        public Vector3 Position => this != null ? transform.position : _lastKnownPosition;
+        public Vector3 CurrentPosition => Position;
         public float CollisionRadius => 0.5f;
         public int EntityID => _entityId != 0 ? _entityId : gameObject.GetInstanceID();
         public bool IsExpired(uint currentTick) => currentTick >= _expiryTick;
-        public bool IsDead => _currentHealth <= 0f;
+        public bool IsDead => _state != null ? _state.IsDead : _currentHealth <= 0f;
 
         private DeployableAbilityUser _abilityUser;
         private IAbilityLogic _abilityLogic;
@@ -36,6 +38,7 @@ namespace MOBA.Core.Simulation
         protected override void Awake()
         {
             _entityId = gameObject.GetInstanceID();
+            _lastKnownPosition = transform.position;
             base.Awake();
         }
 
@@ -57,6 +60,8 @@ namespace MOBA.Core.Simulation
             _state.Controller = this;
 
             transform.position = request.Position;
+            _lastKnownPosition = request.Position;
+            _isDespawning = false;
 
             _behavior = CreateBehavior(_definition.DeployableType);
             _behavior?.Initialize(this);
@@ -80,12 +85,16 @@ namespace MOBA.Core.Simulation
             if (_state == null)
                 return;
 
+            if (_isDespawning)
+                return;
+
             if (_state.IsDead || _state.IsExpired(currentTick))
             {
                 Despawn();
                 return;
             }
 
+            _lastKnownPosition = Position;
             _behavior?.Tick(currentTick);
             Debug.Log($"[DEPLOYABLE] Tick {name} tick={currentTick}");
         }
@@ -103,12 +112,18 @@ namespace MOBA.Core.Simulation
 
         public void Despawn()
         {
+            if (_isDespawning)
+                return;
+
+            _isDespawning = true;
+            _lastKnownPosition = Position;
+
             IDeployableRegistry registry = ServiceProvider.Get<IDeployableRegistry>();
             registry?.Unregister(this);
 
             // Destroy(gameObject) will fire OnDisable, which unregisters from
             // SimulationClock.Registry via the SimulationEntity base class.
-            SimulationClock.Grid?.Remove(this, transform.position);
+            SimulationClock.Grid?.Remove(this, _lastKnownPosition);
             CombatRegistry.Unregister(this);
             Destroy(gameObject);
         }
@@ -136,8 +151,9 @@ namespace MOBA.Core.Simulation
 
         protected override void OnDisable()
         {
+            _lastKnownPosition = Position;
             base.OnDisable();
-            SimulationClock.Grid?.Remove(this, transform.position);
+            SimulationClock.Grid?.Remove(this, _lastKnownPosition);
             CombatRegistry.Unregister(this);
         }
     }

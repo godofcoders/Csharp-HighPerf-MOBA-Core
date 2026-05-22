@@ -41,7 +41,7 @@ namespace MOBA.Core.Simulation.AI
                 return true;
             }
 
-            if (requestedTarget == null)
+            if (!SpatialEntityUtility.IsAlive(requestedTarget))
                 return false;
 
             if (!IsWithinRange(requestedTarget.Position, abilityRange))
@@ -101,7 +101,7 @@ namespace MOBA.Core.Simulation.AI
                 if (HasHealthyOwnedDeployable())
                     return false;
 
-                if (requestedTarget == null || !IsWithinRange(requestedTarget.Position, abilityRange))
+                if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                     return false;
 
                 Vector3 point = BuildDeployablePressurePoint(requestedTarget.Position, abilityRange);
@@ -128,7 +128,7 @@ namespace MOBA.Core.Simulation.AI
                     return true;
                 }
 
-                if (requestedTarget == null || !IsWithinRange(requestedTarget.Position, abilityRange))
+                if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                     return false;
 
                 Vector3 point = BuildAreaDenialPoint(
@@ -142,7 +142,7 @@ namespace MOBA.Core.Simulation.AI
 
             if (ability is ThrownVolleyAoEAbilityDefinition volley)
             {
-                if (requestedTarget == null || !IsWithinRange(requestedTarget.Position, abilityRange))
+                if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                     return false;
 
                 Vector3 point = BuildAreaDenialPoint(
@@ -156,7 +156,7 @@ namespace MOBA.Core.Simulation.AI
 
             if (ability is BurstSequenceProjectileAbilityDefinition)
             {
-                if (requestedTarget == null || !IsWithinRange(requestedTarget.Position, abilityRange))
+                if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                     return false;
 
                 plan = AIAbilityCastPlan.Directional(
@@ -166,7 +166,7 @@ namespace MOBA.Core.Simulation.AI
                 return true;
             }
 
-            if (requestedTarget == null || !IsWithinRange(requestedTarget.Position, abilityRange))
+            if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                 return false;
 
             plan = BuildDirectionalPlan(requestedTarget, "default_super");
@@ -267,7 +267,9 @@ namespace MOBA.Core.Simulation.AI
             if (allyRatio <= HybridEmergencyHealthThreshold)
                 return true;
 
-            if (requestedTarget is not BrawlerController enemy || enemy.State == null)
+            if (!SpatialEntityUtility.IsAlive(requestedTarget) ||
+                requestedTarget is not BrawlerController enemy ||
+                enemy.State == null)
                 return true;
 
             float enemyRatio = enemy.State.CurrentHealth / Mathf.Max(1f, enemy.State.MaxHealth.Value);
@@ -400,7 +402,7 @@ namespace MOBA.Core.Simulation.AI
 
         private bool IsLiveEnemy(ISpatialEntity entity)
         {
-            if (entity == null || entity.Team == _self.Team)
+            if (!SpatialEntityUtility.IsAlive(entity) || entity.Team == _self.Team)
                 return false;
 
             if (entity is BrawlerController brawler && (brawler.State == null || brawler.State.IsDead))

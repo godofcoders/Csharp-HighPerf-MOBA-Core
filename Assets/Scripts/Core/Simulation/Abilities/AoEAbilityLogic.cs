@@ -32,39 +32,44 @@ namespace MOBA.Core.Simulation.Abilities
             for (int i = 0; i < _targetBuffer.Count; i++)
             {
                 var target = _targetBuffer[i];
+                if (!SpatialEntityUtility.IsAlive(target))
+                    continue;
 
                 if (user is BrawlerController owner && target.EntityID == owner.EntityID)
                     continue;
 
                 float distSq = (target.Position - context.Origin).sqrMagnitude;
-                if (distSq <= sqrRadius)
-                {
-                    damageService.ApplyDamage(new DamageContext
-                    {
-                        Attacker = context.Source,
-                        Target = target,
-                        Damage = _damage,
-                        Type = DamageType.AoE,
-                        HitPosition = target.Position,
-                        Direction = (target.Position - context.Origin).normalized,
-                        SourceAbility = context.AbilityDefinition,
-                        IsSuper = context.IsSuper
-                    });
-                    CombatPresentationEventBus.Raise(new CombatPresentationEvent
-                    {
-                        EventType = CombatPresentationEventType.DamageHit,
-                        Source = context.Source,
-                        Target = target as BrawlerController,
-                        AbilityDefinition = context.AbilityDefinition,
-                        SlotType = context.SlotType,
-                        Position = target.Position,
-                        Direction = (target.Position - context.Origin).normalized,
-                        Value = _damage,
-                        IsSuper = context.IsSuper
-                    });
+                if (distSq > sqrRadius)
+                    continue;
 
-                    targetsAffected++;
-                }
+                Vector3 targetPosition = target.Position;
+                Vector3 direction = (targetPosition - context.Origin).normalized;
+
+                damageService.ApplyDamage(new DamageContext
+                {
+                    Attacker = context.Source,
+                    Target = target,
+                    Damage = _damage,
+                    Type = DamageType.AoE,
+                    HitPosition = targetPosition,
+                    Direction = direction,
+                    SourceAbility = context.AbilityDefinition,
+                    IsSuper = context.IsSuper
+                });
+                CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                {
+                    EventType = CombatPresentationEventType.DamageHit,
+                    Source = context.Source,
+                    Target = target as BrawlerController,
+                    AbilityDefinition = context.AbilityDefinition,
+                    SlotType = context.SlotType,
+                    Position = targetPosition,
+                    Direction = direction,
+                    Value = _damage,
+                    IsSuper = context.IsSuper
+                });
+
+                targetsAffected++;
             }
 
             var result = AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);

@@ -29,7 +29,7 @@ namespace MOBA.Core.Simulation.AI
             for (int i = 0; i < _nearbyBuffer.Count; i++)
             {
                 var entity = _nearbyBuffer[i];
-                if (entity == null || entity.EntityID == _self.EntityID)
+                if (!SpatialEntityUtility.IsAlive(entity) || entity.EntityID == _self.EntityID)
                     continue;
 
                 if (entity.Team != _self.Team)

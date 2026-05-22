@@ -20,10 +20,10 @@ namespace MOBA.Core.Infrastructure
             if (entity == null)
                 return;
 
-            if (!SpatialEntityUtility.IsAlive(entity))
+            if (!SpatialEntityUtility.TryGetEntityIdEvenIfDestroyed(entity, out int entityId))
                 return;
 
-            _entities.Remove(entity.EntityID);
+            _entities.Remove(entityId);
         }
 
         public static ISpatialEntity GetEntity(int entityId)

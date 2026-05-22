@@ -11,7 +11,7 @@ namespace MOBA.Core.Simulation
     {
         public void ApplyDamage(in DamageContext ctx)
         {
-            if (ctx.Target == null)
+            if (!SpatialEntityUtility.IsAlive(ctx.Target))
                 return;
 
             float workingDamage = ctx.Damage;

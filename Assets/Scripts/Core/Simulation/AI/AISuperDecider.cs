@@ -30,7 +30,7 @@ namespace MOBA.Core.Simulation.AI
             if (!_profile.EnableSuperUsage)
                 return;
 
-            if (target == null || _self.State == null)
+            if (!SpatialEntityUtility.IsAlive(target) || _self.State == null)
                 return;
 
             if (!_self.State.SuperCharge.IsReady)
@@ -164,7 +164,7 @@ namespace MOBA.Core.Simulation.AI
             {
                 ISpatialEntity entity = _clusterBuffer[i];
 
-                if (entity == null || entity.Team == _self.Team)
+                if (!SpatialEntityUtility.IsAlive(entity) || entity.Team == _self.Team)
                     continue;
 
                 if (entity is BrawlerController bc && (bc.State == null || bc.State.IsDead))

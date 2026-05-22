@@ -605,7 +605,7 @@ namespace MOBA.Core.Simulation.AI
             {
                 ISpatialEntity entity = _nearbyAllyBuffer[i];
 
-                if (entity == null)
+                if (!SpatialEntityUtility.IsAlive(entity))
                     continue;
 
                 if (entity == _self)

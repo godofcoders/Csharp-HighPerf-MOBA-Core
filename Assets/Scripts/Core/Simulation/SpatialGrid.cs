@@ -82,6 +82,18 @@ namespace MOBA.Core.Simulation
                                 continue;
                             }
 
+                            if (target is BrawlerController brawler &&
+                                (brawler.State == null || brawler.State.IsDead))
+                            {
+                                continue;
+                            }
+
+                            if (target is DeployableController deployable &&
+                                (deployable.State == null || deployable.State.IsDead))
+                            {
+                                continue;
+                            }
+
                             bool sameTeam = target.Team == attackerTeam;
 
                             switch (hitRule)
@@ -134,6 +146,18 @@ namespace MOBA.Core.Simulation
                             {
                                 entities.RemoveAt(i);
                                 i--;
+                                continue;
+                            }
+
+                            if (entity is BrawlerController brawler &&
+                                (brawler.State == null || brawler.State.IsDead))
+                            {
+                                continue;
+                            }
+
+                            if (entity is DeployableController deployable &&
+                                (deployable.State == null || deployable.State.IsDead))
+                            {
                                 continue;
                             }
 

@@ -25,7 +25,7 @@ namespace MOBA.Core.Simulation.AI
 
         public void TryUseMainAttack(ISpatialEntity target, uint currentTick, float maxRange)
         {
-            if (target == null)
+            if (!SpatialEntityUtility.IsAlive(target))
                 return;
 
             if (currentTick < _nextPrimaryAttackTick)
@@ -57,7 +57,7 @@ namespace MOBA.Core.Simulation.AI
             if (!_profile.EnableGadgetUsage)
                 return;
 
-            if (target == null || _self.State == null)
+            if (!SpatialEntityUtility.IsAlive(target) || _self.State == null)
                 return;
 
             if (_self.State.RemainingGadgets <= 0)

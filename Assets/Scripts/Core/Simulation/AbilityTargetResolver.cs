@@ -83,6 +83,9 @@ namespace MOBA.Core.Simulation
             if (candidate == null || candidate.State == null)
                 return false;
 
+            if (request.Source == null)
+                return false;
+
             if (request.RequireAlive && candidate.State.IsDead)
                 return false;
 

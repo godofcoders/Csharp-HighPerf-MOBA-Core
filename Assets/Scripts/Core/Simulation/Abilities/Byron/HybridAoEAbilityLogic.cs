@@ -34,6 +34,9 @@ namespace MOBA.Core.Simulation.Abilities
             for (int i = 0; i < _targetBuffer.Count; i++)
             {
                 var target = _targetBuffer[i];
+                if (!SpatialEntityUtility.IsAlive(target))
+                    continue;
+
                 var targetBrawler = target as BrawlerController;
 
                 if (targetBrawler == null)
@@ -49,6 +52,8 @@ namespace MOBA.Core.Simulation.Abilities
                 if (distSq > sqrRadius)
                     continue;
 
+                Vector3 targetPosition = target.Position;
+                Vector3 direction = (targetPosition - context.Origin).normalized;
                 bool isAlly = targetBrawler.Team == context.Source.Team;
 
                 if (isAlly)
@@ -64,8 +69,8 @@ namespace MOBA.Core.Simulation.Abilities
                         Target = targetBrawler,
                         AbilityDefinition = context.AbilityDefinition,
                         SlotType = context.SlotType,
-                        Position = target.Position,
-                        Direction = (target.Position - context.Origin).normalized,
+                        Position = targetPosition,
+                        Direction = direction,
                         Value = _definition.AllyHeal,
                         IsSuper = context.IsSuper
                     });
@@ -78,8 +83,8 @@ namespace MOBA.Core.Simulation.Abilities
                         Target = target,
                         Damage = _definition.EnemyDamage,
                         Type = DamageType.AoE,
-                        HitPosition = target.Position,
-                        Direction = (target.Position - context.Origin).normalized,
+                        HitPosition = targetPosition,
+                        Direction = direction,
                         SourceAbility = context.AbilityDefinition,
                         IsSuper = context.IsSuper
                     });
@@ -93,8 +98,8 @@ namespace MOBA.Core.Simulation.Abilities
                         Target = targetBrawler,
                         AbilityDefinition = context.AbilityDefinition,
                         SlotType = context.SlotType,
-                        Position = target.Position,
-                        Direction = (target.Position - context.Origin).normalized,
+                        Position = targetPosition,
+                        Direction = direction,
                         Value = _definition.EnemyDamage,
                         IsSuper = context.IsSuper
                     });

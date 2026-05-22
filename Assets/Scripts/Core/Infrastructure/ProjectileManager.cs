@@ -184,8 +184,9 @@ namespace MOBA.Core.Infrastructure
                     p.HitTeamRule
                 );
 
-                if (hit != null)
+                if (SpatialEntityUtility.IsAlive(hit))
                 {
+                    Vector3 projectilePosition = p.GameObject.transform.position;
                     BrawlerController targetBrawler = hit as BrawlerController;
 
                     if (p.IsChainProjectile && targetBrawler != null && p.HitEntityIds.Contains(targetBrawler.EntityID))
@@ -209,7 +210,7 @@ namespace MOBA.Core.Infrastructure
                                 Target = targetBrawler,
                                 AbilityDefinition = p.SourceAbility,
                                 SlotType = p.SlotType,
-                                Position = p.GameObject.transform.position,
+                                Position = projectilePosition,
                                 Direction = p.Direction,
                                 Value = p.AllyHealAmount,
                                 IsSuper = p.IsSuper
@@ -226,7 +227,7 @@ namespace MOBA.Core.Infrastructure
                                 Target = hit,
                                 Damage = p.EnemyDamageAmount,
                                 Type = DamageType.Projectile,
-                                HitPosition = p.GameObject.transform.position,
+                                HitPosition = projectilePosition,
                                 Direction = p.Direction,
                                 SourceAbility = p.SourceAbility,
                                 IsSuper = p.IsSuper
@@ -239,7 +240,7 @@ namespace MOBA.Core.Infrastructure
                                 Target = targetBrawler,
                                 AbilityDefinition = p.SourceAbility,
                                 SlotType = p.SlotType,
-                                Position = p.GameObject.transform.position,
+                                Position = projectilePosition,
                                 Direction = p.Direction,
                                 Value = p.EnemyDamageAmount,
                                 IsSuper = p.IsSuper
@@ -256,7 +257,7 @@ namespace MOBA.Core.Infrastructure
                             Target = hit,
                             Damage = p.Damage,
                             Type = DamageType.Projectile,
-                            HitPosition = p.GameObject.transform.position,
+                            HitPosition = projectilePosition,
                             Direction = p.Direction,
                             SourceAbility = p.SourceAbility,
                             IsSuper = p.IsSuper
@@ -269,7 +270,7 @@ namespace MOBA.Core.Infrastructure
                             Target = hit as BrawlerController,
                             AbilityDefinition = p.SourceAbility,
                             SlotType = p.SlotType,
-                            Position = p.GameObject.transform.position,
+                            Position = projectilePosition,
                             Direction = p.Direction,
                             Value = p.Damage,
                             IsSuper = p.IsSuper
@@ -288,7 +289,7 @@ namespace MOBA.Core.Infrastructure
                             {
                                 p.RemainingBounces--;
 
-                                Vector3 nextDirection = (nextTarget.Position - p.GameObject.transform.position).normalized;
+                                Vector3 nextDirection = (nextTarget.Position - projectilePosition).normalized;
                                 p.Direction = nextDirection;
 
                                 if (nextDirection.sqrMagnitude > 0.001f)
@@ -321,7 +322,8 @@ namespace MOBA.Core.Infrastructure
                 if (targetBrawler == null)
                     continue;
 
-                float distSq = (targetBrawler.Position - impactPosition).sqrMagnitude;
+                Vector3 targetPosition = targetBrawler.Position;
+                float distSq = (targetPosition - impactPosition).sqrMagnitude;
                 if (distSq > sqrRadius)
                     continue;
 
@@ -352,7 +354,7 @@ namespace MOBA.Core.Infrastructure
                             Damage = p.ImpactEnemyDamage,
                             Type = DamageType.AoE,
                             HitPosition = impactPosition,
-                            Direction = (targetBrawler.Position - impactPosition).normalized,
+                            Direction = (targetPosition - impactPosition).normalized,
                             SourceAbility = p.SourceAbility,
                             IsSuper = p.IsSuper
                         });

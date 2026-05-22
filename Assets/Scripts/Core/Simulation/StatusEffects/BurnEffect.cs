@@ -51,12 +51,14 @@ namespace MOBA.Core.Simulation
             else if (target is DeployableState deployableState)
                 spatialTarget = deployableState.Controller;
 
-            if (spatialTarget == null)
+            if (!SpatialEntityUtility.IsAlive(spatialTarget))
                 return;
 
             var damageService = ServiceProvider.Get<IDamageService>();
             if (damageService == null)
                 return;
+
+            Vector3 targetPosition = spatialTarget.Position;
 
             damageService.ApplyDamage(new DamageContext
             {
@@ -64,7 +66,7 @@ namespace MOBA.Core.Simulation
                 Target = spatialTarget,
                 Damage = _magnitude,
                 Type = DamageType.Ability,
-                HitPosition = spatialTarget.Position,
+                HitPosition = targetPosition,
                 Direction = Vector3.forward,
                 IsCritical = false,
                 SourceAbility = null,

@@ -46,13 +46,14 @@ namespace MOBA.Core.Infrastructure
 
         private readonly BrawlerDebugSnapshot _debugSnapshot = new BrawlerDebugSnapshot();
         private int _entityId;
+        private Vector3 _lastKnownPosition;
 
         public BrawlerDefinition Definition => _definition;
         public BrawlerState State { get; private set; }
 
         public TeamType Team => _team;
-        public Vector3 Position => transform.position;
-        public Vector3 CurrentPosition => transform.position;
+        public Vector3 Position => this != null ? transform.position : _lastKnownPosition;
+        public Vector3 CurrentPosition => Position;
         public float CollisionRadius => 0.5f;
         public int EntityID => _entityId != 0 ? _entityId : gameObject.GetInstanceID();
         public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
@@ -60,6 +61,7 @@ namespace MOBA.Core.Infrastructure
         protected override void Awake()
         {
             _entityId = gameObject.GetInstanceID();
+            _lastKnownPosition = transform.position;
             base.Awake();
 
             // Generic shell flow:
@@ -128,6 +130,7 @@ namespace MOBA.Core.Infrastructure
             ResolveAndApplyCurrentBuild();
 
             _lastTickPosition = transform.position;
+            _lastKnownPosition = transform.position;
 
             _previousSimPosition = transform.position;
             _currentSimPosition = transform.position;
@@ -422,6 +425,7 @@ namespace MOBA.Core.Infrastructure
 
             SimulationClock.Grid?.UpdateEntity(this, _lastTickPosition, transform.position);
             _lastTickPosition = transform.position;
+            _lastKnownPosition = transform.position;
 
             _mainAttack?.Tick(currentTick);
             _superAbility?.Tick(currentTick);
@@ -487,7 +491,8 @@ namespace MOBA.Core.Infrastructure
         protected override void OnDisable()
         {
             base.OnDisable();
-            SimulationClock.Grid?.Remove(this, transform.position);
+            _lastKnownPosition = Position;
+            SimulationClock.Grid?.Remove(this, _lastKnownPosition);
             CombatRegistry.Unregister(this);
             BrawlerDebugTracker.Remove(this);
         }
@@ -1075,7 +1080,8 @@ namespace MOBA.Core.Infrastructure
             MatchManager.Instance.AddScore(enemyTeam, 1);
 
             gameObject.SetActive(false);
-            SimulationClock.Grid?.Remove(this, transform.position);
+            _lastKnownPosition = Position;
+            SimulationClock.Grid?.Remove(this, _lastKnownPosition);
 
             SpawnManager.Instance.RequestRespawn(this, _team);
         }
@@ -1121,6 +1127,7 @@ namespace MOBA.Core.Infrastructure
 
             gameObject.SetActive(true);
             CombatRegistry.Register(this);
+            _lastKnownPosition = Position;
             SimulationClock.Grid?.Add(this);
         }
 
