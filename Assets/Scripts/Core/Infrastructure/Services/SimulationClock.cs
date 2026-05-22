@@ -83,7 +83,7 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
         if (generator != null)
         {
             var data = generator.BakeMap();
-            Pathfinder = new AStarSolver(data.WalkabilityGrid, data.CellSize, data.Origin);
+            Pathfinder = new AStarSolver(data);
         }
     }
 

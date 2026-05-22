@@ -108,6 +108,11 @@ _actionExecutor != null
                 ? _actionExecutor.LastTacticalMoveReason
                 : string.Empty;
 
+        public string LastMapRouteDebug =>
+            _actionExecutor != null
+                ? _actionExecutor.LastMapRouteDebug
+                : string.Empty;
+
         public AIDifficultyLevel Difficulty => _profile != null ? _profile.Difficulty : _difficulty;
         public AIPersonalityType Personality => _profile != null ? _profile.Personality : _personality;
 
@@ -356,7 +361,8 @@ $"Dist={LastTacticalTargetDistance:0.0} " +
 $"Preferred={LastTacticalPreferredRange:0.0} " +
 $"TooClose={LastTacticalTooCloseDistance:0.0} " +
 $"Retarget={LastTacticalRetargetTick}->{NextTacticalMoveRetargetTick} " +
-$"Reason={LastTacticalMoveReason}";
+$"Reason={LastTacticalMoveReason} " +
+$"Map={LastMapRouteDebug}";
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }

@@ -6,9 +6,21 @@ namespace MOBA.Core.Simulation.AI
     public class AStarSolver
     {
         private PathNode[,] _grid;
+        private MapData _mapData;
         private int _width, _height;
         private UnityEngine.Vector3 _origin;
         private float _cellSize;
+
+        public int Width => _width;
+        public int Height => _height;
+        public float CellSize => _cellSize;
+        public UnityEngine.Vector3 Origin => _origin;
+
+        public AStarSolver(MapData mapData)
+            : this(mapData.WalkabilityGrid, mapData.CellSize, mapData.Origin)
+        {
+            _mapData = mapData;
+        }
 
         public AStarSolver(bool[,] walkableMap, float cellSize, UnityEngine.Vector3 origin)
         {
@@ -24,20 +36,17 @@ namespace MOBA.Core.Simulation.AI
                     _grid[x, y] = new PathNode(x, y, walkableMap[x, y]);
         }
 
-        // NEW: Translate World Position -> Grid Coordinates
         public UnityEngine.Vector2Int GetGridCoords(UnityEngine.Vector3 worldPos)
         {
             int x = UnityEngine.Mathf.FloorToInt((worldPos.x - _origin.x) / _cellSize);
             int y = UnityEngine.Mathf.FloorToInt((worldPos.z - _origin.z) / _cellSize);
 
-            // Clamp to ensure we stay inside the array bounds
             x = UnityEngine.Mathf.Clamp(x, 0, _width - 1);
             y = UnityEngine.Mathf.Clamp(y, 0, _height - 1);
 
             return new UnityEngine.Vector2Int(x, y);
         }
 
-        // NEW: Translate Grid Coordinates -> World Position (Center of the cell)
         public UnityEngine.Vector3 GetWorldPos(int x, int y)
         {
             float worldX = _origin.x + (x * _cellSize) + (_cellSize / 2f);
@@ -46,12 +55,148 @@ namespace MOBA.Core.Simulation.AI
             return new UnityEngine.Vector3(worldX, 0, worldZ);
         }
 
+        public UnityEngine.Vector3 GetWorldPos(UnityEngine.Vector2Int coords)
+        {
+            return GetWorldPos(coords.x, coords.y);
+        }
+
+        public bool IsInBounds(UnityEngine.Vector2Int coords)
+        {
+            return coords.x >= 0 && coords.y >= 0 && coords.x < _width && coords.y < _height;
+        }
+
+        public bool IsWalkable(UnityEngine.Vector2Int coords)
+        {
+            PathNode node = GetNode(coords.x, coords.y);
+            return node != null && node.IsWalkable;
+        }
+
+        public bool IsBush(UnityEngine.Vector2Int coords)
+        {
+            return _mapData != null && _mapData.IsBush(coords);
+        }
+
+        public int CountWalkableNeighbors(UnityEngine.Vector2Int coords)
+        {
+            int count = 0;
+
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    if (x == 0 && y == 0)
+                        continue;
+
+                    if (IsWalkable(new UnityEngine.Vector2Int(coords.x + x, coords.y + y)))
+                        count++;
+                }
+            }
+
+            return count;
+        }
+
+        public int CountBlockedNeighbors(UnityEngine.Vector2Int coords)
+        {
+            int count = 0;
+
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    if (x == 0 && y == 0)
+                        continue;
+
+                    UnityEngine.Vector2Int neighbor = new UnityEngine.Vector2Int(coords.x + x, coords.y + y);
+                    if (!IsInBounds(neighbor) || !IsWalkable(neighbor))
+                        count++;
+                }
+            }
+
+            return count;
+        }
+
+        public bool IsNearObstacle(UnityEngine.Vector2Int coords)
+        {
+            return CountBlockedNeighbors(coords) > 0;
+        }
+
+        public bool IsChokepoint(UnityEngine.Vector2Int coords)
+        {
+            if (!IsWalkable(coords))
+                return true;
+
+            return CountWalkableNeighbors(coords) <= 3 || CountBlockedNeighbors(coords) >= 5;
+        }
+
+        public UnityEngine.Vector3 GetNearestWalkableWorldPos(UnityEngine.Vector3 worldPos, int searchRadius = 3)
+        {
+            UnityEngine.Vector2Int center = GetGridCoords(worldPos);
+
+            return TryGetNearestWalkableCoords(center, searchRadius, out UnityEngine.Vector2Int best)
+                ? GetWorldPos(best)
+                : worldPos;
+        }
+
+        public bool TryGetNearestWalkableCoords(
+            UnityEngine.Vector2Int center,
+            int searchRadius,
+            out UnityEngine.Vector2Int result)
+        {
+            if (IsWalkable(center))
+            {
+                result = center;
+                return true;
+            }
+
+            int radius = UnityEngine.Mathf.Max(1, searchRadius);
+            float bestDistanceSq = float.MaxValue;
+            result = center;
+            bool found = false;
+
+            for (int r = 1; r <= radius; r++)
+            {
+                for (int x = -r; x <= r; x++)
+                {
+                    for (int y = -r; y <= r; y++)
+                    {
+                        if (UnityEngine.Mathf.Abs(x) != r && UnityEngine.Mathf.Abs(y) != r)
+                            continue;
+
+                        UnityEngine.Vector2Int coords = new UnityEngine.Vector2Int(center.x + x, center.y + y);
+                        if (!IsWalkable(coords))
+                            continue;
+
+                        int dx = coords.x - center.x;
+                        int dy = coords.y - center.y;
+                        float distanceSq = (dx * dx) + (dy * dy);
+
+                        if (!found || distanceSq < bestDistanceSq)
+                        {
+                            found = true;
+                            bestDistanceSq = distanceSq;
+                            result = coords;
+                        }
+                    }
+                }
+
+                if (found)
+                    break;
+            }
+
+            return found;
+        }
+
         public List<PathNode> FindPath(int startX, int startY, int endX, int endY)
         {
+            ResetPathState();
+
             PathNode startNode = GetNode(startX, startY);
             PathNode endNode = GetNode(endX, endY);
 
-            if (startNode == null || endNode == null || !endNode.IsWalkable) return null;
+            if (startNode == null || endNode == null || !startNode.IsWalkable || !endNode.IsWalkable) return null;
+
+            startNode.GCost = 0;
+            startNode.HCost = GetDistance(startNode, endNode);
 
             List<PathNode> openList = new List<PathNode> { startNode };
             HashSet<PathNode> closedList = new HashSet<PathNode>();
@@ -99,6 +244,15 @@ namespace MOBA.Core.Simulation.AI
                 for (int y = -1; y <= 1; y++)
                 {
                     if (x == 0 && y == 0) continue;
+                    if (x != 0 && y != 0)
+                    {
+                        PathNode horizontal = GetNode(node.X + x, node.Y);
+                        PathNode vertical = GetNode(node.X, node.Y + y);
+
+                        if (horizontal == null || vertical == null || !horizontal.IsWalkable || !vertical.IsWalkable)
+                            continue;
+                    }
+
                     PathNode n = GetNode(node.X + x, node.Y + y);
                     if (n != null) neighbors.Add(n);
                 }
@@ -114,6 +268,20 @@ namespace MOBA.Core.Simulation.AI
             while (curr != start) { path.Add(curr); curr = curr.Parent; }
             path.Reverse();
             return path;
+        }
+
+        private void ResetPathState()
+        {
+            for (int x = 0; x < _width; x++)
+            {
+                for (int y = 0; y < _height; y++)
+                {
+                    PathNode node = _grid[x, y];
+                    node.GCost = int.MaxValue;
+                    node.HCost = 0;
+                    node.Parent = null;
+                }
+            }
         }
     }
 }

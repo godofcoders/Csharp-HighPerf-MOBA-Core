@@ -152,6 +152,23 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("If true, logs tactical movement decisions.")]
         public bool LogTacticalMovement = false;
 
+        [Header("Map Intelligence")]
+        public bool UseMapIntelligence = true;
+        [Tooltip("How far around a requested movement point the AI may search for a better map-aware destination.")]
+        public float MapDestinationSearchRadius = 3f;
+        [Tooltip("Score bonus for routes that end in bush when the current intent benefits from stealth.")]
+        public float MapBushPreference = 9f;
+        [Tooltip("Score bonus for cover-adjacent cells when the current intent benefits from protection or angle play.")]
+        public float MapCoverPreference = 7f;
+        [Tooltip("Penalty for narrow cells with few exits. Fragile bots and non-combat routes avoid these more strongly.")]
+        public float MapChokepointPenalty = 12f;
+        [Tooltip("How strongly map routing reacts to known enemy threat positions.")]
+        public float MapThreatAvoidanceWeight = 4f;
+        [Tooltip("Small route-length penalty used when several map-aware destinations are otherwise similar.")]
+        public float MapPathCostWeight = 0.2f;
+        [Tooltip("If true, logs map-aware movement decisions.")]
+        public bool LogMapIntelligence = false;
+
         public float GetPreferredAttackRange(float idealRange)
         {
             return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);
@@ -454,6 +471,65 @@ namespace MOBA.Core.Simulation.AI
                     TacticalDestinationStaleDistance = 1.3f;
                     TacticalMinimumStepDistance = 0.7f;
                     FragileRangePadding = 0.4f;
+                    break;
+            }
+
+            ApplyMapIntelligenceDefaults(archetype);
+        }
+
+        private void ApplyMapIntelligenceDefaults(BrawlerArchetype archetype)
+        {
+            UseMapIntelligence = true;
+            MapDestinationSearchRadius = 3f;
+            MapBushPreference = 9f;
+            MapCoverPreference = 7f;
+            MapChokepointPenalty = 12f;
+            MapThreatAvoidanceWeight = 4f;
+            MapPathCostWeight = 0.2f;
+            LogMapIntelligence = false;
+
+            switch (archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                    MapBushPreference = 12f;
+                    MapCoverPreference = 11f;
+                    MapChokepointPenalty = 16f;
+                    MapThreatAvoidanceWeight = 5f;
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    MapBushPreference = 5f;
+                    MapCoverPreference = 4f;
+                    MapChokepointPenalty = 6f;
+                    MapThreatAvoidanceWeight = 2.5f;
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    MapBushPreference = 14f;
+                    MapCoverPreference = 6f;
+                    MapChokepointPenalty = 8f;
+                    MapThreatAvoidanceWeight = 3.5f;
+                    break;
+
+                case BrawlerArchetype.Support:
+                    MapBushPreference = 10f;
+                    MapCoverPreference = 10f;
+                    MapChokepointPenalty = 15f;
+                    MapThreatAvoidanceWeight = 5f;
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    MapBushPreference = 8f;
+                    MapCoverPreference = 9f;
+                    MapChokepointPenalty = 10f;
+                    MapThreatAvoidanceWeight = 4f;
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    MapBushPreference = 11f;
+                    MapCoverPreference = 13f;
+                    MapChokepointPenalty = 17f;
+                    MapThreatAvoidanceWeight = 5.5f;
                     break;
             }
         }

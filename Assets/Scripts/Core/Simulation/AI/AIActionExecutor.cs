@@ -44,6 +44,9 @@ namespace MOBA.Core.Simulation.AI
         private uint _lastTacticalRetargetTick;
         private string _lastTacticalMoveReason;
         private string _pendingTacticalRefreshReason;
+        private string _lastMapRouteDebug;
+        private Vector3 _lastRawMapDestination;
+        private Vector3 _lastResolvedMapDestination;
 
         public float LastTacticalTargetDistance => _lastTacticalTargetDistance;
         public float LastTacticalPreferredRange => _lastTacticalPreferredRange;
@@ -51,6 +54,9 @@ namespace MOBA.Core.Simulation.AI
         public uint LastTacticalRetargetTick => _lastTacticalRetargetTick;
         public uint NextTacticalMoveRetargetTick => _nextTacticalMoveRetargetTick;
         public string LastTacticalMoveReason => _lastTacticalMoveReason;
+        public string LastMapRouteDebug => _lastMapRouteDebug;
+        public Vector3 LastRawMapDestination => _lastRawMapDestination;
+        public Vector3 LastResolvedMapDestination => _lastResolvedMapDestination;
 
         public AIActionExecutor(
             BrawlerController brawler,
@@ -129,6 +135,112 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
+        private void RequestMapAwareDestination(
+            Vector3 destination,
+            float arrivalDistance,
+            AIMapRouteIntent routeIntent,
+            bool hasThreatPosition = false,
+            Vector3 threatPosition = default,
+            float preferredThreatDistance = 0f)
+        {
+            Vector3 resolvedDestination = ResolveMapAwareDestination(
+                destination,
+                routeIntent,
+                hasThreatPosition,
+                threatPosition,
+                preferredThreatDistance);
+
+            _navAgent.RequestDestination(resolvedDestination, arrivalDistance);
+        }
+
+        private Vector3 ResolveMapAwareDestination(
+            Vector3 destination,
+            AIMapRouteIntent routeIntent,
+            bool hasThreatPosition = false,
+            Vector3 threatPosition = default,
+            float preferredThreatDistance = 0f)
+        {
+            AIMapNavigationRequest request = BuildMapNavigationRequest(
+                destination,
+                routeIntent,
+                hasThreatPosition,
+                threatPosition,
+                preferredThreatDistance);
+
+            Vector3 resolvedDestination = AIMapNavigationUtility.ResolveDestination(
+                _brawler,
+                _profile,
+                request,
+                out AIMapNavigationDecision decision);
+
+            _lastRawMapDestination = decision.RawDestination;
+            _lastResolvedMapDestination = decision.ResolvedDestination;
+            _lastMapRouteDebug =
+                $"Route={decision.Intent} " +
+                $"Raw={FormatVector(decision.RawDestination)} " +
+                $"Resolved={FormatVector(decision.ResolvedDestination)} " +
+                $"Score={decision.Score:0.0} " +
+                $"Reason={decision.Reason}";
+
+            if (_profile.LogMapIntelligence)
+            {
+                Debug.Log($"[AIMap-{_brawler.name}] {_lastMapRouteDebug}");
+            }
+
+            return resolvedDestination;
+        }
+
+        private AIMapNavigationRequest BuildMapNavigationRequest(
+            Vector3 destination,
+            AIMapRouteIntent routeIntent,
+            bool hasThreatPosition,
+            Vector3 threatPosition,
+            float preferredThreatDistance)
+        {
+            bool fragile = AIMapNavigationUtility.IsFragileArchetype(_profile.Archetype);
+            bool combatRoute =
+                routeIntent == AIMapRouteIntent.CombatAdvance ||
+                routeIntent == AIMapRouteIntent.CombatReposition ||
+                routeIntent == AIMapRouteIntent.CombatRetreat ||
+                routeIntent == AIMapRouteIntent.Peel;
+
+            bool stealthRoute =
+                routeIntent == AIMapRouteIntent.Search ||
+                routeIntent == AIMapRouteIntent.Objective ||
+                routeIntent == AIMapRouteIntent.Wander ||
+                _profile.Archetype == BrawlerArchetype.Assassin;
+
+            return new AIMapNavigationRequest
+            {
+                DesiredDestination = destination,
+                Intent = routeIntent,
+                HasThreatPosition = hasThreatPosition,
+                ThreatPosition = threatPosition,
+                PreferredThreatDistance = preferredThreatDistance,
+                PreferBush = stealthRoute || fragile,
+                PreferCover = combatRoute || fragile || _profile.Archetype == BrawlerArchetype.Controller,
+                AvoidChokepoints = fragile ||
+                                   routeIntent == AIMapRouteIntent.CombatRetreat ||
+                                   routeIntent == AIMapRouteIntent.Search ||
+                                   routeIntent == AIMapRouteIntent.Objective ||
+                                   routeIntent == AIMapRouteIntent.Regroup,
+                PreferFlank = routeIntent == AIMapRouteIntent.CombatAdvance ||
+                              routeIntent == AIMapRouteIntent.CombatReposition ||
+                              _profile.Archetype == BrawlerArchetype.Assassin,
+                SearchRadius = _profile.MapDestinationSearchRadius,
+                BushWeight = _profile.MapBushPreference,
+                CoverWeight = _profile.MapCoverPreference,
+                ChokepointPenalty = _profile.MapChokepointPenalty,
+                ThreatWeight = _profile.MapThreatAvoidanceWeight,
+                PathCostWeight = _profile.MapPathCostWeight
+            };
+        }
+
+        private string FormatVector(Vector3 value)
+        {
+            return $"({value.x:0.0},{value.y:0.0},{value.z:0.0})";
+        }
+
         private void RunObjective(AITargetInfo targetInfo)
         {
             // Combat always overrides objective movement.
@@ -164,15 +276,17 @@ namespace MOBA.Core.Simulation.AI
                 _profile,
                 objectivePosition);
 
+            Vector3 destination = ResolveMapAwareDestination(
+                slotPosition,
+                AIMapRouteIntent.Objective);
+
             _lastObjectiveCenter = objectivePosition;
             _lastObjectiveSlot = slotPosition;
-            _lastObjectiveDestination = slotPosition;
+            _lastObjectiveDestination = destination;
             _lastObjectiveName = objective.name;
             _hasObjectiveDebug = true;
 
-            _navAgent.RequestDestination(
-                slotPosition,
-                1f);
+            _navAgent.RequestDestination(destination, 1f);
         }
 
         private void RunApproach(
@@ -233,20 +347,38 @@ namespace MOBA.Core.Simulation.AI
             // If strafe is disabled, still use your existing preferred-range logic.
             if (!_profile.UseStrafe)
             {
-                float preferredRange =
-                    GetTacticalPreferredRange(idealRange) +
-                    _profile.PreferredCombatOffset;
+                if (ShouldRefreshTacticalMove(targetInfo, currentTick, out string holdRefreshReason))
+                {
+                    BeginTacticalRefresh(holdRefreshReason);
 
-                Vector3 preferredPoint = _spacingUtility.GetPreferredRangePosition(
-                    targetInfo.Target.Position,
-                    preferredRange,
-                    _profile.AllyAvoidanceRadius,
-                    _profile.AllyAvoidanceWeight);
+                    float preferredRange =
+                        GetTacticalPreferredRange(idealRange) +
+                        _profile.PreferredCombatOffset;
 
-                _lastTacticalMovementIntent = AITacticalMovementIntent.HoldPosition;
-                _lastTacticalMoveDestination = preferredPoint;
+                    Vector3 preferredPoint = _spacingUtility.GetPreferredRangePosition(
+                        targetInfo.Target.Position,
+                        preferredRange,
+                        _profile.AllyAvoidanceRadius,
+                        _profile.AllyAvoidanceWeight);
 
-                _navAgent.RequestDestination(preferredPoint, 0.5f);
+                    _lastTacticalTargetPosition = targetInfo.Target.Position;
+                    _lastTacticalTargetDistance = Vector3.Distance(_brawler.Position, targetInfo.Target.Position);
+                    _lastTacticalPreferredRange = preferredRange;
+                    _lastTacticalTooCloseDistance = _profile.GetTooCloseDistance(idealRange);
+
+                    Vector3 destination = CommitTacticalMove(
+                        AITacticalMovementIntent.HoldPosition,
+                        preferredPoint,
+                        currentTick,
+                        "hold_no_strafe");
+
+                    _navAgent.RequestDestination(destination, 0.5f);
+                }
+                else
+                {
+                    _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.5f);
+                }
+
                 return;
             }
 
@@ -320,28 +452,49 @@ namespace MOBA.Core.Simulation.AI
                 _profile.AllyAvoidanceRadius,
                 _profile.AllyAvoidanceWeight);
 
-            _navAgent.RequestDestination(retreatPoint, 0.5f);
+            RequestMapAwareDestination(
+                retreatPoint,
+                0.5f,
+                AIMapRouteIntent.CombatRetreat,
+                true,
+                targetInfo.Target.Position,
+                GetTacticalPreferredRange(GetAbilityIdealRange()));
         }
 
         private void RunSearch(AITargetInfo targetInfo, uint currentTick)
         {
             if (targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
             {
-                _navAgent.RequestDestination(targetInfo.LastKnownPosition, 1.0f);
+                RequestMapAwareDestination(
+                    targetInfo.LastKnownPosition,
+                    1.0f,
+                    AIMapRouteIntent.Search);
                 return;
             }
 
             if (_teamCoordinator != null &&
                 _teamCoordinator.TryGetThreatCenter(currentTick, out var threatCenter, out _))
             {
-                _navAgent.RequestDestination(threatCenter, 1.0f);
+                RequestMapAwareDestination(
+                    threatCenter,
+                    1.0f,
+                    AIMapRouteIntent.Search,
+                    true,
+                    threatCenter,
+                    GetTacticalPreferredRange(GetAbilityIdealRange()));
                 return;
             }
 
             if (_teamCoordinator != null &&
                 _teamCoordinator.TryGetEnemyHotspot(currentTick, out var enemyHotspot, out _))
             {
-                _navAgent.RequestDestination(enemyHotspot, 1.0f);
+                RequestMapAwareDestination(
+                    enemyHotspot,
+                    1.0f,
+                    AIMapRouteIntent.Search,
+                    true,
+                    enemyHotspot,
+                    GetTacticalPreferredRange(GetAbilityIdealRange()));
                 return;
             }
 
@@ -351,7 +504,10 @@ namespace MOBA.Core.Simulation.AI
                 _profile.SharedHotspotMemoryTicks,
                 out var destination))
             {
-                _navAgent.RequestDestination(destination, 1.0f);
+                RequestMapAwareDestination(
+                    destination,
+                    1.0f,
+                    AIMapRouteIntent.Search);
                 return;
             }
 
@@ -363,9 +519,10 @@ namespace MOBA.Core.Simulation.AI
 
                 if (objective != null)
                 {
-                    _navAgent.RequestDestination(
+                    RequestMapAwareDestination(
                         objective.transform.position,
-                        1.0f);
+                        1.0f,
+                        AIMapRouteIntent.Objective);
 
                     return;
                 }
@@ -379,7 +536,10 @@ namespace MOBA.Core.Simulation.AI
             {
                 Vector2 random2D = Random.insideUnitCircle * _profile.FallbackWanderRadius;
                 _fallbackWanderPoint = _brawler.Position + new Vector3(random2D.x, 0f, random2D.y);
-                _navAgent.RequestDestination(_fallbackWanderPoint, 0.5f);
+                RequestMapAwareDestination(
+                    _fallbackWanderPoint,
+                    0.5f,
+                    AIMapRouteIntent.Wander);
                 _nextFallbackWanderTick = currentTick + _profile.FallbackWanderRetargetTicks;
             }
         }
@@ -400,7 +560,13 @@ namespace MOBA.Core.Simulation.AI
                 _profile.AllyAvoidanceRadius,
                 _profile.AllyAvoidanceWeight);
 
-            _navAgent.RequestDestination(destination, 0.8f);
+            RequestMapAwareDestination(
+                destination,
+                0.8f,
+                AIMapRouteIntent.CombatReposition,
+                true,
+                targetInfo.Target.Position,
+                preferredRange);
 
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
             _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
@@ -410,7 +576,10 @@ namespace MOBA.Core.Simulation.AI
         {
             if (_teamCoordinator != null && _teamCoordinator.TryGetRegroupPoint(currentTick, out var point))
             {
-                _navAgent.RequestDestination(point, 1.0f);
+                RequestMapAwareDestination(
+                    point,
+                    1.0f,
+                    AIMapRouteIntent.Regroup);
                 return;
             }
 
@@ -443,7 +612,13 @@ namespace MOBA.Core.Simulation.AI
                             _profile.AllyAvoidanceRadius,
                             _profile.AllyAvoidanceWeight);
 
-                        _navAgent.RequestDestination(destination, 1.0f);
+                        RequestMapAwareDestination(
+                            destination,
+                            1.0f,
+                            AIMapRouteIntent.Peel,
+                            true,
+                            attacker.Position,
+                            preferredRange);
                         _abilityDecider.TryUseMainAttack(attacker, currentTick, attackRange);
                         _superDecider.TryUseSuper(attacker, currentTick, superRange);
                         return;
@@ -451,7 +626,10 @@ namespace MOBA.Core.Simulation.AI
                 }
             }
 
-            _navAgent.RequestDestination(ally.Position, 1.0f);
+            RequestMapAwareDestination(
+                ally.Position,
+                1.0f,
+                AIMapRouteIntent.Peel);
         }
 
         private bool ShouldRefreshTacticalMove(
@@ -510,13 +688,19 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
-        private void CommitTacticalMove(
+        private Vector3 CommitTacticalMove(
      AITacticalMovementIntent intent,
      Vector3 destination,
      uint currentTick,
      string reason = "")
         {
             destination = EnsureMeaningfulTacticalDestination(destination, intent);
+            destination = ResolveMapAwareDestination(
+                destination,
+                GetMapRouteIntent(intent),
+                intent != AITacticalMovementIntent.None,
+                _lastTacticalTargetPosition,
+                _lastTacticalPreferredRange);
 
             _lastTacticalMovementIntent = intent;
             _lastTacticalMoveDestination = destination;
@@ -540,6 +724,32 @@ namespace MOBA.Core.Simulation.AI
                     $"Dest={destination} " +
                     $"Reason={_lastTacticalMoveReason} " +
                     $"NextRetarget={_nextTacticalMoveRetargetTick}");
+            }
+
+            return destination;
+        }
+
+        private AIMapRouteIntent GetMapRouteIntent(AITacticalMovementIntent intent)
+        {
+            switch (intent)
+            {
+                case AITacticalMovementIntent.CloseGap:
+                    return AIMapRouteIntent.CombatAdvance;
+
+                case AITacticalMovementIntent.Kite:
+                case AITacticalMovementIntent.EmergencyRetreat:
+                    return AIMapRouteIntent.CombatRetreat;
+
+                case AITacticalMovementIntent.Strafe:
+                case AITacticalMovementIntent.RepositionAngle:
+                case AITacticalMovementIntent.HoldPosition:
+                    return AIMapRouteIntent.CombatReposition;
+
+                case AITacticalMovementIntent.Regroup:
+                    return AIMapRouteIntent.Regroup;
+
+                default:
+                    return AIMapRouteIntent.None;
             }
         }
 
@@ -623,6 +833,12 @@ namespace MOBA.Core.Simulation.AI
             return preferred;
         }
 
+        private float GetAbilityIdealRange()
+        {
+            AbilityDefinition attack = _brawler.Definition?.MainAttack;
+            return attack != null ? attack.GetAIIdealRange() : 6f;
+        }
+
         private int GetStableStrafeSide()
         {
             // Keep side stable, but split bots by identity.
@@ -673,7 +889,7 @@ namespace MOBA.Core.Simulation.AI
                 intent = AITacticalMovementIntent.Kite;
                 destination = selfPos + awayFromTarget * _profile.TacticalKiteDistance;
 
-                CommitTacticalMove(
+                return CommitTacticalMove(
                     intent,
                     destination,
                     currentTick,
@@ -687,7 +903,7 @@ namespace MOBA.Core.Simulation.AI
                     awayFromTarget * (_profile.TacticalKiteDistance * 0.5f) +
                     side * (_profile.TacticalStrafeDistance * 0.75f);
 
-                CommitTacticalMove(
+                return CommitTacticalMove(
                     intent,
                     destination,
                     currentTick,
@@ -700,14 +916,12 @@ namespace MOBA.Core.Simulation.AI
                     selfPos +
                     side * _profile.TacticalStrafeDistance;
 
-                CommitTacticalMove(
+                return CommitTacticalMove(
                     intent,
                     destination,
                     currentTick,
                     $"combat_good_range dist={dist:0.0} preferred={preferredRange:0.0}");
             }
-
-            return destination;
         }
 
         private Vector3 BuildTacticalRepositionDestination(
@@ -793,13 +1007,11 @@ namespace MOBA.Core.Simulation.AI
                     side * _profile.TacticalStrafeDistance;
             }
 
-            CommitTacticalMove(
+            return CommitTacticalMove(
                 intent,
                 destination,
                 currentTick,
                 $"reposition_{_profile.Archetype} dist={dist:0.0} preferred={preferredRange:0.0} tooClose={tooCloseDistance:0.0}");
-
-            return destination;
         }
 
         private Vector3 BuildTacticalApproachDestination(
@@ -885,13 +1097,11 @@ namespace MOBA.Core.Simulation.AI
                     side * (_profile.TacticalStrafeDistance * 0.75f);
             }
 
-            CommitTacticalMove(
+            return CommitTacticalMove(
                 intent,
                 destination,
                 currentTick,
                 $"approach_{_profile.Archetype} dist={dist:0.0} preferred={preferredRange:0.0} tooClose={tooCloseDistance:0.0}");
-
-            return destination;
         }
     }
 }
