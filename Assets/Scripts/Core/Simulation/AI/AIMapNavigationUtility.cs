@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
@@ -32,6 +31,8 @@ namespace MOBA.Core.Simulation.AI
         public string Reason;
         public float Score;
         public bool UsedMap;
+        public int CandidateCount;
+        public int PathValidationCount;
     }
 
     public static class AIMapNavigationUtility
@@ -60,7 +61,9 @@ namespace MOBA.Core.Simulation.AI
                 Intent = request.Intent,
                 Reason = "map_unavailable",
                 Score = 0f,
-                UsedMap = false
+                UsedMap = false,
+                CandidateCount = 0,
+                PathValidationCount = 0
             };
 
             if (self == null || profile == null || !profile.UseMapIntelligence || SimulationClock.Pathfinder == null)
@@ -79,7 +82,11 @@ namespace MOBA.Core.Simulation.AI
                 return request.DesiredDestination;
             }
 
-            CandidateScore[] topCandidates = new CandidateScore[MaxPathValidatedCandidates];
+            CandidateScore first = default;
+            CandidateScore second = default;
+            CandidateScore third = default;
+            CandidateScore fourth = default;
+            int candidateCount = 0;
             int maxOffsetMagnitudeSq = maxOffsetMagnitude * maxOffsetMagnitude;
 
             for (int x = -maxOffsetMagnitude; x <= maxOffsetMagnitude; x++)
@@ -93,6 +100,7 @@ namespace MOBA.Core.Simulation.AI
                     if (!pathfinder.IsWalkable(coords))
                         continue;
 
+                    candidateCount++;
                     Vector3 candidate = pathfinder.GetWorldPos(coords);
                     float score = ScoreCandidate(
                         self,
@@ -107,7 +115,10 @@ namespace MOBA.Core.Simulation.AI
                         continue;
 
                     InsertCandidate(
-                        topCandidates,
+                        ref first,
+                        ref second,
+                        ref third,
+                        ref fourth,
                         new CandidateScore
                         {
                             Coords = coords,
@@ -124,13 +135,19 @@ namespace MOBA.Core.Simulation.AI
                 pathfinder,
                 selfCoords,
                 request,
-                topCandidates,
+                first,
+                second,
+                third,
+                fourth,
+                out int pathValidationCount,
                 out CandidateScore bestCandidate))
             {
                 decision.ResolvedDestination = bestCandidate.Destination;
                 decision.Reason = bestCandidate.Reason;
                 decision.Score = bestCandidate.Score;
                 decision.UsedMap = true;
+                decision.CandidateCount = candidateCount;
+                decision.PathValidationCount = pathValidationCount;
 
                 return bestCandidate.Destination;
             }
@@ -143,27 +160,45 @@ namespace MOBA.Core.Simulation.AI
             decision.Reason = "nearest_walkable_fallback";
             decision.Score = 0f;
             decision.UsedMap = false;
+            decision.CandidateCount = candidateCount;
+            decision.PathValidationCount = 0;
 
             return bestDestination;
         }
 
         private static void InsertCandidate(
-            CandidateScore[] topCandidates,
+            ref CandidateScore first,
+            ref CandidateScore second,
+            ref CandidateScore third,
+            ref CandidateScore fourth,
             CandidateScore candidate)
         {
-            for (int i = 0; i < topCandidates.Length; i++)
+            if (!first.IsValid || candidate.Score > first.Score)
             {
-                if (!topCandidates[i].IsValid || candidate.Score > topCandidates[i].Score)
-                {
-                    for (int j = topCandidates.Length - 1; j > i; j--)
-                    {
-                        topCandidates[j] = topCandidates[j - 1];
-                    }
-
-                    topCandidates[i] = candidate;
-                    return;
-                }
+                fourth = third;
+                third = second;
+                second = first;
+                first = candidate;
+                return;
             }
+
+            if (!second.IsValid || candidate.Score > second.Score)
+            {
+                fourth = third;
+                third = second;
+                second = candidate;
+                return;
+            }
+
+            if (!third.IsValid || candidate.Score > third.Score)
+            {
+                fourth = third;
+                third = candidate;
+                return;
+            }
+
+            if (!fourth.IsValid || candidate.Score > fourth.Score)
+                fourth = candidate;
         }
 
         private static bool TrySelectReachableCandidate(
@@ -171,40 +206,58 @@ namespace MOBA.Core.Simulation.AI
             AStarSolver pathfinder,
             Vector2Int selfCoords,
             in AIMapNavigationRequest request,
-            CandidateScore[] topCandidates,
+            CandidateScore first,
+            CandidateScore second,
+            CandidateScore third,
+            CandidateScore fourth,
+            out int pathValidationCount,
+            out CandidateScore selected)
+        {
+            pathValidationCount = 0;
+            selected = default;
+
+            return TrySelectReachableCandidate(self, pathfinder, selfCoords, request, first, ref pathValidationCount, out selected) ||
+                   TrySelectReachableCandidate(self, pathfinder, selfCoords, request, second, ref pathValidationCount, out selected) ||
+                   TrySelectReachableCandidate(self, pathfinder, selfCoords, request, third, ref pathValidationCount, out selected) ||
+                   TrySelectReachableCandidate(self, pathfinder, selfCoords, request, fourth, ref pathValidationCount, out selected);
+        }
+
+        private static bool TrySelectReachableCandidate(
+            BrawlerController self,
+            AStarSolver pathfinder,
+            Vector2Int selfCoords,
+            in AIMapNavigationRequest request,
+            CandidateScore candidate,
+            ref int pathValidationCount,
             out CandidateScore selected)
         {
             selected = default;
 
-            for (int i = 0; i < topCandidates.Length; i++)
+            if (!candidate.IsValid)
+                return false;
+
+            if (!RequiresPathValidation(request.Intent) ||
+                (candidate.Destination - self.Position).sqrMagnitude <= pathfinder.CellSize * pathfinder.CellSize)
             {
-                CandidateScore candidate = topCandidates[i];
-                if (!candidate.IsValid)
-                    continue;
-
-                if (!RequiresPathValidation(request.Intent) ||
-                    (candidate.Destination - self.Position).sqrMagnitude <= pathfinder.CellSize * pathfinder.CellSize)
-                {
-                    selected = candidate;
-                    return true;
-                }
-
-                List<PathNode> path = pathfinder.FindPath(
-                    selfCoords.x,
-                    selfCoords.y,
-                    candidate.Coords.x,
-                    candidate.Coords.y);
-
-                if (path == null)
-                    continue;
-
-                candidate.Score -= path.Count * Mathf.Max(0f, request.PathCostWeight);
-                candidate.Reason += "|path";
                 selected = candidate;
                 return true;
             }
 
-            return false;
+            pathValidationCount++;
+            if (!pathfinder.TryGetPathLength(
+                selfCoords.x,
+                selfCoords.y,
+                candidate.Coords.x,
+                candidate.Coords.y,
+                out int pathLength))
+            {
+                return false;
+            }
+
+            candidate.Score -= pathLength * Mathf.Max(0f, request.PathCostWeight);
+            candidate.Reason += "|path";
+            selected = candidate;
+            return true;
         }
 
         private static bool RequiresPathValidation(AIMapRouteIntent intent)

@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation;
 
 namespace MOBA.Core.Simulation.AI
 {
@@ -12,6 +14,8 @@ namespace MOBA.Core.Simulation.AI
         private float _cellSize;
         private readonly List<PathNode> _touchedNodes = new List<PathNode>(256);
         private readonly List<PathNode> _neighborBuffer = new List<PathNode>(8);
+        private readonly List<PathNode> _openList = new List<PathNode>(256);
+        private readonly HashSet<PathNode> _closedSet = new HashSet<PathNode>();
 
         public int Width => _width;
         public int Height => _height;
@@ -190,49 +194,92 @@ namespace MOBA.Core.Simulation.AI
 
         public List<PathNode> FindPath(int startX, int startY, int endX, int endY)
         {
+            PathNode endNode = FindEndNode(startX, startY, endX, endY);
+            return endNode != null ? RetracePath(GetNode(startX, startY), endNode) : null;
+        }
+
+        public bool TryGetPathLength(
+            int startX,
+            int startY,
+            int endX,
+            int endY,
+            out int pathLength)
+        {
+            pathLength = 0;
+
+            PathNode startNode = GetNode(startX, startY);
+            PathNode endNode = FindEndNode(startX, startY, endX, endY);
+            if (startNode == null || endNode == null)
+                return false;
+
+            pathLength = CountPathLength(startNode, endNode);
+            return true;
+        }
+
+        private PathNode FindEndNode(int startX, int startY, int endX, int endY)
+        {
             ResetPathState();
 
             PathNode startNode = GetNode(startX, startY);
             PathNode endNode = GetNode(endX, endY);
 
-            if (startNode == null || endNode == null || !startNode.IsWalkable || !endNode.IsWalkable) return null;
+            if (startNode == null || endNode == null || !startNode.IsWalkable || !endNode.IsWalkable)
+            {
+                RecordPathQuery(false);
+                return null;
+            }
 
             TouchNode(startNode);
             startNode.GCost = 0;
             startNode.HCost = GetDistance(startNode, endNode);
 
-            List<PathNode> openList = new List<PathNode> { startNode };
-            HashSet<PathNode> closedList = new HashSet<PathNode>();
+            _openList.Clear();
+            _closedSet.Clear();
+            _openList.Add(startNode);
 
-            while (openList.Count > 0)
+            while (_openList.Count > 0)
             {
                 // Find node with lowest F cost
-                PathNode current = openList[0];
-                for (int i = 1; i < openList.Count; i++)
-                    if (openList[i].FCost < current.FCost) current = openList[i];
+                int currentIndex = 0;
+                PathNode current = _openList[0];
+                for (int i = 1; i < _openList.Count; i++)
+                {
+                    if (_openList[i].FCost < current.FCost)
+                    {
+                        current = _openList[i];
+                        currentIndex = i;
+                    }
+                }
 
-                if (current == endNode) return RetracePath(startNode, endNode);
+                if (current == endNode)
+                {
+                    RecordPathQuery(true);
+                    return endNode;
+                }
 
-                openList.Remove(current);
-                closedList.Add(current);
+                _openList.RemoveAt(currentIndex);
+                _closedSet.Add(current);
 
                 GetNeighborsNonAlloc(current, _neighborBuffer);
                 for (int i = 0; i < _neighborBuffer.Count; i++)
                 {
                     PathNode neighbor = _neighborBuffer[i];
-                    if (!neighbor.IsWalkable || closedList.Contains(neighbor)) continue;
+                    if (!neighbor.IsWalkable || _closedSet.Contains(neighbor)) continue;
 
                     int newCostToNeighbor = current.GCost + GetDistance(current, neighbor);
-                    if (newCostToNeighbor < neighbor.GCost || !openList.Contains(neighbor))
+                    bool alreadyOpen = _openList.Contains(neighbor);
+                    if (newCostToNeighbor < neighbor.GCost || !alreadyOpen)
                     {
                         TouchNode(neighbor);
                         neighbor.GCost = newCostToNeighbor;
                         neighbor.HCost = GetDistance(neighbor, endNode);
                         neighbor.Parent = current;
-                        if (!openList.Contains(neighbor)) openList.Add(neighbor);
+                        if (!alreadyOpen) _openList.Add(neighbor);
                     }
                 }
             }
+
+            RecordPathQuery(false);
             return null;
         }
 
@@ -278,6 +325,20 @@ namespace MOBA.Core.Simulation.AI
             return path;
         }
 
+        private int CountPathLength(PathNode start, PathNode end)
+        {
+            int count = 0;
+            PathNode curr = end;
+
+            while (curr != null && curr != start)
+            {
+                count++;
+                curr = curr.Parent;
+            }
+
+            return count;
+        }
+
         private void ResetPathState()
         {
             for (int i = 0; i < _touchedNodes.Count; i++)
@@ -299,6 +360,18 @@ namespace MOBA.Core.Simulation.AI
 
             node.IsPathTouched = true;
             _touchedNodes.Add(node);
+        }
+
+        private void RecordPathQuery(bool success)
+        {
+            uint currentTick = 0u;
+            if (ServiceProvider.TryGet<ISimulationClock>(out var clock) && clock != null)
+                currentTick = clock.CurrentTick;
+
+            AIPerformanceTracker.RecordPathQuery(
+                currentTick,
+                success,
+                _touchedNodes.Count);
         }
     }
 }

@@ -390,6 +390,8 @@ $"Retarget={LastTacticalRetargetTick}->{NextTacticalMoveRetargetTick} " +
 $"Reason={LastTacticalMoveReason} " +
 $"Map={LastMapRouteDebug}";
 
+            _debugSnapshot.PerformanceDebug = AIPerformanceTracker.GetDebugSummary(currentTick);
+
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }
 

@@ -53,6 +53,7 @@ namespace MOBA.Core.Simulation.AI
         private float _lastMapRequestPreferredThreatDistance;
         private bool _lastMapRequestHadThreatPosition;
         private bool _hasMapRouteCache;
+        private uint _currentExecuteTick;
 
         public float LastTacticalTargetDistance => _lastTacticalTargetDistance;
         public float LastTacticalPreferredRange => _lastTacticalPreferredRange;
@@ -95,6 +96,8 @@ namespace MOBA.Core.Simulation.AI
             float idealRange,
             float superRange)
         {
+            _currentExecuteTick = currentTick;
+
             switch (actionType)
             {
                 case AIActionType.Approach:
@@ -186,6 +189,13 @@ namespace MOBA.Core.Simulation.AI
                     $"Score=0.0 " +
                     $"Reason=cached";
 
+                AIPerformanceTracker.RecordMapResolve(
+                    _currentExecuteTick,
+                    routeIntent,
+                    true,
+                    0,
+                    0);
+
                 return _lastResolvedMapDestination;
             }
 
@@ -214,7 +224,16 @@ namespace MOBA.Core.Simulation.AI
                 $"Raw={FormatVector(decision.RawDestination)} " +
                 $"Resolved={FormatVector(decision.ResolvedDestination)} " +
                 $"Score={decision.Score:0.0} " +
-                $"Reason={decision.Reason}";
+                $"Reason={decision.Reason} " +
+                $"Candidates={decision.CandidateCount} " +
+                $"Validations={decision.PathValidationCount}";
+
+            AIPerformanceTracker.RecordMapResolve(
+                _currentExecuteTick,
+                routeIntent,
+                false,
+                decision.CandidateCount,
+                decision.PathValidationCount);
 
             if (_profile.LogMapIntelligence)
             {
