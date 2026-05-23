@@ -12,6 +12,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerAIProfile _profile;
         private readonly AIObjectiveMemory _objectiveMemory;
         private readonly AITeamCoordinator _teamCoordinator;
+        private readonly AIReactiveMemory _reactiveMemory;
 
         private readonly uint _threatForgetTicks = 240;
 
@@ -44,22 +45,24 @@ namespace MOBA.Core.Simulation.AI
             BrawlerController self,
             BrawlerAIProfile profile,
             AIObjectiveMemory objectiveMemory,
-            AITeamCoordinator teamCoordinator)
+            AITeamCoordinator teamCoordinator,
+            AIReactiveMemory reactiveMemory = null)
         {
             _self = self;
             _profile = profile;
             _objectiveMemory = objectiveMemory;
             _teamCoordinator = teamCoordinator;
+            _reactiveMemory = reactiveMemory;
         }
 
         public AIActionScore ScoreBestAction(AITargetInfo targetInfo, uint currentTick)
         {
             AIActionScore best = new AIActionScore(AIActionType.Wander, 0f);
 
-            ScoreAndReplace(ref best, ScoreRetreat(targetInfo));
+            ScoreAndReplace(ref best, ScoreRetreat(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScoreUseSuper(targetInfo));
             ScoreAndReplace(ref best, ScoreHoldRange(targetInfo));
-            ScoreAndReplace(ref best, ScoreReposition(targetInfo));
+            ScoreAndReplace(ref best, ScoreReposition(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScoreApproach(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScorePeel(currentTick));
             ScoreAndReplace(ref best, ScoreRegroup(targetInfo, currentTick));
@@ -74,10 +77,10 @@ namespace MOBA.Core.Simulation.AI
         {
             results.Clear();
 
-            results.Add(ScoreRetreat(targetInfo));
+            results.Add(ScoreRetreat(targetInfo, currentTick));
             results.Add(ScoreUseSuper(targetInfo));
             results.Add(ScoreHoldRange(targetInfo));
-            results.Add(ScoreReposition(targetInfo));
+            results.Add(ScoreReposition(targetInfo, currentTick));
             results.Add(ScoreApproach(targetInfo, currentTick));
             results.Add(ScorePeel(currentTick));
             results.Add(ScoreRegroup(targetInfo, currentTick));
@@ -130,7 +133,7 @@ namespace MOBA.Core.Simulation.AI
             return score;
         }
 
-        private AIActionScore ScoreRetreat(AITargetInfo targetInfo)
+        private AIActionScore ScoreRetreat(AITargetInfo targetInfo, uint currentTick)
         {
             if (_self.State == null)
                 return new AIActionScore(AIActionType.Retreat, 0f);
@@ -152,6 +155,15 @@ namespace MOBA.Core.Simulation.AI
                 float dist = Vector3.Distance(_self.Position, targetInfo.Target.Position);
                 if (dist <= _profile.GetTooCloseDistance(GetAbilityIdealRange()))
                     score += 20f;
+            }
+
+            float reactivePressure = GetReactiveDamagePressure(currentTick);
+            if (reactivePressure > 0f)
+            {
+                score += reactivePressure * _profile.ReactiveRetreatPressureBonus;
+
+                if (healthRatio <= _profile.ReactiveEmergencyHealthRatio)
+                    score += reactivePressure * 30f;
             }
 
             float roleSurvival = _self.Definition != null ? _self.Definition.SurvivalInstinct : 1f;
@@ -260,7 +272,7 @@ namespace MOBA.Core.Simulation.AI
       _profile.HoldRangeWeight);
         }
 
-        private AIActionScore ScoreReposition(AITargetInfo targetInfo)
+        private AIActionScore ScoreReposition(AITargetInfo targetInfo, uint currentTick)
         {
             if (!targetInfo.HasLiveTarget)
                 return new AIActionScore(AIActionType.Reposition, 0f);
@@ -272,6 +284,10 @@ namespace MOBA.Core.Simulation.AI
             float score = 0f;
             if (dist < tooClose)
                 score += 60f;
+
+            float reactivePressure = GetReactiveDamagePressure(currentTick);
+            if (reactivePressure > 0f)
+                score += reactivePressure * _profile.ReactiveRepositionPressureBonus;
 
             if (IsSniper) score += 15f;
             if (IsSupport) score += 10f;
@@ -313,6 +329,18 @@ namespace MOBA.Core.Simulation.AI
                 targetInfo.Target.EntityID == focusTarget.EntityID)
             {
                 score += _profile.FocusFireWeight;
+            }
+
+            float reactivePressure = GetReactiveDamagePressure(currentTick);
+            if (reactivePressure > 0f &&
+                _reactiveMemory != null &&
+                _reactiveMemory.TryGetRecentAttacker(
+                    currentTick,
+                    _profile.ReactiveDamageMemoryTicks,
+                    out ISpatialEntity recentAttacker) &&
+                SpatialEntityUtility.IsSameEntity(targetInfo.Target, recentAttacker))
+            {
+                score += _profile.ReactiveAttackerFocusBonus * reactivePressure;
             }
 
             float roleAggression = _self.Definition != null ? _self.Definition.Aggression : 1f;
@@ -585,6 +613,13 @@ namespace MOBA.Core.Simulation.AI
         {
             var attack = _self.Definition?.MainAttack;
             return attack != null ? attack.GetAIMaxRange() : 6f;
+        }
+
+        private float GetReactiveDamagePressure(uint currentTick)
+        {
+            return _reactiveMemory != null
+                ? _reactiveMemory.GetDamagePressure(currentTick, _profile.ReactiveDamageMemoryTicks)
+                : 0f;
         }
 
         private float CalculateNearbyAllyPressure(Vector3 position, float radius)

@@ -30,6 +30,7 @@ namespace MOBA.Core.Simulation.AI
 
         public string TeamTactic;
         public string TeamSignalDebug;
+        public string ReactiveDebug;
         public string ObjectiveName;
 
         public readonly List<AIActionScore> ActionScores = new List<AIActionScore>(16);

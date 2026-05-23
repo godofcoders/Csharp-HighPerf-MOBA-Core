@@ -169,6 +169,20 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("If true, logs map-aware movement decisions.")]
         public bool LogMapIntelligence = false;
 
+        [Header("Reactive Combat")]
+        [Tooltip("Ticks recent incoming damage remains tactically relevant.")]
+        public uint ReactiveDamageMemoryTicks = 45;
+        [Tooltip("Retreat score bonus at full recent-damage pressure.")]
+        public float ReactiveRetreatPressureBonus = 38f;
+        [Tooltip("Reposition score bonus at full recent-damage pressure.")]
+        public float ReactiveRepositionPressureBonus = 28f;
+        [Tooltip("Combat score bonus against the most recent attacker.")]
+        public float ReactiveAttackerFocusBonus = 18f;
+        [Tooltip("Below this health ratio, recent damage becomes an emergency survival signal.")]
+        public float ReactiveEmergencyHealthRatio = 0.40f;
+        [Tooltip("If true, logs reactive damage memory updates.")]
+        public bool LogReactiveEvents = false;
+
         public float GetPreferredAttackRange(float idealRange)
         {
             return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);
@@ -475,6 +489,7 @@ namespace MOBA.Core.Simulation.AI
             }
 
             ApplyMapIntelligenceDefaults(archetype);
+            ApplyReactiveCombatDefaults(archetype);
         }
 
         private void ApplyMapIntelligenceDefaults(BrawlerArchetype archetype)
@@ -530,6 +545,61 @@ namespace MOBA.Core.Simulation.AI
                     MapCoverPreference = 13f;
                     MapChokepointPenalty = 17f;
                     MapThreatAvoidanceWeight = 5.5f;
+                    break;
+            }
+        }
+
+        private void ApplyReactiveCombatDefaults(BrawlerArchetype archetype)
+        {
+            ReactiveDamageMemoryTicks = 45;
+            ReactiveRetreatPressureBonus = 38f;
+            ReactiveRepositionPressureBonus = 28f;
+            ReactiveAttackerFocusBonus = 18f;
+            ReactiveEmergencyHealthRatio = 0.40f;
+            LogReactiveEvents = false;
+
+            switch (archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                    ReactiveRetreatPressureBonus = 48f;
+                    ReactiveRepositionPressureBonus = 38f;
+                    ReactiveAttackerFocusBonus = 14f;
+                    ReactiveEmergencyHealthRatio = 0.48f;
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    ReactiveRetreatPressureBonus = 22f;
+                    ReactiveRepositionPressureBonus = 16f;
+                    ReactiveAttackerFocusBonus = 22f;
+                    ReactiveEmergencyHealthRatio = 0.26f;
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    ReactiveRetreatPressureBonus = 28f;
+                    ReactiveRepositionPressureBonus = 30f;
+                    ReactiveAttackerFocusBonus = 28f;
+                    ReactiveEmergencyHealthRatio = 0.34f;
+                    break;
+
+                case BrawlerArchetype.Support:
+                    ReactiveRetreatPressureBonus = 44f;
+                    ReactiveRepositionPressureBonus = 34f;
+                    ReactiveAttackerFocusBonus = 14f;
+                    ReactiveEmergencyHealthRatio = 0.46f;
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    ReactiveRetreatPressureBonus = 36f;
+                    ReactiveRepositionPressureBonus = 32f;
+                    ReactiveAttackerFocusBonus = 18f;
+                    ReactiveEmergencyHealthRatio = 0.40f;
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    ReactiveRetreatPressureBonus = 50f;
+                    ReactiveRepositionPressureBonus = 42f;
+                    ReactiveAttackerFocusBonus = 12f;
+                    ReactiveEmergencyHealthRatio = 0.50f;
                     break;
             }
         }

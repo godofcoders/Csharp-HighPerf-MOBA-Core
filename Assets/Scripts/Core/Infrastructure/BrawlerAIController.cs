@@ -28,12 +28,15 @@ namespace MOBA.Core.Infrastructure
         private AIActionExecutor _actionExecutor;
         private AIObjectiveMemory _objectiveMemory;
         private AITeamCoordinator _teamCoordinator;
+        private AIReactiveMemory _reactiveMemory;
+        private AIReactiveListener _reactiveListener;
         private AICommandSource _commandSource;
 
         private BrawlerAIProfile _profile;
 
         private uint _nextSenseTick;
         private bool _brainInitialized;
+        private string _lastReactiveDebug = "Reactive=None";
         private readonly AIDebugSnapshot _debugSnapshot = new AIDebugSnapshot();
         private readonly System.Collections.Generic.List<AIActionScore> _debugScores = new System.Collections.Generic.List<AIActionScore>(16);
         private AIActionScore _lastChosenAction;
@@ -115,6 +118,7 @@ _actionExecutor != null
 
         public AIDifficultyLevel Difficulty => _profile != null ? _profile.Difficulty : _difficulty;
         public AIPersonalityType Personality => _profile != null ? _profile.Personality : _personality;
+        public string ReactiveDebug => _lastReactiveDebug;
 
         public int CurrentTargetFocusCount =>
             _teamCoordinator != null &&
@@ -178,6 +182,14 @@ _actionExecutor != null
                 _brawler = GetComponent<BrawlerController>();
 
             TryInitializeBrain();
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+
+            if (_brainInitialized)
+                EnsureReactiveListener();
         }
 
         public override void Tick(uint currentTick)
@@ -311,13 +323,18 @@ _actionExecutor != null
                     ? $"Hotspot={FormatVector(enemyHotspot)} p={hotspotPressure:0.0}"
                     : "Hotspot=None";
 
-                _debugSnapshot.TeamSignalDebug = $"{threatSignal} {hotspotSignal}";
+            _debugSnapshot.TeamSignalDebug = $"{threatSignal} {hotspotSignal}";
             }
             else
             {
                 _debugSnapshot.TeamTactic = "None";
                 _debugSnapshot.TeamSignalDebug = "Threat=None Hotspot=None";
             }
+
+            _lastReactiveDebug = _reactiveMemory != null && _profile != null
+                ? _reactiveMemory.GetDebugSummary(currentTick, _profile.ReactiveDamageMemoryTicks)
+                : "Reactive=None";
+            _debugSnapshot.ReactiveDebug = _lastReactiveDebug;
 
             _debugSnapshot.ObjectiveName = _profile != null ? _profile.PreferredObjective.ToString() : "None";
 
@@ -384,14 +401,16 @@ $"Map={LastMapRouteDebug}";
             _targetScorer = new AITargetScorer(_brawler, _profile);
             _objectiveMemory = new AIObjectiveMemory();
             _teamCoordinator = new AITeamCoordinator(_brawler);
+            _reactiveMemory = new AIReactiveMemory();
 
             _perception = new AIPerception(_profile.DetectionRadius, _profile.MemoryDurationTicks, _targetScorer);
             _abilityDecider = new AIAbilityDecider(_brawler, _profile, _commandSource);
             _superDecider = new AISuperDecider(_brawler, _profile, _commandSource);
 
-            _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory, _teamCoordinator);
+            _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory, _teamCoordinator, _reactiveMemory);
             _actionCommitment = new AIActionCommitment(_profile);
             _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory, _teamCoordinator, _commandSource);
+            EnsureReactiveListener();
 
             var objectivePoints = FindObjectsOfType<AIObjectivePoint>();
             Debug.Log(
@@ -474,11 +493,31 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             base.OnDisable();
 
             _teamCoordinator?.ClearTargetFocusCount();
+            _reactiveListener?.Dispose();
+            _reactiveListener = null;
 
             if (_brawler != null)
             {
                 AIDebugTracker.Unregister(_brawler);
             }
+        }
+
+        private void EnsureReactiveListener()
+        {
+            if (_reactiveListener != null ||
+                _brawler == null ||
+                _profile == null ||
+                _targetInfo == null ||
+                _reactiveMemory == null)
+            {
+                return;
+            }
+
+            _reactiveListener = new AIReactiveListener(
+                _brawler,
+                _profile,
+                _targetInfo,
+                _reactiveMemory);
         }
 
 #if UNITY_EDITOR

@@ -51,6 +51,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Position: {snapshot.Position}");
             GUILayout.Label($"Team Tactic: {snapshot.TeamTactic}");
             GUILayout.Label($"Team Signals: {snapshot.TeamSignalDebug}");
+            GUILayout.Label($"Reactive: {snapshot.ReactiveDebug}");
             GUILayout.Label($"Objective: {snapshot.ObjectiveName}");
             GUILayout.Label($"Objective Debug: {snapshot.ObjectiveDebug}");
             GUILayout.Label($"Tactical/Map: {snapshot.TacticalMovementDebug}");
@@ -113,6 +114,7 @@ namespace MOBA.Core.Simulation.AI
                     $"OverFocusPenalty={snapshot.CurrentTargetOverFocusPenalty:0.0} | " +
                     $"HP={snapshot.Health:0}/{snapshot.MaxHealth:0} | " +
                     $"TeamSignals={snapshot.TeamSignalDebug} | " +
+                    $"Reactive={snapshot.ReactiveDebug} | " +
                     $"Objective={snapshot.ObjectiveDebug} | " +
                     $"Tactical={snapshot.TacticalMovementDebug} | " +
                     $"Statuses={string.Join(", ", snapshot.ActiveStatuses)}");
