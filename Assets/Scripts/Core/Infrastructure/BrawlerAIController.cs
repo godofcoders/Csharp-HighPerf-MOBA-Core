@@ -30,13 +30,16 @@ namespace MOBA.Core.Infrastructure
         private AITeamCoordinator _teamCoordinator;
         private AIReactiveMemory _reactiveMemory;
         private AIReactiveListener _reactiveListener;
+        private AIDangerMemory _dangerMemory;
         private AICommandSource _commandSource;
 
         private BrawlerAIProfile _profile;
 
         private uint _nextSenseTick;
+        private uint _nextDangerRefreshTick;
         private bool _brainInitialized;
         private string _lastReactiveDebug = "Reactive=None";
+        private string _lastDangerDebug = "Danger=None";
         private readonly AIDebugSnapshot _debugSnapshot = new AIDebugSnapshot();
         private readonly System.Collections.Generic.List<AIActionScore> _debugScores = new System.Collections.Generic.List<AIActionScore>(16);
         private AIActionScore _lastChosenAction;
@@ -119,6 +122,7 @@ _actionExecutor != null
         public AIDifficultyLevel Difficulty => _profile != null ? _profile.Difficulty : _difficulty;
         public AIPersonalityType Personality => _profile != null ? _profile.Personality : _personality;
         public string ReactiveDebug => _lastReactiveDebug;
+        public string DangerDebug => _lastDangerDebug;
 
         public int CurrentTargetFocusCount =>
             _teamCoordinator != null &&
@@ -224,6 +228,7 @@ _actionExecutor != null
 
             _teamCoordinator.UpdateTeamSignals(_targetInfo, currentTick);
             ReportCurrentTargetFocus();
+            RefreshDangerIfDue(currentTick);
 
             _utilityScorer.CollectActionScores(_targetInfo, currentTick, _debugScores);
 
@@ -335,6 +340,10 @@ _actionExecutor != null
                 ? _reactiveMemory.GetDebugSummary(currentTick, _profile.ReactiveDamageMemoryTicks)
                 : "Reactive=None";
             _debugSnapshot.ReactiveDebug = _lastReactiveDebug;
+            _lastDangerDebug = _dangerMemory != null
+                ? _dangerMemory.GetDebugSummary()
+                : "Danger=None";
+            _debugSnapshot.DangerDebug = _lastDangerDebug;
 
             _debugSnapshot.ObjectiveName = _profile != null ? _profile.PreferredObjective.ToString() : "None";
 
@@ -402,14 +411,15 @@ $"Map={LastMapRouteDebug}";
             _objectiveMemory = new AIObjectiveMemory();
             _teamCoordinator = new AITeamCoordinator(_brawler);
             _reactiveMemory = new AIReactiveMemory();
+            _dangerMemory = new AIDangerMemory();
 
             _perception = new AIPerception(_profile.DetectionRadius, _profile.MemoryDurationTicks, _targetScorer);
             _abilityDecider = new AIAbilityDecider(_brawler, _profile, _commandSource);
             _superDecider = new AISuperDecider(_brawler, _profile, _commandSource);
 
-            _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory, _teamCoordinator, _reactiveMemory);
+            _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory, _teamCoordinator, _reactiveMemory, _dangerMemory);
             _actionCommitment = new AIActionCommitment(_profile);
-            _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory, _teamCoordinator, _commandSource);
+            _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory, _teamCoordinator, _commandSource, _dangerMemory);
             EnsureReactiveListener();
 
             var objectivePoints = FindObjectsOfType<AIObjectivePoint>();
@@ -421,6 +431,9 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             }
 
             _nextSenseTick = (uint)Random.Range(0, 8);
+            _nextDangerRefreshTick = (uint)Random.Range(
+                0,
+                Mathf.Max(1, (int)_profile.DangerRefreshIntervalTicks));
             AIDebugTracker.Register(_brawler);
 
             _brainInitialized = true;
@@ -468,6 +481,20 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             bool hot = _targetInfo.HasLiveTarget;
             uint baseInterval = hot ? _profile.CombatSenseIntervalTicks : _profile.IdleSenseIntervalTicks;
             _nextSenseTick = currentTick + baseInterval + _profile.ReactionDelayTicks;
+        }
+
+        private void RefreshDangerIfDue(uint currentTick)
+        {
+            if (_dangerMemory == null || _profile == null || currentTick < _nextDangerRefreshTick)
+                return;
+
+            _dangerMemory.Refresh(_brawler, _profile, currentTick);
+
+            uint interval = _profile.DangerRefreshIntervalTicks == 0u
+                ? 1u
+                : _profile.DangerRefreshIntervalTicks;
+
+            _nextDangerRefreshTick = currentTick + interval;
         }
 
         private float GetAbilityIdealRange()

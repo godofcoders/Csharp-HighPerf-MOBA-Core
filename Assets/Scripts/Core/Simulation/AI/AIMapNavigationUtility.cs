@@ -139,8 +139,19 @@ namespace MOBA.Core.Simulation.AI
             float desiredDistance = Vector3.Distance(candidate, request.DesiredDestination);
             score -= desiredDistance * 10f;
 
-            List<PathNode> path = pathfinder.FindPath(selfCoords.x, selfCoords.y, coords.x, coords.y);
-            if (path == null && (candidate - self.Position).sqrMagnitude > pathfinder.CellSize * pathfinder.CellSize)
+            List<PathNode> path = null;
+            if (request.Intent != AIMapRouteIntent.Evade)
+            {
+                path = pathfinder.FindPath(selfCoords.x, selfCoords.y, coords.x, coords.y);
+            }
+            else
+            {
+                reason += "|fast_evade";
+            }
+
+            if (request.Intent != AIMapRouteIntent.Evade &&
+                path == null &&
+                (candidate - self.Position).sqrMagnitude > pathfinder.CellSize * pathfinder.CellSize)
             {
                 reason += "|no_path";
                 return float.MinValue;
@@ -200,6 +211,7 @@ namespace MOBA.Core.Simulation.AI
             switch (request.Intent)
             {
                 case AIMapRouteIntent.CombatRetreat:
+                case AIMapRouteIntent.Evade:
                     score += distanceFromThreat * threatWeight;
                     if (preferredDistance > 0f && distanceFromThreat < preferredDistance)
                     {

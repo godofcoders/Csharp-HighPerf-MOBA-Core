@@ -154,6 +154,7 @@ namespace MOBA.Core.Simulation.AI
             switch (action.ActionType)
             {
                 case AIActionType.Retreat:
+                case AIActionType.Evade:
                 case AIActionType.UseSuper:
                 case AIActionType.Peel:
                     return true;
@@ -178,6 +179,7 @@ namespace MOBA.Core.Simulation.AI
                 case AIActionType.HoldRange:
                 case AIActionType.Reposition:
                 case AIActionType.Retreat:
+                case AIActionType.Evade:
                 case AIActionType.UseSuper:
                 case AIActionType.Peel:
                     return true;

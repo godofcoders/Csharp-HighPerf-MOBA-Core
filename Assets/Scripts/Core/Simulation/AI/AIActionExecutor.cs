@@ -13,6 +13,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly AISuperDecider _superDecider;
         private readonly AIObjectiveMemory _objectiveMemory;
         private readonly AITeamCoordinator _teamCoordinator;
+        private readonly AIDangerMemory _dangerMemory;
         private readonly AISpacingUtility _spacingUtility;
         private readonly AICommandSource _commandSource;
 
@@ -66,7 +67,8 @@ namespace MOBA.Core.Simulation.AI
             AISuperDecider superDecider,
             AIObjectiveMemory objectiveMemory,
             AITeamCoordinator teamCoordinator,
-            AICommandSource commandSource)
+            AICommandSource commandSource,
+            AIDangerMemory dangerMemory = null)
         {
             _brawler = brawler;
             _profile = profile;
@@ -75,6 +77,7 @@ namespace MOBA.Core.Simulation.AI
             _superDecider = superDecider;
             _objectiveMemory = objectiveMemory;
             _teamCoordinator = teamCoordinator;
+            _dangerMemory = dangerMemory;
             _spacingUtility = new AISpacingUtility(brawler);
             _commandSource = commandSource;
         }
@@ -103,6 +106,10 @@ namespace MOBA.Core.Simulation.AI
 
                 case AIActionType.Retreat:
                     RunRetreat(targetInfo);
+                    break;
+
+                case AIActionType.Evade:
+                    RunEvade(targetInfo, currentTick, attackRange, superRange);
                     break;
 
                 case AIActionType.Search:
@@ -202,6 +209,7 @@ namespace MOBA.Core.Simulation.AI
                 routeIntent == AIMapRouteIntent.CombatAdvance ||
                 routeIntent == AIMapRouteIntent.CombatReposition ||
                 routeIntent == AIMapRouteIntent.CombatRetreat ||
+                routeIntent == AIMapRouteIntent.Evade ||
                 routeIntent == AIMapRouteIntent.Peel;
 
             bool stealthRoute =
@@ -221,13 +229,17 @@ namespace MOBA.Core.Simulation.AI
                 PreferCover = combatRoute || fragile || _profile.Archetype == BrawlerArchetype.Controller,
                 AvoidChokepoints = fragile ||
                                    routeIntent == AIMapRouteIntent.CombatRetreat ||
+                                   routeIntent == AIMapRouteIntent.Evade ||
                                    routeIntent == AIMapRouteIntent.Search ||
                                    routeIntent == AIMapRouteIntent.Objective ||
                                    routeIntent == AIMapRouteIntent.Regroup,
-                PreferFlank = routeIntent == AIMapRouteIntent.CombatAdvance ||
-                              routeIntent == AIMapRouteIntent.CombatReposition ||
-                              _profile.Archetype == BrawlerArchetype.Assassin,
-                SearchRadius = _profile.MapDestinationSearchRadius,
+                PreferFlank = routeIntent != AIMapRouteIntent.Evade &&
+                              (routeIntent == AIMapRouteIntent.CombatAdvance ||
+                               routeIntent == AIMapRouteIntent.CombatReposition ||
+                               _profile.Archetype == BrawlerArchetype.Assassin),
+                SearchRadius = routeIntent == AIMapRouteIntent.Evade
+                    ? Mathf.Min(_profile.MapDestinationSearchRadius, _profile.DangerMapSearchRadius)
+                    : _profile.MapDestinationSearchRadius,
                 BushWeight = _profile.MapBushPreference,
                 CoverWeight = _profile.MapCoverPreference,
                 ChokepointPenalty = _profile.MapChokepointPenalty,
@@ -459,6 +471,119 @@ namespace MOBA.Core.Simulation.AI
                 true,
                 targetInfo.Target.Position,
                 GetTacticalPreferredRange(GetAbilityIdealRange()));
+        }
+
+        private void RunEvade(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            float attackRange,
+            float superRange)
+        {
+            if (_dangerMemory == null || !_dangerMemory.HasDanger)
+            {
+                _navAgent.Stop();
+                return;
+            }
+
+            if (targetInfo.HasLiveTarget && targetInfo.Target != null)
+            {
+                _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
+                _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
+                _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
+            }
+
+            if (!ShouldRefreshEvadeMove(currentTick, out string refreshReason))
+            {
+                _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.4f);
+                return;
+            }
+
+            _pendingTacticalRefreshReason = refreshReason;
+            _lastTacticalTargetPosition = _dangerMemory.ThreatPosition;
+            _lastTacticalTargetDistance = Vector3.Distance(_brawler.Position, _dangerMemory.ThreatPosition);
+            _lastTacticalPreferredRange = _profile.DangerEvadeDistance;
+            _lastTacticalTooCloseDistance = Mathf.Max(0.5f, _profile.DangerEvadeDistance * 0.5f);
+
+            Vector3 destination = _dangerMemory.GetEvadeDestination(
+                _brawler.Position,
+                _profile.DangerEvadeDistance);
+
+            destination = EnsureMeaningfulTacticalDestination(
+                destination,
+                AITacticalMovementIntent.EmergencyRetreat);
+
+            Vector3 resolvedDestination = ResolveMapAwareDestination(
+                destination,
+                AIMapRouteIntent.Evade,
+                true,
+                _dangerMemory.ThreatPosition,
+                _profile.DangerEvadeDistance);
+
+            _lastTacticalMovementIntent = AITacticalMovementIntent.EmergencyRetreat;
+            _lastTacticalMoveDestination = resolvedDestination;
+            _lastTacticalRetargetTick = currentTick;
+            _lastTacticalMoveReason = string.IsNullOrEmpty(_pendingTacticalRefreshReason)
+                ? "danger_evade"
+                : $"danger_evade|{_pendingTacticalRefreshReason}";
+            _pendingTacticalRefreshReason = string.Empty;
+
+            uint retargetTicks = _profile.DangerEvadeRetargetTicks == 0
+                ? 1u
+                : _profile.DangerEvadeRetargetTicks;
+
+            _nextTacticalMoveRetargetTick = currentTick + retargetTicks;
+
+            _navAgent.RequestDestination(resolvedDestination, 0.4f);
+        }
+
+        private bool ShouldRefreshEvadeMove(uint currentTick, out string refreshReason)
+        {
+            refreshReason = string.Empty;
+
+            if (!_navAgent.HasDestination)
+            {
+                refreshReason = "missing_destination";
+                return true;
+            }
+
+            if (_lastTacticalMovementIntent != AITacticalMovementIntent.EmergencyRetreat ||
+                string.IsNullOrEmpty(_lastTacticalMoveReason) ||
+                !_lastTacticalMoveReason.StartsWith("danger_evade"))
+            {
+                refreshReason = "new_evade";
+                return true;
+            }
+
+            uint retargetTicks = _profile.DangerEvadeRetargetTicks == 0u
+                ? 1u
+                : _profile.DangerEvadeRetargetTicks;
+
+            if ((currentTick - _lastTacticalRetargetTick) >= retargetTicks)
+            {
+                refreshReason = "evade_retarget_window";
+                return true;
+            }
+
+            float staleDistance = Mathf.Max(0.25f, _profile.DangerThreatStaleDistance);
+            float threatMoveSq = (_dangerMemory.ThreatPosition - _lastTacticalTargetPosition).sqrMagnitude;
+            if (threatMoveSq >= staleDistance * staleDistance)
+            {
+                refreshReason = $"threat_moved_{Mathf.Sqrt(threatMoveSq):0.0}";
+                return true;
+            }
+
+            uint heartbeatTicks = _profile.TacticalMoveHeartbeatTicks == 0u
+                ? 1u
+                : _profile.TacticalMoveHeartbeatTicks;
+
+            if ((currentTick - _lastTacticalRetargetTick) >= heartbeatTicks &&
+                IsNearLastTacticalDestination())
+            {
+                refreshReason = "evade_heartbeat";
+                return true;
+            }
+
+            return false;
         }
 
         private void RunSearch(AITargetInfo targetInfo, uint currentTick)

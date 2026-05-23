@@ -13,6 +13,7 @@ namespace MOBA.Core.Simulation
         private AbilityDefinition _sourceAbility;
         private AbilitySlotType _slotType;
         private bool _isSuper;
+        private AreaHazardService _hazardService;
 
         private float _elapsedLifetime;
         private float _tickTimer;
@@ -20,7 +21,14 @@ namespace MOBA.Core.Simulation
         private GameObject _visualInstance;
         private readonly List<ISpatialEntity> _targets = new List<ISpatialEntity>(16);
 
-        public void Initialize(in AreaHazardSpawnRequest request)
+        public BrawlerController Owner => _owner;
+        public TeamType Team => _team;
+        public Vector3 Position => transform.position;
+        public float Radius => _definition != null ? _definition.Radius : 0f;
+        public float DamagePerTick => _definition != null ? _definition.DamagePerTick : 0f;
+        public bool IsSuper => _isSuper;
+
+        public void Initialize(in AreaHazardSpawnRequest request, AreaHazardService hazardService = null)
         {
             _definition = request.Definition;
             _owner = request.Owner;
@@ -28,10 +36,37 @@ namespace MOBA.Core.Simulation
             _sourceAbility = request.SourceAbility;
             _slotType = request.SlotType;
             _isSuper = request.IsSuper;
+            _hazardService = hazardService;
 
             transform.position = request.Position;
 
             BuildVisual();
+        }
+
+        private void OnDestroy()
+        {
+            _hazardService?.Unregister(this);
+        }
+
+        public bool CanThreatenTeam(TeamType observerTeam)
+        {
+            if (_definition == null || _definition.DamagePerTick <= 0f)
+                return false;
+
+            switch (_definition.TargetTeamRule)
+            {
+                case AbilityTargetTeamRule.Enemy:
+                    return observerTeam != _team;
+
+                case AbilityTargetTeamRule.Ally:
+                    return observerTeam == _team;
+
+                case AbilityTargetTeamRule.Any:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
 
         private void Update()

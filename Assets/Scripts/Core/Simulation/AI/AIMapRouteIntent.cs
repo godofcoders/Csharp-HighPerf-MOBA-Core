@@ -6,6 +6,7 @@ namespace MOBA.Core.Simulation.AI
         CombatAdvance,
         CombatReposition,
         CombatRetreat,
+        Evade,
         Objective,
         Search,
         Regroup,

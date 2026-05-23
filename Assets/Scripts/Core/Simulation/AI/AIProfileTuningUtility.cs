@@ -42,6 +42,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.OverFocusedTargetPenaltyPerAlly *= 0.70f;
                     profile.TacticalMoveRetargetTicks = ScaleTicks(profile.TacticalMoveRetargetTicks, 1.35f, 1);
                     profile.TacticalMoveHeartbeatTicks = ScaleTicks(profile.TacticalMoveHeartbeatTicks, 1.25f, 1);
+                    profile.DangerScanRadius *= 0.85f;
+                    profile.DangerReactionTimeSeconds *= 0.80f;
+                    profile.DangerEvadePressureThreshold *= 1.15f;
+                    profile.DangerEvadeScoreBonus *= 0.80f;
+                    profile.DangerRefreshIntervalTicks = ScaleTicks(profile.DangerRefreshIntervalTicks, 1.5f, 1);
+                    profile.DangerEvadeRetargetTicks = ScaleTicks(profile.DangerEvadeRetargetTicks, 1.35f, 1);
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -62,6 +68,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.TacticalMoveRetargetTicks = ScaleTicks(profile.TacticalMoveRetargetTicks, 0.80f, 1);
                     profile.TacticalMoveHeartbeatTicks = ScaleTicks(profile.TacticalMoveHeartbeatTicks, 0.80f, 1);
                     profile.TacticalMinimumStepDistance *= 1.10f;
+                    profile.DangerScanRadius *= 1.10f;
+                    profile.DangerReactionTimeSeconds *= 1.15f;
+                    profile.DangerEvadePressureThreshold *= 0.90f;
+                    profile.DangerEvadeScoreBonus *= 1.12f;
+                    profile.DangerRefreshIntervalTicks = ScaleTicks(profile.DangerRefreshIntervalTicks, 0.75f, 1);
+                    profile.DangerEvadeRetargetTicks = ScaleTicks(profile.DangerEvadeRetargetTicks, 0.80f, 1);
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -87,6 +99,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.LowHealthRetreatRatio *= 0.85f;
                     profile.PreferredAttackRangeRatio *= 0.92f;
                     profile.TacticalKiteDistance *= 0.85f;
+                    profile.DangerEvadePressureThreshold *= 1.10f;
+                    profile.DangerEvadeScoreBonus *= 0.90f;
+                    profile.DangerEvadeDistance *= 0.90f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -99,6 +114,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.PreferredAttackRangeRatio *= 1.08f;
                     profile.TacticalKiteDistance *= 1.15f;
                     profile.FragileRangePadding += 0.25f;
+                    profile.DangerScanRadius *= 1.08f;
+                    profile.DangerEvadePressureThreshold *= 0.90f;
+                    profile.DangerEvadeScoreBonus *= 1.10f;
+                    profile.DangerEvadeDistance *= 1.08f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -110,6 +129,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.AllyAvoidanceWeight *= 1.15f;
                     profile.AllySupportRange *= 1.12f;
                     profile.ApproachWeight *= 0.95f;
+                    profile.DangerEvadeScoreBonus *= 1.04f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -145,6 +165,17 @@ namespace MOBA.Core.Simulation.AI
             profile.FocusFireWeight = Mathf.Clamp(profile.FocusFireWeight, 0f, 45f);
             profile.OverFocusedTargetPenaltyPerAlly = Mathf.Clamp(profile.OverFocusedTargetPenaltyPerAlly, 0f, 45f);
             profile.MaxOverFocusedTargetPenalty = Mathf.Clamp(profile.MaxOverFocusedTargetPenalty, 0f, 70f);
+
+            profile.DangerScanRadius = Mathf.Clamp(profile.DangerScanRadius, 3f, 12f);
+            profile.DangerPersonalSpace = Mathf.Clamp(profile.DangerPersonalSpace, 0.1f, 1.5f);
+            profile.DangerReactionTimeSeconds = Mathf.Clamp(profile.DangerReactionTimeSeconds, 0.20f, 1.75f);
+            profile.DangerEvadePressureThreshold = Mathf.Clamp(profile.DangerEvadePressureThreshold, 0.05f, 0.85f);
+            profile.DangerEvadeScoreBonus = Mathf.Clamp(profile.DangerEvadeScoreBonus, 10f, 110f);
+            profile.DangerEvadeDistance = Mathf.Clamp(profile.DangerEvadeDistance, 0.75f, 5f);
+            profile.DangerRefreshIntervalTicks = ClampTicks(profile.DangerRefreshIntervalTicks, 1, 12);
+            profile.DangerEvadeRetargetTicks = ClampTicks(profile.DangerEvadeRetargetTicks, 1, 20);
+            profile.DangerThreatStaleDistance = Mathf.Clamp(profile.DangerThreatStaleDistance, 0.25f, 3f);
+            profile.DangerMapSearchRadius = Mathf.Clamp(profile.DangerMapSearchRadius, 0.5f, 3f);
         }
 
         private static uint ScaleTicks(uint value, float multiplier, uint minimum)

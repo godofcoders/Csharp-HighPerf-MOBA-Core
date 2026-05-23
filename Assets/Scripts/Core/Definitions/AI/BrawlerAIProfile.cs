@@ -183,6 +183,30 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("If true, logs reactive damage memory updates.")]
         public bool LogReactiveEvents = false;
 
+        [Header("Danger Avoidance")]
+        [Tooltip("How far the bot scans for active projectiles and hostile area hazards.")]
+        public float DangerScanRadius = 7f;
+        [Tooltip("Ticks between danger scans. Keep low for responsiveness, but never every frame for every bot unless profiling proves it safe.")]
+        public uint DangerRefreshIntervalTicks = 2;
+        [Tooltip("Extra padding added around the bot and threat radius while evaluating danger.")]
+        public float DangerPersonalSpace = 0.55f;
+        [Tooltip("Threat impact window used for early evasion. Higher values make bots dodge sooner.")]
+        public float DangerReactionTimeSeconds = 0.75f;
+        [Tooltip("Minimum danger pressure needed before Evade can score.")]
+        public float DangerEvadePressureThreshold = 0.25f;
+        [Tooltip("Evade score added at full danger pressure.")]
+        public float DangerEvadeScoreBonus = 70f;
+        [Tooltip("Step distance requested when dodging a projectile or leaving a hazard.")]
+        public float DangerEvadeDistance = 2.6f;
+        [Tooltip("Ticks before recalculating an evade route while danger remains active.")]
+        public uint DangerEvadeRetargetTicks = 6;
+        [Tooltip("Recalculate evade movement when the primary threat moves this far from the last planned threat position.")]
+        public float DangerThreatStaleDistance = 0.9f;
+        [Tooltip("Local map search radius for evade. Smaller than normal map routing to avoid expensive per-tick candidate scans.")]
+        public float DangerMapSearchRadius = 1.5f;
+        [Tooltip("If true, logs danger avoidance memory updates.")]
+        public bool LogDangerAvoidance = false;
+
         public float GetPreferredAttackRange(float idealRange)
         {
             return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);
@@ -490,6 +514,7 @@ namespace MOBA.Core.Simulation.AI
 
             ApplyMapIntelligenceDefaults(archetype);
             ApplyReactiveCombatDefaults(archetype);
+            ApplyDangerAvoidanceDefaults(archetype);
         }
 
         private void ApplyMapIntelligenceDefaults(BrawlerArchetype archetype)
@@ -600,6 +625,79 @@ namespace MOBA.Core.Simulation.AI
                     ReactiveRepositionPressureBonus = 42f;
                     ReactiveAttackerFocusBonus = 12f;
                     ReactiveEmergencyHealthRatio = 0.50f;
+                    break;
+            }
+        }
+
+        private void ApplyDangerAvoidanceDefaults(BrawlerArchetype archetype)
+        {
+            DangerScanRadius = 7f;
+            DangerRefreshIntervalTicks = 2;
+            DangerPersonalSpace = 0.55f;
+            DangerReactionTimeSeconds = 0.75f;
+            DangerEvadePressureThreshold = 0.25f;
+            DangerEvadeScoreBonus = 70f;
+            DangerEvadeDistance = 2.6f;
+            DangerEvadeRetargetTicks = 6;
+            DangerThreatStaleDistance = 0.9f;
+            DangerMapSearchRadius = 1.5f;
+            LogDangerAvoidance = false;
+
+            switch (archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                    DangerScanRadius = 8.5f;
+                    DangerReactionTimeSeconds = 0.95f;
+                    DangerEvadePressureThreshold = 0.20f;
+                    DangerEvadeScoreBonus = 82f;
+                    DangerEvadeDistance = 3.1f;
+                    DangerEvadeRetargetTicks = 5;
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    DangerScanRadius = 6f;
+                    DangerReactionTimeSeconds = 0.60f;
+                    DangerEvadePressureThreshold = 0.34f;
+                    DangerEvadeScoreBonus = 48f;
+                    DangerEvadeDistance = 1.9f;
+                    DangerEvadeRetargetTicks = 7;
+                    DangerMapSearchRadius = 1.25f;
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    DangerScanRadius = 7.5f;
+                    DangerReactionTimeSeconds = 0.80f;
+                    DangerEvadePressureThreshold = 0.23f;
+                    DangerEvadeScoreBonus = 66f;
+                    DangerEvadeDistance = 2.4f;
+                    DangerEvadeRetargetTicks = 5;
+                    break;
+
+                case BrawlerArchetype.Support:
+                    DangerScanRadius = 8f;
+                    DangerReactionTimeSeconds = 0.90f;
+                    DangerEvadePressureThreshold = 0.22f;
+                    DangerEvadeScoreBonus = 78f;
+                    DangerEvadeDistance = 2.9f;
+                    DangerEvadeRetargetTicks = 5;
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    DangerScanRadius = 7.25f;
+                    DangerReactionTimeSeconds = 0.80f;
+                    DangerEvadePressureThreshold = 0.24f;
+                    DangerEvadeScoreBonus = 72f;
+                    DangerEvadeDistance = 2.6f;
+                    DangerEvadeRetargetTicks = 6;
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    DangerScanRadius = 8.75f;
+                    DangerReactionTimeSeconds = 1.00f;
+                    DangerEvadePressureThreshold = 0.20f;
+                    DangerEvadeScoreBonus = 86f;
+                    DangerEvadeDistance = 3.2f;
+                    DangerEvadeRetargetTicks = 5;
                     break;
             }
         }

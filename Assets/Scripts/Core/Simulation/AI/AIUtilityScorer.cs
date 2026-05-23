@@ -13,6 +13,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly AIObjectiveMemory _objectiveMemory;
         private readonly AITeamCoordinator _teamCoordinator;
         private readonly AIReactiveMemory _reactiveMemory;
+        private readonly AIDangerMemory _dangerMemory;
 
         private readonly uint _threatForgetTicks = 240;
 
@@ -46,19 +47,22 @@ namespace MOBA.Core.Simulation.AI
             BrawlerAIProfile profile,
             AIObjectiveMemory objectiveMemory,
             AITeamCoordinator teamCoordinator,
-            AIReactiveMemory reactiveMemory = null)
+            AIReactiveMemory reactiveMemory = null,
+            AIDangerMemory dangerMemory = null)
         {
             _self = self;
             _profile = profile;
             _objectiveMemory = objectiveMemory;
             _teamCoordinator = teamCoordinator;
             _reactiveMemory = reactiveMemory;
+            _dangerMemory = dangerMemory;
         }
 
         public AIActionScore ScoreBestAction(AITargetInfo targetInfo, uint currentTick)
         {
             AIActionScore best = new AIActionScore(AIActionType.Wander, 0f);
 
+            ScoreAndReplace(ref best, ScoreEvade());
             ScoreAndReplace(ref best, ScoreRetreat(targetInfo, currentTick));
             ScoreAndReplace(ref best, ScoreUseSuper(targetInfo));
             ScoreAndReplace(ref best, ScoreHoldRange(targetInfo));
@@ -77,6 +81,7 @@ namespace MOBA.Core.Simulation.AI
         {
             results.Clear();
 
+            results.Add(ScoreEvade());
             results.Add(ScoreRetreat(targetInfo, currentTick));
             results.Add(ScoreUseSuper(targetInfo));
             results.Add(ScoreHoldRange(targetInfo));
@@ -188,6 +193,43 @@ namespace MOBA.Core.Simulation.AI
     score,
     _profile.RetreatWeight,
     allowEmergencyScore: true);
+        }
+
+        private AIActionScore ScoreEvade()
+        {
+            if (_dangerMemory == null ||
+                !_dangerMemory.HasDanger ||
+                _dangerMemory.Pressure < _profile.DangerEvadePressureThreshold)
+            {
+                return new AIActionScore(AIActionType.Evade, 0f);
+            }
+
+            float score = 35f + (_dangerMemory.Pressure * _profile.DangerEvadeScoreBonus);
+
+            if (_self.State != null)
+            {
+                float healthRatio = _self.State.CurrentHealth /
+                                    Mathf.Max(1f, _self.State.MaxHealth.Value);
+
+                if (healthRatio <= _profile.LowHealthRetreatRatio)
+                    score += 15f;
+            }
+
+            score = AddArchetypeBias(
+                score,
+                sniper: 10f,
+                tank: -10f,
+                assassin: 4f,
+                support: 8f,
+                fighter: 0f,
+                controller: 5f,
+                artillery: 12f);
+
+            return MakeScore(
+                AIActionType.Evade,
+                score,
+                1f,
+                allowEmergencyScore: true);
         }
 
         private AIActionScore ScoreUseSuper(AITargetInfo targetInfo)

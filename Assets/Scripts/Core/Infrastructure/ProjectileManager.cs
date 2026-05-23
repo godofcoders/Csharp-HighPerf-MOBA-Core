@@ -6,8 +6,11 @@ using MOBA.Core.Definitions;
 namespace MOBA.Core.Infrastructure
 {
     [RequireComponent(typeof(SimpleObjectPool))]
-    public class ProjectileManager : MonoBehaviour, IProjectileService, ITickable
+    public class ProjectileManager : MonoBehaviour, IProjectileService, IProjectileThreatProvider, ITickable
     {
+        private const float DirectProjectileThreatRadius = 1.15f;
+        private const float DirectProjectileThreatLookaheadSeconds = 1.25f;
+
         private SimpleObjectPool _pool;
         private readonly List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>(64);
 
@@ -15,6 +18,7 @@ namespace MOBA.Core.Infrastructure
         {
             _pool = GetComponent<SimpleObjectPool>();
             ServiceProvider.Register<IProjectileService>(this);
+            ServiceProvider.Register<IProjectileThreatProvider>(this);
         }
 
         // Registered in Start (not Awake) so SimulationClock.Awake has run first
@@ -93,6 +97,8 @@ namespace MOBA.Core.Infrastructure
                 RemainingBounces = context.RemainingBounces,
                 BounceRadius = context.BounceRadius,
                 HitEntityIds = new System.Collections.Generic.HashSet<int>(),
+                CanAffectEnemiesOnImpact = context.CanAffectEnemiesOnImpact,
+                CanAffectAlliesOnImpact = context.CanAffectAlliesOnImpact,
             });
 
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
@@ -302,6 +308,191 @@ namespace MOBA.Core.Infrastructure
 
                     Despawn(i);
                 }
+            }
+        }
+
+        public void AppendProjectileThreatsNonAlloc(
+            Vector3 observerPosition,
+            TeamType observerTeam,
+            float scanRadius,
+            List<GameplayThreatInfo> results)
+        {
+            if (results == null)
+                return;
+
+            float scanRadiusSq = scanRadius * scanRadius;
+
+            for (int i = 0; i < _activeProjectiles.Count; i++)
+            {
+                ActiveProjectile projectile = _activeProjectiles[i];
+                if (projectile == null || projectile.GameObject == null)
+                    continue;
+
+                if (projectile.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE)
+                {
+                    AppendThrownProjectileThreat(
+                        projectile,
+                        observerPosition,
+                        observerTeam,
+                        scanRadiusSq,
+                        results);
+                }
+                else
+                {
+                    AppendDirectProjectileThreat(
+                        projectile,
+                        observerPosition,
+                        observerTeam,
+                        scanRadiusSq,
+                        results);
+                }
+            }
+        }
+
+        private void AppendDirectProjectileThreat(
+            ActiveProjectile projectile,
+            Vector3 observerPosition,
+            TeamType observerTeam,
+            float scanRadiusSq,
+            List<GameplayThreatInfo> results)
+        {
+            float damage = GetProjectileThreatDamage(projectile, observerTeam);
+            if (damage <= 0f)
+                return;
+
+            Vector3 projectilePosition = projectile.GameObject.transform.position;
+            Vector3 toObserver = observerPosition - projectilePosition;
+            toObserver.y = 0f;
+
+            if (toObserver.sqrMagnitude > scanRadiusSq)
+                return;
+
+            Vector3 direction = projectile.Direction;
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.001f)
+                return;
+
+            direction.Normalize();
+            float forwardDistance = Vector3.Dot(toObserver, direction);
+            float lookaheadDistance = Mathf.Max(
+                DirectProjectileThreatRadius,
+                projectile.Speed * DirectProjectileThreatLookaheadSeconds);
+
+            if (forwardDistance < -DirectProjectileThreatRadius || forwardDistance > lookaheadDistance)
+                return;
+
+            Vector3 closestPoint = projectilePosition + direction * Mathf.Max(0f, forwardDistance);
+            Vector3 lateral = observerPosition - closestPoint;
+            lateral.y = 0f;
+
+            float threatRadius = DirectProjectileThreatRadius;
+            if (lateral.sqrMagnitude > threatRadius * threatRadius)
+                return;
+
+            results.Add(new GameplayThreatInfo
+            {
+                Owner = projectile.Owner,
+                Team = projectile.Team,
+                Position = closestPoint,
+                Direction = direction,
+                Radius = threatRadius,
+                Damage = damage,
+                TimeToImpact = projectile.Speed > 0f ? Mathf.Max(0f, forwardDistance) / projectile.Speed : 0f,
+                IsProjectile = true,
+                IsAreaHazard = false,
+                IsSuper = projectile.IsSuper
+            });
+        }
+
+        private void AppendThrownProjectileThreat(
+            ActiveProjectile projectile,
+            Vector3 observerPosition,
+            TeamType observerTeam,
+            float scanRadiusSq,
+            List<GameplayThreatInfo> results)
+        {
+            float damage = GetThrownThreatDamage(projectile, observerTeam);
+            if (damage <= 0f || projectile.ImpactRadius <= 0f)
+                return;
+
+            Vector3 delta = observerPosition - projectile.TargetPoint;
+            delta.y = 0f;
+
+            if (delta.sqrMagnitude > scanRadiusSq)
+                return;
+
+            float threatRadius = projectile.ImpactRadius + 0.35f;
+            if (delta.sqrMagnitude > threatRadius * threatRadius)
+                return;
+
+            float remainingDistance = Mathf.Max(0f, 1f - projectile.TravelProgress) *
+                                      Mathf.Max(0.01f, projectile.TravelDistance);
+
+            Vector3 direction = projectile.TargetPoint - projectile.Origin;
+            direction.y = 0f;
+
+            results.Add(new GameplayThreatInfo
+            {
+                Owner = projectile.Owner,
+                Team = projectile.Team,
+                Position = projectile.TargetPoint,
+                Direction = direction.sqrMagnitude > 0.001f ? direction.normalized : Vector3.zero,
+                Radius = threatRadius,
+                Damage = damage,
+                TimeToImpact = projectile.Speed > 0f ? remainingDistance / projectile.Speed : 0f,
+                IsProjectile = true,
+                IsAreaHazard = false,
+                IsSuper = projectile.IsSuper
+            });
+        }
+
+        private float GetProjectileThreatDamage(ActiveProjectile projectile, TeamType observerTeam)
+        {
+            if (!CanProjectileAffectTeam(projectile.HitTeamRule, projectile.Team, observerTeam))
+                return 0f;
+
+            return projectile.IsHybrid
+                ? Mathf.Max(0f, projectile.EnemyDamageAmount)
+                : Mathf.Max(0f, projectile.Damage);
+        }
+
+        private float GetThrownThreatDamage(ActiveProjectile projectile, TeamType observerTeam)
+        {
+            if (projectile.HasHybridAoEImpact)
+            {
+                bool enemy = observerTeam != projectile.Team;
+                if (enemy && projectile.CanAffectEnemiesOnImpact)
+                    return Mathf.Max(0f, projectile.ImpactEnemyDamage);
+
+                return 0f;
+            }
+
+            if (!CanProjectileAffectTeam(projectile.HitTeamRule, projectile.Team, observerTeam))
+                return 0f;
+
+            return projectile.IsHybrid
+                ? Mathf.Max(0f, projectile.EnemyDamageAmount)
+                : Mathf.Max(0f, projectile.Damage);
+        }
+
+        private static bool CanProjectileAffectTeam(
+            ProjectileHitTeamRule hitTeamRule,
+            TeamType projectileTeam,
+            TeamType observerTeam)
+        {
+            switch (hitTeamRule)
+            {
+                case ProjectileHitTeamRule.EnemiesOnly:
+                    return observerTeam != projectileTeam;
+
+                case ProjectileHitTeamRule.AlliesOnly:
+                    return observerTeam == projectileTeam;
+
+                case ProjectileHitTeamRule.AlliesAndEnemies:
+                    return true;
+
+                default:
+                    return false;
             }
         }
 
