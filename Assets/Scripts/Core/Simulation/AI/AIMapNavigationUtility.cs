@@ -13,11 +13,16 @@ namespace MOBA.Core.Simulation.AI
         public float PreferredThreatDistance;
         public bool PreferBush;
         public bool PreferCover;
+        public bool PreferLineOfSightCover;
+        public bool PreferOpenShot;
         public bool AvoidChokepoints;
         public bool PreferFlank;
         public float SearchRadius;
         public float BushWeight;
         public float CoverWeight;
+        public float LineOfSightCoverWeight;
+        public float ExposedPositionPenalty;
+        public float OpenShotWeight;
         public float ChokepointPenalty;
         public float ThreatWeight;
         public float PathCostWeight;
@@ -38,6 +43,7 @@ namespace MOBA.Core.Simulation.AI
     public static class AIMapNavigationUtility
     {
         private const int MaxPathValidatedCandidates = 4;
+        private const int MaxCoverLineSamples = 32;
 
         private struct CandidateScore
         {
@@ -74,6 +80,9 @@ namespace MOBA.Core.Simulation.AI
             int maxOffsetMagnitude = Mathf.Max(1, Mathf.CeilToInt(searchRadius / Mathf.Max(0.1f, pathfinder.CellSize)));
             Vector2Int selfCoords = pathfinder.GetGridCoords(self.Position);
             Vector2Int desiredCoords = pathfinder.GetGridCoords(request.DesiredDestination);
+            Vector2Int threatCoords = request.HasThreatPosition
+                ? pathfinder.GetGridCoords(request.ThreatPosition)
+                : default;
 
             if (!pathfinder.IsWalkable(selfCoords) &&
                 !pathfinder.TryGetNearestWalkableCoords(selfCoords, maxOffsetMagnitude, out selfCoords))
@@ -108,6 +117,7 @@ namespace MOBA.Core.Simulation.AI
                         selfCoords,
                         coords,
                         candidate,
+                        threatCoords,
                         request,
                         out string reason);
 
@@ -271,6 +281,7 @@ namespace MOBA.Core.Simulation.AI
             Vector2Int selfCoords,
             Vector2Int coords,
             Vector3 candidate,
+            Vector2Int threatCoords,
             in AIMapNavigationRequest request,
             out string reason)
         {
@@ -298,6 +309,28 @@ namespace MOBA.Core.Simulation.AI
                 reason += "|cover";
             }
 
+            if (request.HasThreatPosition && (request.PreferLineOfSightCover || request.PreferOpenShot))
+            {
+                bool hasCoverBetween = HasCoverBetween(
+                    pathfinder,
+                    coords,
+                    threatCoords);
+
+                if (request.PreferLineOfSightCover)
+                    ApplyLineOfSightCoverScore(
+                        hasCoverBetween,
+                        request,
+                        ref score,
+                        ref reason);
+
+                if (request.PreferOpenShot)
+                    ApplyOpenShotScore(
+                        hasCoverBetween,
+                        request,
+                        ref score,
+                        ref reason);
+            }
+
             if (request.AvoidChokepoints && pathfinder.IsChokepoint(coords))
             {
                 score -= request.ChokepointPenalty;
@@ -315,6 +348,109 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return score;
+        }
+
+        public static bool HasCoverBetween(
+            AStarSolver pathfinder,
+            Vector3 protectedPosition,
+            Vector3 threatPosition)
+        {
+            if (pathfinder == null)
+                return false;
+
+            return HasCoverBetween(
+                pathfinder,
+                pathfinder.GetGridCoords(protectedPosition),
+                pathfinder.GetGridCoords(threatPosition));
+        }
+
+        private static bool HasCoverBetween(
+            AStarSolver pathfinder,
+            Vector2Int protectedCoords,
+            Vector2Int threatCoords)
+        {
+            if (protectedCoords == threatCoords)
+                return false;
+
+            int x = protectedCoords.x;
+            int y = protectedCoords.y;
+            int dx = Mathf.Abs(threatCoords.x - protectedCoords.x);
+            int dy = Mathf.Abs(threatCoords.y - protectedCoords.y);
+            int sx = protectedCoords.x < threatCoords.x ? 1 : -1;
+            int sy = protectedCoords.y < threatCoords.y ? 1 : -1;
+            int error = dx - dy;
+            int maxSamples = Mathf.Min(MaxCoverLineSamples, Mathf.Max(1, pathfinder.Width + pathfinder.Height));
+            int samples = 0;
+
+            while ((x != threatCoords.x || y != threatCoords.y) && samples < maxSamples)
+            {
+                int error2 = error * 2;
+
+                if (error2 > -dy)
+                {
+                    error -= dy;
+                    x += sx;
+                }
+
+                if (error2 < dx)
+                {
+                    error += dx;
+                    y += sy;
+                }
+
+                samples++;
+
+                if (x == threatCoords.x && y == threatCoords.y)
+                    return false;
+
+                Vector2Int sample = new Vector2Int(x, y);
+                if (!pathfinder.IsInBounds(sample) || !pathfinder.IsWalkable(sample))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static void ApplyLineOfSightCoverScore(
+            bool hasCoverBetween,
+            in AIMapNavigationRequest request,
+            ref float score,
+            ref string reason)
+        {
+            if (hasCoverBetween)
+            {
+                score += Mathf.Max(0f, request.LineOfSightCoverWeight);
+                reason += "|los_cover";
+                return;
+            }
+
+            float exposedPenalty = Mathf.Max(0f, request.ExposedPositionPenalty);
+            if (exposedPenalty <= 0f)
+                return;
+
+            score -= exposedPenalty;
+            reason += "|exposed";
+        }
+
+        private static void ApplyOpenShotScore(
+            bool hasCoverBetween,
+            in AIMapNavigationRequest request,
+            ref float score,
+            ref string reason)
+        {
+            float openShotWeight = Mathf.Max(0f, request.OpenShotWeight);
+            if (openShotWeight <= 0f)
+                return;
+
+            if (hasCoverBetween)
+            {
+                score -= openShotWeight * 0.6f;
+                reason += "|blocked_shot";
+                return;
+            }
+
+            score += openShotWeight;
+            reason += "|open_shot";
         }
 
         private static int EstimateGridSteps(Vector2Int from, Vector2Int to)

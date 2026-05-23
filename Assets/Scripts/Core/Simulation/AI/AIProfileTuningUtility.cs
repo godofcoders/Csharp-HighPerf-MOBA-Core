@@ -48,6 +48,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.DangerEvadeScoreBonus *= 0.80f;
                     profile.DangerRefreshIntervalTicks = ScaleTicks(profile.DangerRefreshIntervalTicks, 1.5f, 1);
                     profile.DangerEvadeRetargetTicks = ScaleTicks(profile.DangerEvadeRetargetTicks, 1.35f, 1);
+                    profile.MapLineOfSightCoverPreference *= 0.80f;
+                    profile.MapExposedPositionPenalty *= 0.75f;
+                    profile.MapOpenShotPreference *= 0.80f;
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -74,6 +77,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.DangerEvadeScoreBonus *= 1.12f;
                     profile.DangerRefreshIntervalTicks = ScaleTicks(profile.DangerRefreshIntervalTicks, 0.75f, 1);
                     profile.DangerEvadeRetargetTicks = ScaleTicks(profile.DangerEvadeRetargetTicks, 0.80f, 1);
+                    profile.MapLineOfSightCoverPreference *= 1.12f;
+                    profile.MapExposedPositionPenalty *= 1.10f;
+                    profile.MapOpenShotPreference *= 1.12f;
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -102,6 +108,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.DangerEvadePressureThreshold *= 1.10f;
                     profile.DangerEvadeScoreBonus *= 0.90f;
                     profile.DangerEvadeDistance *= 0.90f;
+                    profile.MapLineOfSightCoverPreference *= 0.85f;
+                    profile.MapExposedPositionPenalty *= 0.85f;
+                    profile.MapOpenShotPreference *= 1.15f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -118,6 +127,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.DangerEvadePressureThreshold *= 0.90f;
                     profile.DangerEvadeScoreBonus *= 1.10f;
                     profile.DangerEvadeDistance *= 1.08f;
+                    profile.MapLineOfSightCoverPreference *= 1.18f;
+                    profile.MapExposedPositionPenalty *= 1.15f;
+                    profile.MapOpenShotPreference *= 0.92f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -130,6 +142,8 @@ namespace MOBA.Core.Simulation.AI
                     profile.AllySupportRange *= 1.12f;
                     profile.ApproachWeight *= 0.95f;
                     profile.DangerEvadeScoreBonus *= 1.04f;
+                    profile.MapLineOfSightCoverPreference *= 1.08f;
+                    profile.MapOpenShotPreference *= 1.05f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -165,6 +179,16 @@ namespace MOBA.Core.Simulation.AI
             profile.FocusFireWeight = Mathf.Clamp(profile.FocusFireWeight, 0f, 45f);
             profile.OverFocusedTargetPenaltyPerAlly = Mathf.Clamp(profile.OverFocusedTargetPenaltyPerAlly, 0f, 45f);
             profile.MaxOverFocusedTargetPenalty = Mathf.Clamp(profile.MaxOverFocusedTargetPenalty, 0f, 70f);
+
+            profile.MapDestinationSearchRadius = Mathf.Clamp(profile.MapDestinationSearchRadius, 0.5f, 5f);
+            profile.MapBushPreference = Mathf.Clamp(profile.MapBushPreference, 0f, 30f);
+            profile.MapCoverPreference = Mathf.Clamp(profile.MapCoverPreference, 0f, 30f);
+            profile.MapLineOfSightCoverPreference = Mathf.Clamp(profile.MapLineOfSightCoverPreference, 0f, 35f);
+            profile.MapExposedPositionPenalty = Mathf.Clamp(profile.MapExposedPositionPenalty, 0f, 35f);
+            profile.MapOpenShotPreference = Mathf.Clamp(profile.MapOpenShotPreference, 0f, 30f);
+            profile.MapChokepointPenalty = Mathf.Clamp(profile.MapChokepointPenalty, 0f, 35f);
+            profile.MapThreatAvoidanceWeight = Mathf.Clamp(profile.MapThreatAvoidanceWeight, 0f, 12f);
+            profile.MapPathCostWeight = Mathf.Clamp(profile.MapPathCostWeight, 0f, 2f);
 
             profile.DangerScanRadius = Mathf.Clamp(profile.DangerScanRadius, 3f, 12f);
             profile.DangerPersonalSpace = Mathf.Clamp(profile.DangerPersonalSpace, 0.1f, 1.5f);

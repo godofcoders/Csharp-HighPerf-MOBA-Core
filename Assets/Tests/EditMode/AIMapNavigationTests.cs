@@ -72,6 +72,31 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(new Vector3(2.5f, 0f, 1.5f), solver.GetNearestWalkableWorldPos(new Vector3(1.5f, 0f, 1.5f), 2));
         }
 
+        [Test]
+        public void AIMapNavigationUtility_DetectsCoverBetweenPositions()
+        {
+            MapData map = MakeMap(5, 3, true);
+            map.WalkabilityGrid[2, 1] = false;
+            AStarSolver solver = new AStarSolver(map);
+
+            Assert.IsTrue(AIMapNavigationUtility.HasCoverBetween(
+                solver,
+                map.GetWorldPos(1, 1),
+                map.GetWorldPos(3, 1)));
+        }
+
+        [Test]
+        public void AIMapNavigationUtility_ReportsClearMapLineWhenUnblocked()
+        {
+            MapData map = MakeMap(5, 3, true);
+            AStarSolver solver = new AStarSolver(map);
+
+            Assert.IsFalse(AIMapNavigationUtility.HasCoverBetween(
+                solver,
+                map.GetWorldPos(1, 1),
+                map.GetWorldPos(3, 1)));
+        }
+
         private static MapData MakeMap(int width, int height, bool walkable)
         {
             MapData map = new MapData(width, height, 1f, Vector3.zero);

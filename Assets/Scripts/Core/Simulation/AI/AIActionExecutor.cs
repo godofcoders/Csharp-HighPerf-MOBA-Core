@@ -297,6 +297,25 @@ namespace MOBA.Core.Simulation.AI
                 routeIntent == AIMapRouteIntent.Wander ||
                 _profile.Archetype == BrawlerArchetype.Assassin;
 
+            bool defensiveRoute =
+                routeIntent == AIMapRouteIntent.CombatRetreat ||
+                routeIntent == AIMapRouteIntent.Evade ||
+                routeIntent == AIMapRouteIntent.Regroup ||
+                routeIntent == AIMapRouteIntent.Objective ||
+                routeIntent == AIMapRouteIntent.Search;
+
+            bool artilleryCoverAngle =
+                _profile.Archetype == BrawlerArchetype.Artillery &&
+                routeIntent == AIMapRouteIntent.CombatReposition;
+
+            bool directFireRoute =
+                _profile.Archetype != BrawlerArchetype.Artillery &&
+                routeIntent != AIMapRouteIntent.CombatRetreat &&
+                routeIntent != AIMapRouteIntent.Evade &&
+                (routeIntent == AIMapRouteIntent.CombatAdvance ||
+                 routeIntent == AIMapRouteIntent.CombatReposition ||
+                 routeIntent == AIMapRouteIntent.Peel);
+
             return new AIMapNavigationRequest
             {
                 DesiredDestination = destination,
@@ -306,6 +325,8 @@ namespace MOBA.Core.Simulation.AI
                 PreferredThreatDistance = preferredThreatDistance,
                 PreferBush = stealthRoute || fragile,
                 PreferCover = combatRoute || fragile || _profile.Archetype == BrawlerArchetype.Controller,
+                PreferLineOfSightCover = hasThreatPosition && (defensiveRoute || artilleryCoverAngle),
+                PreferOpenShot = hasThreatPosition && directFireRoute,
                 AvoidChokepoints = fragile ||
                                    routeIntent == AIMapRouteIntent.CombatRetreat ||
                                    routeIntent == AIMapRouteIntent.Evade ||
@@ -321,6 +342,9 @@ namespace MOBA.Core.Simulation.AI
                     : _profile.MapDestinationSearchRadius,
                 BushWeight = _profile.MapBushPreference,
                 CoverWeight = _profile.MapCoverPreference,
+                LineOfSightCoverWeight = _profile.MapLineOfSightCoverPreference,
+                ExposedPositionPenalty = _profile.MapExposedPositionPenalty,
+                OpenShotWeight = _profile.MapOpenShotPreference,
                 ChokepointPenalty = _profile.MapChokepointPenalty,
                 ThreatWeight = _profile.MapThreatAvoidanceWeight,
                 PathCostWeight = _profile.MapPathCostWeight

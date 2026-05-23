@@ -160,6 +160,12 @@ namespace MOBA.Core.Simulation.AI
         public float MapBushPreference = 9f;
         [Tooltip("Score bonus for cover-adjacent cells when the current intent benefits from protection or angle play.")]
         public float MapCoverPreference = 7f;
+        [Tooltip("Score bonus when map blockers sit between the bot and a known threat on defensive routes.")]
+        public float MapLineOfSightCoverPreference = 10f;
+        [Tooltip("Score penalty for exposed defensive destinations with no map blocker between the bot and known threat.")]
+        public float MapExposedPositionPenalty = 7f;
+        [Tooltip("Score bonus for direct-fire combat routes that keep an unobstructed map line toward the target.")]
+        public float MapOpenShotPreference = 6f;
         [Tooltip("Penalty for narrow cells with few exits. Fragile bots and non-combat routes avoid these more strongly.")]
         public float MapChokepointPenalty = 12f;
         [Tooltip("How strongly map routing reacts to known enemy threat positions.")]
@@ -523,6 +529,9 @@ namespace MOBA.Core.Simulation.AI
             MapDestinationSearchRadius = 3f;
             MapBushPreference = 9f;
             MapCoverPreference = 7f;
+            MapLineOfSightCoverPreference = 10f;
+            MapExposedPositionPenalty = 7f;
+            MapOpenShotPreference = 6f;
             MapChokepointPenalty = 12f;
             MapThreatAvoidanceWeight = 4f;
             MapPathCostWeight = 0.2f;
@@ -533,6 +542,9 @@ namespace MOBA.Core.Simulation.AI
                 case BrawlerArchetype.Sniper:
                     MapBushPreference = 12f;
                     MapCoverPreference = 11f;
+                    MapLineOfSightCoverPreference = 14f;
+                    MapExposedPositionPenalty = 10f;
+                    MapOpenShotPreference = 9f;
                     MapChokepointPenalty = 16f;
                     MapThreatAvoidanceWeight = 5f;
                     break;
@@ -540,6 +552,9 @@ namespace MOBA.Core.Simulation.AI
                 case BrawlerArchetype.Tank:
                     MapBushPreference = 5f;
                     MapCoverPreference = 4f;
+                    MapLineOfSightCoverPreference = 5f;
+                    MapExposedPositionPenalty = 3f;
+                    MapOpenShotPreference = 4f;
                     MapChokepointPenalty = 6f;
                     MapThreatAvoidanceWeight = 2.5f;
                     break;
@@ -547,6 +562,9 @@ namespace MOBA.Core.Simulation.AI
                 case BrawlerArchetype.Assassin:
                     MapBushPreference = 14f;
                     MapCoverPreference = 6f;
+                    MapLineOfSightCoverPreference = 7f;
+                    MapExposedPositionPenalty = 5f;
+                    MapOpenShotPreference = 7f;
                     MapChokepointPenalty = 8f;
                     MapThreatAvoidanceWeight = 3.5f;
                     break;
@@ -554,6 +572,9 @@ namespace MOBA.Core.Simulation.AI
                 case BrawlerArchetype.Support:
                     MapBushPreference = 10f;
                     MapCoverPreference = 10f;
+                    MapLineOfSightCoverPreference = 13f;
+                    MapExposedPositionPenalty = 9f;
+                    MapOpenShotPreference = 6f;
                     MapChokepointPenalty = 15f;
                     MapThreatAvoidanceWeight = 5f;
                     break;
@@ -561,6 +582,9 @@ namespace MOBA.Core.Simulation.AI
                 case BrawlerArchetype.Controller:
                     MapBushPreference = 8f;
                     MapCoverPreference = 9f;
+                    MapLineOfSightCoverPreference = 11f;
+                    MapExposedPositionPenalty = 7f;
+                    MapOpenShotPreference = 8f;
                     MapChokepointPenalty = 10f;
                     MapThreatAvoidanceWeight = 4f;
                     break;
@@ -568,6 +592,9 @@ namespace MOBA.Core.Simulation.AI
                 case BrawlerArchetype.Artillery:
                     MapBushPreference = 11f;
                     MapCoverPreference = 13f;
+                    MapLineOfSightCoverPreference = 16f;
+                    MapExposedPositionPenalty = 11f;
+                    MapOpenShotPreference = 0f;
                     MapChokepointPenalty = 17f;
                     MapThreatAvoidanceWeight = 5.5f;
                     break;
