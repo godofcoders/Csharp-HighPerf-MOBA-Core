@@ -29,6 +29,7 @@ namespace MOBA.Core.Simulation.AI
             public float PeelUrgency;
 
             public AITeamFocusTracker FocusTracker;
+            public AITeamActionTracker ActionTracker;
             public TeamPositionSignal EnemyHotspot;
             public TeamPositionSignal ThreatCenter;
         }
@@ -255,10 +256,77 @@ namespace MOBA.Core.Simulation.AI
             data.FocusTracker.Clear();
         }
 
+        public static void ReportActionIntent(
+            TeamType team,
+            int botEntityId,
+            AIActionType actionType,
+            uint currentTick)
+        {
+            if (botEntityId == 0)
+                return;
+
+            ref TeamData data = ref GetData(team);
+            EnsureActionTracker(ref data);
+            data.ActionTracker.ReportAction(botEntityId, actionType, currentTick);
+        }
+
+        public static void ClearActionIntent(TeamType team, int botEntityId)
+        {
+            if (botEntityId == 0)
+                return;
+
+            ref TeamData data = ref GetData(team);
+            EnsureActionTracker(ref data);
+            data.ActionTracker.ClearAction(botEntityId);
+        }
+
+        public static int GetActionIntentCount(
+            TeamType team,
+            AIActionType actionType,
+            uint currentTick,
+            uint maxAgeTicks)
+        {
+            ref TeamData data = ref GetData(team);
+            EnsureActionTracker(ref data);
+
+            return data.ActionTracker.GetActionCount(actionType, currentTick, maxAgeTicks);
+        }
+
+        public static int GetActionIntentCountExcluding(
+            TeamType team,
+            AIActionType actionType,
+            int excludedBotEntityId,
+            uint currentTick,
+            uint maxAgeTicks)
+        {
+            ref TeamData data = ref GetData(team);
+            EnsureActionTracker(ref data);
+
+            return data.ActionTracker.GetActionCountExcluding(
+                actionType,
+                excludedBotEntityId,
+                currentTick,
+                maxAgeTicks);
+        }
+
+        public static void ClearTeamActionIntents(TeamType team)
+        {
+            ref TeamData data = ref GetData(team);
+            EnsureActionTracker(ref data);
+
+            data.ActionTracker.Clear();
+        }
+
         private static void EnsureFocusTracker(ref TeamData data)
         {
             if (data.FocusTracker == null)
                 data.FocusTracker = new AITeamFocusTracker();
+        }
+
+        private static void EnsureActionTracker(ref TeamData data)
+        {
+            if (data.ActionTracker == null)
+                data.ActionTracker = new AITeamActionTracker();
         }
 
         private static void ReportPositionSignal(

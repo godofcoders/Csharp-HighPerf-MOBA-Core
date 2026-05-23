@@ -40,6 +40,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.LowHealthTargetBias *= 0.80f;
                     profile.FinisherBonus *= 0.80f;
                     profile.OverFocusedTargetPenaltyPerAlly *= 0.70f;
+                    profile.TeamRoleCoordinationWeight *= 0.75f;
+                    profile.TeamActionCrowdingPenalty *= 0.75f;
+                    profile.TeamFrontlineNeedBonus *= 0.75f;
+                    profile.TeamBacklineAnchorBonus *= 0.75f;
                     profile.TacticalMoveRetargetTicks = ScaleTicks(profile.TacticalMoveRetargetTicks, 1.35f, 1);
                     profile.TacticalMoveHeartbeatTicks = ScaleTicks(profile.TacticalMoveHeartbeatTicks, 1.25f, 1);
                     profile.DangerScanRadius *= 0.85f;
@@ -68,6 +72,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.LowHealthTargetBias *= 1.15f;
                     profile.FinisherBonus *= 1.20f;
                     profile.OverFocusedTargetPenaltyPerAlly *= 1.15f;
+                    profile.TeamRoleCoordinationWeight *= 1.15f;
+                    profile.TeamActionCrowdingPenalty *= 1.10f;
+                    profile.TeamFrontlineNeedBonus *= 1.10f;
+                    profile.TeamBacklineAnchorBonus *= 1.10f;
                     profile.TacticalMoveRetargetTicks = ScaleTicks(profile.TacticalMoveRetargetTicks, 0.80f, 1);
                     profile.TacticalMoveHeartbeatTicks = ScaleTicks(profile.TacticalMoveHeartbeatTicks, 0.80f, 1);
                     profile.TacticalMinimumStepDistance *= 1.10f;
@@ -108,6 +116,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.DangerEvadePressureThreshold *= 1.10f;
                     profile.DangerEvadeScoreBonus *= 0.90f;
                     profile.DangerEvadeDistance *= 0.90f;
+                    profile.TeamActionCrowdingPenalty *= 0.85f;
+                    profile.TeamFrontlineNeedBonus *= 1.20f;
+                    profile.TeamBacklineAnchorBonus *= 0.80f;
                     profile.MapLineOfSightCoverPreference *= 0.85f;
                     profile.MapExposedPositionPenalty *= 0.85f;
                     profile.MapOpenShotPreference *= 1.15f;
@@ -127,6 +138,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.DangerEvadePressureThreshold *= 0.90f;
                     profile.DangerEvadeScoreBonus *= 1.10f;
                     profile.DangerEvadeDistance *= 1.08f;
+                    profile.TeamActionCrowdingPenalty *= 1.10f;
+                    profile.TeamFrontlineNeedBonus *= 0.80f;
+                    profile.TeamBacklineAnchorBonus *= 1.20f;
                     profile.MapLineOfSightCoverPreference *= 1.18f;
                     profile.MapExposedPositionPenalty *= 1.15f;
                     profile.MapOpenShotPreference *= 0.92f;
@@ -142,6 +156,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.AllySupportRange *= 1.12f;
                     profile.ApproachWeight *= 0.95f;
                     profile.DangerEvadeScoreBonus *= 1.04f;
+                    profile.TeamRoleCoordinationWeight *= 1.25f;
+                    profile.TeamActionCrowdingPenalty *= 1.15f;
+                    profile.TeamBacklineAnchorBonus *= 1.10f;
                     profile.MapLineOfSightCoverPreference *= 1.08f;
                     profile.MapOpenShotPreference *= 1.05f;
                     break;
@@ -179,6 +196,14 @@ namespace MOBA.Core.Simulation.AI
             profile.FocusFireWeight = Mathf.Clamp(profile.FocusFireWeight, 0f, 45f);
             profile.OverFocusedTargetPenaltyPerAlly = Mathf.Clamp(profile.OverFocusedTargetPenaltyPerAlly, 0f, 45f);
             profile.MaxOverFocusedTargetPenalty = Mathf.Clamp(profile.MaxOverFocusedTargetPenalty, 0f, 70f);
+            profile.TeamRoleCoordinationWeight = Mathf.Clamp(profile.TeamRoleCoordinationWeight, 0f, 2f);
+            profile.TeamActionCrowdingPenalty = Mathf.Clamp(profile.TeamActionCrowdingPenalty, 0f, 35f);
+            profile.TeamFrontlineNeedBonus = Mathf.Clamp(profile.TeamFrontlineNeedBonus, 0f, 35f);
+            profile.TeamBacklineAnchorBonus = Mathf.Clamp(profile.TeamBacklineAnchorBonus, 0f, 30f);
+            profile.MaxTeamApproachers = Mathf.Clamp(profile.MaxTeamApproachers, 0, 3);
+            profile.MaxTeamPeelResponders = Mathf.Clamp(profile.MaxTeamPeelResponders, 0, 3);
+            profile.MaxTeamRegroupResponders = Mathf.Clamp(profile.MaxTeamRegroupResponders, 0, 3);
+            profile.MaxTeamObjectiveMovers = Mathf.Clamp(profile.MaxTeamObjectiveMovers, 0, 3);
 
             profile.MapDestinationSearchRadius = Mathf.Clamp(profile.MapDestinationSearchRadius, 0.5f, 5f);
             profile.MapBushPreference = Mathf.Clamp(profile.MapBushPreference, 0f, 30f);

@@ -13,6 +13,7 @@ namespace MOBA.Core.Simulation.AI
         private const uint PeelMemoryTicks = 60;
         private const uint EnemyHotspotMemoryTicks = 120;
         private const uint ThreatCenterMemoryTicks = 75;
+        private const uint ActionIntentMemoryTicks = 12;
 
         public AITeamCoordinator(BrawlerController self)
         {
@@ -143,6 +144,53 @@ namespace MOBA.Core.Simulation.AI
                 _self.Team,
                 targetEntityId,
                 _self.EntityID);
+        }
+
+        public void ReportActionIntent(AIActionType actionType, uint currentTick)
+        {
+            if (_self == null)
+                return;
+
+            AITeamBlackboard.ReportActionIntent(
+                _self.Team,
+                _self.EntityID,
+                actionType,
+                currentTick);
+        }
+
+        public void ClearActionIntent()
+        {
+            if (_self == null)
+                return;
+
+            AITeamBlackboard.ClearActionIntent(
+                _self.Team,
+                _self.EntityID);
+        }
+
+        public int GetActionIntentCount(AIActionType actionType, uint currentTick)
+        {
+            if (_self == null)
+                return 0;
+
+            return AITeamBlackboard.GetActionIntentCount(
+                _self.Team,
+                actionType,
+                currentTick,
+                ActionIntentMemoryTicks);
+        }
+
+        public int GetActionIntentCountExcludingSelf(AIActionType actionType, uint currentTick)
+        {
+            if (_self == null)
+                return 0;
+
+            return AITeamBlackboard.GetActionIntentCountExcluding(
+                _self.Team,
+                actionType,
+                _self.EntityID,
+                currentTick,
+                ActionIntentMemoryTicks);
         }
 
         private float BuildPeelUrgency(float threat, float selfHealthRatio)

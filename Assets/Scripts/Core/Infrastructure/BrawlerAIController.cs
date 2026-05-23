@@ -123,6 +123,8 @@ _actionExecutor != null
         public AIPersonalityType Personality => _profile != null ? _profile.Personality : _personality;
         public string ReactiveDebug => _lastReactiveDebug;
         public string DangerDebug => _lastDangerDebug;
+        public string TeamRoleDebug =>
+            _utilityScorer != null ? _utilityScorer.LastTeamRoleDebug : "RoleCoord=None";
 
         public int CurrentTargetFocusCount =>
             _teamCoordinator != null &&
@@ -202,6 +204,7 @@ _actionExecutor != null
             {
                 _actionCommitment?.Reset();
                 _teamCoordinator?.ClearTargetFocusCount();
+                _teamCoordinator?.ClearActionIntent();
 
                 if (currentTick % 30 == 0)
                     Debug.Log($"[AI-{(_brawler != null ? _brawler.name : "?")}] CanRunAI=false brain={_brainInitialized} brawlerNull={_brawler == null} stateNull={(_brawler == null ? "?" : (_brawler.State == null).ToString())} dead={(_brawler == null || _brawler.State == null ? "?" : _brawler.State.IsDead.ToString())} gridNull={SimulationClock.Grid == null}");
@@ -216,6 +219,7 @@ _actionExecutor != null
             {
                 _actionCommitment?.Reset();
                 _teamCoordinator?.ClearTargetFocusCount();
+                _teamCoordinator?.ClearActionIntent();
                 _commandSource?.QueueMove(Vector3.zero);
                 return;
             }
@@ -238,6 +242,7 @@ _actionExecutor != null
                 _brawler.name);
 
             _lastChosenAction = chosenAction;
+            _teamCoordinator?.ReportActionIntent(chosenAction.ActionType, currentTick);
 
             _actionExecutor.Execute(
                 chosenAction.ActionType,
@@ -329,11 +334,13 @@ _actionExecutor != null
                     : "Hotspot=None";
 
             _debugSnapshot.TeamSignalDebug = $"{threatSignal} {hotspotSignal}";
+            _debugSnapshot.TeamRoleDebug = TeamRoleDebug;
             }
             else
             {
                 _debugSnapshot.TeamTactic = "None";
                 _debugSnapshot.TeamSignalDebug = "Threat=None Hotspot=None";
+                _debugSnapshot.TeamRoleDebug = "RoleCoord=None";
             }
 
             _lastReactiveDebug = _reactiveMemory != null && _profile != null
@@ -522,6 +529,7 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             base.OnDisable();
 
             _teamCoordinator?.ClearTargetFocusCount();
+            _teamCoordinator?.ClearActionIntent();
             _reactiveListener?.Dispose();
             _reactiveListener = null;
 

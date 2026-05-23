@@ -28,6 +28,7 @@ namespace MOBA.Core.Simulation.AI
         private const float MinActionScore = 0f;
         private const float MaxNormalActionScore = 100f;
         private const float MaxEmergencyActionScore = 120f;
+        private readonly List<AIActionScore> _scoreBuffer = new List<AIActionScore>(16);
         private readonly List<ISpatialEntity> _nearbyAllyBuffer = new List<ISpatialEntity>(16);
 
         private float _lastObjectiveAllyPressure;
@@ -35,12 +36,14 @@ namespace MOBA.Core.Simulation.AI
         private float _lastObjectiveRawScore;
         private float _lastObjectiveFinalScore;
         private string _lastObjectiveScoreReason;
+        private string _lastTeamRoleDebug = "RoleCoord=None";
 
         public float LastObjectiveAllyPressure => _lastObjectiveAllyPressure;
         public float LastObjectiveCrowdingPenalty => _lastObjectiveCrowdingPenalty;
         public float LastObjectiveRawScore => _lastObjectiveRawScore;
         public float LastObjectiveFinalScore => _lastObjectiveFinalScore;
         public string LastObjectiveScoreReason => _lastObjectiveScoreReason;
+        public string LastTeamRoleDebug => _lastTeamRoleDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -60,19 +63,13 @@ namespace MOBA.Core.Simulation.AI
 
         public AIActionScore ScoreBestAction(AITargetInfo targetInfo, uint currentTick)
         {
-            AIActionScore best = new AIActionScore(AIActionType.Wander, 0f);
+            CollectActionScores(targetInfo, currentTick, _scoreBuffer);
 
-            ScoreAndReplace(ref best, ScoreEvade());
-            ScoreAndReplace(ref best, ScoreRetreat(targetInfo, currentTick));
-            ScoreAndReplace(ref best, ScoreUseSuper(targetInfo));
-            ScoreAndReplace(ref best, ScoreHoldRange(targetInfo));
-            ScoreAndReplace(ref best, ScoreReposition(targetInfo, currentTick));
-            ScoreAndReplace(ref best, ScoreApproach(targetInfo, currentTick));
-            ScoreAndReplace(ref best, ScorePeel(currentTick));
-            ScoreAndReplace(ref best, ScoreRegroup(targetInfo, currentTick));
-            ScoreAndReplace(ref best, ScoreSearch(targetInfo, currentTick));
-            ScoreAndReplace(ref best, ScoreWander());
-            ScoreAndReplace(ref best, ScoreObjective(targetInfo));
+            AIActionScore best = new AIActionScore(AIActionType.Wander, 0f);
+            for (int i = 0; i < _scoreBuffer.Count; i++)
+            {
+                ScoreAndReplace(ref best, _scoreBuffer[i]);
+            }
 
             return best;
         }
@@ -92,6 +89,8 @@ namespace MOBA.Core.Simulation.AI
             results.Add(ScoreSearch(targetInfo, currentTick));
             results.Add(ScoreWander());
             results.Add(ScoreObjective(targetInfo));
+
+            ApplyTeamRoleCoordination(targetInfo, currentTick, results);
         }
 
         private void ScoreAndReplace(ref AIActionScore best, AIActionScore candidate)
@@ -115,6 +114,221 @@ namespace MOBA.Core.Simulation.AI
             return new AIActionScore(
                 actionType,
                 Mathf.Clamp(weightedScore, MinActionScore, maxScore));
+        }
+
+        private void ApplyTeamRoleCoordination(AITargetInfo targetInfo, uint currentTick, List<AIActionScore> results)
+        {
+            _lastTeamRoleDebug = "RoleCoord=Off";
+
+            if (_profile == null ||
+                !_profile.UseTeamRoleCoordination ||
+                _teamCoordinator == null ||
+                results == null ||
+                results.Count == 0)
+            {
+                return;
+            }
+
+            int approachAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(AIActionType.Approach, currentTick);
+            int holdAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(AIActionType.HoldRange, currentTick);
+            int repositionAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(AIActionType.Reposition, currentTick);
+            int peelAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(AIActionType.Peel, currentTick);
+            int regroupAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(AIActionType.Regroup, currentTick);
+            int objectiveAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(AIActionType.Objective, currentTick);
+            int searchAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(AIActionType.Search, currentTick);
+
+            string deltaDebug = string.Empty;
+
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculateTeamRoleDelta(
+                    actionScore,
+                    targetInfo,
+                    approachAllies,
+                    peelAllies,
+                    regroupAllies,
+                    objectiveAllies,
+                    searchAllies);
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+
+                results[i] = new AIActionScore(actionScore.ActionType, adjustedScore);
+
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{delta:+0.0;-0.0}");
+            }
+
+            _lastTeamRoleDebug =
+                $"A={approachAllies} H={holdAllies} R={repositionAllies} " +
+                $"P={peelAllies} G={regroupAllies} O={objectiveAllies} S={searchAllies}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastTeamRoleDebug += $" Delta={deltaDebug}";
+        }
+
+        private float CalculateTeamRoleDelta(
+            AIActionScore actionScore,
+            AITargetInfo targetInfo,
+            int approachAllies,
+            int peelAllies,
+            int regroupAllies,
+            int objectiveAllies,
+            int searchAllies)
+        {
+            if (actionScore.Score <= 0f)
+                return 0f;
+
+            float weight = Mathf.Max(0f, _profile.TeamRoleCoordinationWeight);
+            if (weight <= 0f)
+                return 0f;
+
+            float delta = 0f;
+            int capacity = GetTeamActionCapacity(actionScore.ActionType);
+            int alliedSameAction = GetKnownAlliedActionCount(
+                actionScore.ActionType,
+                approachAllies,
+                peelAllies,
+                regroupAllies,
+                objectiveAllies,
+                searchAllies);
+
+            if (capacity >= 0)
+            {
+                int excess = (alliedSameAction + 1) - capacity;
+                if (excess > 0)
+                    delta -= excess * Mathf.Max(0f, _profile.TeamActionCrowdingPenalty);
+            }
+
+            if (targetInfo.HasLiveTarget)
+            {
+                if (actionScore.ActionType == AIActionType.Approach &&
+                    CanServeFrontline() &&
+                    approachAllies == 0)
+                {
+                    delta += _profile.TeamFrontlineNeedBonus;
+                }
+
+                if ((actionScore.ActionType == AIActionType.HoldRange ||
+                     actionScore.ActionType == AIActionType.Reposition) &&
+                    IsBacklineRole() &&
+                    approachAllies > 0)
+                {
+                    delta += _profile.TeamBacklineAnchorBonus;
+                }
+            }
+
+            return delta * weight;
+        }
+
+        private int GetTeamActionCapacity(AIActionType actionType)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return Mathf.Max(0, _profile.MaxTeamApproachers);
+
+                case AIActionType.Peel:
+                    return Mathf.Max(0, _profile.MaxTeamPeelResponders);
+
+                case AIActionType.Regroup:
+                    return Mathf.Max(0, _profile.MaxTeamRegroupResponders);
+
+                case AIActionType.Objective:
+                    return Mathf.Max(0, _profile.MaxTeamObjectiveMovers);
+
+                case AIActionType.Search:
+                    return 1;
+
+                default:
+                    return -1;
+            }
+        }
+
+        private int GetKnownAlliedActionCount(
+            AIActionType actionType,
+            int approachAllies,
+            int peelAllies,
+            int regroupAllies,
+            int objectiveAllies,
+            int searchAllies)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return approachAllies;
+
+                case AIActionType.Peel:
+                    return peelAllies;
+
+                case AIActionType.Regroup:
+                    return regroupAllies;
+
+                case AIActionType.Objective:
+                    return objectiveAllies;
+
+                case AIActionType.Search:
+                    return searchAllies;
+
+                default:
+                    return 0;
+            }
+        }
+
+        private float ClampActionScore(AIActionType actionType, float score)
+        {
+            float maxScore = IsEmergencyAction(actionType)
+                ? MaxEmergencyActionScore
+                : MaxNormalActionScore;
+
+            return Mathf.Clamp(score, MinActionScore, maxScore);
+        }
+
+        private bool IsEmergencyAction(AIActionType actionType)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Retreat:
+                case AIActionType.Evade:
+                case AIActionType.UseSuper:
+                case AIActionType.Peel:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private bool CanServeFrontline()
+        {
+            if (!(IsTank || IsFighter || IsAssassin))
+                return false;
+
+            if (_self.State == null)
+                return true;
+
+            float healthRatio = _self.State.CurrentHealth /
+                                Mathf.Max(1f, _self.State.MaxHealth.Value);
+
+            return healthRatio >= Mathf.Max(0.35f, _profile.LowHealthRetreatRatio + 0.10f);
+        }
+
+        private bool IsBacklineRole()
+        {
+            return IsSniper || IsSupport || IsController || IsArtillery;
+        }
+
+        private string AppendRoleDebug(string current, string value)
+        {
+            return string.IsNullOrEmpty(current)
+                ? value
+                : $"{current},{value}";
         }
 
         private float AddArchetypeBias(

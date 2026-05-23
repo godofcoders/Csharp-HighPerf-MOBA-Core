@@ -98,6 +98,24 @@ namespace MOBA.Core.Simulation.AI
         public float OverFocusedTargetPenaltyPerAlly = 16f;
         [Tooltip("Maximum target score removed for over-focused targets. Keeps focus-fire possible for urgent kills.")]
         public float MaxOverFocusedTargetPenalty = 36f;
+        [Tooltip("If true, action scores are softly shaped around allied action reservations.")]
+        public bool UseTeamRoleCoordination = true;
+        [Tooltip("Multiplier for team role bonuses and duplicate-role penalties.")]
+        public float TeamRoleCoordinationWeight = 1f;
+        [Tooltip("Score removed for each allied bot already filling a saturated action role.")]
+        public float TeamActionCrowdingPenalty = 12f;
+        [Tooltip("Score added when this bot is a good frontline candidate and no ally is currently pressuring forward.")]
+        public float TeamFrontlineNeedBonus = 12f;
+        [Tooltip("Score added for backline actions when an ally is already pressuring forward.")]
+        public float TeamBacklineAnchorBonus = 6f;
+        [Tooltip("Soft cap for allies already approaching before duplicate approach pressure is discouraged.")]
+        public int MaxTeamApproachers = 1;
+        [Tooltip("Soft cap for allies already responding to peel before duplicate peel is discouraged.")]
+        public int MaxTeamPeelResponders = 1;
+        [Tooltip("Soft cap for allies already regrouping before duplicate regroup is discouraged.")]
+        public int MaxTeamRegroupResponders = 2;
+        [Tooltip("Soft cap for allies already moving to objective before duplicate objective movement is discouraged.")]
+        public int MaxTeamObjectiveMovers = 1;
 
         [Header("Spacing / Anti-Clump")]
         public float AllyAvoidanceRadius = 2.5f;
@@ -225,6 +243,8 @@ namespace MOBA.Core.Simulation.AI
 
         public void ApplyArchetypeDefaults(BrawlerArchetype archetype)
         {
+            UseTeamRoleCoordination = true;
+
             switch (archetype)
             {
                 case BrawlerArchetype.Sniper:
@@ -247,6 +267,14 @@ namespace MOBA.Core.Simulation.AI
                     TargetFocusSoftLimit = 1;
                     OverFocusedTargetPenaltyPerAlly = 18f;
                     MaxOverFocusedTargetPenalty = 40f;
+                    TeamRoleCoordinationWeight = 1.1f;
+                    TeamActionCrowdingPenalty = 14f;
+                    TeamFrontlineNeedBonus = 4f;
+                    TeamBacklineAnchorBonus = 10f;
+                    MaxTeamApproachers = 1;
+                    MaxTeamPeelResponders = 1;
+                    MaxTeamRegroupResponders = 2;
+                    MaxTeamObjectiveMovers = 1;
 
                     AllyAvoidanceRadius = 3.5f;
                     AllyAvoidanceWeight = 2.0f;
@@ -287,6 +315,14 @@ namespace MOBA.Core.Simulation.AI
                     TargetFocusSoftLimit = 1;
                     OverFocusedTargetPenaltyPerAlly = 12f;
                     MaxOverFocusedTargetPenalty = 28f;
+                    TeamRoleCoordinationWeight = 0.9f;
+                    TeamActionCrowdingPenalty = 8f;
+                    TeamFrontlineNeedBonus = 18f;
+                    TeamBacklineAnchorBonus = 2f;
+                    MaxTeamApproachers = 2;
+                    MaxTeamPeelResponders = 2;
+                    MaxTeamRegroupResponders = 1;
+                    MaxTeamObjectiveMovers = 1;
 
                     AllyAvoidanceRadius = 2.0f;
                     AllyAvoidanceWeight = 0.8f;
@@ -327,6 +363,14 @@ namespace MOBA.Core.Simulation.AI
                     TargetFocusSoftLimit = 1;
                     OverFocusedTargetPenaltyPerAlly = 20f;
                     MaxOverFocusedTargetPenalty = 44f;
+                    TeamRoleCoordinationWeight = 0.95f;
+                    TeamActionCrowdingPenalty = 10f;
+                    TeamFrontlineNeedBonus = 10f;
+                    TeamBacklineAnchorBonus = 4f;
+                    MaxTeamApproachers = 1;
+                    MaxTeamPeelResponders = 1;
+                    MaxTeamRegroupResponders = 1;
+                    MaxTeamObjectiveMovers = 1;
 
                     AllyAvoidanceRadius = 2.3f;
                     AllyAvoidanceWeight = 1.1f;
@@ -367,6 +411,14 @@ namespace MOBA.Core.Simulation.AI
                     TargetFocusSoftLimit = 1;
                     OverFocusedTargetPenaltyPerAlly = 18f;
                     MaxOverFocusedTargetPenalty = 40f;
+                    TeamRoleCoordinationWeight = 1.15f;
+                    TeamActionCrowdingPenalty = 13f;
+                    TeamFrontlineNeedBonus = 3f;
+                    TeamBacklineAnchorBonus = 10f;
+                    MaxTeamApproachers = 1;
+                    MaxTeamPeelResponders = 2;
+                    MaxTeamRegroupResponders = 2;
+                    MaxTeamObjectiveMovers = 1;
 
                     AllyAvoidanceRadius = 3.0f;
                     AllyAvoidanceWeight = 1.8f;
@@ -409,6 +461,14 @@ namespace MOBA.Core.Simulation.AI
                     TargetFocusSoftLimit = 1;
                     OverFocusedTargetPenaltyPerAlly = 16f;
                     MaxOverFocusedTargetPenalty = 36f;
+                    TeamRoleCoordinationWeight = 1.05f;
+                    TeamActionCrowdingPenalty = 11f;
+                    TeamFrontlineNeedBonus = 7f;
+                    TeamBacklineAnchorBonus = 8f;
+                    MaxTeamApproachers = 1;
+                    MaxTeamPeelResponders = 1;
+                    MaxTeamRegroupResponders = 2;
+                    MaxTeamObjectiveMovers = 2;
 
                     AllyAvoidanceRadius = 2.5f;
                     AllyAvoidanceWeight = 1.5f;
@@ -456,6 +516,14 @@ namespace MOBA.Core.Simulation.AI
                     TargetFocusSoftLimit = 1;
                     OverFocusedTargetPenaltyPerAlly = 18f;
                     MaxOverFocusedTargetPenalty = 40f;
+                    TeamRoleCoordinationWeight = 1.15f;
+                    TeamActionCrowdingPenalty = 14f;
+                    TeamFrontlineNeedBonus = 2f;
+                    TeamBacklineAnchorBonus = 11f;
+                    MaxTeamApproachers = 1;
+                    MaxTeamPeelResponders = 1;
+                    MaxTeamRegroupResponders = 2;
+                    MaxTeamObjectiveMovers = 1;
 
                     AllyAvoidanceRadius = 3f;
                     AllyAvoidanceWeight = 1.7f;
@@ -497,6 +565,14 @@ namespace MOBA.Core.Simulation.AI
                     TargetFocusSoftLimit = 1;
                     OverFocusedTargetPenaltyPerAlly = 16f;
                     MaxOverFocusedTargetPenalty = 36f;
+                    TeamRoleCoordinationWeight = 1f;
+                    TeamActionCrowdingPenalty = 12f;
+                    TeamFrontlineNeedBonus = 12f;
+                    TeamBacklineAnchorBonus = 6f;
+                    MaxTeamApproachers = 1;
+                    MaxTeamPeelResponders = 1;
+                    MaxTeamRegroupResponders = 2;
+                    MaxTeamObjectiveMovers = 1;
 
                     AllyAvoidanceRadius = 2.5f;
                     AllyAvoidanceWeight = 1.5f;
