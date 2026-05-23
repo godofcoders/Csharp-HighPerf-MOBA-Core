@@ -48,6 +48,11 @@ namespace MOBA.Core.Simulation.AI
         private string _lastMapRouteDebug;
         private Vector3 _lastRawMapDestination;
         private Vector3 _lastResolvedMapDestination;
+        private AIMapRouteIntent _lastMapRequestIntent;
+        private Vector3 _lastMapRequestThreatPosition;
+        private float _lastMapRequestPreferredThreatDistance;
+        private bool _lastMapRequestHadThreatPosition;
+        private bool _hasMapRouteCache;
 
         public float LastTacticalTargetDistance => _lastTacticalTargetDistance;
         public float LastTacticalPreferredRange => _lastTacticalPreferredRange;
@@ -167,6 +172,23 @@ namespace MOBA.Core.Simulation.AI
             Vector3 threatPosition = default,
             float preferredThreatDistance = 0f)
         {
+            if (CanReuseMapResolvedDestination(
+                destination,
+                routeIntent,
+                hasThreatPosition,
+                threatPosition,
+                preferredThreatDistance))
+            {
+                _lastMapRouteDebug =
+                    $"Route={routeIntent} " +
+                    $"Raw={FormatVector(destination)} " +
+                    $"Resolved={FormatVector(_lastResolvedMapDestination)} " +
+                    $"Score=0.0 " +
+                    $"Reason=cached";
+
+                return _lastResolvedMapDestination;
+            }
+
             AIMapNavigationRequest request = BuildMapNavigationRequest(
                 destination,
                 routeIntent,
@@ -182,6 +204,11 @@ namespace MOBA.Core.Simulation.AI
 
             _lastRawMapDestination = decision.RawDestination;
             _lastResolvedMapDestination = decision.ResolvedDestination;
+            _lastMapRequestIntent = routeIntent;
+            _lastMapRequestThreatPosition = threatPosition;
+            _lastMapRequestPreferredThreatDistance = preferredThreatDistance;
+            _lastMapRequestHadThreatPosition = hasThreatPosition;
+            _hasMapRouteCache = true;
             _lastMapRouteDebug =
                 $"Route={decision.Intent} " +
                 $"Raw={FormatVector(decision.RawDestination)} " +
@@ -195,6 +222,39 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return resolvedDestination;
+        }
+
+        private bool CanReuseMapResolvedDestination(
+            Vector3 destination,
+            AIMapRouteIntent routeIntent,
+            bool hasThreatPosition,
+            Vector3 threatPosition,
+            float preferredThreatDistance)
+        {
+            if (!_hasMapRouteCache || routeIntent == AIMapRouteIntent.None)
+                return false;
+
+            if (_lastMapRequestIntent != routeIntent ||
+                _lastMapRequestHadThreatPosition != hasThreatPosition)
+            {
+                return false;
+            }
+
+            float destinationTolerance = Mathf.Max(0.5f, _profile.TacticalDestinationStaleDistance * 0.5f);
+            if ((destination - _lastRawMapDestination).sqrMagnitude > destinationTolerance * destinationTolerance)
+                return false;
+
+            if (hasThreatPosition)
+            {
+                float threatTolerance = Mathf.Max(0.5f, destinationTolerance);
+                if ((threatPosition - _lastMapRequestThreatPosition).sqrMagnitude > threatTolerance * threatTolerance)
+                    return false;
+
+                if (Mathf.Abs(preferredThreatDistance - _lastMapRequestPreferredThreatDistance) > 0.25f)
+                    return false;
+            }
+
+            return true;
         }
 
         private AIMapNavigationRequest BuildMapNavigationRequest(

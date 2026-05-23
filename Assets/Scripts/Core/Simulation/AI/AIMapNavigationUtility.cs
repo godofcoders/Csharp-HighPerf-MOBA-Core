@@ -36,6 +36,17 @@ namespace MOBA.Core.Simulation.AI
 
     public static class AIMapNavigationUtility
     {
+        private const int MaxPathValidatedCandidates = 4;
+
+        private struct CandidateScore
+        {
+            public Vector2Int Coords;
+            public Vector3 Destination;
+            public float Score;
+            public string Reason;
+            public bool IsValid;
+        }
+
         public static Vector3 ResolveDestination(
             BrawlerController self,
             BrawlerAIProfile profile,
@@ -68,10 +79,7 @@ namespace MOBA.Core.Simulation.AI
                 return request.DesiredDestination;
             }
 
-            Vector3 bestDestination = request.DesiredDestination;
-            float bestScore = float.MinValue;
-            string bestReason = "no_candidate";
-            bool foundCandidate = false;
+            CandidateScore[] topCandidates = new CandidateScore[MaxPathValidatedCandidates];
             int maxOffsetMagnitudeSq = maxOffsetMagnitude * maxOffsetMagnitude;
 
             for (int x = -maxOffsetMagnitude; x <= maxOffsetMagnitude; x++)
@@ -98,30 +106,110 @@ namespace MOBA.Core.Simulation.AI
                     if (score == float.MinValue)
                         continue;
 
-                    if (!foundCandidate || score > bestScore)
-                    {
-                        foundCandidate = true;
-                        bestScore = score;
-                        bestDestination = candidate;
-                        bestReason = reason;
-                    }
+                    InsertCandidate(
+                        topCandidates,
+                        new CandidateScore
+                        {
+                            Coords = coords,
+                            Destination = candidate,
+                            Score = score,
+                            Reason = reason,
+                            IsValid = true
+                        });
                 }
             }
 
-            if (!foundCandidate)
+            if (TrySelectReachableCandidate(
+                self,
+                pathfinder,
+                selfCoords,
+                request,
+                topCandidates,
+                out CandidateScore bestCandidate))
             {
-                bestDestination = pathfinder.GetNearestWalkableWorldPos(
-                    request.DesiredDestination,
-                    Mathf.Max(1, maxOffsetMagnitude));
-                bestReason = "nearest_walkable_fallback";
+                decision.ResolvedDestination = bestCandidate.Destination;
+                decision.Reason = bestCandidate.Reason;
+                decision.Score = bestCandidate.Score;
+                decision.UsedMap = true;
+
+                return bestCandidate.Destination;
             }
 
+            Vector3 bestDestination = pathfinder.GetNearestWalkableWorldPos(
+                request.DesiredDestination,
+                Mathf.Max(1, maxOffsetMagnitude));
+
             decision.ResolvedDestination = bestDestination;
-            decision.Reason = bestReason;
-            decision.Score = bestScore;
-            decision.UsedMap = foundCandidate;
+            decision.Reason = "nearest_walkable_fallback";
+            decision.Score = 0f;
+            decision.UsedMap = false;
 
             return bestDestination;
+        }
+
+        private static void InsertCandidate(
+            CandidateScore[] topCandidates,
+            CandidateScore candidate)
+        {
+            for (int i = 0; i < topCandidates.Length; i++)
+            {
+                if (!topCandidates[i].IsValid || candidate.Score > topCandidates[i].Score)
+                {
+                    for (int j = topCandidates.Length - 1; j > i; j--)
+                    {
+                        topCandidates[j] = topCandidates[j - 1];
+                    }
+
+                    topCandidates[i] = candidate;
+                    return;
+                }
+            }
+        }
+
+        private static bool TrySelectReachableCandidate(
+            BrawlerController self,
+            AStarSolver pathfinder,
+            Vector2Int selfCoords,
+            in AIMapNavigationRequest request,
+            CandidateScore[] topCandidates,
+            out CandidateScore selected)
+        {
+            selected = default;
+
+            for (int i = 0; i < topCandidates.Length; i++)
+            {
+                CandidateScore candidate = topCandidates[i];
+                if (!candidate.IsValid)
+                    continue;
+
+                if (!RequiresPathValidation(request.Intent) ||
+                    (candidate.Destination - self.Position).sqrMagnitude <= pathfinder.CellSize * pathfinder.CellSize)
+                {
+                    selected = candidate;
+                    return true;
+                }
+
+                List<PathNode> path = pathfinder.FindPath(
+                    selfCoords.x,
+                    selfCoords.y,
+                    candidate.Coords.x,
+                    candidate.Coords.y);
+
+                if (path == null)
+                    continue;
+
+                candidate.Score -= path.Count * Mathf.Max(0f, request.PathCostWeight);
+                candidate.Reason += "|path";
+                selected = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool RequiresPathValidation(AIMapRouteIntent intent)
+        {
+            return intent != AIMapRouteIntent.Evade;
         }
 
         private static float ScoreCandidate(
@@ -139,26 +227,11 @@ namespace MOBA.Core.Simulation.AI
             float desiredDistance = Vector3.Distance(candidate, request.DesiredDestination);
             score -= desiredDistance * 10f;
 
-            List<PathNode> path = null;
-            if (request.Intent != AIMapRouteIntent.Evade)
-            {
-                path = pathfinder.FindPath(selfCoords.x, selfCoords.y, coords.x, coords.y);
-            }
-            else
-            {
+            int estimatedSteps = EstimateGridSteps(selfCoords, coords);
+            score -= estimatedSteps * Mathf.Max(0f, request.PathCostWeight);
+
+            if (request.Intent == AIMapRouteIntent.Evade)
                 reason += "|fast_evade";
-            }
-
-            if (request.Intent != AIMapRouteIntent.Evade &&
-                path == null &&
-                (candidate - self.Position).sqrMagnitude > pathfinder.CellSize * pathfinder.CellSize)
-            {
-                reason += "|no_path";
-                return float.MinValue;
-            }
-
-            int pathLength = path != null ? path.Count : 0;
-            score -= pathLength * Mathf.Max(0f, request.PathCostWeight);
 
             if (request.PreferBush && pathfinder.IsBush(coords))
             {
@@ -189,6 +262,13 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return score;
+        }
+
+        private static int EstimateGridSteps(Vector2Int from, Vector2Int to)
+        {
+            return Mathf.Max(
+                Mathf.Abs(from.x - to.x),
+                Mathf.Abs(from.y - to.y));
         }
 
         private static void ApplyThreatScore(

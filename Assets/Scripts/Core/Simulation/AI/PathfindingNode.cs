@@ -11,12 +11,14 @@ namespace MOBA.Core.Simulation.AI
         public int FCost => GCost + HCost;
 
         public PathNode Parent;
+        public bool IsPathTouched;
 
         public PathNode(int x, int y, bool walkable)
         {
             X = x;
             Y = y;
             IsWalkable = walkable;
+            GCost = int.MaxValue;
         }
     }
 }

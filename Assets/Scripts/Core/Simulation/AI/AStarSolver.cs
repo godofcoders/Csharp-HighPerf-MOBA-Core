@@ -10,6 +10,8 @@ namespace MOBA.Core.Simulation.AI
         private int _width, _height;
         private UnityEngine.Vector3 _origin;
         private float _cellSize;
+        private readonly List<PathNode> _touchedNodes = new List<PathNode>(256);
+        private readonly List<PathNode> _neighborBuffer = new List<PathNode>(8);
 
         public int Width => _width;
         public int Height => _height;
@@ -195,6 +197,7 @@ namespace MOBA.Core.Simulation.AI
 
             if (startNode == null || endNode == null || !startNode.IsWalkable || !endNode.IsWalkable) return null;
 
+            TouchNode(startNode);
             startNode.GCost = 0;
             startNode.HCost = GetDistance(startNode, endNode);
 
@@ -213,13 +216,16 @@ namespace MOBA.Core.Simulation.AI
                 openList.Remove(current);
                 closedList.Add(current);
 
-                foreach (var neighbor in GetNeighbors(current))
+                GetNeighborsNonAlloc(current, _neighborBuffer);
+                for (int i = 0; i < _neighborBuffer.Count; i++)
                 {
+                    PathNode neighbor = _neighborBuffer[i];
                     if (!neighbor.IsWalkable || closedList.Contains(neighbor)) continue;
 
                     int newCostToNeighbor = current.GCost + GetDistance(current, neighbor);
                     if (newCostToNeighbor < neighbor.GCost || !openList.Contains(neighbor))
                     {
+                        TouchNode(neighbor);
                         neighbor.GCost = newCostToNeighbor;
                         neighbor.HCost = GetDistance(neighbor, endNode);
                         neighbor.Parent = current;
@@ -237,10 +243,12 @@ namespace MOBA.Core.Simulation.AI
             return (distX > distY) ? 14 * distY + 10 * (distX - distY) : 14 * distX + 10 * (distY - distX);
         }
 
-        private List<PathNode> GetNeighbors(PathNode node)
+        private void GetNeighborsNonAlloc(PathNode node, List<PathNode> results)
         {
-            List<PathNode> neighbors = new List<PathNode>();
+            results.Clear();
+
             for (int x = -1; x <= 1; x++)
+            {
                 for (int y = -1; y <= 1; y++)
                 {
                     if (x == 0 && y == 0) continue;
@@ -254,9 +262,9 @@ namespace MOBA.Core.Simulation.AI
                     }
 
                     PathNode n = GetNode(node.X + x, node.Y + y);
-                    if (n != null) neighbors.Add(n);
+                    if (n != null) results.Add(n);
                 }
-            return neighbors;
+            }
         }
 
         private PathNode GetNode(int x, int y) => (x >= 0 && x < _width && y >= 0 && y < _height) ? _grid[x, y] : null;
@@ -272,16 +280,25 @@ namespace MOBA.Core.Simulation.AI
 
         private void ResetPathState()
         {
-            for (int x = 0; x < _width; x++)
+            for (int i = 0; i < _touchedNodes.Count; i++)
             {
-                for (int y = 0; y < _height; y++)
-                {
-                    PathNode node = _grid[x, y];
-                    node.GCost = int.MaxValue;
-                    node.HCost = 0;
-                    node.Parent = null;
-                }
+                PathNode node = _touchedNodes[i];
+                node.GCost = int.MaxValue;
+                node.HCost = 0;
+                node.Parent = null;
+                node.IsPathTouched = false;
             }
+
+            _touchedNodes.Clear();
+        }
+
+        private void TouchNode(PathNode node)
+        {
+            if (node == null || node.IsPathTouched)
+                return;
+
+            node.IsPathTouched = true;
+            _touchedNodes.Add(node);
         }
     }
 }
