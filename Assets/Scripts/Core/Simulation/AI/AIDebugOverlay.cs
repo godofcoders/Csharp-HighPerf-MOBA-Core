@@ -34,7 +34,7 @@ namespace MOBA.Core.Simulation.AI
             if (snapshot == null)
                 return;
 
-            GUILayout.BeginArea(new Rect(20, 20, 520, 640), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(20, 20, 520, 660), GUI.skin.box);
 
             GUILayout.Label($"AI DEBUG: {snapshot.BrawlerName}");
             GUILayout.Label($"Action: {snapshot.CurrentAction}");
@@ -58,6 +58,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Objective Debug: {snapshot.ObjectiveDebug}");
             GUILayout.Label($"Tactical/Map: {snapshot.TacticalMovementDebug}");
             GUILayout.Label($"AI Perf: {snapshot.PerformanceDebug}");
+            GUILayout.Label($"AI Validation: {snapshot.ValidationDebug}");
 
             GUILayout.Space(8);
             GUILayout.Label("Flags:");
@@ -123,6 +124,7 @@ namespace MOBA.Core.Simulation.AI
                     $"Objective={snapshot.ObjectiveDebug} | " +
                     $"Tactical={snapshot.TacticalMovementDebug} | " +
                     $"Perf={snapshot.PerformanceDebug} | " +
+                    $"Validation={snapshot.ValidationDebug} | " +
                     $"Statuses={string.Join(", ", snapshot.ActiveStatuses)}");
             }
         }

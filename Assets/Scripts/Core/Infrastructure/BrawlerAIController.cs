@@ -244,6 +244,14 @@ _actionExecutor != null
             _lastChosenAction = chosenAction;
             _teamCoordinator?.ReportActionIntent(chosenAction.ActionType, currentTick);
 
+            AIValidationTelemetry.RecordDecision(
+                _brawler.EntityID,
+                currentTick,
+                chosenAction,
+                _targetInfo.HasLiveTarget,
+                _debugScores,
+                TeamRoleDebug);
+
             _actionExecutor.Execute(
                 chosenAction.ActionType,
                 _targetInfo,
@@ -398,6 +406,7 @@ $"Reason={LastTacticalMoveReason} " +
 $"Map={LastMapRouteDebug}";
 
             _debugSnapshot.PerformanceDebug = AIPerformanceTracker.GetDebugSummary(currentTick);
+            _debugSnapshot.ValidationDebug = AIValidationTelemetry.GetDebugSummary(currentTick);
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }
