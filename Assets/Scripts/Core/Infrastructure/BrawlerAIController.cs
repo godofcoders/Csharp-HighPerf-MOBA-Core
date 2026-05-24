@@ -407,6 +407,7 @@ $"Map={LastMapRouteDebug}";
 
             _debugSnapshot.PerformanceDebug = AIPerformanceTracker.GetDebugSummary(currentTick);
             _debugSnapshot.ValidationDebug = AIValidationTelemetry.GetDebugSummary(currentTick);
+            _debugSnapshot.ValidationHealthDebug = AIValidationHealthTracker.GetDebugSummary();
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }

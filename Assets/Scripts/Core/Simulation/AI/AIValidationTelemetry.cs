@@ -152,6 +152,7 @@ namespace MOBA.Core.Simulation.AI
 
         public static void ResetForTests()
         {
+            AIValidationHealthTracker.ResetForTests();
             _botRecords.Clear();
             _staleBotBuffer.Clear();
             _hasPurgeTick = false;
@@ -164,7 +165,47 @@ namespace MOBA.Core.Simulation.AI
             if (_hasTick && _tick == currentTick)
                 return;
 
+            if (_hasTick && currentTick < _tick)
+            {
+                ClearLongLivedState();
+                ResetFrame(currentTick);
+                return;
+            }
+
+            FlushCurrentFrameToHealth();
             ResetFrame(currentTick);
+        }
+
+        private static void ClearLongLivedState()
+        {
+            AIValidationHealthTracker.Clear();
+            _botRecords.Clear();
+            _staleBotBuffer.Clear();
+            _hasPurgeTick = false;
+        }
+
+        private static void FlushCurrentFrameToHealth()
+        {
+            if (!_hasTick || _activeBotCount <= 0)
+                return;
+
+            AIValidationHealthTracker.RecordFrame(
+                new AIValidationFrame
+                {
+                    Tick = _tick,
+                    ActiveBotCount = _activeBotCount,
+                    TargetedBotCount = _targetedBotCount,
+                    TargetlessBotCount = _targetlessBotCount,
+                    ActionSwitchCount = _actionSwitchCount,
+                    InvalidDecisionCount = _invalidDecisionCount,
+                    LowConfidenceDecisionCount = _lowConfidenceDecisionCount,
+                    ZeroScoreDecisionCount = _zeroScoreDecisionCount,
+                    EmergencyActionCount = _emergencyActionCount,
+                    TeamRoleAdjustedDecisionCount = _teamRoleAdjustedDecisionCount,
+                    AverageTopScore = AverageTopScore,
+                    AverageScoreMargin = AverageScoreMargin
+                },
+                _actionCounts);
         }
 
         private static void ResetFrame(uint currentTick)

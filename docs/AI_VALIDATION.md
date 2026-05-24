@@ -4,6 +4,7 @@ Use the AI debug overlay while running play mode:
 
 - `AI Perf` shows map/path cost for the current simulation tick.
 - `AI Validation` shows whether decisions are healthy at the team level.
+- `AI Health` is a rolling `OK/WATCH/FAIL` validation gate over the last 180 completed AI ticks.
 - `Team Roles` shows whether AI-15 role coordination is actively changing scores.
 
 ## Healthy Baseline
@@ -15,6 +16,7 @@ Use the AI debug overlay while running play mode:
 - `target=X/Y` should reflect combat state: targeted bots during fights, targetless bots during objective/search phases.
 - `roleAdj` should be non-zero when multiple allies are choosing similar roles.
 - `A/H/R`, `Rt/E/P`, `U/G`, and `S/O/W` should show a spread of actions in real matches, not all bots parked on one action.
+- `Health=OK` should be the steady state after the first few seconds of combat.
 
 ## Regression Signals
 
@@ -22,6 +24,8 @@ Use the AI debug overlay while running play mode:
 - sustained high `zero`: bots are alive but no meaningful action is scoring.
 - sustained high `switch`: commitment or team role shaping may be too loose.
 - sustained high `lowMargin`: action weights are too flat or competing systems are fighting each other.
+- `Health=WATCH`: sustained flicker, low-confidence scoring, or action collapse.
+- `Health=FAIL`: invalid context decisions or sustained zero-score decisions.
 - `roleAdj=0` in clustered team fights: AI-15 reservations may not be reporting.
 - high `AI Perf` path queries or touched nodes alongside poor FPS: map-aware movement needs another budget pass.
 
