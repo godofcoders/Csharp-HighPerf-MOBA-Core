@@ -34,6 +34,7 @@ namespace MOBA.Core.Simulation.AI
             if (!_specialistPlanner.TryBuildMainAttackPlan(
                     target,
                     maxRange,
+                    currentTick,
                     out AIAbilityCastPlan plan))
             {
                 return;

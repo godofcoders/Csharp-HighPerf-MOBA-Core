@@ -11,9 +11,19 @@ namespace MOBA.Core.Simulation.AI
         private const float HybridHealHealthThreshold = 0.68f;
         private const float HybridEmergencyHealthThreshold = 0.40f;
         private const float HealthyDeployableKeepThreshold = 0.35f;
+        private const float FireLaneWidth = 1.15f;
+        private const uint TargetMotionForgetTicks = 90;
 
         private readonly BrawlerController _self;
         private readonly List<ISpatialEntity> _buffer = new List<ISpatialEntity>(24);
+        private readonly Dictionary<int, TargetMotionRecord> _targetMotion =
+            new Dictionary<int, TargetMotionRecord>(16);
+
+        private struct TargetMotionRecord
+        {
+            public Vector3 Position;
+            public uint Tick;
+        }
 
         public AIAbilitySpecialistPlanner(BrawlerController self)
         {
@@ -23,6 +33,7 @@ namespace MOBA.Core.Simulation.AI
         public bool TryBuildMainAttackPlan(
             ISpatialEntity requestedTarget,
             float maxRange,
+            uint currentTick,
             out AIAbilityCastPlan plan)
         {
             plan = default;
@@ -49,8 +60,14 @@ namespace MOBA.Core.Simulation.AI
 
             if (ability is ThrownHybridAoEAbilityDefinition thrown)
             {
+                Vector3 targetPoint = GetPredictedTargetPoint(
+                    ability,
+                    requestedTarget,
+                    thrown.ThrowRange,
+                    currentTick);
+
                 Vector3 point = BuildAreaDenialPoint(
-                    requestedTarget.Position,
+                    targetPoint,
                     thrown.ThrowRange,
                     Mathf.Max(2.5f, thrown.ImpactRadius * 1.25f));
 
@@ -60,8 +77,14 @@ namespace MOBA.Core.Simulation.AI
 
             if (ability is ThrownVolleyAoEAbilityDefinition volley)
             {
+                Vector3 targetPoint = GetPredictedTargetPoint(
+                    ability,
+                    requestedTarget,
+                    volley.ThrowRange,
+                    currentTick);
+
                 Vector3 point = BuildAreaDenialPoint(
-                    requestedTarget.Position,
+                    targetPoint,
                     volley.ThrowRange,
                     Mathf.Max(3.5f, volley.ImpactRadius * 1.5f));
 
@@ -71,11 +94,35 @@ namespace MOBA.Core.Simulation.AI
 
             if (ability is BurstSequenceProjectileAbilityDefinition)
             {
-                plan = AIAbilityCastPlan.Directional(
-                    requestedTarget,
-                    BuildLinePressureDirection(requestedTarget.Position, abilityRange),
-                    "line_pressure");
+                if (!TryBuildPredictiveProjectilePlan(
+                        ability,
+                        requestedTarget,
+                        abilityRange,
+                        currentTick,
+                        requireQualityGate: true,
+                        "line_pressure",
+                        out plan))
+                {
+                    return false;
+                }
+
                 return true;
+            }
+
+            if (AIPredictiveCombatUtility.TryGetProjectileKinematics(
+                    ability,
+                    abilityRange,
+                    out _,
+                    out _))
+            {
+                return TryBuildPredictiveProjectilePlan(
+                    ability,
+                    requestedTarget,
+                    abilityRange,
+                    currentTick,
+                    requireQualityGate: true,
+                    "predictive_main",
+                    out plan);
             }
 
             plan = BuildDirectionalPlan(requestedTarget, "default_main");
@@ -85,6 +132,7 @@ namespace MOBA.Core.Simulation.AI
         public bool TryBuildSuperPlan(
             ISpatialEntity requestedTarget,
             float superRange,
+            uint currentTick,
             out AIAbilityCastPlan plan)
         {
             plan = default;
@@ -131,8 +179,14 @@ namespace MOBA.Core.Simulation.AI
                 if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                     return false;
 
+                Vector3 targetPoint = GetPredictedTargetPoint(
+                    ability,
+                    requestedTarget,
+                    hybridAoE.ThrowRange,
+                    currentTick);
+
                 Vector3 point = BuildAreaDenialPoint(
-                    requestedTarget.Position,
+                    targetPoint,
                     hybridAoE.ThrowRange,
                     Mathf.Max(3f, hybridAoE.ImpactRadius * 0.75f));
 
@@ -145,8 +199,14 @@ namespace MOBA.Core.Simulation.AI
                 if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                     return false;
 
+                Vector3 targetPoint = GetPredictedTargetPoint(
+                    ability,
+                    requestedTarget,
+                    volley.ThrowRange,
+                    currentTick);
+
                 Vector3 point = BuildAreaDenialPoint(
-                    requestedTarget.Position,
+                    targetPoint,
                     volley.ThrowRange,
                     Mathf.Max(4f, volley.ImpactRadius * 1.5f));
 
@@ -159,15 +219,34 @@ namespace MOBA.Core.Simulation.AI
                 if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                     return false;
 
-                plan = AIAbilityCastPlan.Directional(
+                return TryBuildPredictiveProjectilePlan(
+                    ability,
                     requestedTarget,
-                    BuildLinePressureDirection(requestedTarget.Position, abilityRange),
-                    "super_line_pressure");
-                return true;
+                    abilityRange,
+                    currentTick,
+                    requireQualityGate: false,
+                    "super_line_pressure",
+                    out plan);
             }
 
             if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                 return false;
+
+            if (AIPredictiveCombatUtility.TryGetProjectileKinematics(
+                    ability,
+                    abilityRange,
+                    out _,
+                    out _))
+            {
+                return TryBuildPredictiveProjectilePlan(
+                    ability,
+                    requestedTarget,
+                    abilityRange,
+                    currentTick,
+                    requireQualityGate: false,
+                    "predictive_super",
+                    out plan);
+            }
 
             plan = BuildDirectionalPlan(requestedTarget, "default_super");
             return true;
@@ -180,6 +259,115 @@ namespace MOBA.Core.Simulation.AI
             return ability is EffectAbilityDefinition effect &&
                    effect.TargetingType == AbilityTargetingType.Area &&
                    HasHealthyOwnedDeployable();
+        }
+
+        private bool TryBuildPredictiveProjectilePlan(
+            AbilityDefinition ability,
+            ISpatialEntity target,
+            float fallbackRange,
+            uint currentTick,
+            bool requireQualityGate,
+            string reason,
+            out AIAbilityCastPlan plan)
+        {
+            plan = default;
+
+            if (!SpatialEntityUtility.IsAlive(target))
+                return false;
+
+            if (!AIPredictiveCombatUtility.TryGetProjectileKinematics(
+                    ability,
+                    fallbackRange,
+                    out float range,
+                    out float projectileSpeed))
+            {
+                return false;
+            }
+
+            if (!IsWithinRange(target.Position, range))
+                return false;
+
+            Vector3 targetVelocity = EstimateTargetVelocity(target, currentTick);
+            bool targetControlled = IsTargetControlled(target);
+            int availableAmmo = GetAvailableAmmo();
+
+            AIPredictiveShotResult preview =
+                AIPredictiveCombatUtility.EvaluateProjectileShot(
+                    _self.Position,
+                    target.Position,
+                    targetVelocity,
+                    range,
+                    projectileSpeed,
+                    availableAmmo,
+                    targetControlled,
+                    enemyCountInLane: 1,
+                    allyCountInLane: 0);
+
+            CountFireLaneEntities(
+                target,
+                preview.AimPoint,
+                range,
+                FireLaneWidth,
+                out int enemiesInLane,
+                out int alliesInLane);
+
+            AIPredictiveShotResult result =
+                AIPredictiveCombatUtility.EvaluateProjectileShot(
+                    _self.Position,
+                    target.Position,
+                    targetVelocity,
+                    range,
+                    projectileSpeed,
+                    availableAmmo,
+                    targetControlled,
+                    enemiesInLane,
+                    alliesInLane);
+
+            if (requireQualityGate && !result.ShouldFire)
+                return false;
+
+            Vector3 direction = ability is BurstSequenceProjectileAbilityDefinition
+                ? BuildLinePressureDirection(result.AimPoint, range)
+                : result.AimPoint - _self.Position;
+            direction.y = 0f;
+
+            plan = AIAbilityCastPlan.Directional(
+                target,
+                direction,
+                $"{reason}:{result.Reason}:q={result.Quality:0.00}");
+            return true;
+        }
+
+        private Vector3 GetPredictedTargetPoint(
+            AbilityDefinition ability,
+            ISpatialEntity target,
+            float fallbackRange,
+            uint currentTick)
+        {
+            if (!SpatialEntityUtility.IsAlive(target) ||
+                !AIPredictiveCombatUtility.TryGetProjectileKinematics(
+                    ability,
+                    fallbackRange,
+                    out float range,
+                    out float projectileSpeed))
+            {
+                return target != null ? target.Position : _self.Position;
+            }
+
+            Vector3 targetVelocity = EstimateTargetVelocity(target, currentTick);
+            AIPredictiveShotResult result =
+                AIPredictiveCombatUtility.EvaluateProjectileShot(
+                    _self.Position,
+                    target.Position,
+                    targetVelocity,
+                    range,
+                    projectileSpeed,
+                    availableAmmo: 3,
+                    targetControlled: IsTargetControlled(target),
+                    enemyCountInLane: 1,
+                    allyCountInLane: 0);
+
+            return result.AimPoint;
         }
 
         private AIAbilityCastPlan BuildDirectionalPlan(ISpatialEntity target, string reason)
@@ -385,6 +573,131 @@ namespace MOBA.Core.Simulation.AI
                 : baseDirection;
         }
 
+        private Vector3 EstimateTargetVelocity(ISpatialEntity target, uint currentTick)
+        {
+            if (target == null || target.EntityID == 0)
+                return Vector3.zero;
+
+            Vector3 currentPosition = target.Position;
+            int targetId = target.EntityID;
+            Vector3 velocity = Vector3.zero;
+
+            if (_targetMotion.TryGetValue(targetId, out TargetMotionRecord previous) &&
+                currentTick >= previous.Tick)
+            {
+                uint tickDelta = currentTick - previous.Tick;
+                if (tickDelta > 0 && tickDelta <= TargetMotionForgetTicks)
+                {
+                    float seconds = tickDelta * SimulationClock.TickDeltaTime;
+                    velocity = (currentPosition - previous.Position) / Mathf.Max(0.001f, seconds);
+                    velocity.y = 0f;
+                }
+            }
+
+            _targetMotion[targetId] = new TargetMotionRecord
+            {
+                Position = currentPosition,
+                Tick = currentTick
+            };
+
+            return ClampTargetVelocity(target, velocity);
+        }
+
+        private Vector3 ClampTargetVelocity(ISpatialEntity target, Vector3 velocity)
+        {
+            if (target is not BrawlerController targetBrawler || targetBrawler.State == null)
+                return velocity;
+
+            if (targetBrawler.State.HasStatus(StatusEffectType.Stun))
+                return Vector3.zero;
+
+            if (targetBrawler.State.HasStatus(StatusEffectType.Slow))
+                velocity *= 0.35f;
+
+            float maxSpeed = Mathf.Max(1f, targetBrawler.State.MoveSpeed.Value * 1.75f);
+            if (velocity.magnitude > maxSpeed)
+                velocity = velocity.normalized * maxSpeed;
+
+            return velocity;
+        }
+
+        private bool IsTargetControlled(ISpatialEntity target)
+        {
+            return target is BrawlerController targetBrawler &&
+                   targetBrawler.State != null &&
+                   (targetBrawler.State.HasStatus(StatusEffectType.Stun) ||
+                    targetBrawler.State.HasStatus(StatusEffectType.Slow));
+        }
+
+        private int GetAvailableAmmo()
+        {
+            return _self != null && _self.State != null && _self.State.Ammo != null
+                ? _self.State.Ammo.AvailableBars
+                : 3;
+        }
+
+        private void CountFireLaneEntities(
+            ISpatialEntity primaryTarget,
+            Vector3 aimPoint,
+            float range,
+            float width,
+            out int enemiesInLane,
+            out int alliesInLane)
+        {
+            enemiesInLane = 0;
+            alliesInLane = 0;
+
+            Vector3 direction = aimPoint - _self.Position;
+            direction.y = 0f;
+
+            if (direction.sqrMagnitude <= 0.001f)
+            {
+                enemiesInLane = 1;
+                return;
+            }
+
+            direction.Normalize();
+
+            if (SimulationClock.Grid == null)
+            {
+                enemiesInLane = 1;
+                return;
+            }
+
+            _buffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(_self.Position, range, _buffer);
+
+            for (int i = 0; i < _buffer.Count; i++)
+            {
+                ISpatialEntity entity = _buffer[i];
+                if (!SpatialEntityUtility.IsAlive(entity) || entity.EntityID == _self.EntityID)
+                    continue;
+
+                Vector3 toEntity = entity.Position - _self.Position;
+                toEntity.y = 0f;
+
+                float forwardDistance = Vector3.Dot(toEntity, direction);
+                if (forwardDistance <= 0f || forwardDistance > range)
+                    continue;
+
+                Vector3 closestPoint = _self.Position + direction * forwardDistance;
+                if (Vector3.Distance(closestPoint, entity.Position) > width)
+                    continue;
+
+                if (entity.Team == _self.Team)
+                {
+                    alliesInLane++;
+                }
+                else
+                {
+                    enemiesInLane++;
+                }
+            }
+
+            if (enemiesInLane == 0 && primaryTarget != null)
+                enemiesInLane = 1;
+        }
+
         private bool HasHealthyOwnedDeployable()
         {
             if (!ServiceProvider.TryGet<IDeployableRegistry>(out var registry) || registry == null)
@@ -431,6 +744,10 @@ namespace MOBA.Core.Simulation.AI
         {
             switch (ability)
             {
+                case BasicProjectileAttackDefinition basic:
+                    return basic.Range;
+                case BasicSuperDefinition basicSuper:
+                    return basicSuper.Range;
                 case BurstSequenceProjectileAbilityDefinition burst:
                     return burst.Range;
                 case ProjectileAbilityDefinition projectile:

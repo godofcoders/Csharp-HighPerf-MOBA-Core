@@ -46,6 +46,7 @@ namespace MOBA.Core.Simulation.AI
             bool hasSpecialistPlan = _specialistPlanner.TryBuildSuperPlan(
                 target,
                 superRange,
+                currentTick,
                 out plan);
 
             Vector3 aimPoint = hasSpecialistPlan && plan.HasTargetPoint
