@@ -42,6 +42,7 @@ namespace MOBA.Core.Simulation.AI
         public string PerformanceDebug;
         public string ValidationDebug;
         public string ValidationHealthDebug;
+        public string ValidationScenarioDebug;
 
         public void ClearLists()
         {

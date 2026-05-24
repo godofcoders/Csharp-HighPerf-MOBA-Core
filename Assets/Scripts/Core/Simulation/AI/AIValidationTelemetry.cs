@@ -153,6 +153,7 @@ namespace MOBA.Core.Simulation.AI
         public static void ResetForTests()
         {
             AIValidationHealthTracker.ResetForTests();
+            AIValidationScenarioTracker.ResetForTests();
             _botRecords.Clear();
             _staleBotBuffer.Clear();
             _hasPurgeTick = false;
@@ -179,6 +180,7 @@ namespace MOBA.Core.Simulation.AI
         private static void ClearLongLivedState()
         {
             AIValidationHealthTracker.Clear();
+            AIValidationScenarioTracker.Clear();
             _botRecords.Clear();
             _staleBotBuffer.Clear();
             _hasPurgeTick = false;
@@ -189,23 +191,28 @@ namespace MOBA.Core.Simulation.AI
             if (!_hasTick || _activeBotCount <= 0)
                 return;
 
-            AIValidationHealthTracker.RecordFrame(
-                new AIValidationFrame
-                {
-                    Tick = _tick,
-                    ActiveBotCount = _activeBotCount,
-                    TargetedBotCount = _targetedBotCount,
-                    TargetlessBotCount = _targetlessBotCount,
-                    ActionSwitchCount = _actionSwitchCount,
-                    InvalidDecisionCount = _invalidDecisionCount,
-                    LowConfidenceDecisionCount = _lowConfidenceDecisionCount,
-                    ZeroScoreDecisionCount = _zeroScoreDecisionCount,
-                    EmergencyActionCount = _emergencyActionCount,
-                    TeamRoleAdjustedDecisionCount = _teamRoleAdjustedDecisionCount,
-                    AverageTopScore = AverageTopScore,
-                    AverageScoreMargin = AverageScoreMargin
-                },
-                _actionCounts);
+            AIValidationFrame frame = new AIValidationFrame
+            {
+                Tick = _tick,
+                ActiveBotCount = _activeBotCount,
+                TargetedBotCount = _targetedBotCount,
+                TargetlessBotCount = _targetlessBotCount,
+                ActionSwitchCount = _actionSwitchCount,
+                InvalidDecisionCount = _invalidDecisionCount,
+                LowConfidenceDecisionCount = _lowConfidenceDecisionCount,
+                ZeroScoreDecisionCount = _zeroScoreDecisionCount,
+                EmergencyActionCount = _emergencyActionCount,
+                TeamRoleAdjustedDecisionCount = _teamRoleAdjustedDecisionCount,
+                AverageTopScore = AverageTopScore,
+                AverageScoreMargin = AverageScoreMargin
+            };
+
+            AIValidationHealthTracker.RecordFrame(frame, _actionCounts);
+            AIValidationScenarioTracker.RecordFrame(
+                frame,
+                _actionCounts,
+                AIValidationHealthTracker.Status,
+                AIValidationHealthTracker.PrimarySignal);
         }
 
         private static void ResetFrame(uint currentTick)

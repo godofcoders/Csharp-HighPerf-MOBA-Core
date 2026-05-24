@@ -5,6 +5,7 @@ Use the AI debug overlay while running play mode:
 - `AI Perf` shows map/path cost for the current simulation tick.
 - `AI Validation` shows whether decisions are healthy at the team level.
 - `AI Health` is a rolling `OK/WATCH/FAIL` validation gate over the last 180 completed AI ticks.
+- `AI Scenario` shows whether recent validation came from combat, objective, or mixed AI situations.
 - `Team Roles` shows whether AI-15 role coordination is actively changing scores.
 
 ## Healthy Baseline
@@ -17,6 +18,7 @@ Use the AI debug overlay while running play mode:
 - `roleAdj` should be non-zero when multiple allies are choosing similar roles.
 - `A/H/R`, `Rt/E/P`, `U/G`, and `S/O/W` should show a spread of actions in real matches, not all bots parked on one action.
 - `Health=OK` should be the steady state after the first few seconds of combat.
+- `AI Scenario` should move between `Combat`, `Objective`, and `Mixed` as the match state changes.
 
 ## Regression Signals
 
@@ -26,6 +28,7 @@ Use the AI debug overlay while running play mode:
 - sustained high `lowMargin`: action weights are too flat or competing systems are fighting each other.
 - `Health=WATCH`: sustained flicker, low-confidence scoring, or action collapse.
 - `Health=FAIL`: invalid context decisions or sustained zero-score decisions.
+- `AI Scenario` fail/watch frames concentrated in one scenario point to that subsystem first.
 - `roleAdj=0` in clustered team fights: AI-15 reservations may not be reporting.
 - high `AI Perf` path queries or touched nodes alongside poor FPS: map-aware movement needs another budget pass.
 
@@ -36,4 +39,5 @@ Use the AI debug overlay while running play mode:
 3. During combat, verify target actions spread across `Approach`, `HoldRange`, `Reposition`, `Peel`, `Retreat`, and `Evade`.
 4. During downtime, verify actions move toward `Search`, `Objective`, or `Wander`.
 5. Press `F4` if console dump is enabled and scan for non-zero `invalid`.
-6. Repeat once with a fragile-heavy team and once with a tank/fighter-heavy team.
+6. Check `AI Scenario` to confirm fail/watch frames are not concentrated in only `Combat`, `Objective`, or `Mixed`.
+7. Repeat once with a fragile-heavy team and once with a tank/fighter-heavy team.
