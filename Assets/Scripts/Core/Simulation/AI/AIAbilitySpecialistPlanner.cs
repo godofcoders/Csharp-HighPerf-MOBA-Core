@@ -12,17 +12,32 @@ namespace MOBA.Core.Simulation.AI
         private const float HybridEmergencyHealthThreshold = 0.40f;
         private const float HealthyDeployableKeepThreshold = 0.35f;
         private const float FireLaneWidth = 1.15f;
+        private const uint ComboWindowTicks = 36;
+        private const float DeployableProtectionRadius = 5.5f;
+        private const float WoundedDeployableProtectThreshold = 0.72f;
         private const uint TargetMotionForgetTicks = 90;
 
         private readonly BrawlerController _self;
         private readonly List<ISpatialEntity> _buffer = new List<ISpatialEntity>(24);
+        private readonly List<ISpatialEntity> _scratchBuffer = new List<ISpatialEntity>(24);
         private readonly Dictionary<int, TargetMotionRecord> _targetMotion =
             new Dictionary<int, TargetMotionRecord>(16);
+        private readonly Dictionary<int, TargetSynergyRecord> _targetSynergy =
+            new Dictionary<int, TargetSynergyRecord>(16);
+        private int _areaLayerIndex;
 
         private struct TargetMotionRecord
         {
             public Vector3 Position;
             public uint Tick;
+        }
+
+        private struct TargetSynergyRecord
+        {
+            public uint LastSetupTick;
+            public Vector3 LastAimPoint;
+            public int EnemyPressureCount;
+            public int AllyRiskCount;
         }
 
         public AIAbilitySpecialistPlanner(BrawlerController self)
@@ -64,14 +79,19 @@ namespace MOBA.Core.Simulation.AI
                     ability,
                     requestedTarget,
                     thrown.ThrowRange,
-                    currentTick);
+                    currentTick,
+                    out Vector3 targetVelocity);
 
-                Vector3 point = BuildAreaDenialPoint(
+                Vector3 point = BuildLayeredAreaDenialPoint(
                     targetPoint,
+                    targetVelocity,
                     thrown.ThrowRange,
-                    Mathf.Max(2.5f, thrown.ImpactRadius * 1.25f));
+                    Mathf.Max(2.5f, thrown.ImpactRadius * 1.25f),
+                    thrown.ImpactRadius,
+                    out int enemyPressure);
 
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "thrown_area_denial");
+                RecordComboSetup(requestedTarget, currentTick, point, enemyPressure, 0);
                 return true;
             }
 
@@ -81,14 +101,30 @@ namespace MOBA.Core.Simulation.AI
                     ability,
                     requestedTarget,
                     volley.ThrowRange,
-                    currentTick);
+                    currentTick,
+                    out Vector3 targetVelocity);
 
-                Vector3 point = BuildAreaDenialPoint(
+                Vector3 point = BuildLayeredAreaDenialPoint(
                     targetPoint,
+                    targetVelocity,
                     volley.ThrowRange,
-                    Mathf.Max(3.5f, volley.ImpactRadius * 1.5f));
+                    Mathf.Max(3.5f, volley.ImpactRadius * 1.5f),
+                    volley.ImpactRadius,
+                    out int enemyPressure);
 
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "volley_area_denial");
+                RecordComboSetup(requestedTarget, currentTick, point, enemyPressure, 0);
+                return true;
+            }
+
+            if (ability is ChainProjectileAbilityDefinition chain &&
+                TryBuildChainBouncePlan(
+                    chain,
+                    requestedTarget,
+                    abilityRange,
+                    currentTick,
+                    out plan))
+            {
                 return true;
             }
 
@@ -126,6 +162,12 @@ namespace MOBA.Core.Simulation.AI
             }
 
             plan = BuildDirectionalPlan(requestedTarget, "default_main");
+            RecordComboSetup(
+                requestedTarget,
+                currentTick,
+                _self.Position + plan.Direction * abilityRange,
+                1,
+                0);
             return true;
         }
 
@@ -146,14 +188,32 @@ namespace MOBA.Core.Simulation.AI
             if (ability is EffectAbilityDefinition effect &&
                 effect.TargetingType == AbilityTargetingType.Area)
             {
-                if (HasHealthyOwnedDeployable())
+                bool hasOwnedDeployable = TryGetMostWoundedOwnedDeployable(
+                    out DeployableController deployable,
+                    out float deployableHealthRatio);
+
+                if (hasOwnedDeployable &&
+                    deployableHealthRatio > HealthyDeployableKeepThreshold &&
+                    !IsOwnedDeployableThreatened(deployable, requestedTarget))
+                {
                     return false;
+                }
 
                 if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                     return false;
 
-                Vector3 point = BuildDeployablePressurePoint(requestedTarget.Position, abilityRange);
-                plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "deployable_pressure");
+                Vector3 point = hasOwnedDeployable &&
+                                deployableHealthRatio <= WoundedDeployableProtectThreshold
+                    ? BuildDeployableProtectionPoint(deployable, requestedTarget.Position, abilityRange)
+                    : BuildDeployablePressurePoint(requestedTarget.Position, abilityRange);
+
+                plan = AIAbilityCastPlan.PointTarget(
+                    requestedTarget,
+                    _self.Position,
+                    point,
+                    hasOwnedDeployable && deployableHealthRatio <= WoundedDeployableProtectThreshold
+                        ? "deployable_protection"
+                        : "deployable_pressure");
                 plan.ForceUse = true;
                 return true;
             }
@@ -183,14 +243,19 @@ namespace MOBA.Core.Simulation.AI
                     ability,
                     requestedTarget,
                     hybridAoE.ThrowRange,
-                    currentTick);
+                    currentTick,
+                    out Vector3 targetVelocity);
 
-                Vector3 point = BuildAreaDenialPoint(
+                Vector3 point = BuildLayeredAreaDenialPoint(
                     targetPoint,
+                    targetVelocity,
                     hybridAoE.ThrowRange,
-                    Mathf.Max(3f, hybridAoE.ImpactRadius * 0.75f));
+                    Mathf.Max(3f, hybridAoE.ImpactRadius * 0.75f),
+                    hybridAoE.ImpactRadius,
+                    out _);
 
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "hybrid_super_damage");
+                ApplyComboWindow(requestedTarget, currentTick, ref plan);
                 return true;
             }
 
@@ -203,14 +268,19 @@ namespace MOBA.Core.Simulation.AI
                     ability,
                     requestedTarget,
                     volley.ThrowRange,
-                    currentTick);
+                    currentTick,
+                    out Vector3 targetVelocity);
 
-                Vector3 point = BuildAreaDenialPoint(
+                Vector3 point = BuildLayeredAreaDenialPoint(
                     targetPoint,
+                    targetVelocity,
                     volley.ThrowRange,
-                    Mathf.Max(4f, volley.ImpactRadius * 1.5f));
+                    Mathf.Max(4f, volley.ImpactRadius * 1.5f),
+                    volley.ImpactRadius,
+                    out _);
 
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "volley_super_denial");
+                ApplyComboWindow(requestedTarget, currentTick, ref plan);
                 return true;
             }
 
@@ -219,7 +289,7 @@ namespace MOBA.Core.Simulation.AI
                 if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
                     return false;
 
-                return TryBuildPredictiveProjectilePlan(
+                bool builtPlan = TryBuildPredictiveProjectilePlan(
                     ability,
                     requestedTarget,
                     abilityRange,
@@ -227,6 +297,11 @@ namespace MOBA.Core.Simulation.AI
                     requireQualityGate: false,
                     "super_line_pressure",
                     out plan);
+
+                if (builtPlan)
+                    ApplyComboWindow(requestedTarget, currentTick, ref plan);
+
+                return builtPlan;
             }
 
             if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
@@ -238,7 +313,7 @@ namespace MOBA.Core.Simulation.AI
                     out _,
                     out _))
             {
-                return TryBuildPredictiveProjectilePlan(
+                bool builtPlan = TryBuildPredictiveProjectilePlan(
                     ability,
                     requestedTarget,
                     abilityRange,
@@ -246,9 +321,15 @@ namespace MOBA.Core.Simulation.AI
                     requireQualityGate: false,
                     "predictive_super",
                     out plan);
+
+                if (builtPlan)
+                    ApplyComboWindow(requestedTarget, currentTick, ref plan);
+
+                return builtPlan;
             }
 
             plan = BuildDirectionalPlan(requestedTarget, "default_super");
+            ApplyComboWindow(requestedTarget, currentTick, ref plan);
             return true;
         }
 
@@ -335,6 +416,10 @@ namespace MOBA.Core.Simulation.AI
                 target,
                 direction,
                 $"{reason}:{result.Reason}:q={result.Quality:0.00}");
+
+            if (ability.SlotType == AbilitySlotType.MainAttack)
+                RecordComboSetup(target, currentTick, result.AimPoint, enemiesInLane, alliesInLane);
+
             return true;
         }
 
@@ -342,8 +427,11 @@ namespace MOBA.Core.Simulation.AI
             AbilityDefinition ability,
             ISpatialEntity target,
             float fallbackRange,
-            uint currentTick)
+            uint currentTick,
+            out Vector3 targetVelocity)
         {
+            targetVelocity = Vector3.zero;
+
             if (!SpatialEntityUtility.IsAlive(target) ||
                 !AIPredictiveCombatUtility.TryGetProjectileKinematics(
                     ability,
@@ -354,7 +442,7 @@ namespace MOBA.Core.Simulation.AI
                 return target != null ? target.Position : _self.Position;
             }
 
-            Vector3 targetVelocity = EstimateTargetVelocity(target, currentTick);
+            targetVelocity = EstimateTargetVelocity(target, currentTick);
             AIPredictiveShotResult result =
                 AIPredictiveCombatUtility.EvaluateProjectileShot(
                     _self.Position,
@@ -368,6 +456,96 @@ namespace MOBA.Core.Simulation.AI
                     allyCountInLane: 0);
 
             return result.AimPoint;
+        }
+
+        private bool TryBuildChainBouncePlan(
+            ChainProjectileAbilityDefinition chain,
+            ISpatialEntity requestedTarget,
+            float abilityRange,
+            uint currentTick,
+            out AIAbilityCastPlan plan)
+        {
+            plan = default;
+
+            if (chain == null || !SpatialEntityUtility.IsAlive(requestedTarget))
+                return false;
+
+            float range = Mathf.Max(1f, abilityRange);
+            if (!IsWithinRange(requestedTarget.Position, range))
+                return false;
+
+            ISpatialEntity bestTarget = requestedTarget;
+            int bestBounceTargets = CountEnemiesNear(
+                requestedTarget.Position,
+                chain.BounceRadius,
+                includePrimaryTarget: true);
+            float bestScore = ScoreChainBounceAnchor(
+                requestedTarget,
+                bestBounceTargets,
+                requestedTargetBonus: true);
+
+            if (SimulationClock.Grid != null)
+            {
+                _buffer.Clear();
+                SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(_self.Position, range, _buffer);
+
+                for (int i = 0; i < _buffer.Count; i++)
+                {
+                    ISpatialEntity entity = _buffer[i];
+                    if (!IsLiveEnemy(entity))
+                        continue;
+
+                    int bounceTargets = CountEnemiesNear(
+                        entity.Position,
+                        chain.BounceRadius,
+                        includePrimaryTarget: true);
+                    float score = ScoreChainBounceAnchor(
+                        entity,
+                        bounceTargets,
+                        SpatialEntityUtility.IsSameEntity(entity, requestedTarget));
+
+                    if (score > bestScore)
+                    {
+                        bestScore = score;
+                        bestTarget = entity;
+                        bestBounceTargets = bounceTargets;
+                    }
+                }
+            }
+
+            Vector3 aimPoint = GetPredictedTargetPoint(
+                chain,
+                bestTarget,
+                range,
+                currentTick,
+                out _);
+
+            plan = AIAbilityCastPlan.Directional(
+                bestTarget,
+                aimPoint - _self.Position,
+                $"chain_bounce targets={bestBounceTargets}");
+
+            RecordComboSetup(bestTarget, currentTick, aimPoint, bestBounceTargets, 0);
+            return true;
+        }
+
+        private float ScoreChainBounceAnchor(
+            ISpatialEntity entity,
+            int bounceTargets,
+            bool requestedTargetBonus)
+        {
+            float score = Mathf.Max(1, bounceTargets) * 20f;
+
+            if (requestedTargetBonus)
+                score += 8f;
+
+            if (entity is BrawlerController brawler && brawler.State != null)
+            {
+                float healthRatio = brawler.State.CurrentHealth / Mathf.Max(1f, brawler.State.MaxHealth.Value);
+                score += (1f - healthRatio) * 12f;
+            }
+
+            return score;
         }
 
         private AIAbilityCastPlan BuildDirectionalPlan(ISpatialEntity target, string reason)
@@ -430,11 +608,16 @@ namespace MOBA.Core.Simulation.AI
                 return;
 
             float distance = Vector3.Distance(_self.Position, candidate.Position);
+            int nearbyEnemies = CountEnemiesNear(
+                candidate.Position,
+                DeployableProtectionRadius,
+                includePrimaryTarget: false);
             float score =
                 ((1f - healthRatio) * 100f) +
                 Mathf.Clamp(missingHealth / Mathf.Max(1f, healAmount), 0f, 3f) * 18f -
                 distance * 1.25f +
-                candidate.State.CarriedGemCount * 6f;
+                candidate.State.CarriedGemCount * 6f +
+                Mathf.Min(24f, nearbyEnemies * 8f);
 
             if (healthRatio <= HybridEmergencyHealthThreshold)
                 score += 35f;
@@ -467,9 +650,105 @@ namespace MOBA.Core.Simulation.AI
             return allyRatio <= HybridHealHealthThreshold;
         }
 
-        private Vector3 BuildAreaDenialPoint(Vector3 targetPosition, float range, float clusterRadius)
+        private int CountEnemiesNear(
+            Vector3 position,
+            float radius,
+            bool includePrimaryTarget)
+        {
+            if (SimulationClock.Grid == null)
+                return includePrimaryTarget ? 1 : 0;
+
+            _scratchBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(position, radius, _scratchBuffer);
+
+            int count = 0;
+            for (int i = 0; i < _scratchBuffer.Count; i++)
+            {
+                if (IsLiveEnemy(_scratchBuffer[i]))
+                    count++;
+            }
+
+            return includePrimaryTarget ? Mathf.Max(1, count) : count;
+        }
+
+        private void RecordComboSetup(
+            ISpatialEntity target,
+            uint currentTick,
+            Vector3 aimPoint,
+            int enemyPressureCount,
+            int allyRiskCount)
+        {
+            if (!SpatialEntityUtility.TryGetEntityId(target, out int targetId))
+                return;
+
+            _targetSynergy[targetId] = new TargetSynergyRecord
+            {
+                LastSetupTick = currentTick,
+                LastAimPoint = aimPoint,
+                EnemyPressureCount = Mathf.Max(1, enemyPressureCount),
+                AllyRiskCount = Mathf.Max(0, allyRiskCount)
+            };
+        }
+
+        private void ApplyComboWindow(
+            ISpatialEntity target,
+            uint currentTick,
+            ref AIAbilityCastPlan plan)
+        {
+            if (!SpatialEntityUtility.TryGetEntityId(target, out int targetId))
+                return;
+
+            if (!_targetSynergy.TryGetValue(targetId, out TargetSynergyRecord record))
+                return;
+
+            AIComboWindowResult combo = AIAbilitySynergyUtility.EvaluateComboWindow(
+                hasSetup: true,
+                currentTick: currentTick,
+                setupTick: record.LastSetupTick,
+                windowTicks: ComboWindowTicks,
+                targetHealthRatio: GetTargetHealthRatio(target),
+                targetControlled: IsTargetControlled(target),
+                enemyPressureCount: record.EnemyPressureCount,
+                allyRiskCount: record.AllyRiskCount);
+
+            if (!combo.IsActive)
+                return;
+
+            if (combo.ShouldCommit)
+                plan.ForceUse = true;
+
+            plan.Reason = $"{plan.Reason}|combo={combo.Reason}:{combo.Score:0}";
+
+            if (plan.HasTargetPoint)
+            {
+                Vector3 blendedPoint = Vector3.Lerp(plan.TargetPoint, record.LastAimPoint, 0.25f);
+                plan.TargetPoint = ClampPointToRange(blendedPoint, GetAbilityRange(_self.Definition?.SuperAbility, 6f));
+                Vector3 direction = plan.TargetPoint - _self.Position;
+                direction.y = 0f;
+                plan.Direction = direction.sqrMagnitude > 0.001f
+                    ? direction.normalized
+                    : plan.Direction;
+            }
+        }
+
+        private float GetTargetHealthRatio(ISpatialEntity target)
+        {
+            if (target is not BrawlerController brawler || brawler.State == null)
+                return 1f;
+
+            return brawler.State.CurrentHealth / Mathf.Max(1f, brawler.State.MaxHealth.Value);
+        }
+
+        private Vector3 BuildLayeredAreaDenialPoint(
+            Vector3 targetPosition,
+            Vector3 targetVelocity,
+            float range,
+            float clusterRadius,
+            float impactRadius,
+            out int enemyPressure)
         {
             Vector3 desired = targetPosition;
+            enemyPressure = 1;
 
             if (SimulationClock.Grid != null)
             {
@@ -491,15 +770,21 @@ namespace MOBA.Core.Simulation.AI
 
                 if (count > 1)
                     desired = sum / count;
+
+                if (count > 0)
+                    enemyPressure = count;
             }
 
-            Vector3 awayFromSelf = desired - _self.Position;
-            awayFromSelf.y = 0f;
+            Vector3 layeredPoint = AIAbilitySynergyUtility.ResolveLayeredAreaDenialPoint(
+                _self.Position,
+                desired,
+                targetVelocity,
+                impactRadius,
+                range,
+                enemyPressure,
+                _areaLayerIndex++);
 
-            if (awayFromSelf.sqrMagnitude > 0.001f)
-                desired += awayFromSelf.normalized * 0.6f;
-
-            return ClampPointToRange(desired, range);
+            return ClampPointToRange(layeredPoint, range);
         }
 
         private Vector3 BuildDeployablePressurePoint(Vector3 targetPosition, float range)
@@ -518,6 +803,42 @@ namespace MOBA.Core.Simulation.AI
             return ClampPointToRange(
                 _self.Position + direction * placementDistance + side * sideSign * 0.75f,
                 range);
+        }
+
+        private Vector3 BuildDeployableProtectionPoint(
+            DeployableController deployable,
+            Vector3 threatPosition,
+            float range)
+        {
+            if (!SpatialEntityUtility.IsAlive(deployable))
+                return BuildDeployablePressurePoint(threatPosition, range);
+
+            Vector3 deployablePosition = deployable.Position;
+            Vector3 awayFromThreat = deployablePosition - threatPosition;
+            awayFromThreat.y = 0f;
+
+            if (awayFromThreat.sqrMagnitude <= 0.001f)
+                awayFromThreat = deployablePosition - _self.Position;
+
+            awayFromThreat.y = 0f;
+            if (awayFromThreat.sqrMagnitude <= 0.001f)
+                awayFromThreat = -_self.transform.forward;
+
+            awayFromThreat.Normalize();
+
+            Vector3 fromSelf = deployablePosition - _self.Position;
+            fromSelf.y = 0f;
+            Vector3 side = fromSelf.sqrMagnitude > 0.001f
+                ? new Vector3(fromSelf.z, 0f, -fromSelf.x).normalized
+                : _self.transform.right;
+
+            float sideSign = (_self.EntityID & 1) == 0 ? 1f : -1f;
+            Vector3 protectedPoint =
+                deployablePosition +
+                awayFromThreat * 1.4f +
+                side * sideSign * 0.65f;
+
+            return ClampPointToRange(protectedPoint, range);
         }
 
         private Vector3 BuildLinePressureDirection(Vector3 primaryTargetPosition, float range)
@@ -700,17 +1021,62 @@ namespace MOBA.Core.Simulation.AI
 
         private bool HasHealthyOwnedDeployable()
         {
+            return TryGetMostWoundedOwnedDeployable(
+                       out DeployableController deployable,
+                       out float healthRatio) &&
+                   healthRatio > HealthyDeployableKeepThreshold &&
+                   !IsOwnedDeployableThreatened(deployable, null);
+        }
+
+        private bool TryGetMostWoundedOwnedDeployable(
+            out DeployableController deployable,
+            out float healthRatio)
+        {
+            deployable = null;
+            healthRatio = 1f;
+
             if (!ServiceProvider.TryGet<IDeployableRegistry>(out var registry) || registry == null)
                 return false;
 
-            if (!registry.TryGetMostWoundedOwnedDeployable(_self, out DeployableController deployable))
+            if (!registry.TryGetMostWoundedOwnedDeployable(_self, out deployable))
                 return false;
 
-            if (deployable.State == null)
+            if (!SpatialEntityUtility.IsAlive(deployable) || deployable.State == null)
                 return false;
+
+            healthRatio = deployable.State.CurrentHealth / Mathf.Max(1f, deployable.State.MaxHealth);
+            return true;
+        }
+
+        private bool IsOwnedDeployableThreatened(
+            DeployableController deployable,
+            ISpatialEntity requestedTarget)
+        {
+            if (!SpatialEntityUtility.IsAlive(deployable) || deployable.State == null)
+                return false;
+
+            int nearbyEnemyCount = CountEnemiesNear(
+                deployable.Position,
+                DeployableProtectionRadius,
+                includePrimaryTarget: false);
+
+            float threatDistance = DeployableProtectionRadius;
+            if (SpatialEntityUtility.IsAlive(requestedTarget) &&
+                requestedTarget.Team != _self.Team)
+            {
+                threatDistance = Vector3.Distance(deployable.Position, requestedTarget.Position);
+                if (threatDistance <= DeployableProtectionRadius * 0.75f)
+                    nearbyEnemyCount = Mathf.Max(nearbyEnemyCount, 1);
+            }
 
             float healthRatio = deployable.State.CurrentHealth / Mathf.Max(1f, deployable.State.MaxHealth);
-            return healthRatio > HealthyDeployableKeepThreshold;
+            float protectionScore = AIAbilitySynergyUtility.ScoreDeployableProtection(
+                healthRatio,
+                threatDistance,
+                DeployableProtectionRadius,
+                nearbyEnemyCount);
+
+            return protectionScore >= 0.55f;
         }
 
         private bool IsLiveEnemy(ISpatialEntity entity)
