@@ -231,6 +231,29 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("If true, logs danger avoidance memory updates.")]
         public bool LogDangerAvoidance = false;
 
+        [Header("Failure Recovery")]
+        public bool EnableFailureRecovery = true;
+        [Tooltip("Navigation samples that must report no meaningful movement before recovery opens.")]
+        public int NavigationStuckSampleLimit = 2;
+        [Tooltip("Blocked route reports needed before the bot attempts a local detour.")]
+        public int BlockedRouteRecoveryLimit = 1;
+        [Tooltip("Ticks a destination can remain active with minimal progress before it is considered stale.")]
+        public uint StaleDestinationRecoveryTicks = 90;
+        [Tooltip("Minimum distance that counts as real progress toward a long-lived destination.")]
+        public float StaleDestinationProgressThreshold = 0.6f;
+        [Tooltip("Minimum ticks between navigation recovery attempts.")]
+        public uint FailureRecoveryCooldownTicks = 18;
+        [Tooltip("Distance of the local side-step / detour requested after a navigation recovery trigger.")]
+        public float FailureRecoveryDetourDistance = 1.8f;
+        [Tooltip("Failed casts remembered for this many ticks while detecting repeated invalid ability usage.")]
+        public uint FailedCastMemoryTicks = 60;
+        [Tooltip("Failed casts within memory before the slot is briefly suppressed.")]
+        public int FailedCastRecoveryLimit = 2;
+        [Tooltip("Ticks to suppress a repeatedly failing ability slot.")]
+        public uint FailedCastSuppressionTicks = 30;
+        [Tooltip("If true, logs stuck, blocked-route, stale-command, and failed-cast recovery decisions.")]
+        public bool LogFailureRecovery = false;
+
         public float GetPreferredAttackRange(float idealRange)
         {
             return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);
@@ -597,6 +620,7 @@ namespace MOBA.Core.Simulation.AI
             ApplyMapIntelligenceDefaults(archetype);
             ApplyReactiveCombatDefaults(archetype);
             ApplyDangerAvoidanceDefaults(archetype);
+            ApplyFailureRecoveryDefaults(archetype);
         }
 
         private void ApplyMapIntelligenceDefaults(BrawlerArchetype archetype)
@@ -801,6 +825,44 @@ namespace MOBA.Core.Simulation.AI
                     DangerEvadeScoreBonus = 86f;
                     DangerEvadeDistance = 3.2f;
                     DangerEvadeRetargetTicks = 5;
+                    break;
+            }
+        }
+
+        private void ApplyFailureRecoveryDefaults(BrawlerArchetype archetype)
+        {
+            EnableFailureRecovery = true;
+            NavigationStuckSampleLimit = 2;
+            BlockedRouteRecoveryLimit = 1;
+            StaleDestinationRecoveryTicks = 90;
+            StaleDestinationProgressThreshold = 0.6f;
+            FailureRecoveryCooldownTicks = 18;
+            FailureRecoveryDetourDistance = 1.8f;
+            FailedCastMemoryTicks = 60;
+            FailedCastRecoveryLimit = 2;
+            FailedCastSuppressionTicks = 30;
+            LogFailureRecovery = false;
+
+            switch (archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                case BrawlerArchetype.Support:
+                case BrawlerArchetype.Artillery:
+                    FailureRecoveryCooldownTicks = 16;
+                    FailureRecoveryDetourDistance = 2.2f;
+                    StaleDestinationRecoveryTicks = 75;
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    FailureRecoveryCooldownTicks = 22;
+                    FailureRecoveryDetourDistance = 1.4f;
+                    FailedCastSuppressionTicks = 24;
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    FailureRecoveryCooldownTicks = 14;
+                    FailureRecoveryDetourDistance = 2.0f;
+                    StaleDestinationRecoveryTicks = 70;
                     break;
             }
         }

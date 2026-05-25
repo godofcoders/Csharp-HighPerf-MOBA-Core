@@ -55,6 +55,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapLineOfSightCoverPreference *= 0.80f;
                     profile.MapExposedPositionPenalty *= 0.75f;
                     profile.MapOpenShotPreference *= 0.80f;
+                    profile.NavigationStuckSampleLimit += 1;
+                    profile.StaleDestinationRecoveryTicks = ScaleTicks(profile.StaleDestinationRecoveryTicks, 1.25f, 1);
+                    profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 1.25f, 1);
+                    profile.FailedCastSuppressionTicks = ScaleTicks(profile.FailedCastSuppressionTicks, 1.15f, 1);
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -88,6 +92,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapLineOfSightCoverPreference *= 1.12f;
                     profile.MapExposedPositionPenalty *= 1.10f;
                     profile.MapOpenShotPreference *= 1.12f;
+                    profile.StaleDestinationRecoveryTicks = ScaleTicks(profile.StaleDestinationRecoveryTicks, 0.85f, 1);
+                    profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 0.85f, 1);
+                    profile.FailedCastSuppressionTicks = ScaleTicks(profile.FailedCastSuppressionTicks, 0.85f, 1);
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -122,6 +129,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapLineOfSightCoverPreference *= 0.85f;
                     profile.MapExposedPositionPenalty *= 0.85f;
                     profile.MapOpenShotPreference *= 1.15f;
+                    profile.FailureRecoveryDetourDistance *= 0.95f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -144,6 +152,8 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapLineOfSightCoverPreference *= 1.18f;
                     profile.MapExposedPositionPenalty *= 1.15f;
                     profile.MapOpenShotPreference *= 0.92f;
+                    profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 0.90f, 1);
+                    profile.FailureRecoveryDetourDistance *= 1.08f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -161,6 +171,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBacklineAnchorBonus *= 1.10f;
                     profile.MapLineOfSightCoverPreference *= 1.08f;
                     profile.MapOpenShotPreference *= 1.05f;
+                    profile.FailedCastSuppressionTicks = ScaleTicks(profile.FailedCastSuppressionTicks, 1.10f, 1);
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -225,6 +236,16 @@ namespace MOBA.Core.Simulation.AI
             profile.DangerEvadeRetargetTicks = ClampTicks(profile.DangerEvadeRetargetTicks, 1, 20);
             profile.DangerThreatStaleDistance = Mathf.Clamp(profile.DangerThreatStaleDistance, 0.25f, 3f);
             profile.DangerMapSearchRadius = Mathf.Clamp(profile.DangerMapSearchRadius, 0.5f, 3f);
+
+            profile.NavigationStuckSampleLimit = Mathf.Clamp(profile.NavigationStuckSampleLimit, 1, 5);
+            profile.BlockedRouteRecoveryLimit = Mathf.Clamp(profile.BlockedRouteRecoveryLimit, 1, 4);
+            profile.StaleDestinationRecoveryTicks = ClampTicks(profile.StaleDestinationRecoveryTicks, 20, 240);
+            profile.StaleDestinationProgressThreshold = Mathf.Clamp(profile.StaleDestinationProgressThreshold, 0.1f, 3f);
+            profile.FailureRecoveryCooldownTicks = ClampTicks(profile.FailureRecoveryCooldownTicks, 4, 90);
+            profile.FailureRecoveryDetourDistance = Mathf.Clamp(profile.FailureRecoveryDetourDistance, 0.75f, 4f);
+            profile.FailedCastMemoryTicks = ClampTicks(profile.FailedCastMemoryTicks, 5, 240);
+            profile.FailedCastRecoveryLimit = Mathf.Clamp(profile.FailedCastRecoveryLimit, 1, 5);
+            profile.FailedCastSuppressionTicks = ClampTicks(profile.FailedCastSuppressionTicks, 5, 180);
         }
 
         private static uint ScaleTicks(uint value, float multiplier, uint minimum)

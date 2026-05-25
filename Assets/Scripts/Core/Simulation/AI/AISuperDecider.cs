@@ -13,14 +13,21 @@ namespace MOBA.Core.Simulation.AI
         private readonly AICommandSource _commandSource;
         private readonly AIAbilitySpecialistPlanner _specialistPlanner;
         private readonly List<ISpatialEntity> _clusterBuffer;
+        private readonly AIFailureRecoveryMemory _failureRecovery;
 
         private uint _nextSuperDecisionTick;
 
-        public AISuperDecider(BrawlerController self, BrawlerAIProfile profile, AICommandSource commandSource, int bufferCapacity = 16)
+        public AISuperDecider(
+            BrawlerController self,
+            BrawlerAIProfile profile,
+            AICommandSource commandSource,
+            AIFailureRecoveryMemory failureRecovery = null,
+            int bufferCapacity = 16)
         {
             _self = self;
             _profile = profile;
             _commandSource = commandSource;
+            _failureRecovery = failureRecovery;
             _specialistPlanner = new AIAbilitySpecialistPlanner(self);
             _clusterBuffer = new List<ISpatialEntity>(bufferCapacity);
         }
@@ -38,6 +45,12 @@ namespace MOBA.Core.Simulation.AI
 
             if (currentTick < _nextSuperDecisionTick)
                 return;
+
+            if (_failureRecovery != null &&
+                _failureRecovery.IsAbilitySuppressed(AbilitySlotType.Super, currentTick))
+            {
+                return;
+            }
 
             if (_specialistPlanner.ShouldHoldSuperForSpecialistValue())
                 return;

@@ -31,6 +31,8 @@ namespace MOBA.Core.Infrastructure
         private AIReactiveMemory _reactiveMemory;
         private AIReactiveListener _reactiveListener;
         private AIDangerMemory _dangerMemory;
+        private AIFailureRecoveryMemory _failureRecovery;
+        private AIFailureRecoveryListener _failureRecoveryListener;
         private AICommandSource _commandSource;
 
         private BrawlerAIProfile _profile;
@@ -40,6 +42,7 @@ namespace MOBA.Core.Infrastructure
         private bool _brainInitialized;
         private string _lastReactiveDebug = "Reactive=None";
         private string _lastDangerDebug = "Danger=None";
+        private string _lastFailureRecoveryDebug = "Recovery=None";
         private readonly AIDebugSnapshot _debugSnapshot = new AIDebugSnapshot();
         private readonly System.Collections.Generic.List<AIActionScore> _debugScores = new System.Collections.Generic.List<AIActionScore>(16);
         private AIActionScore _lastChosenAction;
@@ -123,6 +126,7 @@ _actionExecutor != null
         public AIPersonalityType Personality => _profile != null ? _profile.Personality : _personality;
         public string ReactiveDebug => _lastReactiveDebug;
         public string DangerDebug => _lastDangerDebug;
+        public string FailureRecoveryDebug => _lastFailureRecoveryDebug;
         public string TeamRoleDebug =>
             _utilityScorer != null ? _utilityScorer.LastTeamRoleDebug : "RoleCoord=None";
         public string MacroDebug =>
@@ -197,7 +201,10 @@ _actionExecutor != null
             base.OnEnable();
 
             if (_brainInitialized)
+            {
                 EnsureReactiveListener();
+                EnsureFailureRecoveryListener();
+            }
         }
 
         public override void Tick(uint currentTick)
@@ -262,9 +269,11 @@ _actionExecutor != null
                 GetAbilityIdealRange(),
                 GetSuperMaxRange());
 
-            UpdateDebugSnapshot(currentTick);
-
             _navAgent.Tick();
+
+            UpdateFailureRecovery(currentTick);
+
+            UpdateDebugSnapshot(currentTick);
         }
 
 
@@ -362,6 +371,7 @@ _actionExecutor != null
                 ? _dangerMemory.GetDebugSummary()
                 : "Danger=None";
             _debugSnapshot.DangerDebug = _lastDangerDebug;
+            _debugSnapshot.FailureRecoveryDebug = _lastFailureRecoveryDebug;
 
             _debugSnapshot.ObjectiveName = _profile != null ? _profile.PreferredObjective.ToString() : "None";
 
@@ -436,15 +446,17 @@ $"Map={LastMapRouteDebug}";
             _teamCoordinator = new AITeamCoordinator(_brawler);
             _reactiveMemory = new AIReactiveMemory();
             _dangerMemory = new AIDangerMemory();
+            _failureRecovery = new AIFailureRecoveryMemory();
 
             _perception = new AIPerception(_profile.DetectionRadius, _profile.MemoryDurationTicks, _targetScorer);
-            _abilityDecider = new AIAbilityDecider(_brawler, _profile, _commandSource);
-            _superDecider = new AISuperDecider(_brawler, _profile, _commandSource);
+            _abilityDecider = new AIAbilityDecider(_brawler, _profile, _commandSource, _failureRecovery);
+            _superDecider = new AISuperDecider(_brawler, _profile, _commandSource, _failureRecovery);
 
             _utilityScorer = new AIUtilityScorer(_brawler, _profile, _objectiveMemory, _teamCoordinator, _reactiveMemory, _dangerMemory);
             _actionCommitment = new AIActionCommitment(_profile);
             _actionExecutor = new AIActionExecutor(_brawler, _profile, _navAgent, _abilityDecider, _superDecider, _objectiveMemory, _teamCoordinator, _commandSource, _dangerMemory);
             EnsureReactiveListener();
+            EnsureFailureRecoveryListener();
 
             var objectivePoints = FindObjectsOfType<AIObjectivePoint>();
             Debug.Log(
@@ -547,6 +559,8 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             _teamCoordinator?.ClearActionIntent();
             _reactiveListener?.Dispose();
             _reactiveListener = null;
+            _failureRecoveryListener?.Dispose();
+            _failureRecoveryListener = null;
 
             if (_brawler != null)
             {
@@ -570,6 +584,59 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
                 _profile,
                 _targetInfo,
                 _reactiveMemory);
+        }
+
+        private void EnsureFailureRecoveryListener()
+        {
+            if (_failureRecoveryListener != null ||
+                _brawler == null ||
+                _profile == null ||
+                _failureRecovery == null)
+            {
+                return;
+            }
+
+            _failureRecoveryListener = new AIFailureRecoveryListener(
+                _brawler,
+                _profile,
+                _failureRecovery);
+        }
+
+        private void UpdateFailureRecovery(uint currentTick)
+        {
+            if (_failureRecovery == null || _navAgent == null || _profile == null)
+            {
+                _lastFailureRecoveryDebug = "Recovery=None";
+                return;
+            }
+
+            if (_navAgent.TryGetFailureSignal(_profile, currentTick, out AIFailureRecoverySignal signal) &&
+                _failureRecovery.TryCreateNavigationRecovery(
+                    signal,
+                    _profile,
+                    currentTick,
+                    out AIFailureRecoveryRequest request))
+            {
+                _actionExecutor?.HandleFailureRecovery(request, currentTick);
+
+                bool recovered = _navAgent.TryRequestRecoveryDestination(
+                    request,
+                    _profile,
+                    out Vector3 recoveryDestination);
+
+                if (_profile.LogFailureRecovery)
+                {
+                    Debug.Log(
+                        $"[AIFailure-{_brawler.name}] " +
+                        $"reason={request.Reason} " +
+                        $"count={request.ConsecutiveCount} " +
+                        $"dist={request.DistanceToDestination:0.0} " +
+                        $"detour={FormatVector(recoveryDestination)} " +
+                        $"applied={recovered}");
+                }
+            }
+
+            _lastFailureRecoveryDebug = _failureRecovery.GetDebugSummary(currentTick);
         }
 
 #if UNITY_EDITOR

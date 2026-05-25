@@ -150,6 +150,24 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
+        public void HandleFailureRecovery(
+            AIFailureRecoveryRequest request,
+            uint currentTick)
+        {
+            _hasMapRouteCache = false;
+            _nextTacticalMoveRetargetTick = currentTick;
+            _lastStrafeSide = -GetStableStrafeSide();
+
+            string reason = $"recovery_{request.Reason}";
+            _pendingTacticalRefreshReason = string.IsNullOrEmpty(_pendingTacticalRefreshReason)
+                ? reason
+                : $"{_pendingTacticalRefreshReason}+{reason}";
+
+            _lastTacticalMoveReason = string.IsNullOrEmpty(_lastTacticalMoveReason)
+                ? reason
+                : $"{_lastTacticalMoveReason}|{reason}";
+        }
+
         private void RequestMapAwareDestination(
             Vector3 destination,
             float arrivalDistance,

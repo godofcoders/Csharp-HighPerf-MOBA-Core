@@ -11,15 +11,21 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerAIProfile _profile;
         private readonly AICommandSource _commandSource;
         private readonly AIAbilitySpecialistPlanner _specialistPlanner;
+        private readonly AIFailureRecoveryMemory _failureRecovery;
 
         private uint _nextPrimaryAttackTick;
         private uint _nextGadgetTick;
 
-        public AIAbilityDecider(BrawlerController self, BrawlerAIProfile profile, AICommandSource commandSource)
+        public AIAbilityDecider(
+            BrawlerController self,
+            BrawlerAIProfile profile,
+            AICommandSource commandSource,
+            AIFailureRecoveryMemory failureRecovery = null)
         {
             _self = self;
             _profile = profile;
             _commandSource = commandSource;
+            _failureRecovery = failureRecovery;
             _specialistPlanner = new AIAbilitySpecialistPlanner(self);
         }
 
@@ -30,6 +36,12 @@ namespace MOBA.Core.Simulation.AI
 
             if (currentTick < _nextPrimaryAttackTick)
                 return;
+
+            if (_failureRecovery != null &&
+                _failureRecovery.IsAbilitySuppressed(AbilitySlotType.MainAttack, currentTick))
+            {
+                return;
+            }
 
             if (!_specialistPlanner.TryBuildMainAttackPlan(
                     target,
@@ -66,6 +78,12 @@ namespace MOBA.Core.Simulation.AI
 
             if (currentTick < _nextGadgetTick)
                 return;
+
+            if (_failureRecovery != null &&
+                _failureRecovery.IsAbilitySuppressed(AbilitySlotType.Gadget, currentTick))
+            {
+                return;
+            }
 
             float selfHealthRatio = _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value);
             float distance = Vector3.Distance(_self.Position, target.Position);
