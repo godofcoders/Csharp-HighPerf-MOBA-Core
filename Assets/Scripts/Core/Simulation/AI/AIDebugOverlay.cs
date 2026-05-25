@@ -34,7 +34,7 @@ namespace MOBA.Core.Simulation.AI
             if (snapshot == null)
                 return;
 
-            GUILayout.BeginArea(new Rect(20, 20, 520, 700), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(20, 20, 520, 720), GUI.skin.box);
 
             GUILayout.Label($"AI DEBUG: {snapshot.BrawlerName}");
             GUILayout.Label($"Action: {snapshot.CurrentAction}");
@@ -52,6 +52,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Team Tactic: {snapshot.TeamTactic}");
             GUILayout.Label($"Team Signals: {snapshot.TeamSignalDebug}");
             GUILayout.Label($"Team Roles: {snapshot.TeamRoleDebug}");
+            GUILayout.Label($"Macro: {snapshot.MacroDebug}");
             GUILayout.Label($"Reactive: {snapshot.ReactiveDebug}");
             GUILayout.Label($"Danger: {snapshot.DangerDebug}");
             GUILayout.Label($"Objective: {snapshot.ObjectiveName}");
@@ -121,6 +122,7 @@ namespace MOBA.Core.Simulation.AI
                     $"HP={snapshot.Health:0}/{snapshot.MaxHealth:0} | " +
                     $"TeamSignals={snapshot.TeamSignalDebug} | " +
                     $"TeamRoles={snapshot.TeamRoleDebug} | " +
+                    $"Macro={snapshot.MacroDebug} | " +
                     $"Reactive={snapshot.ReactiveDebug} | " +
                     $"Danger={snapshot.DangerDebug} | " +
                     $"Objective={snapshot.ObjectiveDebug} | " +

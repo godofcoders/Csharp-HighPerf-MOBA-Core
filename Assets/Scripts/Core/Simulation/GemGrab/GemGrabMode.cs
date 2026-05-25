@@ -66,6 +66,9 @@ namespace MOBA.Core.Simulation
         public TeamType LeadingTeam { get; private set; } = TeamType.Blue; // arbitrary default; gated by HasLeader
         public bool HasLeader { get; private set; }
         public float WinTimerRemainingSeconds { get; private set; }
+        public int GemsToWin => _gemsToWin;
+        public float WinTimerDurationSeconds => _winTimerSeconds;
+        public float MatchDurationSeconds => _matchDurationSeconds;
 
         /// <summary>Seconds left in the match. Counts down once MatchManager
         /// is Active. On reaching 0, fires sudden-death tiebreak.</summary>

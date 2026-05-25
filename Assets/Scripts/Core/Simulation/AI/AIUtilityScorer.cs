@@ -37,6 +37,7 @@ namespace MOBA.Core.Simulation.AI
         private float _lastObjectiveFinalScore;
         private string _lastObjectiveScoreReason;
         private string _lastTeamRoleDebug = "RoleCoord=None";
+        private string _lastMacroDebug = "Macro=None";
 
         public float LastObjectiveAllyPressure => _lastObjectiveAllyPressure;
         public float LastObjectiveCrowdingPenalty => _lastObjectiveCrowdingPenalty;
@@ -44,6 +45,7 @@ namespace MOBA.Core.Simulation.AI
         public float LastObjectiveFinalScore => _lastObjectiveFinalScore;
         public string LastObjectiveScoreReason => _lastObjectiveScoreReason;
         public string LastTeamRoleDebug => _lastTeamRoleDebug;
+        public string LastMacroDebug => _lastMacroDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -78,19 +80,30 @@ namespace MOBA.Core.Simulation.AI
         {
             results.Clear();
 
+            AIGameModeMacroState macroState = ResolveMacroState();
+
             results.Add(ScoreEvade());
-            results.Add(ScoreRetreat(targetInfo, currentTick));
-            results.Add(ScoreUseSuper(targetInfo));
+            results.Add(ScoreRetreat(targetInfo, currentTick, macroState));
+            results.Add(ScoreUseSuper(targetInfo, macroState));
             results.Add(ScoreHoldRange(targetInfo));
             results.Add(ScoreReposition(targetInfo, currentTick));
-            results.Add(ScoreApproach(targetInfo, currentTick));
-            results.Add(ScorePeel(currentTick));
-            results.Add(ScoreRegroup(targetInfo, currentTick));
-            results.Add(ScoreSearch(targetInfo, currentTick));
+            results.Add(ScoreApproach(targetInfo, currentTick, macroState));
+            results.Add(ScorePeel(currentTick, macroState));
+            results.Add(ScoreRegroup(targetInfo, currentTick, macroState));
+            results.Add(ScoreSearch(targetInfo, currentTick, macroState));
             results.Add(ScoreWander());
-            results.Add(ScoreObjective(targetInfo));
+            results.Add(ScoreObjective(targetInfo, macroState));
 
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
+        }
+
+        private AIGameModeMacroState ResolveMacroState()
+        {
+            AIGameModeMacroState state =
+                AIGameModeMacroStrategy.ResolveGemGrab(GemGrabMode.Instance, _self.Team);
+
+            _lastMacroDebug = state.GetDebugSummary();
+            return state;
         }
 
         private void ScoreAndReplace(ref AIActionScore best, AIActionScore candidate)
@@ -352,7 +365,10 @@ namespace MOBA.Core.Simulation.AI
             return score;
         }
 
-        private AIActionScore ScoreRetreat(AITargetInfo targetInfo, uint currentTick)
+        private AIActionScore ScoreRetreat(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState)
         {
             if (_self.State == null)
                 return new AIActionScore(AIActionType.Retreat, 0f);
@@ -402,6 +418,14 @@ namespace MOBA.Core.Simulation.AI
             if (_self.State != null)
                 score += 6f * _self.State.CarriedGemCount;
 
+            if (_self.State.CarriedGemCount > 0)
+            {
+                if (macroState.Call == AIGameModeMacroCall.Hold)
+                    score += 8f * _self.State.CarriedGemCount;
+                else if (macroState.Call == AIGameModeMacroCall.Reset)
+                    score += 4f * _self.State.CarriedGemCount;
+            }
+
             return MakeScore(
     AIActionType.Retreat,
     score,
@@ -446,7 +470,9 @@ namespace MOBA.Core.Simulation.AI
                 allowEmergencyScore: true);
         }
 
-        private AIActionScore ScoreUseSuper(AITargetInfo targetInfo)
+        private AIActionScore ScoreUseSuper(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState)
         {
             if (_self.State == null || !_self.State.SuperCharge.IsReady || !targetInfo.HasLiveTarget)
                 return new AIActionScore(AIActionType.UseSuper, 0f);
@@ -485,6 +511,11 @@ namespace MOBA.Core.Simulation.AI
                 carrierTarget.State != null)
             {
                 score += 5f * carrierTarget.State.CarriedGemCount;
+
+                if (macroState.Call == AIGameModeMacroCall.Reset)
+                    score += 6f * carrierTarget.State.CarriedGemCount;
+                else if (macroState.Call == AIGameModeMacroCall.Push && carrierTarget.State.CarriedGemCount > 0)
+                    score += 8f;
             }
 
             return MakeScore(
@@ -558,7 +589,10 @@ namespace MOBA.Core.Simulation.AI
      _profile.RepositionWeight);
         }
 
-        private AIActionScore ScoreApproach(AITargetInfo targetInfo, uint currentTick)
+        private AIActionScore ScoreApproach(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState)
         {
             if (!targetInfo.HasLiveTarget)
                 return new AIActionScore(AIActionType.Approach, 0f);
@@ -615,13 +649,27 @@ namespace MOBA.Core.Simulation.AI
             if (GemGrabMode.Instance != null && GemGrabMode.Instance.IsTeamBehind(_self.Team))
                 score += 8f;
 
+            if (macroState.Call == AIGameModeMacroCall.Push)
+                score += 12f;
+            else if (macroState.Call == AIGameModeMacroCall.Reset)
+                score += 18f;
+            else if (macroState.Call == AIGameModeMacroCall.Hold &&
+                     _self.State != null &&
+                     _self.State.CarriedGemCount > 0)
+            {
+                score -= 18f;
+            }
+
             return MakeScore(
      AIActionType.Approach,
      score,
      _profile.ApproachWeight);
         }
 
-        private AIActionScore ScoreSearch(AITargetInfo targetInfo, uint currentTick)
+        private AIActionScore ScoreSearch(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState)
         {
             // NEVER SEARCH DURING ACTIVE COMBAT
             if (targetInfo.HasLiveTarget)
@@ -658,6 +706,13 @@ namespace MOBA.Core.Simulation.AI
             if (Gem.HasAnyUnpickedWithin(_self.Position, 8f))
                 score += 35f;
 
+            if (macroState.Call == AIGameModeMacroCall.Push)
+                score += 12f;
+            else if (macroState.Call == AIGameModeMacroCall.Reset)
+                score += 8f;
+            else if (macroState.Call == AIGameModeMacroCall.Hold)
+                score -= 10f;
+
             return MakeScore(
       AIActionType.Search,
       score,
@@ -669,7 +724,9 @@ namespace MOBA.Core.Simulation.AI
             return new AIActionScore(AIActionType.Wander, 5f * _profile.WanderWeight);
         }
 
-        private AIActionScore ScoreObjective(AITargetInfo targetInfo)
+        private AIActionScore ScoreObjective(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState)
         {
             _lastObjectiveAllyPressure = 0f;
             _lastObjectiveCrowdingPenalty = 0f;
@@ -766,6 +823,30 @@ namespace MOBA.Core.Simulation.AI
                 _lastObjectiveScoreReason += "|behind_+8";
             }
 
+            if (macroState.Call == AIGameModeMacroCall.Push)
+            {
+                score += 16f;
+                _lastObjectiveScoreReason += "|macro_push_+16";
+            }
+            else if (macroState.Call == AIGameModeMacroCall.Reset)
+            {
+                score += 10f;
+                _lastObjectiveScoreReason += "|macro_reset_+10";
+            }
+            else if (macroState.Call == AIGameModeMacroCall.Hold)
+            {
+                if (_self.State != null && _self.State.CarriedGemCount > 0)
+                {
+                    score -= 18f;
+                    _lastObjectiveScoreReason += "|carrier_hold_-18";
+                }
+                else
+                {
+                    score += 8f;
+                    _lastObjectiveScoreReason += "|zone_hold_+8";
+                }
+            }
+
             _lastObjectiveRawScore = score;
 
             AIActionScore finalScore = MakeScore(
@@ -780,7 +861,8 @@ namespace MOBA.Core.Simulation.AI
 
         private AIActionScore ScoreRegroup(
      AITargetInfo targetInfo,
-     uint currentTick)
+     uint currentTick,
+     AIGameModeMacroState macroState)
         {
             if (_teamCoordinator == null)
                 return new AIActionScore(AIActionType.Regroup, 0f);
@@ -820,6 +902,11 @@ namespace MOBA.Core.Simulation.AI
 
                 // Gem carriers should regroup more safely.
                 score += 5f * _self.State.CarriedGemCount;
+
+                if (macroState.Call == AIGameModeMacroCall.Hold)
+                    score += 8f * _self.State.CarriedGemCount;
+                else if (macroState.Call == AIGameModeMacroCall.Reset)
+                    score += 4f * _self.State.CarriedGemCount;
             }
 
             return MakeScore(
@@ -829,7 +916,9 @@ namespace MOBA.Core.Simulation.AI
         }
 
 
-        private AIActionScore ScorePeel(uint currentTick)
+        private AIActionScore ScorePeel(
+            uint currentTick,
+            AIGameModeMacroState macroState)
         {
             float score = 0f;
 
@@ -841,6 +930,13 @@ namespace MOBA.Core.Simulation.AI
 
                 if (ally.State != null && ally.State.CarriedGemCount > 0)
                     score += 8f * ally.State.CarriedGemCount;
+
+                if (macroState.Call == AIGameModeMacroCall.Hold &&
+                    ally.State != null &&
+                    ally.State.CarriedGemCount > 0)
+                {
+                    score += 10f * ally.State.CarriedGemCount;
+                }
             }
 
             float teamplay = _self.Definition != null ? _self.Definition.TeamplayWeight : 1f;

@@ -31,6 +31,7 @@ namespace MOBA.Core.Simulation.AI
         public string TeamTactic;
         public string TeamSignalDebug;
         public string TeamRoleDebug;
+        public string MacroDebug;
         public string ReactiveDebug;
         public string DangerDebug;
         public string ObjectiveName;

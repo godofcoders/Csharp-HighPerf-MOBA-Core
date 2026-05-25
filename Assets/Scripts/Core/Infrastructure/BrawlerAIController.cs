@@ -125,6 +125,8 @@ _actionExecutor != null
         public string DangerDebug => _lastDangerDebug;
         public string TeamRoleDebug =>
             _utilityScorer != null ? _utilityScorer.LastTeamRoleDebug : "RoleCoord=None";
+        public string MacroDebug =>
+            _utilityScorer != null ? _utilityScorer.LastMacroDebug : "Macro=None";
 
         public int CurrentTargetFocusCount =>
             _teamCoordinator != null &&
@@ -341,14 +343,15 @@ _actionExecutor != null
                     ? $"Hotspot={FormatVector(enemyHotspot)} p={hotspotPressure:0.0}"
                     : "Hotspot=None";
 
-            _debugSnapshot.TeamSignalDebug = $"{threatSignal} {hotspotSignal}";
-            _debugSnapshot.TeamRoleDebug = TeamRoleDebug;
+                _debugSnapshot.TeamSignalDebug = $"{threatSignal} {hotspotSignal}";
+                _debugSnapshot.TeamRoleDebug = TeamRoleDebug;
             }
             else
             {
                 _debugSnapshot.TeamTactic = "None";
                 _debugSnapshot.TeamSignalDebug = "Threat=None Hotspot=None";
                 _debugSnapshot.TeamRoleDebug = "RoleCoord=None";
+                _debugSnapshot.MacroDebug = "Macro=None";
             }
 
             _lastReactiveDebug = _reactiveMemory != null && _profile != null
@@ -409,6 +412,7 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.ValidationDebug = AIValidationTelemetry.GetDebugSummary(currentTick);
             _debugSnapshot.ValidationHealthDebug = AIValidationHealthTracker.GetDebugSummary();
             _debugSnapshot.ValidationScenarioDebug = AIValidationScenarioTracker.GetDebugSummary();
+            _debugSnapshot.MacroDebug = MacroDebug;
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }
