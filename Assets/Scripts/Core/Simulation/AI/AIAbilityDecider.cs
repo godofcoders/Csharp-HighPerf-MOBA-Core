@@ -59,10 +59,16 @@ namespace MOBA.Core.Simulation.AI
                 _self.Position,
                 _profile.AimErrorDegrees);
 
-            _commandSource?.QueueMainAttack(
-                plan.Direction,
-                plan.TargetPoint,
-                plan.HasTargetPoint);
+            if (_commandSource != null)
+            {
+                _commandSource.QueueMainAttack(
+                    plan.Direction,
+                    plan.TargetPoint,
+                    plan.HasTargetPoint);
+                AIValidationGauntlet.RecordSignal(
+                    AIValidationGauntletSignal.MainAttackCast,
+                    currentTick);
+            }
 
             _nextPrimaryAttackTick = currentTick + _profile.AttackCadenceTicks;
         }
@@ -92,7 +98,14 @@ namespace MOBA.Core.Simulation.AI
 
             if (TryBuildGadgetSynergyDirection(target, selfHealthRatio, out Vector3 synergyDirection))
             {
-                _commandSource?.QueueGadget(synergyDirection);
+                if (_commandSource != null)
+                {
+                    _commandSource.QueueGadget(synergyDirection);
+                    AIValidationGauntlet.RecordSignal(
+                        AIValidationGauntletSignal.GadgetCast,
+                        currentTick);
+                }
+
                 _nextGadgetTick = currentTick + _profile.GadgetCooldownTicks;
                 return;
             }
@@ -104,7 +117,14 @@ namespace MOBA.Core.Simulation.AI
                 return;
 
             Vector3 dir = (target.Position - _self.Position).normalized;
-            _commandSource?.QueueGadget(dir);
+            if (_commandSource != null)
+            {
+                _commandSource.QueueGadget(dir);
+                AIValidationGauntlet.RecordSignal(
+                    AIValidationGauntletSignal.GadgetCast,
+                    currentTick);
+            }
+
             _nextGadgetTick = currentTick + _profile.GadgetCooldownTicks;
         }
 

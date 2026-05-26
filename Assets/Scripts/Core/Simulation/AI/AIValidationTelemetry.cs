@@ -154,6 +154,7 @@ namespace MOBA.Core.Simulation.AI
         {
             AIValidationHealthTracker.ResetForTests();
             AIValidationScenarioTracker.ResetForTests();
+            AIValidationGauntlet.ResetForTests();
             _botRecords.Clear();
             _staleBotBuffer.Clear();
             _hasPurgeTick = false;
@@ -181,6 +182,7 @@ namespace MOBA.Core.Simulation.AI
         {
             AIValidationHealthTracker.Clear();
             AIValidationScenarioTracker.Clear();
+            AIValidationGauntlet.ResetForTests();
             _botRecords.Clear();
             _staleBotBuffer.Clear();
             _hasPurgeTick = false;
@@ -213,6 +215,7 @@ namespace MOBA.Core.Simulation.AI
                 _actionCounts,
                 AIValidationHealthTracker.Status,
                 AIValidationHealthTracker.PrimarySignal);
+            AIValidationGauntlet.RecordFrame(frame, _actionCounts);
         }
 
         private static void ResetFrame(uint currentTick)

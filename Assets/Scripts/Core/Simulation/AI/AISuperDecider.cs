@@ -98,10 +98,16 @@ namespace MOBA.Core.Simulation.AI
                 _self.Position,
                 _profile.AimErrorDegrees);
 
-            _commandSource?.QueueSuper(
-                plan.Direction,
-                plan.TargetPoint,
-                plan.HasTargetPoint);
+            if (_commandSource != null)
+            {
+                _commandSource.QueueSuper(
+                    plan.Direction,
+                    plan.TargetPoint,
+                    plan.HasTargetPoint);
+                AIValidationGauntlet.RecordSignal(
+                    AIValidationGauntletSignal.SuperCast,
+                    currentTick);
+            }
 
             _nextSuperDecisionTick = currentTick + _profile.SuperDecisionCooldownTicks;
         }

@@ -443,6 +443,9 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.ValidationScenarioDebug = _profile.EnableValidationTelemetry
                 ? AIValidationScenarioTracker.GetDebugSummary()
                 : "Scenario=disabled";
+            _debugSnapshot.ValidationGauntletDebug = _profile.EnableValidationTelemetry
+                ? AIValidationGauntlet.GetDebugSummary()
+                : "Gauntlet=disabled";
             _debugSnapshot.MacroDebug = MacroDebug;
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
@@ -702,6 +705,9 @@ $"Map={LastMapRouteDebug}";
                     request,
                     _profile,
                     out Vector3 recoveryDestination);
+                AIValidationGauntlet.RecordSignal(
+                    AIValidationGauntletSignal.FailureRecovery,
+                    currentTick);
 
                 if (_profile.LogFailureRecovery)
                 {

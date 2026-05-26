@@ -64,6 +64,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"AI Validation: {snapshot.ValidationDebug}");
             GUILayout.Label($"AI Health: {snapshot.ValidationHealthDebug}");
             GUILayout.Label($"AI Scenario: {snapshot.ValidationScenarioDebug}");
+            GUILayout.Label($"AI Gauntlet: {snapshot.ValidationGauntletDebug}");
 
             GUILayout.Space(8);
             GUILayout.Label("Flags:");
@@ -135,6 +136,7 @@ namespace MOBA.Core.Simulation.AI
                     $"Validation={snapshot.ValidationDebug} | " +
                     $"AIHealth={snapshot.ValidationHealthDebug} | " +
                     $"AIScenario={snapshot.ValidationScenarioDebug} | " +
+                    $"AIGauntlet={snapshot.ValidationGauntletDebug} | " +
                     $"Statuses={string.Join(", ", snapshot.ActiveStatuses)}");
             }
         }
