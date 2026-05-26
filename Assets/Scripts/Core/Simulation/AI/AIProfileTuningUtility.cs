@@ -270,6 +270,11 @@ namespace MOBA.Core.Simulation.AI
             profile.FailedCastMemoryTicks = ClampTicks(profile.FailedCastMemoryTicks, 5, 240);
             profile.FailedCastRecoveryLimit = Mathf.Clamp(profile.FailedCastRecoveryLimit, 1, 5);
             profile.FailedCastSuppressionTicks = ClampTicks(profile.FailedCastSuppressionTicks, 5, 180);
+
+            profile.DebugSnapshotIntervalTicks = ClampTicks(profile.DebugSnapshotIntervalTicks, 1, 60);
+            profile.MaxMapResolvesPerTick = Mathf.Clamp(profile.MaxMapResolvesPerTick, 1, 256);
+            profile.MaxPathQueriesPerTick = Mathf.Clamp(profile.MaxPathQueriesPerTick, 1, 128);
+            profile.MaxPathTouchedNodesPerTick = Mathf.Clamp(profile.MaxPathTouchedNodesPerTick, 64, 50000);
         }
 
         private static void ApplyFairPlayGuardrails(BrawlerAIProfile profile)

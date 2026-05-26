@@ -254,6 +254,28 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("If true, logs stuck, blocked-route, stale-command, and failed-cast recovery decisions.")]
         public bool LogFailureRecovery = false;
 
+        [Header("Production Hardening")]
+        [Tooltip("If true, AI lifecycle events may be logged. Keep false in normal gameplay builds.")]
+        public bool LogLifecycle = false;
+        [Tooltip("If true, periodic AI action tick summaries may be logged. Keep false outside targeted debugging.")]
+        public bool LogDecisionTicks = false;
+        [Tooltip("If true, perception target scans may be logged. This can be noisy with many bots.")]
+        public bool LogPerception = false;
+        [Tooltip("If true, AI validation telemetry is recorded for regression health tracking.")]
+        public bool EnableValidationTelemetry = true;
+        [Tooltip("If true, AI debug snapshots are published to AIDebugTracker.")]
+        public bool EnableDebugSnapshots = true;
+        [Tooltip("Ticks between debug snapshot refreshes. Higher values reduce per-bot string/list churn.")]
+        public uint DebugSnapshotIntervalTicks = 5;
+        [Tooltip("Per-tick map resolve budget before AI perf telemetry reports pressure.")]
+        public int MaxMapResolvesPerTick = 24;
+        [Tooltip("Per-tick path query budget before AI perf telemetry reports pressure.")]
+        public int MaxPathQueriesPerTick = 12;
+        [Tooltip("Per-tick A* touched-node budget before AI perf telemetry reports pressure.")]
+        public int MaxPathTouchedNodesPerTick = 5000;
+        [Tooltip("If true, over-budget AI frames emit rate-limited warnings.")]
+        public bool LogBudgetWarnings = false;
+
         public float GetPreferredAttackRange(float idealRange)
         {
             return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);

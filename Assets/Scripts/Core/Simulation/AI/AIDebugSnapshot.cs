@@ -42,6 +42,7 @@ namespace MOBA.Core.Simulation.AI
         public string ObjectiveDebug;
         public string TacticalMovementDebug;
         public string PerformanceDebug;
+        public string ProductionBudgetDebug;
         public string ValidationDebug;
         public string ValidationHealthDebug;
         public string ValidationScenarioDebug;

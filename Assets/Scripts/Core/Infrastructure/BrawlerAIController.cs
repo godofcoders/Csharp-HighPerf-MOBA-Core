@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
 using MOBA.Core.Simulation.AI;
@@ -16,6 +17,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerController _brawler;
         [SerializeField] private AIDifficultyLevel _difficulty = AIDifficultyLevel.Normal;
         [SerializeField] private AIPersonalityType _personality = AIPersonalityType.Balanced;
+
+        private static AIObjectivePoint[] _cachedObjectivePoints;
+        private static int _cachedObjectiveSceneHandle = -1;
 
         private NavigationAgent _navAgent;
         private AIPerception _perception;
@@ -39,10 +43,13 @@ namespace MOBA.Core.Infrastructure
 
         private uint _nextSenseTick;
         private uint _nextDangerRefreshTick;
+        private uint _nextDebugSnapshotTick;
+        private uint _nextBudgetWarningTick;
         private bool _brainInitialized;
         private string _lastReactiveDebug = "Reactive=None";
         private string _lastDangerDebug = "Danger=None";
         private string _lastFailureRecoveryDebug = "Recovery=None";
+        private string _lastBudgetDebug = "Budget=OK map=0/0 paths=0/0 nodes=0/0 maxNodes=0";
         private readonly AIDebugSnapshot _debugSnapshot = new AIDebugSnapshot();
         private readonly System.Collections.Generic.List<AIActionScore> _debugScores = new System.Collections.Generic.List<AIActionScore>(16);
         private AIActionScore _lastChosenAction;
@@ -215,13 +222,15 @@ _actionExecutor != null
                 _teamCoordinator?.ClearTargetFocusCount();
                 _teamCoordinator?.ClearActionIntent();
 
-                if (currentTick % 30 == 0)
+                _commandSource?.ClearQueuedCommands();
+
+                if (_profile != null && _profile.LogDecisionTicks && currentTick % 30 == 0)
                     Debug.Log($"[AI-{(_brawler != null ? _brawler.name : "?")}] CanRunAI=false brain={_brainInitialized} brawlerNull={_brawler == null} stateNull={(_brawler == null ? "?" : (_brawler.State == null).ToString())} dead={(_brawler == null || _brawler.State == null ? "?" : _brawler.State.IsDead.ToString())} gridNull={SimulationClock.Grid == null}");
 
                 return;
             }
 
-            if (currentTick % 30 == 0)
+            if (_profile.LogDecisionTicks && currentTick % 30 == 0)
                 Debug.Log($"[AI-{_brawler.name}] tick ok hasTarget={_targetInfo.HasLiveTarget} action={_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}");
 
             if (_brawler.State.HasStatus(StatusEffectType.Stun))
@@ -253,13 +262,16 @@ _actionExecutor != null
             _lastChosenAction = chosenAction;
             _teamCoordinator?.ReportActionIntent(chosenAction.ActionType, currentTick);
 
-            AIValidationTelemetry.RecordDecision(
-                _brawler.EntityID,
-                currentTick,
-                chosenAction,
-                _targetInfo.HasLiveTarget,
-                _debugScores,
-                TeamRoleDebug);
+            if (_profile.EnableValidationTelemetry)
+            {
+                AIValidationTelemetry.RecordDecision(
+                    _brawler.EntityID,
+                    currentTick,
+                    chosenAction,
+                    _targetInfo.HasLiveTarget,
+                    _debugScores,
+                    TeamRoleDebug);
+            }
 
             _actionExecutor.Execute(
                 chosenAction.ActionType,
@@ -273,7 +285,8 @@ _actionExecutor != null
 
             UpdateFailureRecovery(currentTick);
 
-            UpdateDebugSnapshot(currentTick);
+            UpdateProductionBudget(currentTick);
+            UpdateDebugSnapshotIfDue(currentTick);
         }
 
 
@@ -419,12 +432,36 @@ $"Reason={LastTacticalMoveReason} " +
 $"Map={LastMapRouteDebug}";
 
             _debugSnapshot.PerformanceDebug = AIPerformanceTracker.GetDebugSummary(currentTick);
-            _debugSnapshot.ValidationDebug = AIValidationTelemetry.GetDebugSummary(currentTick);
-            _debugSnapshot.ValidationHealthDebug = AIValidationHealthTracker.GetDebugSummary();
-            _debugSnapshot.ValidationScenarioDebug = AIValidationScenarioTracker.GetDebugSummary();
+            _lastBudgetDebug = BuildBudgetSummary(currentTick);
+            _debugSnapshot.ProductionBudgetDebug = _lastBudgetDebug;
+            _debugSnapshot.ValidationDebug = _profile.EnableValidationTelemetry
+                ? AIValidationTelemetry.GetDebugSummary(currentTick)
+                : "Valid=disabled";
+            _debugSnapshot.ValidationHealthDebug = _profile.EnableValidationTelemetry
+                ? AIValidationHealthTracker.GetDebugSummary()
+                : "Health=disabled";
+            _debugSnapshot.ValidationScenarioDebug = _profile.EnableValidationTelemetry
+                ? AIValidationScenarioTracker.GetDebugSummary()
+                : "Scenario=disabled";
             _debugSnapshot.MacroDebug = MacroDebug;
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
+        }
+
+        private void UpdateDebugSnapshotIfDue(uint currentTick)
+        {
+            if (_profile == null || !_profile.EnableDebugSnapshots)
+                return;
+
+            if (currentTick < _nextDebugSnapshotTick)
+                return;
+
+            uint interval = _profile.DebugSnapshotIntervalTicks == 0u
+                ? 1u
+                : _profile.DebugSnapshotIntervalTicks;
+
+            _nextDebugSnapshotTick = currentTick + interval;
+            UpdateDebugSnapshot(currentTick);
         }
 
         private void TryInitializeBrain()
@@ -448,7 +485,11 @@ $"Map={LastMapRouteDebug}";
             _dangerMemory = new AIDangerMemory();
             _failureRecovery = new AIFailureRecoveryMemory();
 
-            _perception = new AIPerception(_profile.DetectionRadius, _profile.MemoryDurationTicks, _targetScorer);
+            _perception = new AIPerception(
+                _profile.DetectionRadius,
+                _profile.MemoryDurationTicks,
+                _targetScorer,
+                _profile.LogPerception);
             _abilityDecider = new AIAbilityDecider(_brawler, _profile, _commandSource, _failureRecovery);
             _superDecider = new AISuperDecider(_brawler, _profile, _commandSource, _failureRecovery);
 
@@ -458,9 +499,13 @@ $"Map={LastMapRouteDebug}";
             EnsureReactiveListener();
             EnsureFailureRecoveryListener();
 
-            var objectivePoints = FindObjectsOfType<AIObjectivePoint>();
-            Debug.Log(
-$"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
+            AIObjectivePoint[] objectivePoints = GetSceneObjectivePoints();
+            if (_profile.LogLifecycle)
+            {
+                Debug.Log(
+                    $"[AI-{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
+            }
+
             for (int i = 0; i < objectivePoints.Length; i++)
             {
                 _objectiveMemory.Register(objectivePoints[i]);
@@ -470,7 +515,12 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             _nextDangerRefreshTick = (uint)Random.Range(
                 0,
                 Mathf.Max(1, (int)_profile.DangerRefreshIntervalTicks));
-            AIDebugTracker.Register(_brawler);
+            _nextDebugSnapshotTick = (uint)Random.Range(
+                0,
+                Mathf.Max(1, (int)_profile.DebugSnapshotIntervalTicks));
+
+            if (_profile.EnableDebugSnapshots)
+                AIDebugTracker.Register(_brawler);
 
             _brainInitialized = true;
         }
@@ -501,6 +551,34 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
                 _personality);
 
             return runtimeProfile;
+        }
+
+        private static AIObjectivePoint[] GetSceneObjectivePoints()
+        {
+            int sceneHandle = SceneManager.GetActiveScene().handle;
+            if (_cachedObjectivePoints == null ||
+                _cachedObjectiveSceneHandle != sceneHandle ||
+                HasDestroyedObjectivePoint(_cachedObjectivePoints))
+            {
+                _cachedObjectivePoints = Object.FindObjectsOfType<AIObjectivePoint>();
+                _cachedObjectiveSceneHandle = sceneHandle;
+            }
+
+            return _cachedObjectivePoints;
+        }
+
+        private static bool HasDestroyedObjectivePoint(AIObjectivePoint[] points)
+        {
+            if (points == null)
+                return true;
+
+            for (int i = 0; i < points.Length; i++)
+            {
+                if (points[i] == null)
+                    return true;
+            }
+
+            return false;
         }
 
         private bool CanRunAI()
@@ -557,6 +635,7 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
 
             _teamCoordinator?.ClearTargetFocusCount();
             _teamCoordinator?.ClearActionIntent();
+            _commandSource?.ClearQueuedCommands();
             _reactiveListener?.Dispose();
             _reactiveListener = null;
             _failureRecoveryListener?.Dispose();
@@ -637,6 +716,51 @@ $"[{_brawler.name}] Registered Objectives: {objectivePoints.Length}");
             }
 
             _lastFailureRecoveryDebug = _failureRecovery.GetDebugSummary(currentTick);
+        }
+
+        private void UpdateProductionBudget(uint currentTick)
+        {
+            if (_profile == null)
+            {
+                _lastBudgetDebug = "Budget=NoProfile";
+                return;
+            }
+
+            bool overBudget = AIPerformanceTracker.IsOverBudget(
+                _profile.MaxMapResolvesPerTick,
+                _profile.MaxPathQueriesPerTick,
+                _profile.MaxPathTouchedNodesPerTick);
+
+            if (!overBudget)
+            {
+                _lastBudgetDebug = "Budget=OK";
+                return;
+            }
+
+            if (!_profile.LogBudgetWarnings)
+            {
+                _lastBudgetDebug = "Budget=OVER";
+                return;
+            }
+
+            if (currentTick < _nextBudgetWarningTick)
+            {
+                _lastBudgetDebug = "Budget=OVER";
+                return;
+            }
+
+            _lastBudgetDebug = BuildBudgetSummary(currentTick);
+            Debug.LogWarning($"[AIBudget-{_brawler.name}] {_lastBudgetDebug}");
+            _nextBudgetWarningTick = currentTick + 30u;
+        }
+
+        private string BuildBudgetSummary(uint currentTick)
+        {
+            return AIPerformanceTracker.GetBudgetSummary(
+                currentTick,
+                _profile.MaxMapResolvesPerTick,
+                _profile.MaxPathQueriesPerTick,
+                _profile.MaxPathTouchedNodesPerTick);
         }
 
 #if UNITY_EDITOR

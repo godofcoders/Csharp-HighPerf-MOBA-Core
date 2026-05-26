@@ -10,12 +10,19 @@ namespace MOBA.Core.Simulation.AI
         private readonly uint _memoryDurationTicks;
         private readonly List<ISpatialEntity> _nearbyBuffer;
         private readonly AITargetScorer _targetScorer;
+        private readonly bool _logPerception;
 
-        public AIPerception(float detectionRadius, uint memoryDurationTicks, AITargetScorer targetScorer, int initialBufferCapacity = 32)
+        public AIPerception(
+            float detectionRadius,
+            uint memoryDurationTicks,
+            AITargetScorer targetScorer,
+            bool logPerception = false,
+            int initialBufferCapacity = 32)
         {
             _detectionRadius = detectionRadius;
             _memoryDurationTicks = memoryDurationTicks;
             _targetScorer = targetScorer;
+            _logPerception = logPerception;
             _nearbyBuffer = new List<ISpatialEntity>(initialBufferCapacity);
         }
 
@@ -37,19 +44,22 @@ namespace MOBA.Core.Simulation.AI
 
             CompactAndFilterTargets(self);
 
-            Debug.Log(
-    $"[{self.name}] " +
-    $"NearbyEntities={_nearbyBuffer.Count}");
+            if (_logPerception)
+            {
+                Debug.Log(
+                    $"[AIPerception-{self.name}] NearbyTargets={_nearbyBuffer.Count}");
+            }
 
             ISpatialEntity bestTarget = _targetScorer.SelectBestTarget(_nearbyBuffer, memory, currentTick);
 
             if (SpatialEntityUtility.IsAlive(bestTarget))
             {
-                Debug.Log(
+                if (_logPerception)
+                {
+                    Debug.Log(
+                        $"[AIPerception-{self.name}] TargetAcquired={bestTarget.EntityID}");
+                }
 
-    $"[{self.name}] " +
-
-    $"TargetAcquired={bestTarget.EntityID}");
                 memory.Remember(bestTarget, currentTick);
                 AITeamMemory.ReportEnemySighting(self.Team, bestTarget.Position, currentTick);
                 return;

@@ -110,6 +110,10 @@ namespace MOBA.Tests.EditMode
             profile.TeamActionCrowdingPenalty = 0f;
             profile.OverFocusedTargetPenaltyPerAlly = 0f;
             profile.MaxOverFocusedTargetPenalty = 0f;
+            profile.DebugSnapshotIntervalTicks = 999;
+            profile.MaxMapResolvesPerTick = -5;
+            profile.MaxPathQueriesPerTick = -5;
+            profile.MaxPathTouchedNodesPerTick = -5;
 
             AIProfileTuningUtility.ApplyRuntimeTuning(
                 profile,
@@ -127,6 +131,10 @@ namespace MOBA.Tests.EditMode
             Assert.GreaterOrEqual(
                 profile.MaxOverFocusedTargetPenalty,
                 profile.OverFocusedTargetPenaltyPerAlly * 1.75f);
+            Assert.LessOrEqual((int)profile.DebugSnapshotIntervalTicks, 60);
+            Assert.GreaterOrEqual(profile.MaxMapResolvesPerTick, 1);
+            Assert.GreaterOrEqual(profile.MaxPathQueriesPerTick, 1);
+            Assert.GreaterOrEqual(profile.MaxPathTouchedNodesPerTick, 64);
         }
 
         private BrawlerAIProfile CreateProfile()

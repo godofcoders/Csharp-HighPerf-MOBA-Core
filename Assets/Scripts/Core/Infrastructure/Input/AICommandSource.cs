@@ -82,6 +82,27 @@ namespace MOBA.Core.Simulation
             _hyperchargeQueued = true;
         }
 
+        public void ClearQueuedCommands()
+        {
+            _moveDirection = Vector3.zero;
+            _moveQueued = false;
+
+            _mainAttackDirection = Vector3.zero;
+            _mainAttackTargetPoint = Vector3.zero;
+            _mainAttackHasTargetPoint = false;
+            _mainAttackQueued = false;
+
+            _gadgetDirection = Vector3.zero;
+            _gadgetQueued = false;
+
+            _superDirection = Vector3.zero;
+            _superTargetPoint = Vector3.zero;
+            _superHasTargetPoint = false;
+            _superQueued = false;
+
+            _hyperchargeQueued = false;
+        }
+
         public void CollectCommands(List<BrawlerCommand> output, uint currentTick)
         {
             if (_moveQueued)

@@ -61,5 +61,68 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(0, AIPerformanceTracker.PathQueryCount);
             Assert.AreEqual(1, AIPerformanceTracker.MapResolveCount);
         }
+
+        [Test]
+        public void BudgetSummary_FlagsOverBudgetFrames()
+        {
+            AIPerformanceTracker.RecordMapResolve(
+                30u,
+                AIMapRouteIntent.CombatAdvance,
+                false,
+                12,
+                2);
+            AIPerformanceTracker.RecordMapResolve(
+                30u,
+                AIMapRouteIntent.CombatAdvance,
+                false,
+                12,
+                2);
+            AIPerformanceTracker.RecordPathQuery(30u, true, 80);
+
+            Assert.IsTrue(AIPerformanceTracker.IsOverBudget(
+                maxMapResolves: 1,
+                maxPathQueries: 4,
+                maxTouchedNodes: 200));
+            StringAssert.Contains(
+                "Budget=OVER",
+                AIPerformanceTracker.GetBudgetSummary(
+                    30u,
+                    maxMapResolves: 1,
+                    maxPathQueries: 4,
+                    maxTouchedNodes: 200));
+        }
+
+        [Test]
+        public void BudgetSummary_ClampsInvalidBudgetsToOne()
+        {
+            AIPerformanceTracker.RecordPathQuery(40u, true, 1);
+
+            string summary = AIPerformanceTracker.GetBudgetSummary(
+                40u,
+                maxMapResolves: 0,
+                maxPathQueries: 0,
+                maxTouchedNodes: 0);
+
+            StringAssert.Contains("map=0/1", summary);
+            StringAssert.Contains("paths=1/1", summary);
+            StringAssert.Contains("nodes=1/1", summary);
+        }
+
+        [Test]
+        public void Recorders_IgnoreNegativeTelemetryCounts()
+        {
+            AIPerformanceTracker.RecordMapResolve(
+                50u,
+                AIMapRouteIntent.Search,
+                false,
+                -10,
+                -2);
+            AIPerformanceTracker.RecordPathQuery(50u, true, -100);
+
+            Assert.AreEqual(0, AIPerformanceTracker.MapCandidateCount);
+            Assert.AreEqual(0, AIPerformanceTracker.MapPathValidationCount);
+            Assert.AreEqual(0, AIPerformanceTracker.PathTouchedNodeCount);
+            Assert.AreEqual(0, AIPerformanceTracker.PathMaxTouchedNodes);
+        }
     }
 }
