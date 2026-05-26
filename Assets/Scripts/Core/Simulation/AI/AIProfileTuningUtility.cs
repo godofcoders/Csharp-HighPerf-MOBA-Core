@@ -19,6 +19,8 @@ namespace MOBA.Core.Simulation.AI
             ApplyPersonality(profile, personality);
 
             Normalize(profile);
+            ApplyFairPlayGuardrails(profile);
+            Normalize(profile);
         }
 
         private static void ApplyDifficulty(BrawlerAIProfile profile, AIDifficultyLevel difficulty)
@@ -26,14 +28,18 @@ namespace MOBA.Core.Simulation.AI
             switch (difficulty)
             {
                 case AIDifficultyLevel.Easy:
-                    profile.ReactionDelayTicks = 8;
-                    profile.AimErrorDegrees = 8f;
+                    profile.ReactionDelayTicks = 10;
+                    profile.AimErrorDegrees = 9.5f;
                     profile.IdleSenseIntervalTicks = ScaleTicks(profile.IdleSenseIntervalTicks, 1.55f, 4);
                     profile.CombatSenseIntervalTicks = ScaleTicks(profile.CombatSenseIntervalTicks, 2.35f, 2);
                     profile.AttackCadenceTicks = ScaleTicks(profile.AttackCadenceTicks, 1.35f, 1);
                     profile.SuperDecisionCooldownTicks = ScaleTicks(profile.SuperDecisionCooldownTicks, 1.4f, 1);
                     profile.GadgetCooldownTicks = ScaleTicks(profile.GadgetCooldownTicks, 1.25f, 1);
+                    profile.MinimumCommittedActionScore *= 1.10f;
                     profile.ActionSwitchScoreMargin *= 1.25f;
+                    profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 1.25f, 1);
+                    profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 1.20f, 1);
+                    profile.CurrentTargetStickiness *= 1.25f;
                     profile.FocusFireWeight *= 0.75f;
                     profile.ClusterTargetBonus *= 0.75f;
                     profile.InRangeTargetBonus *= 0.80f;
@@ -62,14 +68,19 @@ namespace MOBA.Core.Simulation.AI
                     break;
 
                 case AIDifficultyLevel.Hard:
-                    profile.ReactionDelayTicks = 0;
-                    profile.AimErrorDegrees = 1.25f;
+                    profile.ReactionDelayTicks = 1;
+                    profile.AimErrorDegrees = 1.5f;
                     profile.IdleSenseIntervalTicks = ScaleTicks(profile.IdleSenseIntervalTicks, 0.75f, 2);
-                    profile.CombatSenseIntervalTicks = ScaleTicks(profile.CombatSenseIntervalTicks, 0.65f, 1);
+                    profile.CombatSenseIntervalTicks = ScaleTicks(profile.CombatSenseIntervalTicks, 0.65f, 2);
                     profile.AttackCadenceTicks = ScaleTicks(profile.AttackCadenceTicks, 0.85f, 1);
                     profile.SuperDecisionCooldownTicks = ScaleTicks(profile.SuperDecisionCooldownTicks, 0.75f, 1);
                     profile.GadgetCooldownTicks = ScaleTicks(profile.GadgetCooldownTicks, 0.85f, 1);
+                    profile.MinimumCommittedActionScore *= 0.90f;
                     profile.ActionSwitchScoreMargin *= 0.85f;
+                    profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 0.85f, 1);
+                    profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 0.90f, 1);
+                    profile.EmergencyOverrideScore *= 0.96f;
+                    profile.CurrentTargetStickiness *= 0.92f;
                     profile.FocusFireWeight *= 1.15f;
                     profile.ClusterTargetBonus *= 1.20f;
                     profile.InRangeTargetBonus *= 1.15f;
@@ -114,6 +125,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.SuperWeight *= 1.15f;
                     profile.FocusFireWeight *= 1.20f;
                     profile.InRangeTargetBonus *= 1.10f;
+                    profile.MinimumCommittedActionScore *= 0.95f;
+                    profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 0.90f, 1);
+                    profile.EmergencyOverrideScore *= 0.97f;
                     profile.RetreatWeight *= 0.80f;
                     profile.RegroupWeight *= 0.85f;
                     profile.PeelWeight *= 0.90f;
@@ -137,6 +151,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.HoldRangeWeight *= 1.15f;
                     profile.RepositionWeight *= 1.20f;
                     profile.ApproachWeight *= 0.82f;
+                    profile.ActionSwitchScoreMargin *= 1.10f;
+                    profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 1.10f, 1);
+                    profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 1.08f, 1);
+                    profile.CurrentTargetStickiness *= 0.90f;
                     profile.LowHealthRetreatRatio *= 1.18f;
                     profile.RegroupHealthThreshold *= 1.15f;
                     profile.PreferredAttackRangeRatio *= 1.08f;
@@ -161,6 +179,8 @@ namespace MOBA.Core.Simulation.AI
                     profile.RegroupWeight *= 1.22f;
                     profile.FocusFireWeight *= 1.15f;
                     profile.ObjectiveWeight *= 1.10f;
+                    profile.MinimumCommittedActionScore *= 0.96f;
+                    profile.ActionSwitchScoreMargin *= 0.95f;
                     profile.OverFocusedTargetPenaltyPerAlly *= 1.20f;
                     profile.AllyAvoidanceWeight *= 1.15f;
                     profile.AllySupportRange *= 1.12f;
@@ -203,7 +223,11 @@ namespace MOBA.Core.Simulation.AI
             profile.TacticalStrafeDistance = Mathf.Clamp(profile.TacticalStrafeDistance, 0.4f, 4f);
             profile.TacticalKiteDistance = Mathf.Clamp(profile.TacticalKiteDistance, 0.5f, 5f);
 
+            profile.MinimumCommittedActionScore = Mathf.Clamp(profile.MinimumCommittedActionScore, 0f, 40f);
             profile.ActionSwitchScoreMargin = Mathf.Clamp(profile.ActionSwitchScoreMargin, 4f, 35f);
+            profile.CombatActionCommitmentTicks = ClampTicks(profile.CombatActionCommitmentTicks, 1, 60);
+            profile.NonCombatActionCommitmentTicks = ClampTicks(profile.NonCombatActionCommitmentTicks, 1, 120);
+            profile.EmergencyOverrideScore = Mathf.Clamp(profile.EmergencyOverrideScore, 60f, 120f);
             profile.FocusFireWeight = Mathf.Clamp(profile.FocusFireWeight, 0f, 45f);
             profile.OverFocusedTargetPenaltyPerAlly = Mathf.Clamp(profile.OverFocusedTargetPenaltyPerAlly, 0f, 45f);
             profile.MaxOverFocusedTargetPenalty = Mathf.Clamp(profile.MaxOverFocusedTargetPenalty, 0f, 70f);
@@ -246,6 +270,37 @@ namespace MOBA.Core.Simulation.AI
             profile.FailedCastMemoryTicks = ClampTicks(profile.FailedCastMemoryTicks, 5, 240);
             profile.FailedCastRecoveryLimit = Mathf.Clamp(profile.FailedCastRecoveryLimit, 1, 5);
             profile.FailedCastSuppressionTicks = ClampTicks(profile.FailedCastSuppressionTicks, 5, 180);
+        }
+
+        private static void ApplyFairPlayGuardrails(BrawlerAIProfile profile)
+        {
+            if (profile.Difficulty == AIDifficultyLevel.Hard)
+            {
+                profile.AimErrorDegrees = Mathf.Max(profile.AimErrorDegrees, 1f);
+                profile.CombatSenseIntervalTicks = ClampTicks(profile.CombatSenseIntervalTicks, 2, 30);
+                profile.DangerRefreshIntervalTicks = ClampTicks(profile.DangerRefreshIntervalTicks, 2, 12);
+            }
+            else if (profile.Difficulty == AIDifficultyLevel.Normal)
+            {
+                profile.AimErrorDegrees = Mathf.Max(profile.AimErrorDegrees, 2f);
+            }
+            else
+            {
+                profile.AimErrorDegrees = Mathf.Max(profile.AimErrorDegrees, 6f);
+                profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 6, 24);
+            }
+
+            if (profile.UseTeamRoleCoordination)
+            {
+                profile.TeamRoleCoordinationWeight = Mathf.Max(profile.TeamRoleCoordinationWeight, 0.65f);
+                profile.TeamActionCrowdingPenalty = Mathf.Max(profile.TeamActionCrowdingPenalty, 6f);
+            }
+
+            profile.OverFocusedTargetPenaltyPerAlly =
+                Mathf.Max(profile.OverFocusedTargetPenaltyPerAlly, 8f);
+            profile.MaxOverFocusedTargetPenalty = Mathf.Max(
+                profile.MaxOverFocusedTargetPenalty,
+                profile.OverFocusedTargetPenaltyPerAlly * 1.75f);
         }
 
         private static uint ScaleTicks(uint value, float multiplier, uint minimum)
