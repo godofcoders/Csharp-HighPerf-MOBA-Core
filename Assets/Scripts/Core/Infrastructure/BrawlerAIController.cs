@@ -244,8 +244,18 @@ _actionExecutor != null
 
             if (currentTick >= _nextSenseTick)
             {
-                _perception.UpdateTarget(_brawler, _targetInfo, currentTick);
-                ScheduleNextSense(currentTick);
+                if (AIBudgetCoordinator.TryAcquirePerceptionScan(
+                        currentTick,
+                        _profile,
+                        highPriority: _targetInfo != null && _targetInfo.HasLiveTarget))
+                {
+                    _perception.UpdateTarget(_brawler, _targetInfo, currentTick);
+                    ScheduleNextSense(currentTick);
+                }
+                else
+                {
+                    DeferSense(currentTick);
+                }
             }
 
             _teamCoordinator.UpdateTeamSignals(_targetInfo, currentTick);
@@ -480,7 +490,7 @@ $"Map={LastMapRouteDebug}";
             _commandSource = new AICommandSource();
             _brawler.SetCommandSource(_commandSource);
 
-            _navAgent = new NavigationAgent(_brawler, _commandSource);
+            _navAgent = new NavigationAgent(_brawler, _commandSource, _profile);
             _targetScorer = new AITargetScorer(_brawler, _profile);
             _objectiveMemory = new AIObjectiveMemory();
             _teamCoordinator = new AITeamCoordinator(_brawler);
@@ -604,6 +614,15 @@ $"Map={LastMapRouteDebug}";
         {
             if (_dangerMemory == null || _profile == null || currentTick < _nextDangerRefreshTick)
                 return;
+
+            if (!AIBudgetCoordinator.TryAcquireDangerRefresh(
+                    currentTick,
+                    _profile,
+                    highPriority: _dangerMemory.HasDanger))
+            {
+                DeferDangerRefresh(currentTick);
+                return;
+            }
 
             _dangerMemory.Refresh(_brawler, _profile, currentTick);
 
@@ -736,22 +755,23 @@ $"Map={LastMapRouteDebug}";
                 _profile.MaxMapResolvesPerTick,
                 _profile.MaxPathQueriesPerTick,
                 _profile.MaxPathTouchedNodesPerTick);
+            bool budgetPressure = AIBudgetCoordinator.HasPressure(currentTick);
 
-            if (!overBudget)
+            if (!overBudget && !budgetPressure)
             {
-                _lastBudgetDebug = "Budget=OK";
+                _lastBudgetDebug = BuildBudgetSummary(currentTick);
                 return;
             }
 
             if (!_profile.LogBudgetWarnings)
             {
-                _lastBudgetDebug = "Budget=OVER";
+                _lastBudgetDebug = BuildBudgetSummary(currentTick);
                 return;
             }
 
             if (currentTick < _nextBudgetWarningTick)
             {
-                _lastBudgetDebug = "Budget=OVER";
+                _lastBudgetDebug = BuildBudgetSummary(currentTick);
                 return;
             }
 
@@ -762,11 +782,14 @@ $"Map={LastMapRouteDebug}";
 
         private string BuildBudgetSummary(uint currentTick)
         {
-            return AIPerformanceTracker.GetBudgetSummary(
-                currentTick,
-                _profile.MaxMapResolvesPerTick,
-                _profile.MaxPathQueriesPerTick,
-                _profile.MaxPathTouchedNodesPerTick);
+            return
+                AIPerformanceTracker.GetBudgetSummary(
+                    currentTick,
+                    _profile.MaxMapResolvesPerTick,
+                    _profile.MaxPathQueriesPerTick,
+                    _profile.MaxPathTouchedNodesPerTick) +
+                " " +
+                AIBudgetCoordinator.GetDebugSummary(currentTick);
         }
 
 #if UNITY_EDITOR
@@ -807,6 +830,24 @@ $"Map={LastMapRouteDebug}";
             }
 
             _teamCoordinator.ClearTargetFocusCount();
+        }
+
+        private void DeferSense(uint currentTick)
+        {
+            uint delay = _profile != null && _profile.BudgetDeferredSenseTicks > 0u
+                ? _profile.BudgetDeferredSenseTicks
+                : 1u;
+
+            _nextSenseTick = currentTick + delay;
+        }
+
+        private void DeferDangerRefresh(uint currentTick)
+        {
+            uint delay = _profile != null && _profile.BudgetDeferredDangerTicks > 0u
+                ? _profile.BudgetDeferredDangerTicks
+                : 1u;
+
+            _nextDangerRefreshTick = currentTick + delay;
         }
 
     }

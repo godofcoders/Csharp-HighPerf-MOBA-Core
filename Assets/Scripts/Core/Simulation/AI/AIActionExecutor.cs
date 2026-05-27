@@ -183,7 +183,10 @@ namespace MOBA.Core.Simulation.AI
                 threatPosition,
                 preferredThreatDistance);
 
-            _navAgent.RequestDestination(resolvedDestination, arrivalDistance);
+            _navAgent.RequestDestination(
+                resolvedDestination,
+                arrivalDistance,
+                IsCriticalRoute(routeIntent));
         }
 
         private Vector3 ResolveMapAwareDestination(
@@ -215,6 +218,28 @@ namespace MOBA.Core.Simulation.AI
                     0);
 
                 return _lastResolvedMapDestination;
+            }
+
+            if (!AIBudgetCoordinator.TryAcquireMapResolve(
+                    _currentExecuteTick,
+                    _profile,
+                    IsCriticalRoute(routeIntent)))
+            {
+                _lastRawMapDestination = destination;
+                _lastResolvedMapDestination = destination;
+                _lastMapRequestIntent = routeIntent;
+                _lastMapRequestThreatPosition = threatPosition;
+                _lastMapRequestPreferredThreatDistance = preferredThreatDistance;
+                _lastMapRequestHadThreatPosition = hasThreatPosition;
+                _hasMapRouteCache = false;
+                _lastMapRouteDebug =
+                    $"Route={routeIntent} " +
+                    $"Raw={FormatVector(destination)} " +
+                    $"Resolved={FormatVector(destination)} " +
+                    $"Score=0.0 " +
+                    $"Reason=budget_deferred";
+
+                return destination;
             }
 
             AIMapNavigationRequest request = BuildMapNavigationRequest(
@@ -259,6 +284,19 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return resolvedDestination;
+        }
+
+        private bool IsCriticalRoute(AIMapRouteIntent routeIntent)
+        {
+            return routeIntent == AIMapRouteIntent.Evade ||
+                   routeIntent == AIMapRouteIntent.CombatRetreat ||
+                   routeIntent == AIMapRouteIntent.Peel;
+        }
+
+        private bool IsCriticalTacticalIntent(AITacticalMovementIntent intent)
+        {
+            return intent == AITacticalMovementIntent.Kite ||
+                   intent == AITacticalMovementIntent.EmergencyRetreat;
         }
 
         private bool CanReuseMapResolvedDestination(
@@ -365,7 +403,9 @@ namespace MOBA.Core.Simulation.AI
                 OpenShotWeight = _profile.MapOpenShotPreference,
                 ChokepointPenalty = _profile.MapChokepointPenalty,
                 ThreatWeight = _profile.MapThreatAvoidanceWeight,
-                PathCostWeight = _profile.MapPathCostWeight
+                PathCostWeight = _profile.MapPathCostWeight,
+                CurrentTick = _currentExecuteTick,
+                HighPriority = IsCriticalRoute(routeIntent)
             };
         }
 
@@ -450,11 +490,17 @@ namespace MOBA.Core.Simulation.AI
                     currentTick,
                     idealRange);
 
-                _navAgent.RequestDestination(destination, 0.5f);
+                _navAgent.RequestDestination(
+                    destination,
+                    0.5f,
+                    IsCriticalTacticalIntent(_lastTacticalMovementIntent));
             }
             else
             {
-                _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.5f);
+                _navAgent.RequestDestination(
+                    _lastTacticalMoveDestination,
+                    0.5f,
+                    IsCriticalTacticalIntent(_lastTacticalMovementIntent));
             }
         }
 
@@ -505,11 +551,17 @@ namespace MOBA.Core.Simulation.AI
                         currentTick,
                         "hold_no_strafe");
 
-                    _navAgent.RequestDestination(destination, 0.5f);
+                    _navAgent.RequestDestination(
+                        destination,
+                        0.5f,
+                        IsCriticalTacticalIntent(_lastTacticalMovementIntent));
                 }
                 else
                 {
-                    _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.5f);
+                    _navAgent.RequestDestination(
+                        _lastTacticalMoveDestination,
+                        0.5f,
+                        IsCriticalTacticalIntent(_lastTacticalMovementIntent));
                 }
 
                 return;
@@ -526,11 +578,17 @@ namespace MOBA.Core.Simulation.AI
                     currentTick,
                     idealRange);
 
-                _navAgent.RequestDestination(tacticalDestination, 0.4f);
+                _navAgent.RequestDestination(
+                    tacticalDestination,
+                    0.4f,
+                    IsCriticalTacticalIntent(_lastTacticalMovementIntent));
             }
             else
             {
-                _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.4f);
+                _navAgent.RequestDestination(
+                    _lastTacticalMoveDestination,
+                    0.4f,
+                    IsCriticalTacticalIntent(_lastTacticalMovementIntent));
             }
         }
 
@@ -563,11 +621,17 @@ namespace MOBA.Core.Simulation.AI
                     currentTick,
                     idealRange);
 
-                _navAgent.RequestDestination(destination, 0.45f);
+                _navAgent.RequestDestination(
+                    destination,
+                    0.45f,
+                    IsCriticalTacticalIntent(_lastTacticalMovementIntent));
             }
             else
             {
-                _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.45f);
+                _navAgent.RequestDestination(
+                    _lastTacticalMoveDestination,
+                    0.45f,
+                    IsCriticalTacticalIntent(_lastTacticalMovementIntent));
             }
         }
 
@@ -615,7 +679,10 @@ namespace MOBA.Core.Simulation.AI
 
             if (!ShouldRefreshEvadeMove(currentTick, out string refreshReason))
             {
-                _navAgent.RequestDestination(_lastTacticalMoveDestination, 0.4f);
+                _navAgent.RequestDestination(
+                    _lastTacticalMoveDestination,
+                    0.4f,
+                    highPriority: true);
                 return;
             }
 
@@ -654,7 +721,10 @@ namespace MOBA.Core.Simulation.AI
 
             _nextTacticalMoveRetargetTick = currentTick + retargetTicks;
 
-            _navAgent.RequestDestination(resolvedDestination, 0.4f);
+            _navAgent.RequestDestination(
+                resolvedDestination,
+                0.4f,
+                highPriority: true);
         }
 
         private bool ShouldRefreshEvadeMove(uint currentTick, out string refreshReason)

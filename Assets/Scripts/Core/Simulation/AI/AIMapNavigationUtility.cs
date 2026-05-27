@@ -26,6 +26,8 @@ namespace MOBA.Core.Simulation.AI
         public float ChokepointPenalty;
         public float ThreatWeight;
         public float PathCostWeight;
+        public uint CurrentTick;
+        public bool HighPriority;
     }
 
     public struct AIMapNavigationDecision
@@ -144,6 +146,7 @@ namespace MOBA.Core.Simulation.AI
                 self,
                 pathfinder,
                 selfCoords,
+                profile,
                 request,
                 first,
                 second,
@@ -215,6 +218,7 @@ namespace MOBA.Core.Simulation.AI
             BrawlerController self,
             AStarSolver pathfinder,
             Vector2Int selfCoords,
+            BrawlerAIProfile profile,
             in AIMapNavigationRequest request,
             CandidateScore first,
             CandidateScore second,
@@ -226,16 +230,17 @@ namespace MOBA.Core.Simulation.AI
             pathValidationCount = 0;
             selected = default;
 
-            return TrySelectReachableCandidate(self, pathfinder, selfCoords, request, first, ref pathValidationCount, out selected) ||
-                   TrySelectReachableCandidate(self, pathfinder, selfCoords, request, second, ref pathValidationCount, out selected) ||
-                   TrySelectReachableCandidate(self, pathfinder, selfCoords, request, third, ref pathValidationCount, out selected) ||
-                   TrySelectReachableCandidate(self, pathfinder, selfCoords, request, fourth, ref pathValidationCount, out selected);
+            return TrySelectReachableCandidate(self, pathfinder, selfCoords, profile, request, first, ref pathValidationCount, out selected) ||
+                   TrySelectReachableCandidate(self, pathfinder, selfCoords, profile, request, second, ref pathValidationCount, out selected) ||
+                   TrySelectReachableCandidate(self, pathfinder, selfCoords, profile, request, third, ref pathValidationCount, out selected) ||
+                   TrySelectReachableCandidate(self, pathfinder, selfCoords, profile, request, fourth, ref pathValidationCount, out selected);
         }
 
         private static bool TrySelectReachableCandidate(
             BrawlerController self,
             AStarSolver pathfinder,
             Vector2Int selfCoords,
+            BrawlerAIProfile profile,
             in AIMapNavigationRequest request,
             CandidateScore candidate,
             ref int pathValidationCount,
@@ -251,6 +256,14 @@ namespace MOBA.Core.Simulation.AI
             {
                 selected = candidate;
                 return true;
+            }
+
+            if (!AIBudgetCoordinator.TryAcquirePathQuery(
+                    request.CurrentTick,
+                    profile,
+                    request.HighPriority))
+            {
+                return false;
             }
 
             pathValidationCount++;

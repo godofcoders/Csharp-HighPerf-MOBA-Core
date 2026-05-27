@@ -267,12 +267,26 @@ namespace MOBA.Core.Simulation.AI
         public bool EnableDebugSnapshots = true;
         [Tooltip("Ticks between debug snapshot refreshes. Higher values reduce per-bot string/list churn.")]
         public uint DebugSnapshotIntervalTicks = 5;
+        [Tooltip("If true, expensive AI work uses per-tick permits and gracefully defers non-critical work under load.")]
+        public bool EnableAIBudgetEnforcement = true;
+        [Tooltip("Per-tick perception scans allowed before idle/low-priority bots defer sensing.")]
+        public int MaxPerceptionScansPerTick = 8;
+        [Tooltip("Per-tick danger scans allowed before low-priority danger refreshes defer.")]
+        public int MaxDangerRefreshesPerTick = 8;
         [Tooltip("Per-tick map resolve budget before AI perf telemetry reports pressure.")]
         public int MaxMapResolvesPerTick = 24;
         [Tooltip("Per-tick path query budget before AI perf telemetry reports pressure.")]
         public int MaxPathQueriesPerTick = 12;
         [Tooltip("Per-tick A* touched-node budget before AI perf telemetry reports pressure.")]
         public int MaxPathTouchedNodesPerTick = 5000;
+        [Tooltip("Ticks to delay an optional perception scan when the AI budget is saturated.")]
+        public uint BudgetDeferredSenseTicks = 2;
+        [Tooltip("Ticks to delay an optional danger scan when the AI budget is saturated.")]
+        public uint BudgetDeferredDangerTicks = 2;
+        [Tooltip("Ticks to delay an optional path repath when the AI budget is saturated.")]
+        public uint BudgetDeferredPathTicks = 2;
+        [Tooltip("If true, emergency retreat/evade/recovery work may exceed the soft budget instead of being dropped.")]
+        public bool AllowCriticalBudgetOverspend = true;
         [Tooltip("If true, over-budget AI frames emit rate-limited warnings.")]
         public bool LogBudgetWarnings = false;
 
@@ -643,6 +657,7 @@ namespace MOBA.Core.Simulation.AI
             ApplyReactiveCombatDefaults(archetype);
             ApplyDangerAvoidanceDefaults(archetype);
             ApplyFailureRecoveryDefaults(archetype);
+            ApplyProductionBudgetDefaults(archetype);
         }
 
         private void ApplyMapIntelligenceDefaults(BrawlerArchetype archetype)
@@ -885,6 +900,38 @@ namespace MOBA.Core.Simulation.AI
                     FailureRecoveryCooldownTicks = 14;
                     FailureRecoveryDetourDistance = 2.0f;
                     StaleDestinationRecoveryTicks = 70;
+                    break;
+            }
+        }
+
+        private void ApplyProductionBudgetDefaults(BrawlerArchetype archetype)
+        {
+            EnableAIBudgetEnforcement = true;
+            EnableValidationTelemetry = true;
+            EnableDebugSnapshots = true;
+            DebugSnapshotIntervalTicks = 5;
+            MaxPerceptionScansPerTick = 8;
+            MaxDangerRefreshesPerTick = 8;
+            MaxMapResolvesPerTick = 24;
+            MaxPathQueriesPerTick = 12;
+            MaxPathTouchedNodesPerTick = 5000;
+            BudgetDeferredSenseTicks = 2;
+            BudgetDeferredDangerTicks = 2;
+            BudgetDeferredPathTicks = 2;
+            AllowCriticalBudgetOverspend = true;
+            LogBudgetWarnings = false;
+
+            switch (archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                case BrawlerArchetype.Support:
+                case BrawlerArchetype.Artillery:
+                    MaxDangerRefreshesPerTick = 10;
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    MaxDangerRefreshesPerTick = 6;
+                    BudgetDeferredDangerTicks = 3;
                     break;
             }
         }

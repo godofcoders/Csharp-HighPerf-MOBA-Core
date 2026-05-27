@@ -9,6 +9,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerController _brawler;
         private readonly ISimulationClock _clock;
         private readonly AICommandSource _commandSource;
+        private readonly BrawlerAIProfile _profile;
 
         private List<PathNode> _path;
         private int _pathIndex;
@@ -40,22 +41,29 @@ namespace MOBA.Core.Simulation.AI
         public int ConsecutiveStuckSamples => _consecutiveStuckSamples;
         public int ConsecutiveRouteFailures => _consecutiveRouteFailures;
 
-        public NavigationAgent(BrawlerController brawler, AICommandSource commandSource)
+        public NavigationAgent(
+            BrawlerController brawler,
+            AICommandSource commandSource,
+            BrawlerAIProfile profile = null)
         {
             _brawler = brawler;
             _commandSource = commandSource;
+            _profile = profile;
             _clock = ServiceProvider.Get<ISimulationClock>();
             _lastSamplePosition = brawler.Position;
             _lastSampleTick = _clock.CurrentTick;
         }
 
-        public void RequestDestination(Vector3 target, float arrivalDistance = 0.6f)
+        public void RequestDestination(
+            Vector3 target,
+            float arrivalDistance = 0.6f,
+            bool highPriority = false)
         {
             _arrivalDistance = arrivalDistance;
 
             if (!_hasDestination)
             {
-                ForceRepath(target);
+                ForceRepath(target, highPriority);
                 return;
             }
 
@@ -63,14 +71,14 @@ namespace MOBA.Core.Simulation.AI
             if (movedTargetSq >= (_repathDistanceThreshold * _repathDistanceThreshold) &&
                 _clock.CurrentTick >= _nextRepathTick)
             {
-                ForceRepath(target);
+                ForceRepath(target, highPriority);
                 return;
             }
 
             _destination = target;
         }
 
-        public void ForceRepath(Vector3 target)
+        public void ForceRepath(Vector3 target, bool highPriority = false)
         {
             bool destinationChanged = !_hasDestination ||
                                       (target - _destination).sqrMagnitude >=
@@ -93,6 +101,27 @@ namespace MOBA.Core.Simulation.AI
 
             var start = SimulationClock.Pathfinder.GetGridCoords(_brawler.Position);
             var end = SimulationClock.Pathfinder.GetGridCoords(target);
+
+            if (!AIBudgetCoordinator.TryAcquirePathQuery(
+                    _clock.CurrentTick,
+                    _profile,
+                    highPriority))
+            {
+                bool canKeepExistingPath = _path != null &&
+                                           _pathIndex < _path.Count &&
+                                           !_routeBlocked;
+
+                _hasDestination = true;
+                if (!canKeepExistingPath)
+                {
+                    _path = null;
+                    _pathIndex = 0;
+                }
+
+                _routeBlocked = false;
+                _nextRepathTick = _clock.CurrentTick + GetBudgetDeferredPathTicks();
+                return;
+            }
 
             _path = SimulationClock.Pathfinder.FindPath(start.x, start.y, end.x, end.y);
             _pathIndex = 0;
@@ -258,7 +287,7 @@ namespace MOBA.Core.Simulation.AI
             if (SimulationClock.Pathfinder == null)
             {
                 recoveryDestination = _brawler.Position + GetRecoveryDirection(directionToDestination, sideSign, 0) * detourDistance;
-                ForceRepath(recoveryDestination);
+                ForceRepath(recoveryDestination, highPriority: true);
                 _arrivalDistance = 0.35f;
                 _routeBlocked = false;
                 _consecutiveStuckSamples = 0;
@@ -293,6 +322,14 @@ namespace MOBA.Core.Simulation.AI
                 if (candidateCoords == start)
                     continue;
 
+                if (!AIBudgetCoordinator.TryAcquirePathQuery(
+                        _clock.CurrentTick,
+                        profile,
+                        highPriority: true))
+                {
+                    continue;
+                }
+
                 if (!pathfinder.TryGetPathLength(
                         start.x,
                         start.y,
@@ -323,7 +360,7 @@ namespace MOBA.Core.Simulation.AI
 
             recoveryDestination = pathfinder.GetWorldPos(bestCoords);
             _arrivalDistance = 0.35f;
-            ForceRepath(recoveryDestination);
+            ForceRepath(recoveryDestination, highPriority: true);
             _routeBlocked = false;
             _consecutiveStuckSamples = 0;
             return true;
@@ -422,6 +459,13 @@ namespace MOBA.Core.Simulation.AI
                 default:
                     return (forward - side * 0.45f).normalized;
             }
+        }
+
+        private uint GetBudgetDeferredPathTicks()
+        {
+            return _profile != null && _profile.BudgetDeferredPathTicks > 0u
+                ? _profile.BudgetDeferredPathTicks
+                : 1u;
         }
     }
 }
