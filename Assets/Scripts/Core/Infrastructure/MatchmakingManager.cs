@@ -16,7 +16,11 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private int _teamSize = 3;
         [SerializeField] private BrawlerDefinition _defaultBotBrawler;
         [SerializeField] private BrawlerDefinition[] _botBrawlerPool;
+        [SerializeField] private bool _useCompositionAwareBotSelection = true;
         [SerializeField] private bool _avoidDuplicateBotBrawlersUntilPoolExhausted = true;
+        [SerializeField] private int _maxSameBotBrawlerPerTeam = 1;
+        [SerializeField] private int _maxSameArchetypePerTeam = 1;
+        [SerializeField] private bool _logBotCompositionDraft = false;
 
         private List<MatchParticipant> _roster = new List<MatchParticipant>();
         private readonly List<BrawlerDefinition> _botPickBag = new List<BrawlerDefinition>(8);
@@ -66,9 +70,19 @@ namespace MOBA.Core.Infrastructure
             {
                 // Fill Team Blue first, then Team Red
                 TeamType team = (_roster.Count < _teamSize) ? TeamType.Blue : TeamType.Red;
-                BrawlerDefinition botBrawler = PickBotBrawler(botPool);
+                BrawlerDefinition botBrawler = PickBotBrawler(botPool, team, out string pickReason);
                 string botName = $"Bot {_roster.Count} ({botBrawler.BrawlerName})";
                 _roster.Add(new MatchParticipant(botName, team, botBrawler, true));
+
+                if (_logBotCompositionDraft)
+                {
+                    Debug.Log(
+                        $"[LobbyDraft] team={team} " +
+                        $"mode={SceneSelection.SelectedMode} " +
+                        $"pick={botBrawler.BrawlerName} " +
+                        $"role={botBrawler.Archetype} " +
+                        $"reason={pickReason}");
+                }
             }
 
             Debug.Log("[Lobby] Roster full. Initializing Spawn Sequence...");
@@ -100,8 +114,35 @@ namespace MOBA.Core.Infrastructure
             pool.Add(candidate);
         }
 
-        private BrawlerDefinition PickBotBrawler(List<BrawlerDefinition> pool)
+        private BrawlerDefinition PickBotBrawler(
+            List<BrawlerDefinition> pool,
+            TeamType team,
+            out string pickReason)
         {
+            if (_useCompositionAwareBotSelection)
+            {
+                AITeamCompositionPlanner.PickOptions options = AITeamCompositionPlanner.PickOptions.Default;
+                options.AvoidDuplicateBrawlersUntilPoolExhausted = _avoidDuplicateBotBrawlersUntilPoolExhausted;
+                options.MaxSameBrawlerPerTeam = Mathf.Max(1, _maxSameBotBrawlerPerTeam);
+                options.MaxSameArchetypePerTeam = Mathf.Max(1, _maxSameArchetypePerTeam);
+
+                AITeamCompositionPlanner.PickResult result =
+                    AITeamCompositionPlanner.PickBotBrawler(
+                        pool,
+                        _roster,
+                        team,
+                        SceneSelection.SelectedMode,
+                        options);
+
+                if (result.Brawler != null)
+                {
+                    pickReason = $"{result.Score:0.0}:{result.Reason}";
+                    return result.Brawler;
+                }
+            }
+
+            pickReason = "legacy_bag";
+
             if (pool.Count == 1 || !_avoidDuplicateBotBrawlersUntilPoolExhausted)
             {
                 return pool[UnityEngine.Random.Range(0, pool.Count)];

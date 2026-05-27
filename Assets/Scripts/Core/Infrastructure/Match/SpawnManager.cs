@@ -89,13 +89,44 @@ namespace MOBA.Core.Infrastructure
         {
             int blueIdx = 0;
             int redIdx = 0;
+            bool[] blueSpawnClaims = _blueSpawnPoints != null
+                ? new bool[_blueSpawnPoints.Count]
+                : new bool[0];
+            bool[] redSpawnClaims = _redSpawnPoints != null
+                ? new bool[_redSpawnPoints.Count]
+                : new bool[0];
 
             foreach (var participant in roster)
             {
                 // 1. Determine spawn location
-                Transform spawnPoint = (participant.Team == TeamType.Blue)
-                    ? _blueSpawnPoints[blueIdx++]
-                    : _redSpawnPoints[redIdx++];
+                int teamOrdinal;
+                List<Transform> spawnList;
+                bool[] spawnClaims;
+
+                if (participant.Team == TeamType.Blue)
+                {
+                    teamOrdinal = blueIdx++;
+                    spawnList = _blueSpawnPoints;
+                    spawnClaims = blueSpawnClaims;
+                }
+                else
+                {
+                    teamOrdinal = redIdx++;
+                    spawnList = _redSpawnPoints;
+                    spawnClaims = redSpawnClaims;
+                }
+
+                Transform spawnPoint = ResolveSpawnPoint(
+                    participant,
+                    spawnList,
+                    spawnClaims,
+                    teamOrdinal);
+
+                if (spawnPoint == null)
+                {
+                    Debug.LogError($"[SpawnManager] Missing spawn point for {participant.Name} on {participant.Team}.");
+                    continue;
+                }
 
                 // 2. Instantiate the Brawler Bridge
                 GameObject go = Instantiate(_brawlerBasePrefab, spawnPoint.position, spawnPoint.rotation);
@@ -125,6 +156,60 @@ namespace MOBA.Core.Infrastructure
                     SetPlayerTarget(controller.PresentationFollowTarget);
                 }
             }
+        }
+
+        private static Transform ResolveSpawnPoint(
+            MatchParticipant participant,
+            List<Transform> spawnList,
+            bool[] spawnClaims,
+            int teamOrdinal)
+        {
+            if (spawnList == null || spawnList.Count == 0)
+                return null;
+
+            int preferredIndex = AITeamCompositionPlanner.GetPreferredSpawnIndex(
+                participant != null ? participant.SelectedBrawler : null,
+                spawnList.Count,
+                teamOrdinal);
+
+            int selectedIndex = FindNearestFreeSpawnIndex(
+                spawnList,
+                spawnClaims,
+                preferredIndex);
+
+            if (selectedIndex < 0)
+                selectedIndex = Mathf.Clamp(preferredIndex, 0, spawnList.Count - 1);
+
+            if (spawnClaims != null && selectedIndex < spawnClaims.Length)
+                spawnClaims[selectedIndex] = true;
+
+            return spawnList[selectedIndex];
+        }
+
+        private static int FindNearestFreeSpawnIndex(
+            List<Transform> spawnList,
+            bool[] spawnClaims,
+            int preferredIndex)
+        {
+            if (spawnClaims == null || spawnClaims.Length == 0)
+                return Mathf.Clamp(preferredIndex, 0, spawnList.Count - 1);
+
+            int clampedPreferred = Mathf.Clamp(preferredIndex, 0, spawnClaims.Length - 1);
+            if (!spawnClaims[clampedPreferred] && spawnList[clampedPreferred] != null)
+                return clampedPreferred;
+
+            for (int offset = 1; offset < spawnClaims.Length; offset++)
+            {
+                int left = clampedPreferred - offset;
+                if (left >= 0 && !spawnClaims[left] && spawnList[left] != null)
+                    return left;
+
+                int right = clampedPreferred + offset;
+                if (right < spawnClaims.Length && !spawnClaims[right] && spawnList[right] != null)
+                    return right;
+            }
+
+            return -1;
         }
     }
 }
