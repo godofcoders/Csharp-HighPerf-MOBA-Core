@@ -56,6 +56,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Reactive: {snapshot.ReactiveDebug}");
             GUILayout.Label($"Danger: {snapshot.DangerDebug}");
             GUILayout.Label($"Recovery: {snapshot.FailureRecoveryDebug}");
+            GUILayout.Label($"Humanization: {snapshot.HumanizationDebug}");
             GUILayout.Label($"Objective: {snapshot.ObjectiveName}");
             GUILayout.Label($"Objective Debug: {snapshot.ObjectiveDebug}");
             GUILayout.Label($"Tactical/Map: {snapshot.TacticalMovementDebug}");
@@ -129,6 +130,7 @@ namespace MOBA.Core.Simulation.AI
                     $"Reactive={snapshot.ReactiveDebug} | " +
                     $"Danger={snapshot.DangerDebug} | " +
                     $"Recovery={snapshot.FailureRecoveryDebug} | " +
+                    $"Humanization={snapshot.HumanizationDebug} | " +
                     $"Objective={snapshot.ObjectiveDebug} | " +
                     $"Tactical={snapshot.TacticalMovementDebug} | " +
                     $"Perf={snapshot.PerformanceDebug} | " +

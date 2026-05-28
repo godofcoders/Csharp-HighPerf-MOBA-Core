@@ -65,6 +65,15 @@ namespace MOBA.Core.Simulation.AI
                     profile.StaleDestinationRecoveryTicks = ScaleTicks(profile.StaleDestinationRecoveryTicks, 1.25f, 1);
                     profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 1.25f, 1);
                     profile.FailedCastSuppressionTicks = ScaleTicks(profile.FailedCastSuppressionTicks, 1.15f, 1);
+                    profile.HumanizationReactionJitterTicks = 5;
+                    profile.HumanizationActionScoreJitter = 3.5f;
+                    profile.HumanizationFakeOutChance *= 1.65f;
+                    profile.HumanizationFakeOutScoreBonus *= 1.25f;
+                    profile.HumanizationPressureMistakeChance *= 2.25f;
+                    profile.HumanizationPressureMistakePenalty *= 1.35f;
+                    profile.HumanizationPressureMistakeCooldownTicks =
+                        ScaleTicks(profile.HumanizationPressureMistakeCooldownTicks, 0.75f, 1);
+                    profile.HumanizationPersonalityExpression *= 1.15f;
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -106,12 +115,23 @@ namespace MOBA.Core.Simulation.AI
                     profile.StaleDestinationRecoveryTicks = ScaleTicks(profile.StaleDestinationRecoveryTicks, 0.85f, 1);
                     profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 0.85f, 1);
                     profile.FailedCastSuppressionTicks = ScaleTicks(profile.FailedCastSuppressionTicks, 0.85f, 1);
+                    profile.HumanizationReactionJitterTicks = 1;
+                    profile.HumanizationActionScoreJitter = 0.9f;
+                    profile.HumanizationFakeOutChance *= 0.55f;
+                    profile.HumanizationFakeOutScoreBonus *= 0.65f;
+                    profile.HumanizationPressureMistakeChance *= 0.45f;
+                    profile.HumanizationPressureMistakePenalty *= 0.65f;
+                    profile.HumanizationPressureMistakeCooldownTicks =
+                        ScaleTicks(profile.HumanizationPressureMistakeCooldownTicks, 1.4f, 1);
+                    profile.HumanizationPersonalityExpression *= 0.80f;
                     break;
 
                 case AIDifficultyLevel.Normal:
                 default:
                     profile.ReactionDelayTicks = 3;
                     profile.AimErrorDegrees = 3f;
+                    if (profile.HumanizationReactionJitterTicks < 2u)
+                        profile.HumanizationReactionJitterTicks = 2u;
                     break;
             }
         }
@@ -144,6 +164,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapExposedPositionPenalty *= 0.85f;
                     profile.MapOpenShotPreference *= 1.15f;
                     profile.FailureRecoveryDetourDistance *= 0.95f;
+                    profile.HumanizationFakeOutChance *= 1.25f;
+                    profile.HumanizationFakeOutScoreBonus *= 1.18f;
+                    profile.HumanizationPressureMistakeChance *= 1.10f;
+                    profile.HumanizationPersonalityExpression *= 1.20f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -172,6 +196,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapOpenShotPreference *= 0.92f;
                     profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 0.90f, 1);
                     profile.FailureRecoveryDetourDistance *= 1.08f;
+                    profile.HumanizationFakeOutChance *= 0.90f;
+                    profile.HumanizationPressureMistakeChance *= 0.85f;
+                    profile.HumanizationPressureMistakePenalty *= 1.10f;
+                    profile.HumanizationPersonalityExpression *= 1.10f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -192,6 +220,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapLineOfSightCoverPreference *= 1.08f;
                     profile.MapOpenShotPreference *= 1.05f;
                     profile.FailedCastSuppressionTicks = ScaleTicks(profile.FailedCastSuppressionTicks, 1.10f, 1);
+                    profile.HumanizationFakeOutChance *= 0.80f;
+                    profile.HumanizationPressureMistakeChance *= 0.80f;
+                    profile.HumanizationPersonalityExpression *= 1.05f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -275,6 +306,31 @@ namespace MOBA.Core.Simulation.AI
             profile.MaxMapResolvesPerTick = Mathf.Clamp(profile.MaxMapResolvesPerTick, 1, 256);
             profile.MaxPathQueriesPerTick = Mathf.Clamp(profile.MaxPathQueriesPerTick, 1, 128);
             profile.MaxPathTouchedNodesPerTick = Mathf.Clamp(profile.MaxPathTouchedNodesPerTick, 64, 50000);
+
+            profile.HumanizationReactionJitterTicks =
+                ClampTicks(profile.HumanizationReactionJitterTicks, 0, 8);
+            profile.HumanizationActionScoreJitter =
+                Mathf.Clamp(profile.HumanizationActionScoreJitter, 0f, 6f);
+            profile.HumanizationFakeOutChance =
+                Mathf.Clamp01(profile.HumanizationFakeOutChance);
+            profile.HumanizationFakeOutScoreBonus =
+                Mathf.Clamp(profile.HumanizationFakeOutScoreBonus, 0f, 16f);
+            profile.HumanizationFakeOutDurationTicks =
+                ClampTicks(profile.HumanizationFakeOutDurationTicks, 1, 30);
+            profile.HumanizationFakeOutCooldownTicks =
+                ClampTicks(profile.HumanizationFakeOutCooldownTicks, 15, 240);
+            profile.HumanizationPressureMistakeChance =
+                Mathf.Clamp01(profile.HumanizationPressureMistakeChance);
+            profile.HumanizationPressureMistakePenalty =
+                Mathf.Clamp(profile.HumanizationPressureMistakePenalty, 0f, 24f);
+            profile.HumanizationPressureHealthThreshold =
+                Mathf.Clamp(profile.HumanizationPressureHealthThreshold, 0.15f, 0.80f);
+            profile.HumanizationPressureMistakeDurationTicks =
+                ClampTicks(profile.HumanizationPressureMistakeDurationTicks, 1, 30);
+            profile.HumanizationPressureMistakeCooldownTicks =
+                ClampTicks(profile.HumanizationPressureMistakeCooldownTicks, 20, 300);
+            profile.HumanizationPersonalityExpression =
+                Mathf.Clamp(profile.HumanizationPersonalityExpression, 0f, 2f);
         }
 
         private static void ApplyFairPlayGuardrails(BrawlerAIProfile profile)

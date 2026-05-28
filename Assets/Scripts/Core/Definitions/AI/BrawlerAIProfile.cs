@@ -300,6 +300,36 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("If true, over-budget AI frames emit rate-limited warnings.")]
         public bool LogBudgetWarnings = false;
 
+        [Header("Humanization / Believability")]
+        [Tooltip("If true, applies small bounded imperfections so bots feel skillful but human.")]
+        public bool EnableHumanization = true;
+        [Tooltip("Maximum extra perception jitter added by reaction rhythm. Keeps reads from landing on machine-perfect intervals.")]
+        public uint HumanizationReactionJitterTicks = 2;
+        [Tooltip("Small per-action score variance applied before commitment. Emergency actions are protected.")]
+        public float HumanizationActionScoreJitter = 1.75f;
+        [Tooltip("Chance per fake-out check to briefly overstate a movement action when not in immediate danger.")]
+        [Range(0f, 1f)] public float HumanizationFakeOutChance = 0.08f;
+        [Tooltip("Score bonus applied to the active fake-out movement action.")]
+        public float HumanizationFakeOutScoreBonus = 6f;
+        [Tooltip("Ticks a fake-out expression remains active once selected.")]
+        public uint HumanizationFakeOutDurationTicks = 8;
+        [Tooltip("Minimum ticks between fake-out checks.")]
+        public uint HumanizationFakeOutCooldownTicks = 80;
+        [Tooltip("Chance per pressure check to make a short hesitation/over-defensive choice under pressure.")]
+        [Range(0f, 1f)] public float HumanizationPressureMistakeChance = 0.04f;
+        [Tooltip("Score penalty applied to offensive actions during a pressure mistake window.")]
+        public float HumanizationPressureMistakePenalty = 8f;
+        [Tooltip("Health ratio below which pressure mistakes can be considered even without active danger.")]
+        public float HumanizationPressureHealthThreshold = 0.45f;
+        [Tooltip("Ticks a pressure mistake window remains active once triggered.")]
+        public uint HumanizationPressureMistakeDurationTicks = 8;
+        [Tooltip("Minimum ticks between pressure mistake checks.")]
+        public uint HumanizationPressureMistakeCooldownTicks = 110;
+        [Tooltip("Scales personality-specific expression in fake-outs and hesitation.")]
+        public float HumanizationPersonalityExpression = 1f;
+        [Tooltip("If true, logs humanization windows and score shaping decisions.")]
+        public bool LogHumanization = false;
+
         public float GetPreferredAttackRange(float idealRange)
         {
             return Mathf.Max(0.5f, idealRange * PreferredAttackRangeRatio);

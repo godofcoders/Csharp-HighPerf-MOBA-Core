@@ -37,6 +37,7 @@ namespace MOBA.Core.Infrastructure
         private AIDangerMemory _dangerMemory;
         private AIFailureRecoveryMemory _failureRecovery;
         private AIFailureRecoveryListener _failureRecoveryListener;
+        private AIHumanizationController _humanization;
         private AICommandSource _commandSource;
 
         private BrawlerAIProfile _profile;
@@ -138,6 +139,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastTeamRoleDebug : "RoleCoord=None";
         public string MacroDebug =>
             _utilityScorer != null ? _utilityScorer.LastMacroDebug : "Macro=None";
+        public string HumanizationDebug =>
+            _humanization != null ? _humanization.DebugSummary : "Human=None";
 
         public int CurrentTargetFocusCount =>
             _teamCoordinator != null &&
@@ -219,6 +222,7 @@ _actionExecutor != null
             if (!CanRunAI())
             {
                 _actionCommitment?.Reset();
+                _humanization?.Reset();
                 _teamCoordinator?.ClearTargetFocusCount();
                 _teamCoordinator?.ClearActionIntent();
 
@@ -236,6 +240,7 @@ _actionExecutor != null
             if (_brawler.State.HasStatus(StatusEffectType.Stun))
             {
                 _actionCommitment?.Reset();
+                _humanization?.Reset();
                 _teamCoordinator?.ClearTargetFocusCount();
                 _teamCoordinator?.ClearActionIntent();
                 _commandSource?.QueueMove(Vector3.zero);
@@ -263,6 +268,12 @@ _actionExecutor != null
             RefreshDangerIfDue(currentTick);
 
             _utilityScorer.CollectActionScores(_targetInfo, currentTick, _debugScores);
+            _humanization?.ShapeActionScores(
+                _debugScores,
+                currentTick,
+                _targetInfo.HasLiveTarget,
+                GetHealthRatio(),
+                _dangerMemory != null && _dangerMemory.HasDanger);
 
             AIActionScore chosenAction = _actionCommitment.SelectAction(
                 _debugScores,
@@ -395,6 +406,7 @@ _actionExecutor != null
                 : "Danger=None";
             _debugSnapshot.DangerDebug = _lastDangerDebug;
             _debugSnapshot.FailureRecoveryDebug = _lastFailureRecoveryDebug;
+            _debugSnapshot.HumanizationDebug = HumanizationDebug;
 
             _debugSnapshot.ObjectiveName = _profile != null ? _profile.PreferredObjective.ToString() : "None";
 
@@ -497,6 +509,7 @@ $"Map={LastMapRouteDebug}";
             _reactiveMemory = new AIReactiveMemory();
             _dangerMemory = new AIDangerMemory();
             _failureRecovery = new AIFailureRecoveryMemory();
+            _humanization = new AIHumanizationController(_profile, _brawler.EntityID);
 
             _perception = new AIPerception(
                 _profile.DetectionRadius,
@@ -607,7 +620,18 @@ $"Map={LastMapRouteDebug}";
         {
             bool hot = _targetInfo.HasLiveTarget;
             uint baseInterval = hot ? _profile.CombatSenseIntervalTicks : _profile.IdleSenseIntervalTicks;
-            _nextSenseTick = currentTick + baseInterval + _profile.ReactionDelayTicks;
+            uint rhythmJitter = _humanization != null
+                ? _humanization.GetReactionJitterTicks(currentTick, hot)
+                : 0u;
+            _nextSenseTick = currentTick + baseInterval + _profile.ReactionDelayTicks + rhythmJitter;
+        }
+
+        private float GetHealthRatio()
+        {
+            if (_brawler == null || _brawler.State == null)
+                return 1f;
+
+            return _brawler.State.CurrentHealth / Mathf.Max(1f, _brawler.State.MaxHealth.Value);
         }
 
         private void RefreshDangerIfDue(uint currentTick)

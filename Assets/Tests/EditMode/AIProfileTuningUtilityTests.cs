@@ -43,6 +43,9 @@ namespace MOBA.Tests.EditMode
             Assert.Greater((int)easy.AttackCadenceTicks, (int)hard.AttackCadenceTicks);
             Assert.Greater(easy.ActionSwitchScoreMargin, hard.ActionSwitchScoreMargin);
             Assert.Greater((int)easy.CombatActionCommitmentTicks, (int)hard.CombatActionCommitmentTicks);
+            Assert.Greater((int)easy.HumanizationReactionJitterTicks, (int)hard.HumanizationReactionJitterTicks);
+            Assert.Greater(easy.HumanizationActionScoreJitter, hard.HumanizationActionScoreJitter);
+            Assert.Greater(easy.HumanizationPressureMistakeChance, hard.HumanizationPressureMistakeChance);
         }
 
         [Test]
@@ -114,6 +117,10 @@ namespace MOBA.Tests.EditMode
             profile.MaxMapResolvesPerTick = -5;
             profile.MaxPathQueriesPerTick = -5;
             profile.MaxPathTouchedNodesPerTick = -5;
+            profile.HumanizationReactionJitterTicks = 999;
+            profile.HumanizationActionScoreJitter = 99f;
+            profile.HumanizationFakeOutScoreBonus = 99f;
+            profile.HumanizationPressureMistakePenalty = 99f;
 
             AIProfileTuningUtility.ApplyRuntimeTuning(
                 profile,
@@ -135,6 +142,10 @@ namespace MOBA.Tests.EditMode
             Assert.GreaterOrEqual(profile.MaxMapResolvesPerTick, 1);
             Assert.GreaterOrEqual(profile.MaxPathQueriesPerTick, 1);
             Assert.GreaterOrEqual(profile.MaxPathTouchedNodesPerTick, 64);
+            Assert.LessOrEqual((int)profile.HumanizationReactionJitterTicks, 8);
+            Assert.LessOrEqual(profile.HumanizationActionScoreJitter, 6f);
+            Assert.LessOrEqual(profile.HumanizationFakeOutScoreBonus, 16f);
+            Assert.LessOrEqual(profile.HumanizationPressureMistakePenalty, 24f);
         }
 
         private BrawlerAIProfile CreateProfile()
