@@ -635,19 +635,25 @@ $"Map={LastMapRouteDebug}";
 
         private float GetAbilityIdealRange()
         {
-            var attack = _brawler.Definition?.MainAttack;
+            var attack = _brawler.State != null
+                ? _brawler.State.GetCurrentMainAttackDefinition()
+                : _brawler.Definition?.MainAttack;
             return attack != null ? attack.GetAIIdealRange() : 6f;
         }
 
         private float GetAbilityMaxRange()
         {
-            var attack = _brawler.Definition?.MainAttack;
+            var attack = _brawler.State != null
+                ? _brawler.State.GetCurrentMainAttackDefinition()
+                : _brawler.Definition?.MainAttack;
             return attack != null ? attack.GetAIMaxRange() : 6f;
         }
 
         private float GetSuperMaxRange()
         {
-            var super = _brawler.Definition?.SuperAbility;
+            var super = _brawler.State != null
+                ? _brawler.State.GetCurrentSuperDefinition()
+                : _brawler.Definition?.SuperAbility;
             return super != null ? super.GetAIMaxRange() : 6f;
         }
 

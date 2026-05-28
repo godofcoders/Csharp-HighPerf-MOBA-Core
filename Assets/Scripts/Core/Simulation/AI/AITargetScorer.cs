@@ -159,7 +159,9 @@ namespace MOBA.Core.Simulation.AI
             if (!SpatialEntityUtility.IsAlive(target))
                 return 0f;
 
-            AbilityDefinition attack = _self.Definition?.MainAttack;
+            AbilityDefinition attack = _self.State != null
+                ? _self.State.GetCurrentMainAttackDefinition()
+                : _self.Definition?.MainAttack;
             if (attack == null || SimulationClock.Grid == null)
                 return 0f;
 

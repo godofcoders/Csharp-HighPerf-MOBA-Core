@@ -1183,7 +1183,9 @@ namespace MOBA.Core.Simulation.AI
 
         private float GetAbilityIdealRange()
         {
-            AbilityDefinition attack = _brawler.Definition?.MainAttack;
+            AbilityDefinition attack = _brawler.State != null
+                ? _brawler.State.GetCurrentMainAttackDefinition()
+                : _brawler.Definition?.MainAttack;
             return attack != null ? attack.GetAIIdealRange() : 6f;
         }
 

@@ -957,13 +957,17 @@ namespace MOBA.Core.Simulation.AI
 
         private float GetAbilityIdealRange()
         {
-            var attack = _self.Definition?.MainAttack;
+            var attack = _self.State != null
+                ? _self.State.GetCurrentMainAttackDefinition()
+                : _self.Definition?.MainAttack;
             return attack != null ? attack.GetAIIdealRange() : 6f;
         }
 
         private float GetAbilityMaxRange()
         {
-            var attack = _self.Definition?.MainAttack;
+            var attack = _self.State != null
+                ? _self.State.GetCurrentMainAttackDefinition()
+                : _self.Definition?.MainAttack;
             return attack != null ? attack.GetAIMaxRange() : 6f;
         }
 

@@ -53,7 +53,7 @@ namespace MOBA.Core.Simulation.AI
         {
             plan = default;
 
-            AbilityDefinition ability = _self != null ? _self.Definition?.MainAttack : null;
+            AbilityDefinition ability = GetCurrentMainAttackDefinition();
             if (ability == null)
                 return false;
 
@@ -91,6 +91,13 @@ namespace MOBA.Core.Simulation.AI
                     out int enemyPressure);
 
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "thrown_area_denial");
+                AppendAreaDenialDecision(
+                    requestedTarget,
+                    enemyPressure,
+                    CountAlliesNear(point, thrown.ImpactRadius),
+                    thrown.LingeringHazard != null,
+                    isSuper: false,
+                    ref plan);
                 RecordComboSetup(requestedTarget, currentTick, point, enemyPressure, 0);
                 return true;
             }
@@ -113,6 +120,13 @@ namespace MOBA.Core.Simulation.AI
                     out int enemyPressure);
 
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "volley_area_denial");
+                AppendAreaDenialDecision(
+                    requestedTarget,
+                    enemyPressure,
+                    CountAlliesNear(point, volley.ImpactRadius),
+                    volley.LingeringHazard != null,
+                    isSuper: false,
+                    ref plan);
                 RecordComboSetup(requestedTarget, currentTick, point, enemyPressure, 0);
                 return true;
             }
@@ -179,7 +193,7 @@ namespace MOBA.Core.Simulation.AI
         {
             plan = default;
 
-            AbilityDefinition ability = _self != null ? _self.Definition?.SuperAbility : null;
+            AbilityDefinition ability = GetCurrentSuperDefinition();
             if (ability == null)
                 return false;
 
@@ -252,9 +266,16 @@ namespace MOBA.Core.Simulation.AI
                     hybridAoE.ThrowRange,
                     Mathf.Max(3f, hybridAoE.ImpactRadius * 0.75f),
                     hybridAoE.ImpactRadius,
-                    out _);
+                    out int enemyPressure);
 
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "hybrid_super_damage");
+                AppendAreaDenialDecision(
+                    requestedTarget,
+                    enemyPressure,
+                    CountAlliesNear(point, hybridAoE.ImpactRadius),
+                    hybridAoE.LingeringHazard != null,
+                    isSuper: true,
+                    ref plan);
                 ApplyComboWindow(requestedTarget, currentTick, ref plan);
                 return true;
             }
@@ -277,9 +298,16 @@ namespace MOBA.Core.Simulation.AI
                     volley.ThrowRange,
                     Mathf.Max(4f, volley.ImpactRadius * 1.5f),
                     volley.ImpactRadius,
-                    out _);
+                    out int enemyPressure);
 
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "volley_super_denial");
+                AppendAreaDenialDecision(
+                    requestedTarget,
+                    enemyPressure,
+                    CountAlliesNear(point, volley.ImpactRadius),
+                    volley.LingeringHazard != null,
+                    isSuper: true,
+                    ref plan);
                 ApplyComboWindow(requestedTarget, currentTick, ref plan);
                 return true;
             }
@@ -335,7 +363,7 @@ namespace MOBA.Core.Simulation.AI
 
         public bool ShouldHoldSuperForSpecialistValue()
         {
-            AbilityDefinition ability = _self != null ? _self.Definition?.SuperAbility : null;
+            AbilityDefinition ability = GetCurrentSuperDefinition();
 
             return ability is EffectAbilityDefinition effect &&
                    effect.TargetingType == AbilityTargetingType.Area &&
@@ -416,6 +444,17 @@ namespace MOBA.Core.Simulation.AI
                 target,
                 direction,
                 $"{reason}:{result.Reason}:q={result.Quality:0.00}");
+
+            AIBrawlerPackDecision lineDecision =
+                AIBrawlerIntelligencePackUtility.EvaluateLinePressureCommit(
+                    enemiesInLane,
+                    alliesInLane,
+                    GetTargetHealthRatio(target),
+                    targetControlled,
+                    availableAmmo,
+                    IsSuperAbility(ability));
+
+            AppendPackDecision(lineDecision, ref plan);
 
             if (ability.SlotType == AbilitySlotType.MainAttack)
                 RecordComboSetup(target, currentTick, result.AimPoint, enemiesInLane, alliesInLane);
@@ -534,18 +573,11 @@ namespace MOBA.Core.Simulation.AI
             int bounceTargets,
             bool requestedTargetBonus)
         {
-            float score = Mathf.Max(1, bounceTargets) * 20f;
-
-            if (requestedTargetBonus)
-                score += 8f;
-
-            if (entity is BrawlerController brawler && brawler.State != null)
-            {
-                float healthRatio = brawler.State.CurrentHealth / Mathf.Max(1f, brawler.State.MaxHealth.Value);
-                score += (1f - healthRatio) * 12f;
-            }
-
-            return score;
+            return AIBrawlerIntelligencePackUtility.ScoreChainBounceAnchor(
+                bounceTargets,
+                requestedTargetBonus,
+                GetTargetHealthRatio(entity),
+                IsTargetControlled(entity));
         }
 
         private AIAbilityCastPlan BuildDirectionalPlan(ISpatialEntity target, string reason)
@@ -671,6 +703,34 @@ namespace MOBA.Core.Simulation.AI
             return includePrimaryTarget ? Mathf.Max(1, count) : count;
         }
 
+        private int CountAlliesNear(Vector3 position, float radius)
+        {
+            if (SimulationClock.Grid == null)
+                return 0;
+
+            _scratchBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(position, radius, _scratchBuffer);
+
+            int count = 0;
+            for (int i = 0; i < _scratchBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _scratchBuffer[i];
+                if (!SpatialEntityUtility.IsAlive(entity) ||
+                    entity.EntityID == _self.EntityID ||
+                    entity.Team != _self.Team)
+                {
+                    continue;
+                }
+
+                if (entity is BrawlerController brawler && (brawler.State == null || brawler.State.IsDead))
+                    continue;
+
+                count++;
+            }
+
+            return count;
+        }
+
         private void RecordComboSetup(
             ISpatialEntity target,
             uint currentTick,
@@ -722,13 +782,43 @@ namespace MOBA.Core.Simulation.AI
             if (plan.HasTargetPoint)
             {
                 Vector3 blendedPoint = Vector3.Lerp(plan.TargetPoint, record.LastAimPoint, 0.25f);
-                plan.TargetPoint = ClampPointToRange(blendedPoint, GetAbilityRange(_self.Definition?.SuperAbility, 6f));
+                plan.TargetPoint = ClampPointToRange(blendedPoint, GetAbilityRange(GetCurrentSuperDefinition(), 6f));
                 Vector3 direction = plan.TargetPoint - _self.Position;
                 direction.y = 0f;
                 plan.Direction = direction.sqrMagnitude > 0.001f
                     ? direction.normalized
                     : plan.Direction;
             }
+        }
+
+        private void AppendAreaDenialDecision(
+            ISpatialEntity target,
+            int enemyPressureCount,
+            int allyRiskCount,
+            bool hasLingeringHazard,
+            bool isSuper,
+            ref AIAbilityCastPlan plan)
+        {
+            AIBrawlerPackDecision decision =
+                AIBrawlerIntelligencePackUtility.EvaluateAreaDenialCommit(
+                    enemyPressureCount,
+                    allyRiskCount,
+                    GetTargetHealthRatio(target),
+                    IsTargetControlled(target),
+                    hasLingeringHazard,
+                    isSuper);
+
+            AppendPackDecision(decision, ref plan);
+        }
+
+        private void AppendPackDecision(
+            AIBrawlerPackDecision decision,
+            ref AIAbilityCastPlan plan)
+        {
+            if (decision.ForceUse)
+                plan.ForceUse = true;
+
+            plan.Reason = $"{plan.Reason}|pack={decision.Reason}:{decision.Score:0}";
         }
 
         private float GetTargetHealthRatio(ISpatialEntity target)
@@ -1104,6 +1194,29 @@ namespace MOBA.Core.Simulation.AI
                 return point;
 
             return _self.Position + offset.normalized * range;
+        }
+
+        private AbilityDefinition GetCurrentMainAttackDefinition()
+        {
+            return _self != null && _self.State != null
+                ? _self.State.GetCurrentMainAttackDefinition()
+                : _self != null ? _self.Definition?.MainAttack : null;
+        }
+
+        private AbilityDefinition GetCurrentSuperDefinition()
+        {
+            return _self != null && _self.State != null
+                ? _self.State.GetCurrentSuperDefinition()
+                : _self != null ? _self.Definition?.SuperAbility : null;
+        }
+
+        private bool IsSuperAbility(AbilityDefinition ability)
+        {
+            if (ability == null)
+                return false;
+
+            AbilityDefinition currentSuper = GetCurrentSuperDefinition();
+            return ability.SlotType == AbilitySlotType.Super || ability == currentSuper;
         }
 
         private float GetAbilityRange(AbilityDefinition ability, float fallbackRange)

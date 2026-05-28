@@ -114,7 +114,7 @@ namespace MOBA.Core.Simulation.AI
 
         private bool ShouldUseSuperOnTarget(ISpatialEntity target, float superRange)
         {
-            var super = _self.Definition?.SuperAbility;
+            var super = GetCurrentSuperDefinition();
             if (super == null)
                 return false;
 
@@ -164,10 +164,44 @@ namespace MOBA.Core.Simulation.AI
                     return true;
             }
 
+            if (super is ThrownVolleyAoEAbilityDefinition volley)
+            {
+                int clusterCount = CountEnemiesNear(
+                    target.Position,
+                    Mathf.Max(3.5f, volley.ImpactRadius * 1.6f));
+
+                return clusterCount >= _profile.SuperMinClusterCount ||
+                       healthRatio <= Mathf.Max(0.42f, _profile.SuperLowHealthTargetThreshold);
+            }
+
+            if (super is ThrownHybridAoEAbilityDefinition thrown)
+            {
+                int clusterCount = CountEnemiesNear(
+                    target.Position,
+                    Mathf.Max(3f, thrown.ImpactRadius));
+
+                return clusterCount >= _profile.SuperMinClusterCount ||
+                       healthRatio <= Mathf.Max(0.42f, _profile.SuperLowHealthTargetThreshold);
+            }
+
+            if (super is BurstSequenceProjectileAbilityDefinition)
+            {
+                int laneCluster = CountEnemiesNear(target.Position, 2.75f);
+                return laneCluster >= _profile.SuperMinClusterCount ||
+                       healthRatio <= Mathf.Max(0.38f, _profile.SuperLowHealthTargetThreshold);
+            }
+
             if (super is ProjectileAbilityDefinition)
                 return true;
 
             return superRange >= 6f;
+        }
+
+        private AbilityDefinition GetCurrentSuperDefinition()
+        {
+            return _self != null && _self.State != null
+                ? _self.State.GetCurrentSuperDefinition()
+                : _self != null ? _self.Definition?.SuperAbility : null;
         }
 
         private int CountEnemiesNear(Vector3 position, float radius)
