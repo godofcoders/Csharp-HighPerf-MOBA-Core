@@ -26,6 +26,16 @@ namespace MOBA.Core.Simulation.AI
         public float ChokepointPenalty;
         public float ThreatWeight;
         public float PathCostWeight;
+        public bool PreferCoverPeek;
+        public bool PreferLaneControl;
+        public bool PreferChokeControl;
+        public bool PreferThrowerSafePosition;
+        public bool PreferWallAwarePressure;
+        public float CoverPeekWeight;
+        public float LaneControlWeight;
+        public float ChokeControlWeight;
+        public float ThrowerSafePositionWeight;
+        public float WallPressureWeight;
         public uint CurrentTick;
         public bool HighPriority;
     }
@@ -117,6 +127,7 @@ namespace MOBA.Core.Simulation.AI
                         self,
                         pathfinder,
                         selfCoords,
+                        desiredCoords,
                         coords,
                         candidate,
                         threatCoords,
@@ -292,6 +303,7 @@ namespace MOBA.Core.Simulation.AI
             BrawlerController self,
             AStarSolver pathfinder,
             Vector2Int selfCoords,
+            Vector2Int desiredCoords,
             Vector2Int coords,
             Vector3 candidate,
             Vector2Int threatCoords,
@@ -360,6 +372,21 @@ namespace MOBA.Core.Simulation.AI
                     ref reason);
             }
 
+            AIMapControlEvaluation mapControl = AIMapControlUtility.EvaluateCandidate(
+                pathfinder,
+                selfCoords,
+                coords,
+                desiredCoords,
+                threatCoords,
+                request,
+                self.Definition != null ? self.Definition.Archetype : BrawlerArchetype.Fighter);
+
+            if (Mathf.Abs(mapControl.Score) > 0.01f)
+            {
+                score += mapControl.Score;
+                reason += $"|control:{mapControl.Reason}";
+            }
+
             return score;
         }
 
@@ -377,7 +404,7 @@ namespace MOBA.Core.Simulation.AI
                 pathfinder.GetGridCoords(threatPosition));
         }
 
-        private static bool HasCoverBetween(
+        public static bool HasCoverBetween(
             AStarSolver pathfinder,
             Vector2Int protectedCoords,
             Vector2Int threatCoords)

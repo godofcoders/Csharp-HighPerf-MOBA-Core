@@ -190,6 +190,16 @@ namespace MOBA.Core.Simulation.AI
         public float MapThreatAvoidanceWeight = 4f;
         [Tooltip("Small route-length penalty used when several map-aware destinations are otherwise similar.")]
         public float MapPathCostWeight = 0.2f;
+        [Tooltip("Bonus for direct-fire cells that sit beside cover while keeping a clear shot lane.")]
+        public float MapCoverPeekPreference = 8f;
+        [Tooltip("Bonus for cells that hold the lane between the bot and a pressure point.")]
+        public float MapLaneControlPreference = 7f;
+        [Tooltip("Bonus for controlling the edge of a chokepoint without standing inside it.")]
+        public float MapChokeControlPreference = 9f;
+        [Tooltip("Bonus for thrower-safe cells with wall cover between the bot and a threat.")]
+        public float MapThrowerSafePositionPreference = 12f;
+        [Tooltip("Bonus or penalty for whether walls support the brawler's pressure style.")]
+        public float MapWallPressurePreference = 8f;
         [Tooltip("If true, logs map-aware movement decisions.")]
         public bool LogMapIntelligence = false;
 
@@ -672,6 +682,11 @@ namespace MOBA.Core.Simulation.AI
             MapChokepointPenalty = 12f;
             MapThreatAvoidanceWeight = 4f;
             MapPathCostWeight = 0.2f;
+            MapCoverPeekPreference = 8f;
+            MapLaneControlPreference = 7f;
+            MapChokeControlPreference = 9f;
+            MapThrowerSafePositionPreference = 12f;
+            MapWallPressurePreference = 8f;
             LogMapIntelligence = false;
 
             switch (archetype)
@@ -684,6 +699,10 @@ namespace MOBA.Core.Simulation.AI
                     MapOpenShotPreference = 9f;
                     MapChokepointPenalty = 16f;
                     MapThreatAvoidanceWeight = 5f;
+                    MapCoverPeekPreference = 12f;
+                    MapLaneControlPreference = 10f;
+                    MapChokeControlPreference = 7f;
+                    MapWallPressurePreference = 11f;
                     break;
 
                 case BrawlerArchetype.Tank:
@@ -694,6 +713,11 @@ namespace MOBA.Core.Simulation.AI
                     MapOpenShotPreference = 4f;
                     MapChokepointPenalty = 6f;
                     MapThreatAvoidanceWeight = 2.5f;
+                    MapCoverPeekPreference = 4f;
+                    MapLaneControlPreference = 8f;
+                    MapChokeControlPreference = 13f;
+                    MapThrowerSafePositionPreference = 4f;
+                    MapWallPressurePreference = 5f;
                     break;
 
                 case BrawlerArchetype.Assassin:
@@ -704,6 +728,10 @@ namespace MOBA.Core.Simulation.AI
                     MapOpenShotPreference = 7f;
                     MapChokepointPenalty = 8f;
                     MapThreatAvoidanceWeight = 3.5f;
+                    MapCoverPeekPreference = 9f;
+                    MapLaneControlPreference = 7f;
+                    MapChokeControlPreference = 6f;
+                    MapWallPressurePreference = 7f;
                     break;
 
                 case BrawlerArchetype.Support:
@@ -714,6 +742,10 @@ namespace MOBA.Core.Simulation.AI
                     MapOpenShotPreference = 6f;
                     MapChokepointPenalty = 15f;
                     MapThreatAvoidanceWeight = 5f;
+                    MapCoverPeekPreference = 8f;
+                    MapLaneControlPreference = 9f;
+                    MapChokeControlPreference = 9f;
+                    MapWallPressurePreference = 7f;
                     break;
 
                 case BrawlerArchetype.Controller:
@@ -724,6 +756,10 @@ namespace MOBA.Core.Simulation.AI
                     MapOpenShotPreference = 8f;
                     MapChokepointPenalty = 10f;
                     MapThreatAvoidanceWeight = 4f;
+                    MapCoverPeekPreference = 10f;
+                    MapLaneControlPreference = 12f;
+                    MapChokeControlPreference = 15f;
+                    MapWallPressurePreference = 9f;
                     break;
 
                 case BrawlerArchetype.Artillery:
@@ -734,6 +770,11 @@ namespace MOBA.Core.Simulation.AI
                     MapOpenShotPreference = 0f;
                     MapChokepointPenalty = 17f;
                     MapThreatAvoidanceWeight = 5.5f;
+                    MapCoverPeekPreference = 4f;
+                    MapLaneControlPreference = 9f;
+                    MapChokeControlPreference = 13f;
+                    MapThrowerSafePositionPreference = 18f;
+                    MapWallPressurePreference = 14f;
                     break;
             }
         }

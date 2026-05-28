@@ -372,6 +372,20 @@ namespace MOBA.Core.Simulation.AI
                  routeIntent == AIMapRouteIntent.CombatReposition ||
                  routeIntent == AIMapRouteIntent.Peel);
 
+            bool mapControlRoute =
+                routeIntent == AIMapRouteIntent.CombatAdvance ||
+                routeIntent == AIMapRouteIntent.CombatReposition ||
+                routeIntent == AIMapRouteIntent.Peel ||
+                routeIntent == AIMapRouteIntent.Objective ||
+                routeIntent == AIMapRouteIntent.Search ||
+                routeIntent == AIMapRouteIntent.Regroup;
+
+            bool controlRole =
+                _profile.Archetype == BrawlerArchetype.Controller ||
+                _profile.Archetype == BrawlerArchetype.Artillery ||
+                _profile.Archetype == BrawlerArchetype.Support ||
+                _profile.Archetype == BrawlerArchetype.Tank;
+
             return new AIMapNavigationRequest
             {
                 DesiredDestination = destination,
@@ -404,6 +418,24 @@ namespace MOBA.Core.Simulation.AI
                 ChokepointPenalty = _profile.MapChokepointPenalty,
                 ThreatWeight = _profile.MapThreatAvoidanceWeight,
                 PathCostWeight = _profile.MapPathCostWeight,
+                PreferCoverPeek = hasThreatPosition && directFireRoute,
+                PreferLaneControl = mapControlRoute,
+                PreferChokeControl = mapControlRoute &&
+                                     (controlRole ||
+                                      routeIntent == AIMapRouteIntent.Objective ||
+                                      routeIntent == AIMapRouteIntent.Search),
+                PreferThrowerSafePosition = hasThreatPosition &&
+                                            _profile.Archetype == BrawlerArchetype.Artillery &&
+                                            combatRoute,
+                PreferWallAwarePressure = hasThreatPosition &&
+                                          (combatRoute ||
+                                           routeIntent == AIMapRouteIntent.Objective ||
+                                           routeIntent == AIMapRouteIntent.Search),
+                CoverPeekWeight = _profile.MapCoverPeekPreference,
+                LaneControlWeight = _profile.MapLaneControlPreference,
+                ChokeControlWeight = _profile.MapChokeControlPreference,
+                ThrowerSafePositionWeight = _profile.MapThrowerSafePositionPreference,
+                WallPressureWeight = _profile.MapWallPressurePreference,
                 CurrentTick = _currentExecuteTick,
                 HighPriority = IsCriticalRoute(routeIntent)
             };
