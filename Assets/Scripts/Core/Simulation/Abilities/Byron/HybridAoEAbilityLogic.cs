@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation.AI;
 
 namespace MOBA.Core.Simulation.Abilities
 {
@@ -58,7 +59,18 @@ namespace MOBA.Core.Simulation.Abilities
 
                 if (isAlly)
                 {
+                    float beforeHealth = targetBrawler.State.CurrentHealth;
                     targetBrawler.State.Heal(_definition.AllyHeal);
+                    float healingDone = targetBrawler.State.CurrentHealth - beforeHealth;
+                    if (healingDone > 0f)
+                    {
+                        AIReportCardTracker.RecordHealingDone(
+                            context.Source,
+                            targetBrawler,
+                            healingDone,
+                            context.IsSuper,
+                            context.StartTick);
+                    }
 
                     Debug.Log($"[HYBRID AOE] {context.Source.name} healed ally {targetBrawler.name} for {_definition.AllyHeal}");
 

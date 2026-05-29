@@ -468,6 +468,9 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.ValidationGauntletDebug = _profile.EnableValidationTelemetry
                 ? AIValidationGauntlet.GetDebugSummary()
                 : "Gauntlet=disabled";
+            _debugSnapshot.ReportCardDebug = AIReportCardTracker.GetBotDebugSummary(
+                _brawler.EntityID,
+                currentTick);
             _debugSnapshot.MacroDebug = MacroDebug;
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
@@ -496,6 +499,10 @@ $"Map={LastMapRouteDebug}";
                 return;
 
             _profile = ResolveAIProfile(_brawler.Definition);
+            AIReportCardTracker.RegisterBot(
+                _brawler.EntityID,
+                _brawler.Team,
+                _brawler.Definition != null ? _brawler.Definition.BrawlerName : _brawler.name);
 
             _targetInfo = new AITargetInfo();
 
@@ -756,6 +763,10 @@ $"Map={LastMapRouteDebug}";
                     out Vector3 recoveryDestination);
                 AIValidationGauntlet.RecordSignal(
                     AIValidationGauntletSignal.FailureRecovery,
+                    currentTick);
+                AIReportCardTracker.RecordFailureRecovery(
+                    _brawler.EntityID,
+                    request.Reason,
                     currentTick);
 
                 if (_profile.LogFailureRecovery)

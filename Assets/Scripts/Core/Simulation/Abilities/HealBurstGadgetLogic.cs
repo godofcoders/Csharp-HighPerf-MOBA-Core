@@ -1,5 +1,6 @@
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Definitions;
+using MOBA.Core.Simulation.AI;
 
 namespace MOBA.Core.Simulation.Abilities
 {
@@ -17,7 +18,18 @@ namespace MOBA.Core.Simulation.Abilities
             if (user is not BrawlerController owner || owner.State == null)
                 return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
 
+            float beforeHealth = owner.State.CurrentHealth;
             owner.State.Heal(_healAmount);
+            float healingDone = owner.State.CurrentHealth - beforeHealth;
+            if (healingDone > 0f)
+            {
+                AIReportCardTracker.RecordHealingDone(
+                    owner,
+                    owner,
+                    healingDone,
+                    context.IsSuper,
+                    context.StartTick);
+            }
 
             var result = AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);
             result.ConsumedResource = true;

@@ -1,4 +1,4 @@
-using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation.AI;
 
 namespace MOBA.Core.Simulation
 {
@@ -12,7 +12,18 @@ namespace MOBA.Core.Simulation
             switch (request.EffectType)
             {
                 case SupportEffectType.Heal:
+                    float beforeHealth = request.Target.State.CurrentHealth;
                     request.Target.State.Heal(request.Magnitude);
+                    float healingDone = request.Target.State.CurrentHealth - beforeHealth;
+                    if (healingDone > 0f)
+                    {
+                        AIReportCardTracker.RecordHealingDone(
+                            request.Source,
+                            request.Target,
+                            healingDone,
+                            false,
+                            AIReportCardTracker.GetCurrentTickOrZero());
+                    }
                     return true;
 
                 case SupportEffectType.MoveSpeedBuff:
@@ -40,5 +51,6 @@ namespace MOBA.Core.Simulation
                     return false;
             }
         }
+
     }
 }

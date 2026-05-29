@@ -108,6 +108,14 @@ namespace MOBA.Core.Simulation.AI
                 _actionSwitchCount++;
             }
 
+            AIReportCardTracker.RecordDecision(
+                botEntityId,
+                currentTick,
+                chosenAction,
+                hasLiveTarget,
+                actionScores,
+                teamRoleDebug);
+
             _botRecords[botEntityId] = new BotDecisionRecord
             {
                 ActionType = chosenAction.ActionType,
@@ -155,6 +163,7 @@ namespace MOBA.Core.Simulation.AI
             AIValidationHealthTracker.ResetForTests();
             AIValidationScenarioTracker.ResetForTests();
             AIValidationGauntlet.ResetForTests();
+            AIReportCardTracker.ResetForTests();
             _botRecords.Clear();
             _staleBotBuffer.Clear();
             _hasPurgeTick = false;

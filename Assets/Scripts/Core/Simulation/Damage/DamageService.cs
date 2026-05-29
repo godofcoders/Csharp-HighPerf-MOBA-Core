@@ -1,4 +1,5 @@
 using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation.AI;
 
 namespace MOBA.Core.Simulation
 {
@@ -55,7 +56,18 @@ namespace MOBA.Core.Simulation
 
                     if (outgoingLifesteal > 0f && workingDamage > 0f)
                     {
+                        float beforeHeal = ctx.Attacker.State.CurrentHealth;
                         ctx.Attacker.State.Heal(workingDamage * outgoingLifesteal);
+                        float healingDone = ctx.Attacker.State.CurrentHealth - beforeHeal;
+                        if (healingDone > 0f)
+                        {
+                            AIReportCardTracker.RecordHealingDone(
+                                ctx.Attacker,
+                                ctx.Attacker,
+                                healingDone,
+                                ctx.IsSuper,
+                                AIReportCardTracker.GetCurrentTickOrZero());
+                        }
                     }
                 }
                 else
@@ -132,5 +144,6 @@ namespace MOBA.Core.Simulation
             result = attacker.State.OutgoingDamageModifiers.ApplyIncoming(result, ref dummyShield);
             return result;
         }
+
     }
 }

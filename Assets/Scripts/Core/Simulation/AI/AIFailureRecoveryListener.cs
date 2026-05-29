@@ -33,11 +33,25 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
+            uint previousRecoveryTick = _memory != null ? _memory.LastRecoveryTick : 0u;
+
             _memory?.RecordAbilityResult(
                 evt.SlotType,
                 evt.EventType == AbilityEventType.CastSucceeded,
                 evt.Tick,
                 _profile);
+
+            if (evt.EventType == AbilityEventType.CastFailed &&
+                _memory != null &&
+                _memory.LastRecoveryTick == evt.Tick &&
+                previousRecoveryTick != evt.Tick &&
+                _memory.LastRecoveryReason == AIFailureRecoveryReason.FailedCast)
+            {
+                AIReportCardTracker.RecordFailureRecovery(
+                    _self.EntityID,
+                    AIFailureRecoveryReason.FailedCast,
+                    evt.Tick);
+            }
         }
 
         public void Dispose()

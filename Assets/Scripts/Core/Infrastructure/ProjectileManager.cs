@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Simulation;
+using MOBA.Core.Simulation.AI;
 using MOBA.Core.Definitions;
 
 namespace MOBA.Core.Infrastructure
@@ -207,7 +208,18 @@ namespace MOBA.Core.Infrastructure
                         if (isAlly)
                         {
                             Debug.Log($"[HYBRID PROJECTILE] {p.Owner.name} healed ally {targetBrawler.name} for {p.AllyHealAmount}");
+                            float beforeHealth = targetBrawler.State.CurrentHealth;
                             targetBrawler.State.Heal(p.AllyHealAmount);
+                            float healingDone = targetBrawler.State.CurrentHealth - beforeHealth;
+                            if (healingDone > 0f)
+                            {
+                                AIReportCardTracker.RecordHealingDone(
+                                    p.Owner,
+                                    targetBrawler,
+                                    healingDone,
+                                    p.IsSuper,
+                                    AIReportCardTracker.GetCurrentTickOrZero());
+                            }
 
                             CombatPresentationEventBus.Raise(new CombatPresentationEvent
                             {
@@ -527,7 +539,18 @@ namespace MOBA.Core.Infrastructure
 
                     if (p.ImpactAllyHeal != 0f)
                     {
+                        float beforeHealth = targetBrawler.State.CurrentHealth;
                         targetBrawler.State.Heal(p.ImpactAllyHeal);
+                        float healingDone = targetBrawler.State.CurrentHealth - beforeHealth;
+                        if (healingDone > 0f)
+                        {
+                            AIReportCardTracker.RecordHealingDone(
+                                p.Owner,
+                                targetBrawler,
+                                healingDone,
+                                p.IsSuper,
+                                AIReportCardTracker.GetCurrentTickOrZero());
+                        }
                         Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} healed ally {targetBrawler.name} for {p.ImpactAllyHeal}");
                     }
                 }
