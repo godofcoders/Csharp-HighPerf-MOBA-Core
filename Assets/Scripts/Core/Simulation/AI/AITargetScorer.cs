@@ -92,6 +92,25 @@ namespace MOBA.Core.Simulation.AI
                 {
                     score += 10f;
                 }
+
+                if (AIOpponentModel.TryGetSnapshot(
+                        _self.Team,
+                        targetEntityId,
+                        currentTick,
+                        360u,
+                        out AIOpponentHabitSnapshot habit))
+                {
+                    score += habit.Aggression * 18f;
+
+                    if (habit.PreferredTargetEntityId == _self.EntityID)
+                        score += habit.TargetPreferenceConfidence * 22f;
+
+                    if (healthRatio <= _profile.FinisherHealthThreshold)
+                        score += habit.LowHealthGreed * 16f;
+
+                    if (habit.ObjectiveNeglect > 0.55f)
+                        score -= habit.ObjectiveNeglect * 6f;
+                }
             }
 
             // 4. My own remembered threat memory

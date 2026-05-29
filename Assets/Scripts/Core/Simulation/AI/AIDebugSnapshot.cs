@@ -38,6 +38,7 @@ namespace MOBA.Core.Simulation.AI
         public string FailureRecoveryDebug;
         public string HumanizationDebug;
         public string TuningDebug;
+        public string OpponentModelDebug;
         public string ObjectiveName;
 
         public readonly List<AIActionScore> ActionScores = new List<AIActionScore>(16);

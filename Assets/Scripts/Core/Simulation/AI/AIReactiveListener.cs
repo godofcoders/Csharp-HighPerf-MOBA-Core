@@ -51,6 +51,26 @@ namespace MOBA.Core.Simulation.AI
                 _self.State.MaxHealth.Value,
                 currentTick);
 
+            if (damage.Attacker is BrawlerController attacker &&
+                attacker.State != null)
+            {
+                float attackerHealthRatio =
+                    attacker.State.CurrentHealth /
+                    UnityEngine.Mathf.Max(1f, attacker.State.MaxHealth.Value);
+
+                float damagePressure =
+                    result.FinalDamageApplied /
+                    UnityEngine.Mathf.Max(1f, _self.State.MaxHealth.Value);
+
+                AIOpponentModel.RecordDamage(
+                    _self.Team,
+                    attacker.EntityID,
+                    _self.EntityID,
+                    attackerHealthRatio,
+                    damagePressure,
+                    currentTick);
+            }
+
             if (_profile != null && _profile.LogReactiveEvents)
             {
                 UnityEngine.Debug.Log(

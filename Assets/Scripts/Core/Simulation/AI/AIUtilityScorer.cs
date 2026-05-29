@@ -98,7 +98,7 @@ namespace MOBA.Core.Simulation.AI
             results.Add(ScoreRegroup(targetInfo, currentTick, macroState));
             results.Add(ScoreSearch(targetInfo, currentTick, macroState));
             results.Add(ScoreWander());
-            results.Add(ScoreObjective(targetInfo, macroState));
+            results.Add(ScoreObjective(targetInfo, currentTick, macroState));
 
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
             ApplyPlaybookCoordination(targetInfo, playbookState, results);
@@ -1044,6 +1044,7 @@ namespace MOBA.Core.Simulation.AI
 
         private AIActionScore ScoreObjective(
             AITargetInfo targetInfo,
+            uint currentTick,
             AIGameModeMacroState macroState)
         {
             _lastObjectiveAllyPressure = 0f;
@@ -1163,6 +1164,18 @@ namespace MOBA.Core.Simulation.AI
                     score += 8f;
                     _lastObjectiveScoreReason += "|zone_hold_+8";
                 }
+            }
+
+            float opponentObjectiveNeglect = AIOpponentModel.GetMaxObjectiveNeglect(
+                _self.Team,
+                currentTick,
+                360u);
+
+            if (opponentObjectiveNeglect > 0.20f)
+            {
+                float neglectBonus = opponentObjectiveNeglect * 14f;
+                score += neglectBonus;
+                _lastObjectiveScoreReason += $"|opp_neglect_+{neglectBonus:0.0}";
             }
 
             _lastObjectiveRawScore = score;

@@ -59,6 +59,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Recovery: {snapshot.FailureRecoveryDebug}");
             GUILayout.Label($"Humanization: {snapshot.HumanizationDebug}");
             GUILayout.Label($"Tuning: {snapshot.TuningDebug}");
+            GUILayout.Label($"Opponent: {snapshot.OpponentModelDebug}");
             GUILayout.Label($"Objective: {snapshot.ObjectiveName}");
             GUILayout.Label($"Objective Debug: {snapshot.ObjectiveDebug}");
             GUILayout.Label($"Tactical/Map: {snapshot.TacticalMovementDebug}");
@@ -136,6 +137,7 @@ namespace MOBA.Core.Simulation.AI
                     $"Recovery={snapshot.FailureRecoveryDebug} | " +
                     $"Humanization={snapshot.HumanizationDebug} | " +
                     $"Tuning={snapshot.TuningDebug} | " +
+                    $"Opponent={snapshot.OpponentModelDebug} | " +
                     $"Objective={snapshot.ObjectiveDebug} | " +
                     $"Tactical={snapshot.TacticalMovementDebug} | " +
                     $"Perf={snapshot.PerformanceDebug} | " +

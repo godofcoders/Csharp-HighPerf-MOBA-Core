@@ -1011,7 +1011,25 @@ namespace MOBA.Core.Simulation.AI
                 Tick = currentTick
             };
 
-            return ClampTargetVelocity(target, velocity);
+            velocity = ClampTargetVelocity(target, velocity);
+
+            if (_self != null &&
+                AIOpponentModel.TryGetSnapshot(
+                    _self.Team,
+                    targetId,
+                    currentTick,
+                    360u,
+                    out AIOpponentHabitSnapshot habit))
+            {
+                velocity = AIOpponentModel.ApplyDodgeHabitToVelocity(
+                    _self.Position,
+                    currentPosition,
+                    velocity,
+                    habit,
+                    0.65f);
+            }
+
+            return velocity;
         }
 
         private Vector3 ClampTargetVelocity(ISpatialEntity target, Vector3 velocity)

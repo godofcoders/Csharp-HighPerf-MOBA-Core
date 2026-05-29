@@ -55,6 +55,7 @@ namespace MOBA.Core.Infrastructure
         private string _lastDangerDebug = "Danger=None";
         private string _lastFailureRecoveryDebug = "Recovery=None";
         private string _lastTuningDebug = "Tuning=None";
+        private string _lastOpponentModelDebug = "Opponent=None";
         private string _lastBudgetDebug = "Budget=OK map=0/0 paths=0/0 nodes=0/0 maxNodes=0";
         private readonly AIDebugSnapshot _debugSnapshot = new AIDebugSnapshot();
         private readonly System.Collections.Generic.List<AIActionScore> _debugScores = new System.Collections.Generic.List<AIActionScore>(16);
@@ -146,6 +147,7 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastMacroDebug : "Macro=None";
         public string PlaybookDebug =>
             _utilityScorer != null ? _utilityScorer.LastPlaybookDebug : "Playbook=None";
+        public string OpponentModelDebug => _lastOpponentModelDebug;
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
         public string TuningDebug => _lastTuningDebug;
@@ -274,6 +276,7 @@ _actionExecutor != null
             }
 
             _teamCoordinator.UpdateTeamSignals(_targetInfo, currentTick);
+            UpdateOpponentModel(currentTick);
             ReportCurrentTargetFocus();
             RefreshDangerIfDue(currentTick);
 
@@ -320,7 +323,69 @@ _actionExecutor != null
             UpdateDebugSnapshotIfDue(currentTick);
         }
 
+        private void UpdateOpponentModel(uint currentTick)
+        {
+            _lastOpponentModelDebug = _brawler != null
+                ? AIOpponentModel.GetBestDebugSummary(_brawler.Team, currentTick)
+                : "Opponent=None";
 
+            if (_brawler == null ||
+                _targetInfo == null ||
+                !_targetInfo.HasLiveTarget ||
+                _targetInfo.Target is not BrawlerController opponent ||
+                opponent.State == null ||
+                opponent.State.IsDead)
+            {
+                return;
+            }
+
+            bool hasObjectivePoint = TryGetOpponentModelObjectivePoint(out Vector3 objectivePoint);
+            float opponentHealthRatio =
+                opponent.State.CurrentHealth /
+                Mathf.Max(1f, opponent.State.MaxHealth.Value);
+
+            AIOpponentModel.RecordMovementSample(
+                _brawler.Team,
+                opponent.EntityID,
+                _brawler.Position,
+                opponent.Position,
+                opponentHealthRatio,
+                hasObjectivePoint,
+                objectivePoint,
+                4.5f,
+                currentTick);
+
+            if (AIOpponentModel.TryGetSnapshot(
+                    _brawler.Team,
+                    opponent.EntityID,
+                    currentTick,
+                    360u,
+                    out AIOpponentHabitSnapshot snapshot))
+            {
+                _lastOpponentModelDebug = snapshot.GetDebugSummary();
+            }
+        }
+
+        private bool TryGetOpponentModelObjectivePoint(out Vector3 objectivePoint)
+        {
+            objectivePoint = default;
+
+            if (_objectiveMemory == null ||
+                !_objectiveMemory.HasAnyObjectives())
+            {
+                return false;
+            }
+
+            AIObjectivePoint objective = _objectiveMemory.GetBestObjective(
+                _brawler.Position,
+                _profile != null ? _profile.PreferredObjective : AIObjectiveType.None);
+
+            if (objective == null)
+                return false;
+
+            objectivePoint = objective.transform.position;
+            return true;
+        }
 
         private void UpdateDebugSnapshot(uint currentTick)
         {
@@ -420,6 +485,7 @@ _actionExecutor != null
             _debugSnapshot.FailureRecoveryDebug = _lastFailureRecoveryDebug;
             _debugSnapshot.HumanizationDebug = HumanizationDebug;
             _debugSnapshot.TuningDebug = TuningDebug;
+            _debugSnapshot.OpponentModelDebug = OpponentModelDebug;
 
             _debugSnapshot.ObjectiveName = _profile != null ? _profile.PreferredObjective.ToString() : "None";
 
