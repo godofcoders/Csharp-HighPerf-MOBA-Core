@@ -820,6 +820,9 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
+            if (TryRunPlaybookPressureSearch(currentTick))
+                return;
+
             if (_teamCoordinator != null &&
                 _teamCoordinator.TryGetThreatCenter(currentTick, out var threatCenter, out _))
             {
@@ -876,6 +879,26 @@ namespace MOBA.Core.Simulation.AI
                 }
             }
             _navAgent.Stop();
+        }
+
+        private bool TryRunPlaybookPressureSearch(uint currentTick)
+        {
+            if (_teamCoordinator == null ||
+                !_teamCoordinator.TryGetPlaybookState(currentTick, out AITeamPlaybookState playbookState) ||
+                !playbookState.HasPressurePoint)
+            {
+                return false;
+            }
+
+            RequestMapAwareDestination(
+                playbookState.PressurePoint,
+                1.0f,
+                AIMapRouteIntent.Search,
+                true,
+                playbookState.PressurePoint,
+                GetTacticalPreferredRange(GetAbilityIdealRange()));
+
+            return true;
         }
 
         private void RunFallbackWander(uint currentTick)
@@ -938,6 +961,9 @@ namespace MOBA.Core.Simulation.AI
         {
             if (_teamCoordinator == null || !_teamCoordinator.TryGetAllyUnderThreat(currentTick, out var ally) || ally == null)
             {
+                if (TryRunPlaybookEscort(currentTick))
+                    return;
+
                 _navAgent.Stop();
                 return;
             }
@@ -978,6 +1004,24 @@ namespace MOBA.Core.Simulation.AI
                 ally.Position,
                 1.0f,
                 AIMapRouteIntent.Peel);
+        }
+
+        private bool TryRunPlaybookEscort(uint currentTick)
+        {
+            if (_teamCoordinator == null ||
+                !_teamCoordinator.TryGetPlaybookState(currentTick, out AITeamPlaybookState playbookState) ||
+                playbookState.Call != AITeamPlaybookCall.EscortCarrier ||
+                !playbookState.HasEscortTargetPoint)
+            {
+                return false;
+            }
+
+            RequestMapAwareDestination(
+                playbookState.EscortTargetPoint,
+                1.0f,
+                AIMapRouteIntent.Peel);
+
+            return true;
         }
 
         private bool ShouldRefreshTacticalMove(

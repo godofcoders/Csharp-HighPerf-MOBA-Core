@@ -32,6 +32,7 @@ namespace MOBA.Core.Simulation.AI
         public string TeamSignalDebug;
         public string TeamRoleDebug;
         public string MacroDebug;
+        public string PlaybookDebug;
         public string ReactiveDebug;
         public string DangerDebug;
         public string FailureRecoveryDebug;

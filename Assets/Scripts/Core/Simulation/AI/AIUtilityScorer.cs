@@ -38,6 +38,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastObjectiveScoreReason;
         private string _lastTeamRoleDebug = "RoleCoord=None";
         private string _lastMacroDebug = "Macro=None";
+        private string _lastPlaybookDebug = "Playbook=None";
 
         public float LastObjectiveAllyPressure => _lastObjectiveAllyPressure;
         public float LastObjectiveCrowdingPenalty => _lastObjectiveCrowdingPenalty;
@@ -46,6 +47,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastObjectiveScoreReason => _lastObjectiveScoreReason;
         public string LastTeamRoleDebug => _lastTeamRoleDebug;
         public string LastMacroDebug => _lastMacroDebug;
+        public string LastPlaybookDebug => _lastPlaybookDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -81,6 +83,10 @@ namespace MOBA.Core.Simulation.AI
             results.Clear();
 
             AIGameModeMacroState macroState = ResolveMacroState();
+            AITeamPlaybookState playbookState = ResolvePlaybookState(
+                targetInfo,
+                currentTick,
+                macroState);
 
             results.Add(ScoreEvade());
             results.Add(ScoreRetreat(targetInfo, currentTick, macroState));
@@ -95,6 +101,7 @@ namespace MOBA.Core.Simulation.AI
             results.Add(ScoreObjective(targetInfo, macroState));
 
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
+            ApplyPlaybookCoordination(targetInfo, playbookState, results);
         }
 
         private AIGameModeMacroState ResolveMacroState()
@@ -103,6 +110,26 @@ namespace MOBA.Core.Simulation.AI
                 AIGameModeMacroStrategy.ResolveGemGrab(GemGrabMode.Instance, _self.Team);
 
             _lastMacroDebug = state.GetDebugSummary();
+            return state;
+        }
+
+        private AITeamPlaybookState ResolvePlaybookState(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState)
+        {
+            if (_teamCoordinator == null)
+            {
+                _lastPlaybookDebug = "Playbook=None";
+                return AITeamPlaybookState.None(currentTick);
+            }
+
+            AITeamPlaybookState state = _teamCoordinator.UpdatePlaybook(
+                targetInfo,
+                macroState,
+                currentTick);
+
+            _lastPlaybookDebug = state.GetDebugSummary();
             return state;
         }
 
@@ -184,6 +211,297 @@ namespace MOBA.Core.Simulation.AI
 
             if (!string.IsNullOrEmpty(deltaDebug))
                 _lastTeamRoleDebug += $" Delta={deltaDebug}";
+        }
+
+        private void ApplyPlaybookCoordination(
+            AITargetInfo targetInfo,
+            AITeamPlaybookState playbookState,
+            List<AIActionScore> results)
+        {
+            if (!playbookState.IsActive || results == null || results.Count == 0)
+                return;
+
+            float weight = GetPlaybookWeight();
+            if (weight <= 0f)
+                return;
+
+            string deltaDebug = string.Empty;
+
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculatePlaybookDelta(actionScore.ActionType, playbookState);
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreatePlaybookScore(actionScore.ActionType, targetInfo, playbookState))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta * weight * playbookState.Urgency);
+
+                results[i] = new AIActionScore(actionScore.ActionType, adjustedScore);
+
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{adjustedScore - actionScore.Score:+0.0;-0.0}");
+            }
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastPlaybookDebug += $" Delta={deltaDebug}";
+        }
+
+        private float CalculatePlaybookDelta(
+            AIActionType actionType,
+            AITeamPlaybookState playbookState)
+        {
+            bool selfCarrier =
+                _self != null &&
+                _self.State != null &&
+                _self.State.CarriedGemCount > 0 &&
+                playbookState.CarrierEntityId == _self.EntityID;
+
+            switch (playbookState.Call)
+            {
+                case AITeamPlaybookCall.Push:
+                    return GetPushPlaybookDelta(actionType);
+
+                case AITeamPlaybookCall.Hold:
+                    return GetHoldPlaybookDelta(actionType, selfCarrier);
+
+                case AITeamPlaybookCall.Reset:
+                    return GetResetPlaybookDelta(actionType, selfCarrier);
+
+                case AITeamPlaybookCall.EscortCarrier:
+                    return GetEscortCarrierPlaybookDelta(actionType, playbookState.Lane, selfCarrier);
+
+                case AITeamPlaybookCall.PinchPressure:
+                    return GetPinchPressurePlaybookDelta(actionType, playbookState.Lane);
+
+                case AITeamPlaybookCall.BaitAndCollapse:
+                    return GetBaitAndCollapsePlaybookDelta(actionType, playbookState.Lane);
+
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetPushPlaybookDelta(AIActionType actionType)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return 10f;
+                case AIActionType.Reposition:
+                    return 6f;
+                case AIActionType.Objective:
+                    return 8f;
+                case AIActionType.Search:
+                    return 6f;
+                case AIActionType.Retreat:
+                    return -6f;
+                case AIActionType.Regroup:
+                    return -4f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetHoldPlaybookDelta(AIActionType actionType, bool selfCarrier)
+        {
+            switch (actionType)
+            {
+                case AIActionType.HoldRange:
+                    return 12f;
+                case AIActionType.Reposition:
+                    return 4f;
+                case AIActionType.Peel:
+                    return 8f;
+                case AIActionType.Regroup:
+                    return selfCarrier ? 10f : 5f;
+                case AIActionType.Retreat:
+                    return selfCarrier ? 8f : 0f;
+                case AIActionType.Approach:
+                    return selfCarrier ? -16f : -6f;
+                case AIActionType.Search:
+                    return -6f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetResetPlaybookDelta(AIActionType actionType, bool selfCarrier)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return selfCarrier ? -8f : 12f;
+                case AIActionType.Reposition:
+                    return 8f;
+                case AIActionType.UseSuper:
+                    return 6f;
+                case AIActionType.Search:
+                    return 8f;
+                case AIActionType.Objective:
+                    return 8f;
+                case AIActionType.Regroup:
+                    return selfCarrier ? 8f : -6f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetEscortCarrierPlaybookDelta(
+            AIActionType actionType,
+            AITeamLaneAssignment lane,
+            bool selfCarrier)
+        {
+            if (selfCarrier || lane == AITeamLaneAssignment.Anchor)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Retreat:
+                        return 14f;
+                    case AIActionType.HoldRange:
+                        return 12f;
+                    case AIActionType.Regroup:
+                        return 10f;
+                    case AIActionType.Reposition:
+                        return 6f;
+                    case AIActionType.Approach:
+                        return -18f;
+                    case AIActionType.Objective:
+                    case AIActionType.Search:
+                        return -10f;
+                    default:
+                        return 0f;
+                }
+            }
+
+            switch (actionType)
+            {
+                case AIActionType.Peel:
+                    return 16f;
+                case AIActionType.HoldRange:
+                    return 10f;
+                case AIActionType.Reposition:
+                    return 8f;
+                case AIActionType.Regroup:
+                    return 6f;
+                case AIActionType.Approach:
+                    return -4f;
+                case AIActionType.Search:
+                    return -8f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetPinchPressurePlaybookDelta(
+            AIActionType actionType,
+            AITeamLaneAssignment lane)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return lane == AITeamLaneAssignment.Flank ? 10f : 5f;
+                case AIActionType.Reposition:
+                    return lane == AITeamLaneAssignment.Flank ? 16f : 8f;
+                case AIActionType.HoldRange:
+                    return lane == AITeamLaneAssignment.Anchor ? 12f : 5f;
+                case AIActionType.UseSuper:
+                    return 4f;
+                case AIActionType.Search:
+                    return 8f;
+                case AIActionType.Retreat:
+                    return -6f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetBaitAndCollapsePlaybookDelta(
+            AIActionType actionType,
+            AITeamLaneAssignment lane)
+        {
+            if (lane == AITeamLaneAssignment.Bait)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Retreat:
+                        return 12f;
+                    case AIActionType.HoldRange:
+                        return 10f;
+                    case AIActionType.Reposition:
+                        return 8f;
+                    case AIActionType.Approach:
+                        return -12f;
+                    default:
+                        return 0f;
+                }
+            }
+
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return 12f;
+                case AIActionType.Peel:
+                    return 14f;
+                case AIActionType.Reposition:
+                    return 10f;
+                case AIActionType.UseSuper:
+                    return 6f;
+                case AIActionType.Retreat:
+                    return -6f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private bool CanCreatePlaybookScore(
+            AIActionType actionType,
+            AITargetInfo targetInfo,
+            AITeamPlaybookState playbookState)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Search:
+                    return playbookState.HasPressurePoint &&
+                           (targetInfo == null || !targetInfo.HasLiveTarget);
+
+                case AIActionType.Peel:
+                    return playbookState.Call == AITeamPlaybookCall.BaitAndCollapse ||
+                           (playbookState.Call == AITeamPlaybookCall.EscortCarrier &&
+                            playbookState.HasEscortTargetPoint);
+
+                default:
+                    return targetInfo != null &&
+                           targetInfo.HasLiveTarget &&
+                           (actionType == AIActionType.Approach ||
+                            actionType == AIActionType.HoldRange ||
+                            actionType == AIActionType.Reposition);
+            }
+        }
+
+        private float GetPlaybookWeight()
+        {
+            if (_profile == null || !_profile.UseTeamRoleCoordination)
+                return 0f;
+
+            float teamplay = _self != null && _self.Definition != null
+                ? _self.Definition.TeamplayWeight
+                : 1f;
+
+            return Mathf.Clamp(
+                teamplay * Mathf.Max(0.35f, _profile.TeamRoleCoordinationWeight),
+                0.25f,
+                1.50f);
         }
 
         private float CalculateTeamRoleDelta(

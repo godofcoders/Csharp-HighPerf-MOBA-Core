@@ -28,6 +28,14 @@ namespace MOBA.Core.Simulation.AI
             public uint PeelTick;
             public float PeelUrgency;
 
+            public BrawlerController Carrier;
+            public uint CarrierTick;
+            public int CarrierGemCount;
+
+            public AITeamPlaybookState PlaybookState;
+            public uint PlaybookTick;
+            public bool HasPlaybookState;
+
             public AITeamFocusTracker FocusTracker;
             public AITeamActionTracker ActionTracker;
             public TeamPositionSignal EnemyHotspot;
@@ -143,6 +151,83 @@ namespace MOBA.Core.Simulation.AI
             }
 
             ally = null;
+            return false;
+        }
+
+        public static void ReportCarrier(
+            TeamType team,
+            BrawlerController carrier,
+            int carriedGemCount,
+            uint currentTick)
+        {
+            if (!SpatialEntityUtility.IsAlive(carrier) || carriedGemCount <= 0)
+                return;
+
+            ref TeamData data = ref GetData(team);
+
+            if (SpatialEntityUtility.IsAlive(data.Carrier) &&
+                currentTick - data.CarrierTick <= 20 &&
+                data.CarrierGemCount > carriedGemCount)
+            {
+                return;
+            }
+
+            data.Carrier = carrier;
+            data.CarrierTick = currentTick;
+            data.CarrierGemCount = carriedGemCount;
+        }
+
+        public static bool TryGetCarrier(
+            TeamType team,
+            uint currentTick,
+            uint maxAgeTicks,
+            out BrawlerController carrier,
+            out int carriedGemCount)
+        {
+            ref TeamData data = ref GetData(team);
+
+            if (SpatialEntityUtility.IsAlive(data.Carrier) &&
+                currentTick - data.CarrierTick <= maxAgeTicks &&
+                data.Carrier.State != null &&
+                !data.Carrier.State.IsDead &&
+                data.Carrier.State.CarriedGemCount > 0)
+            {
+                carrier = data.Carrier;
+                carriedGemCount = data.Carrier.State.CarriedGemCount;
+                return true;
+            }
+
+            carrier = null;
+            carriedGemCount = 0;
+            return false;
+        }
+
+        public static void ReportPlaybookState(
+            TeamType team,
+            AITeamPlaybookState state,
+            uint currentTick)
+        {
+            ref TeamData data = ref GetData(team);
+            data.PlaybookState = state;
+            data.PlaybookTick = currentTick;
+            data.HasPlaybookState = state.IsActive;
+        }
+
+        public static bool TryGetPlaybookState(
+            TeamType team,
+            uint currentTick,
+            uint maxAgeTicks,
+            out AITeamPlaybookState state)
+        {
+            ref TeamData data = ref GetData(team);
+
+            if (data.HasPlaybookState && currentTick - data.PlaybookTick <= maxAgeTicks)
+            {
+                state = data.PlaybookState;
+                return true;
+            }
+
+            state = AITeamPlaybookState.None(currentTick);
             return false;
         }
 

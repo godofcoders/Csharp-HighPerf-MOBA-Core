@@ -14,10 +14,18 @@ namespace MOBA.Core.Simulation.AI
         private const uint EnemyHotspotMemoryTicks = 120;
         private const uint ThreatCenterMemoryTicks = 75;
         private const uint ActionIntentMemoryTicks = 12;
+        private const uint CarrierMemoryTicks = 90;
+        private const uint PlaybookMemoryTicks = 20;
+
+        private AITeamPlaybookState _lastPlaybookState;
+        private string _lastPlaybookDebug = "Playbook=None";
+
+        public string LastPlaybookDebug => _lastPlaybookDebug;
 
         public AITeamCoordinator(BrawlerController self)
         {
             _self = self;
+            _lastPlaybookState = AITeamPlaybookState.None(0u);
         }
 
         public void UpdateTeamSignals(AITargetInfo targetInfo, uint currentTick)
@@ -67,6 +75,43 @@ namespace MOBA.Core.Simulation.AI
                     currentTick,
                     BuildRegroupUrgency(healthRatio));
             }
+
+            if (_self.State.CarriedGemCount > 0)
+            {
+                AITeamBlackboard.ReportCarrier(
+                    _self.Team,
+                    _self,
+                    _self.State.CarriedGemCount,
+                    currentTick);
+            }
+        }
+
+        public AITeamPlaybookState UpdatePlaybook(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState,
+            uint currentTick)
+        {
+            if (_self == null || _self.State == null || _self.State.IsDead)
+            {
+                _lastPlaybookState = AITeamPlaybookState.None(currentTick);
+                _lastPlaybookDebug = _lastPlaybookState.GetDebugSummary();
+                return _lastPlaybookState;
+            }
+
+            AITeamPlaybookContext context = BuildPlaybookContext(
+                targetInfo,
+                macroState,
+                currentTick);
+
+            _lastPlaybookState = AITeamPlaybookDirector.Resolve(context);
+            _lastPlaybookDebug = _lastPlaybookState.GetDebugSummary();
+
+            AITeamBlackboard.ReportPlaybookState(
+                _self.Team,
+                _lastPlaybookState,
+                currentTick);
+
+            return _lastPlaybookState;
         }
 
         public bool TryGetFocusTarget(uint currentTick, out BrawlerController target)
@@ -102,6 +147,37 @@ namespace MOBA.Core.Simulation.AI
                 ThreatCenterMemoryTicks,
                 out position,
                 out pressure);
+        }
+
+        public bool TryGetCarrier(
+            uint currentTick,
+            out BrawlerController carrier,
+            out int carriedGemCount)
+        {
+            return AITeamBlackboard.TryGetCarrier(
+                _self.Team,
+                currentTick,
+                CarrierMemoryTicks,
+                out carrier,
+                out carriedGemCount);
+        }
+
+        public bool TryGetPlaybookState(
+            uint currentTick,
+            out AITeamPlaybookState state)
+        {
+            if (_lastPlaybookState.IsActive &&
+                currentTick - _lastPlaybookState.Tick <= PlaybookMemoryTicks)
+            {
+                state = _lastPlaybookState;
+                return true;
+            }
+
+            return AITeamBlackboard.TryGetPlaybookState(
+                _self.Team,
+                currentTick,
+                PlaybookMemoryTicks,
+                out state);
         }
 
         public void ReportTargetFocusCount(int targetEntityId)
@@ -202,6 +278,121 @@ namespace MOBA.Core.Simulation.AI
                    Mathf.Clamp(threat / 500f, 0f, 3f) +
                    healthUrgency * 2f +
                    gemUrgency;
+        }
+
+        private AITeamPlaybookContext BuildPlaybookContext(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState,
+            uint currentTick)
+        {
+            float healthRatio = _self.State.CurrentHealth /
+                                Mathf.Max(1f, _self.State.MaxHealth.Value);
+
+            AITeamPlaybookContext context = new AITeamPlaybookContext
+            {
+                BotEntityId = _self.EntityID,
+                Tick = currentTick,
+                SelfPosition = _self.Position,
+                HealthRatio = healthRatio,
+                MacroState = macroState,
+                SelfIsCarrier = _self.State.CarriedGemCount > 0,
+                SelfCarriedGems = _self.State.CarriedGemCount,
+                ApproachAllies = GetActionIntentCountExcludingSelf(AIActionType.Approach, currentTick),
+                HoldAllies = GetActionIntentCountExcludingSelf(AIActionType.HoldRange, currentTick),
+                RepositionAllies = GetActionIntentCountExcludingSelf(AIActionType.Reposition, currentTick),
+                PeelAllies = GetActionIntentCountExcludingSelf(AIActionType.Peel, currentTick),
+                RegroupAllies = GetActionIntentCountExcludingSelf(AIActionType.Regroup, currentTick),
+                ObjectiveAllies = GetActionIntentCountExcludingSelf(AIActionType.Objective, currentTick)
+            };
+
+            PopulateCarrierContext(ref context, currentTick);
+            PopulateThreatenedAllyContext(ref context, currentTick);
+            PopulateFocusContext(ref context, targetInfo, currentTick);
+            PopulatePositionSignalContext(ref context, currentTick);
+
+            return context;
+        }
+
+        private void PopulateCarrierContext(
+            ref AITeamPlaybookContext context,
+            uint currentTick)
+        {
+            if (!TryGetCarrier(currentTick, out BrawlerController carrier, out int carriedGemCount) ||
+                !SpatialEntityUtility.IsAlive(carrier))
+            {
+                return;
+            }
+
+            if (carrier.EntityID == _self.EntityID)
+            {
+                context.SelfIsCarrier = carriedGemCount > 0;
+                context.SelfCarriedGems = carriedGemCount;
+                return;
+            }
+
+            context.HasAllyCarrier = true;
+            context.AllyCarrierEntityId = carrier.EntityID;
+            context.AllyCarrierGemCount = carriedGemCount;
+            context.AllyCarrierPosition = carrier.Position;
+        }
+
+        private void PopulateThreatenedAllyContext(
+            ref AITeamPlaybookContext context,
+            uint currentTick)
+        {
+            if (!TryGetAllyUnderThreat(currentTick, out BrawlerController ally) ||
+                !SpatialEntityUtility.IsAlive(ally))
+            {
+                return;
+            }
+
+            context.HasAllyUnderThreat = true;
+            context.ThreatenedAllyEntityId = ally.EntityID;
+            context.ThreatenedAllyPosition = ally.Position;
+            context.SelfIsThreatenedAlly = ally.EntityID == _self.EntityID;
+        }
+
+        private void PopulateFocusContext(
+            ref AITeamPlaybookContext context,
+            AITargetInfo targetInfo,
+            uint currentTick)
+        {
+            if (targetInfo != null &&
+                targetInfo.HasLiveTarget &&
+                SpatialEntityUtility.TryGetEntityId(targetInfo.Target, out int targetId))
+            {
+                context.HasFocusTarget = true;
+                context.FocusTargetEntityId = targetId;
+                context.FocusTargetPosition = targetInfo.Target.Position;
+                return;
+            }
+
+            if (TryGetFocusTarget(currentTick, out BrawlerController focusTarget) &&
+                SpatialEntityUtility.IsAlive(focusTarget))
+            {
+                context.HasFocusTarget = true;
+                context.FocusTargetEntityId = focusTarget.EntityID;
+                context.FocusTargetPosition = focusTarget.Position;
+            }
+        }
+
+        private void PopulatePositionSignalContext(
+            ref AITeamPlaybookContext context,
+            uint currentTick)
+        {
+            if (TryGetEnemyHotspot(currentTick, out Vector3 enemyHotspot, out float enemyPressure))
+            {
+                context.HasEnemyHotspot = true;
+                context.EnemyHotspotPosition = enemyHotspot;
+                context.EnemyHotspotPressure = enemyPressure;
+            }
+
+            if (TryGetThreatCenter(currentTick, out Vector3 threatCenter, out float threatPressure))
+            {
+                context.HasThreatCenter = true;
+                context.ThreatCenterPosition = threatCenter;
+                context.ThreatCenterPressure = threatPressure;
+            }
         }
 
         private float BuildRegroupUrgency(float selfHealthRatio)

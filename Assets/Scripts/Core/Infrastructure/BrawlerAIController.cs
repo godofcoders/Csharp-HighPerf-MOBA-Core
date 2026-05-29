@@ -144,6 +144,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastTeamRoleDebug : "RoleCoord=None";
         public string MacroDebug =>
             _utilityScorer != null ? _utilityScorer.LastMacroDebug : "Macro=None";
+        public string PlaybookDebug =>
+            _utilityScorer != null ? _utilityScorer.LastPlaybookDebug : "Playbook=None";
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
         public string TuningDebug => _lastTuningDebug;
@@ -396,6 +398,7 @@ _actionExecutor != null
 
                 _debugSnapshot.TeamSignalDebug = $"{threatSignal} {hotspotSignal}";
                 _debugSnapshot.TeamRoleDebug = TeamRoleDebug;
+                _debugSnapshot.PlaybookDebug = PlaybookDebug;
             }
             else
             {
@@ -403,6 +406,7 @@ _actionExecutor != null
                 _debugSnapshot.TeamSignalDebug = "Threat=None Hotspot=None";
                 _debugSnapshot.TeamRoleDebug = "RoleCoord=None";
                 _debugSnapshot.MacroDebug = "Macro=None";
+                _debugSnapshot.PlaybookDebug = "Playbook=None";
             }
 
             _lastReactiveDebug = _reactiveMemory != null && _profile != null
@@ -481,6 +485,7 @@ $"Map={LastMapRouteDebug}";
                 _brawler.EntityID,
                 currentTick);
             _debugSnapshot.MacroDebug = MacroDebug;
+            _debugSnapshot.PlaybookDebug = PlaybookDebug;
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }
