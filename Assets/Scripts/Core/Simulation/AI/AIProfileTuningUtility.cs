@@ -9,6 +9,15 @@ namespace MOBA.Core.Simulation.AI
             AIDifficultyLevel difficulty,
             AIPersonalityType personality)
         {
+            ApplyRuntimeTuning(profile, difficulty, personality, null);
+        }
+
+        public static void ApplyRuntimeTuning(
+            BrawlerAIProfile profile,
+            AIDifficultyLevel difficulty,
+            AIPersonalityType personality,
+            AITuningCatalog tuningCatalog)
+        {
             if (profile == null)
                 return;
 
@@ -21,6 +30,35 @@ namespace MOBA.Core.Simulation.AI
             Normalize(profile);
             ApplyFairPlayGuardrails(profile);
             Normalize(profile);
+
+            tuningCatalog?.ApplyTo(profile, difficulty, personality);
+            AITuningRuntimeOverrides.ApplyTo(profile);
+            Normalize(profile);
+            ApplyFairPlayGuardrails(profile);
+            Normalize(profile);
+        }
+
+        public static void RebuildRuntimeTuning(
+            BrawlerAIProfile sourceProfile,
+            BrawlerAIProfile runtimeProfile,
+            AIDifficultyLevel difficulty,
+            AIPersonalityType personality,
+            AITuningCatalog tuningCatalog)
+        {
+            if (sourceProfile == null || runtimeProfile == null)
+                return;
+
+            string runtimeName = runtimeProfile.name;
+            JsonUtility.FromJsonOverwrite(
+                JsonUtility.ToJson(sourceProfile),
+                runtimeProfile);
+            runtimeProfile.name = runtimeName;
+
+            ApplyRuntimeTuning(
+                runtimeProfile,
+                difficulty,
+                personality,
+                tuningCatalog);
         }
 
         private static void ApplyDifficulty(BrawlerAIProfile profile, AIDifficultyLevel difficulty)

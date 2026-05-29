@@ -17,6 +17,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerController _brawler;
         [SerializeField] private AIDifficultyLevel _difficulty = AIDifficultyLevel.Normal;
         [SerializeField] private AIPersonalityType _personality = AIPersonalityType.Balanced;
+        [SerializeField] private AITuningCatalog _tuningCatalog;
 
         private static AIObjectivePoint[] _cachedObjectivePoints;
         private static int _cachedObjectiveSceneHandle = -1;
@@ -40,7 +41,10 @@ namespace MOBA.Core.Infrastructure
         private AIHumanizationController _humanization;
         private AICommandSource _commandSource;
 
+        private BrawlerAIProfile _baseProfileSource;
         private BrawlerAIProfile _profile;
+        private AITuningCatalog _activeTuningCatalog;
+        private int _runtimeTuningVersion = -1;
 
         private uint _nextSenseTick;
         private uint _nextDangerRefreshTick;
@@ -50,6 +54,7 @@ namespace MOBA.Core.Infrastructure
         private string _lastReactiveDebug = "Reactive=None";
         private string _lastDangerDebug = "Danger=None";
         private string _lastFailureRecoveryDebug = "Recovery=None";
+        private string _lastTuningDebug = "Tuning=None";
         private string _lastBudgetDebug = "Budget=OK map=0/0 paths=0/0 nodes=0/0 maxNodes=0";
         private readonly AIDebugSnapshot _debugSnapshot = new AIDebugSnapshot();
         private readonly System.Collections.Generic.List<AIActionScore> _debugScores = new System.Collections.Generic.List<AIActionScore>(16);
@@ -141,6 +146,7 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastMacroDebug : "Macro=None";
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
+        public string TuningDebug => _lastTuningDebug;
 
         public int CurrentTargetFocusCount =>
             _teamCoordinator != null &&
@@ -236,6 +242,8 @@ _actionExecutor != null
 
             if (_profile.LogDecisionTicks && currentTick % 30 == 0)
                 Debug.Log($"[AI-{_brawler.name}] tick ok hasTarget={_targetInfo.HasLiveTarget} action={_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}");
+
+            RefreshRuntimeTuningIfNeeded(currentTick);
 
             if (_brawler.State.HasStatus(StatusEffectType.Stun))
             {
@@ -407,6 +415,7 @@ _actionExecutor != null
             _debugSnapshot.DangerDebug = _lastDangerDebug;
             _debugSnapshot.FailureRecoveryDebug = _lastFailureRecoveryDebug;
             _debugSnapshot.HumanizationDebug = HumanizationDebug;
+            _debugSnapshot.TuningDebug = TuningDebug;
 
             _debugSnapshot.ObjectiveName = _profile != null ? _profile.PreferredObjective.ToString() : "None";
 
@@ -575,13 +584,18 @@ $"Map={LastMapRouteDebug}";
                     baseProfile.ApplyArchetypeDefaults(definition.Archetype);
             }
 
+            _baseProfileSource = baseProfile;
             BrawlerAIProfile runtimeProfile = Instantiate(baseProfile);
             runtimeProfile.name = $"{baseProfile.name}_Runtime_{_difficulty}_{_personality}";
 
+            _activeTuningCatalog = AITuningCatalogProvider.Resolve(_tuningCatalog);
             AIProfileTuningUtility.ApplyRuntimeTuning(
                 runtimeProfile,
                 _difficulty,
-                _personality);
+                _personality,
+                _activeTuningCatalog);
+            _runtimeTuningVersion = AITuningRuntimeOverrides.Version;
+            _lastTuningDebug = BuildTuningSummary();
 
             return runtimeProfile;
         }
@@ -740,6 +754,44 @@ $"Map={LastMapRouteDebug}";
                 _failureRecovery);
         }
 
+        private void RefreshRuntimeTuningIfNeeded(uint currentTick)
+        {
+            AITuningCatalog resolvedCatalog = AITuningCatalogProvider.Resolve(_tuningCatalog);
+            if (_profile == null ||
+                _baseProfileSource == null ||
+                (_runtimeTuningVersion == AITuningRuntimeOverrides.Version &&
+                 _activeTuningCatalog == resolvedCatalog))
+            {
+                return;
+            }
+
+            _activeTuningCatalog = resolvedCatalog;
+            AIProfileTuningUtility.RebuildRuntimeTuning(
+                _baseProfileSource,
+                _profile,
+                _difficulty,
+                _personality,
+                _activeTuningCatalog);
+            _runtimeTuningVersion = AITuningRuntimeOverrides.Version;
+            _lastTuningDebug = BuildTuningSummary();
+
+            _perception = new AIPerception(
+                _profile.DetectionRadius,
+                _profile.MemoryDurationTicks,
+                _targetScorer,
+                _profile.LogPerception);
+
+            if (_profile.EnableDebugSnapshots)
+                AIDebugTracker.Register(_brawler);
+            else
+                AIDebugTracker.Unregister(_brawler);
+
+            _actionCommitment?.Reset();
+            _humanization?.Reset();
+            _nextSenseTick = currentTick;
+            _nextDangerRefreshTick = currentTick;
+        }
+
         private void UpdateFailureRecovery(uint currentTick)
         {
             if (_failureRecovery == null || _navAgent == null || _profile == null)
@@ -831,6 +883,17 @@ $"Map={LastMapRouteDebug}";
                     _profile.MaxPathTouchedNodesPerTick) +
                 " " +
                 AIBudgetCoordinator.GetDebugSummary(currentTick);
+        }
+
+        private string BuildTuningSummary()
+        {
+            string catalog = _activeTuningCatalog != null
+                ? _activeTuningCatalog.GetDebugSummary(_difficulty, _personality)
+                : "Catalog=None";
+
+            return
+                $"Tuning {catalog} " +
+                $"{AITuningRuntimeOverrides.GetDebugSummary()}";
         }
 
 #if UNITY_EDITOR

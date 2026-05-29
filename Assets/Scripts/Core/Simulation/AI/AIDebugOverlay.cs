@@ -34,7 +34,7 @@ namespace MOBA.Core.Simulation.AI
             if (snapshot == null)
                 return;
 
-            GUILayout.BeginArea(new Rect(20, 20, 520, 720), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(20, 20, 520, 760), GUI.skin.box);
 
             GUILayout.Label($"AI DEBUG: {snapshot.BrawlerName}");
             GUILayout.Label($"Action: {snapshot.CurrentAction}");
@@ -57,6 +57,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Danger: {snapshot.DangerDebug}");
             GUILayout.Label($"Recovery: {snapshot.FailureRecoveryDebug}");
             GUILayout.Label($"Humanization: {snapshot.HumanizationDebug}");
+            GUILayout.Label($"Tuning: {snapshot.TuningDebug}");
             GUILayout.Label($"Objective: {snapshot.ObjectiveName}");
             GUILayout.Label($"Objective Debug: {snapshot.ObjectiveDebug}");
             GUILayout.Label($"Tactical/Map: {snapshot.TacticalMovementDebug}");
@@ -132,6 +133,7 @@ namespace MOBA.Core.Simulation.AI
                     $"Danger={snapshot.DangerDebug} | " +
                     $"Recovery={snapshot.FailureRecoveryDebug} | " +
                     $"Humanization={snapshot.HumanizationDebug} | " +
+                    $"Tuning={snapshot.TuningDebug} | " +
                     $"Objective={snapshot.ObjectiveDebug} | " +
                     $"Tactical={snapshot.TacticalMovementDebug} | " +
                     $"Perf={snapshot.PerformanceDebug} | " +

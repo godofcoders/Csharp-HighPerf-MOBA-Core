@@ -10,6 +10,13 @@ namespace MOBA.Tests.EditMode
     {
         private readonly List<BrawlerAIProfile> _profiles = new List<BrawlerAIProfile>(8);
 
+        [SetUp]
+        public void SetUp()
+        {
+            AITuningRuntimeOverrides.ResetForTests();
+            AITuningCatalogProvider.ResetForTests();
+        }
+
         [TearDown]
         public void TearDown()
         {
@@ -20,6 +27,8 @@ namespace MOBA.Tests.EditMode
             }
 
             _profiles.Clear();
+            AITuningRuntimeOverrides.ResetForTests();
+            AITuningCatalogProvider.ResetForTests();
         }
 
         [Test]
