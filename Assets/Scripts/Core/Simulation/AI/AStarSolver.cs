@@ -82,6 +82,26 @@ namespace MOBA.Core.Simulation.AI
             return _mapData != null && _mapData.IsBush(coords);
         }
 
+        public AIMapSemanticCell GetSemanticCell(UnityEngine.Vector2Int coords)
+        {
+            return _mapData != null ? _mapData.GetSemanticCell(coords) : default;
+        }
+
+        public bool HasSemanticTag(UnityEngine.Vector2Int coords, AIMapSemanticTag tag)
+        {
+            return _mapData != null && _mapData.HasSemanticTag(coords, tag);
+        }
+
+        public string GetSemanticZoneName(UnityEngine.Vector2Int coords)
+        {
+            return _mapData != null ? _mapData.GetSemanticZoneName(coords) : string.Empty;
+        }
+
+        public string GetSemanticSummary(UnityEngine.Vector2Int coords)
+        {
+            return _mapData != null ? _mapData.GetSemanticSummary(coords) : "none";
+        }
+
         public int CountWalkableNeighbors(UnityEngine.Vector2Int coords)
         {
             int count = 0;
@@ -123,11 +143,16 @@ namespace MOBA.Core.Simulation.AI
 
         public bool IsNearObstacle(UnityEngine.Vector2Int coords)
         {
-            return CountBlockedNeighbors(coords) > 0;
+            return _mapData != null
+                ? _mapData.IsNearObstacle(coords)
+                : CountBlockedNeighbors(coords) > 0;
         }
 
         public bool IsChokepoint(UnityEngine.Vector2Int coords)
         {
+            if (_mapData != null)
+                return _mapData.IsChokepoint(coords);
+
             if (!IsWalkable(coords))
                 return true;
 

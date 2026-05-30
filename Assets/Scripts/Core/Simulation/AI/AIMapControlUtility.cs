@@ -12,6 +12,7 @@ namespace MOBA.Core.Simulation.AI
         public bool IsChokeControl;
         public bool IsThrowerSafe;
         public bool HasWallPressure;
+        public bool IsDangerCorridor;
     }
 
     public static class AIMapControlUtility
@@ -39,6 +40,7 @@ namespace MOBA.Core.Simulation.AI
             bool nearCover = pathfinder.IsNearObstacle(candidateCoords);
             bool insideChoke = pathfinder.IsChokepoint(candidateCoords);
             bool adjacentChoke = HasAdjacentChoke(pathfinder, candidateCoords);
+            AIMapSemanticCell semantic = pathfinder.GetSemanticCell(candidateCoords);
             bool hasCoverBetween = hasThreat &&
                                    AIMapNavigationUtility.HasCoverBetween(
                                        pathfinder,
@@ -98,6 +100,19 @@ namespace MOBA.Core.Simulation.AI
                     hasCoverBetween,
                     archetype,
                     request,
+                    ref evaluation);
+            }
+
+            if (semantic.HasAny)
+            {
+                ApplySemanticScore(
+                    pathfinder,
+                    candidateCoords,
+                    semantic,
+                    hasThreat,
+                    hasCoverBetween,
+                    request,
+                    archetype,
                     ref evaluation);
             }
 
@@ -299,6 +314,104 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return false;
+        }
+
+        private static void ApplySemanticScore(
+            AStarSolver pathfinder,
+            Vector2Int candidateCoords,
+            AIMapSemanticCell semantic,
+            bool hasThreat,
+            bool hasCoverBetween,
+            in AIMapNavigationRequest request,
+            BrawlerArchetype archetype,
+            ref AIMapControlEvaluation evaluation)
+        {
+            float influence = Mathf.Max(0.25f, semantic.Influence);
+            string zoneName = pathfinder.GetSemanticZoneName(candidateCoords);
+            if (string.IsNullOrEmpty(zoneName))
+                zoneName = "zone";
+
+            if (request.PreferLaneControl && semantic.HasTag(AIMapSemanticTag.Lane))
+            {
+                float score = Mathf.Max(0f, request.LaneControlWeight) * influence * 0.85f;
+                if (score > 0f)
+                {
+                    evaluation.Score += score;
+                    evaluation.IsLaneControl = true;
+                    AppendReason(ref evaluation, $"sem_lane:{zoneName}+{score:0.0}");
+                }
+            }
+
+            if (request.PreferChokeControl && semantic.HasTag(AIMapSemanticTag.Choke))
+            {
+                float roleFactor = archetype == BrawlerArchetype.Tank ||
+                                   archetype == BrawlerArchetype.Controller
+                    ? 0.85f
+                    : 0.45f;
+                float score = Mathf.Max(0f, request.ChokeControlWeight) * influence * roleFactor;
+                if (score > 0f)
+                {
+                    evaluation.Score += score;
+                    evaluation.IsChokeControl = true;
+                    AppendReason(ref evaluation, $"sem_choke:{zoneName}+{score:0.0}");
+                }
+            }
+
+            if (request.PreferCoverPeek &&
+                hasThreat &&
+                !hasCoverBetween &&
+                semantic.HasTag(AIMapSemanticTag.CoverCluster))
+            {
+                float score = Mathf.Max(0f, request.CoverPeekWeight) * influence * 0.70f;
+                if (score > 0f)
+                {
+                    evaluation.Score += score;
+                    evaluation.IsCoverPeek = true;
+                    AppendReason(ref evaluation, $"sem_cover:{zoneName}+{score:0.0}");
+                }
+            }
+
+            if (request.PreferThrowerSafePosition &&
+                semantic.HasTag(AIMapSemanticTag.ThrowerSafeZone))
+            {
+                float threatFactor = hasThreat ? 1f : 0.65f;
+                float coverFactor = hasCoverBetween ? 1f : 0.75f;
+                float score = Mathf.Max(0f, request.ThrowerSafePositionWeight) *
+                              influence *
+                              threatFactor *
+                              coverFactor;
+                if (score > 0f)
+                {
+                    evaluation.Score += score;
+                    evaluation.IsThrowerSafe = true;
+                    AppendReason(ref evaluation, $"sem_thrower_safe:{zoneName}+{score:0.0}");
+                }
+            }
+
+            if (semantic.HasTag(AIMapSemanticTag.DangerCorridor))
+            {
+                float basePenalty = Mathf.Max(
+                    Mathf.Max(0f, request.ChokepointPenalty),
+                    Mathf.Max(0f, request.ExposedPositionPenalty));
+                float routeFactor = IsSensitiveToDangerCorridor(request.Intent) ? 1.25f : 0.70f;
+                float penalty = basePenalty * influence * routeFactor;
+
+                if (penalty > 0f)
+                {
+                    evaluation.Score -= penalty;
+                    evaluation.IsDangerCorridor = true;
+                    AppendReason(ref evaluation, $"sem_danger:{zoneName}-{penalty:0.0}");
+                }
+            }
+        }
+
+        private static bool IsSensitiveToDangerCorridor(AIMapRouteIntent intent)
+        {
+            return intent == AIMapRouteIntent.CombatRetreat ||
+                   intent == AIMapRouteIntent.Evade ||
+                   intent == AIMapRouteIntent.Objective ||
+                   intent == AIMapRouteIntent.Search ||
+                   intent == AIMapRouteIntent.Regroup;
         }
 
         private static float Cross(Vector2 a, Vector2 b)

@@ -28,6 +28,66 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void MapData_ReportsDesignerAuthoredSemanticCells()
+        {
+            MapData map = MakeMap(3, 3, true);
+            Vector2Int center = new Vector2Int(1, 1);
+            int zoneId = map.RegisterSemanticZone(
+                "Mid Choke",
+                AIMapSemanticTag.Lane | AIMapSemanticTag.Choke,
+                AITeamLaneAssignment.Mid,
+                1.25f);
+
+            map.ApplySemanticZone(
+                center,
+                zoneId,
+                AIMapSemanticTag.Lane | AIMapSemanticTag.Choke,
+                AITeamLaneAssignment.Mid,
+                1.25f);
+
+            Assert.IsTrue(map.HasSemanticTag(center, AIMapSemanticTag.Lane));
+            Assert.IsTrue(map.HasSemanticTag(center, AIMapSemanticTag.Choke));
+            Assert.IsTrue(map.IsChokepoint(center));
+            Assert.AreEqual("Mid Choke", map.GetSemanticZoneName(center));
+            StringAssert.Contains("Mid", map.GetSemanticSummary(center));
+        }
+
+        [Test]
+        public void AStarSolver_UsesDesignerSemanticCoverAndChokes()
+        {
+            MapData map = MakeMap(3, 3, true);
+            int coverZoneId = map.RegisterSemanticZone(
+                "Left Cover",
+                AIMapSemanticTag.CoverCluster,
+                AITeamLaneAssignment.Left,
+                1f);
+            int chokeZoneId = map.RegisterSemanticZone(
+                "Right Choke",
+                AIMapSemanticTag.Choke,
+                AITeamLaneAssignment.Right,
+                1f);
+
+            map.ApplySemanticZone(
+                new Vector2Int(1, 1),
+                coverZoneId,
+                AIMapSemanticTag.CoverCluster,
+                AITeamLaneAssignment.Left,
+                1f);
+            map.ApplySemanticZone(
+                new Vector2Int(2, 2),
+                chokeZoneId,
+                AIMapSemanticTag.Choke,
+                AITeamLaneAssignment.Right,
+                1f);
+
+            AStarSolver solver = new AStarSolver(map);
+
+            Assert.IsTrue(solver.IsNearObstacle(new Vector2Int(1, 1)));
+            Assert.IsTrue(solver.IsChokepoint(new Vector2Int(2, 2)));
+            StringAssert.Contains("Left Cover", solver.GetSemanticSummary(new Vector2Int(1, 1)));
+        }
+
+        [Test]
         public void AStarSolver_DoesNotCutDiagonalThroughBlockedCorners()
         {
             MapData map = MakeMap(2, 2, true);

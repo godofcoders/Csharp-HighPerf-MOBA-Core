@@ -17,6 +17,12 @@ namespace MOBA.Core.Infrastructure
         private MapData _mapData;
         [Header("Stealth Settings")]
         public LayerMask BushLayer;
+
+        [Header("Semantic Authoring")]
+        [Tooltip("Optional root that contains AIMapSemanticZone components. If unset, active semantic zones in the scene are discovered once during map bake.")]
+        public Transform SemanticZoneRoot;
+        public bool BakeSemanticZones = true;
+
         public MapData BakeMap()
         {
             // Calculate origin so the grid is centered on this GameObject
@@ -43,8 +49,54 @@ namespace MOBA.Core.Infrastructure
                 }
             }
 
-            Debug.Log($"[MAP] Bake Complete: {Width}x{Height} grid.");
+            int semanticZoneCount = BakeSemanticZones ? BakeMapSemantics() : 0;
+
+            Debug.Log($"[MAP] Bake Complete: {Width}x{Height} grid. SemanticZones={semanticZoneCount}");
             return _mapData;
+        }
+
+        private int BakeMapSemantics()
+        {
+            AIMapSemanticZone[] zones = SemanticZoneRoot != null
+                ? SemanticZoneRoot.GetComponentsInChildren<AIMapSemanticZone>(false)
+                : FindObjectsOfType<AIMapSemanticZone>(false);
+            if (zones == null || zones.Length == 0)
+                return 0;
+
+            int bakedZones = 0;
+            for (int i = 0; i < zones.Length; i++)
+            {
+                AIMapSemanticZone zone = zones[i];
+                if (zone == null || zone.Tags == AIMapSemanticTag.None || zone.Influence <= 0f)
+                    continue;
+
+                int zoneId = _mapData.RegisterSemanticZone(
+                    zone.ZoneName,
+                    zone.Tags,
+                    zone.Lane,
+                    zone.Influence);
+
+                for (int x = 0; x < Width; x++)
+                {
+                    for (int y = 0; y < Height; y++)
+                    {
+                        Vector3 worldPos = GetWorldPos(x, y);
+                        if (!zone.ContainsWorldPosition(worldPos))
+                            continue;
+
+                        _mapData.ApplySemanticZone(
+                            new Vector2Int(x, y),
+                            zoneId,
+                            zone.Tags,
+                            zone.Lane,
+                            zone.Influence);
+                    }
+                }
+
+                bakedZones++;
+            }
+
+            return bakedZones;
         }
 
         public Vector3 GetWorldPos(int x, int y)

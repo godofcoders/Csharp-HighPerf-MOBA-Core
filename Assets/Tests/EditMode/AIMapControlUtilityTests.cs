@@ -140,6 +140,106 @@ namespace MOBA.Tests.EditMode
             StringAssert.Contains("wall_throw", thrower.Reason);
         }
 
+        [Test]
+        public void EvaluateCandidate_RewardsDesignerAuthoredLane()
+        {
+            MapData map = MakeMap(5, 5, true);
+            int zoneId = map.RegisterSemanticZone(
+                "Right Pressure Lane",
+                AIMapSemanticTag.Lane,
+                AITeamLaneAssignment.Right,
+                1.2f);
+            map.ApplySemanticZone(
+                new Vector2Int(2, 4),
+                zoneId,
+                AIMapSemanticTag.Lane,
+                AITeamLaneAssignment.Right,
+                1.2f);
+
+            AStarSolver solver = new AStarSolver(map);
+
+            AIMapControlEvaluation evaluation = AIMapControlUtility.EvaluateCandidate(
+                solver,
+                new Vector2Int(0, 2),
+                new Vector2Int(2, 4),
+                new Vector2Int(4, 2),
+                default,
+                MakeRequest(hasThreat: false, laneControl: true),
+                BrawlerArchetype.Controller);
+
+            Assert.IsTrue(evaluation.IsLaneControl);
+            Assert.Greater(evaluation.Score, 0f);
+            StringAssert.Contains("sem_lane:Right Pressure Lane", evaluation.Reason);
+        }
+
+        [Test]
+        public void EvaluateCandidate_RewardsDesignerThrowerSafeZone()
+        {
+            MapData map = MakeMap(5, 3, true);
+            int zoneId = map.RegisterSemanticZone(
+                "Safe Pocket",
+                AIMapSemanticTag.ThrowerSafeZone,
+                AITeamLaneAssignment.None,
+                1.3f);
+            map.ApplySemanticZone(
+                new Vector2Int(1, 1),
+                zoneId,
+                AIMapSemanticTag.ThrowerSafeZone,
+                AITeamLaneAssignment.None,
+                1.3f);
+
+            AStarSolver solver = new AStarSolver(map);
+
+            AIMapControlEvaluation evaluation = AIMapControlUtility.EvaluateCandidate(
+                solver,
+                new Vector2Int(0, 1),
+                new Vector2Int(1, 1),
+                new Vector2Int(4, 1),
+                new Vector2Int(4, 1),
+                MakeRequest(hasThreat: true, throwerSafe: true),
+                BrawlerArchetype.Artillery);
+
+            Assert.IsTrue(evaluation.IsThrowerSafe);
+            Assert.Greater(evaluation.Score, 0f);
+            StringAssert.Contains("sem_thrower_safe:Safe Pocket", evaluation.Reason);
+        }
+
+        [Test]
+        public void EvaluateCandidate_PenalizesDesignerDangerCorridor()
+        {
+            MapData map = MakeMap(5, 3, true);
+            int zoneId = map.RegisterSemanticZone(
+                "Open Mid Run",
+                AIMapSemanticTag.DangerCorridor,
+                AITeamLaneAssignment.Mid,
+                1.1f);
+            map.ApplySemanticZone(
+                new Vector2Int(2, 1),
+                zoneId,
+                AIMapSemanticTag.DangerCorridor,
+                AITeamLaneAssignment.Mid,
+                1.1f);
+
+            AStarSolver solver = new AStarSolver(map);
+            AIMapNavigationRequest request = MakeRequest(hasThreat: false);
+            request.Intent = AIMapRouteIntent.Objective;
+            request.ChokepointPenalty = 10f;
+            request.ExposedPositionPenalty = 8f;
+
+            AIMapControlEvaluation evaluation = AIMapControlUtility.EvaluateCandidate(
+                solver,
+                new Vector2Int(0, 1),
+                new Vector2Int(2, 1),
+                new Vector2Int(4, 1),
+                default,
+                request,
+                BrawlerArchetype.Support);
+
+            Assert.IsTrue(evaluation.IsDangerCorridor);
+            Assert.Less(evaluation.Score, 0f);
+            StringAssert.Contains("sem_danger:Open Mid Run", evaluation.Reason);
+        }
+
         private static AIMapNavigationRequest MakeRequest(
             bool hasThreat,
             bool coverPeek = false,
@@ -160,7 +260,9 @@ namespace MOBA.Tests.EditMode
                 LaneControlWeight = 10f,
                 ChokeControlWeight = 10f,
                 ThrowerSafePositionWeight = 12f,
-                WallPressureWeight = 8f
+                WallPressureWeight = 8f,
+                ChokepointPenalty = 10f,
+                ExposedPositionPenalty = 8f
             };
         }
 
