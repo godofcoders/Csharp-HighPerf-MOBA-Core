@@ -107,7 +107,7 @@ namespace MOBA.Core.Simulation.AI
         private AIGameModeMacroState ResolveMacroState()
         {
             AIGameModeMacroState state =
-                AIGameModeMacroStrategy.ResolveGemGrab(GemGrabMode.Instance, _self.Team);
+                AIGameModeMacroStrategy.ResolveCurrentMode(_self.Team);
 
             _lastMacroDebug = state.GetDebugSummary();
             return state;
@@ -683,6 +683,168 @@ namespace MOBA.Core.Simulation.AI
             return score;
         }
 
+        private float GetApproachMacroDelta(AIGameModeMacroState macroState)
+        {
+            bool selfCarrier = _self.State != null && _self.State.CarriedGemCount > 0;
+
+            switch (macroState.Mode)
+            {
+                case GameModeId.Knockout:
+                    if (macroState.Call == AIGameModeMacroCall.Push) return 14f;
+                    if (macroState.Call == AIGameModeMacroCall.Reset) return -16f;
+                    if (macroState.Call == AIGameModeMacroCall.Hold) return -8f;
+                    break;
+
+                case GameModeId.BrawlBall:
+                    if (macroState.Call == AIGameModeMacroCall.Push) return 18f;
+                    if (macroState.Call == AIGameModeMacroCall.Reset) return 10f;
+                    if (macroState.Call == AIGameModeMacroCall.Hold) return -4f;
+                    break;
+
+                case GameModeId.HotZone:
+                    if (macroState.Call == AIGameModeMacroCall.Push) return 10f;
+                    if (macroState.Call == AIGameModeMacroCall.Reset) return 12f;
+                    if (macroState.Call == AIGameModeMacroCall.Hold) return -4f;
+                    break;
+
+                case GameModeId.GemGrab:
+                default:
+                    if (macroState.Call == AIGameModeMacroCall.Push) return 12f;
+                    if (macroState.Call == AIGameModeMacroCall.Reset) return 18f;
+                    if (macroState.Call == AIGameModeMacroCall.Hold && selfCarrier) return -18f;
+                    break;
+            }
+
+            return 0f;
+        }
+
+        private float GetSearchMacroDelta(AIGameModeMacroState macroState)
+        {
+            switch (macroState.Mode)
+            {
+                case GameModeId.Knockout:
+                    if (macroState.Call == AIGameModeMacroCall.Push) return 6f;
+                    if (macroState.Call == AIGameModeMacroCall.Reset) return -4f;
+                    if (macroState.Call == AIGameModeMacroCall.Hold) return -8f;
+                    break;
+
+                case GameModeId.BrawlBall:
+                    if (macroState.Call == AIGameModeMacroCall.Push) return 14f;
+                    if (macroState.Call == AIGameModeMacroCall.Reset) return 10f;
+                    if (macroState.Call == AIGameModeMacroCall.Hold) return -4f;
+                    break;
+
+                case GameModeId.HotZone:
+                    if (macroState.Call == AIGameModeMacroCall.Push) return 14f;
+                    if (macroState.Call == AIGameModeMacroCall.Reset) return 16f;
+                    if (macroState.Call == AIGameModeMacroCall.Hold) return 4f;
+                    break;
+
+                case GameModeId.GemGrab:
+                default:
+                    if (macroState.Call == AIGameModeMacroCall.Push) return 12f;
+                    if (macroState.Call == AIGameModeMacroCall.Reset) return 8f;
+                    if (macroState.Call == AIGameModeMacroCall.Hold) return -10f;
+                    break;
+            }
+
+            return 0f;
+        }
+
+        private float GetObjectiveMacroDelta(
+            AIGameModeMacroState macroState,
+            bool selfCarrier,
+            out string reason)
+        {
+            reason = "macro_none";
+
+            switch (macroState.Mode)
+            {
+                case GameModeId.Knockout:
+                    if (macroState.Call == AIGameModeMacroCall.Push)
+                    {
+                        reason = "knockout_push";
+                        return 4f;
+                    }
+
+                    if (macroState.Call == AIGameModeMacroCall.Reset)
+                    {
+                        reason = "knockout_stabilize";
+                        return -10f;
+                    }
+
+                    if (macroState.Call == AIGameModeMacroCall.Hold)
+                    {
+                        reason = "knockout_hold";
+                        return -8f;
+                    }
+                    break;
+
+                case GameModeId.BrawlBall:
+                    if (macroState.Call == AIGameModeMacroCall.Push)
+                    {
+                        reason = "ball_push";
+                        return 14f;
+                    }
+
+                    if (macroState.Call == AIGameModeMacroCall.Reset)
+                    {
+                        reason = "ball_defend";
+                        return 10f;
+                    }
+
+                    if (macroState.Call == AIGameModeMacroCall.Hold)
+                    {
+                        reason = "ball_hold";
+                        return 4f;
+                    }
+                    break;
+
+                case GameModeId.HotZone:
+                    if (macroState.Call == AIGameModeMacroCall.Push)
+                    {
+                        reason = "zone_push";
+                        return 20f;
+                    }
+
+                    if (macroState.Call == AIGameModeMacroCall.Reset)
+                    {
+                        reason = "zone_deny";
+                        return 22f;
+                    }
+
+                    if (macroState.Call == AIGameModeMacroCall.Hold)
+                    {
+                        reason = "zone_hold";
+                        return 14f;
+                    }
+                    break;
+
+                case GameModeId.GemGrab:
+                default:
+                    if (macroState.Call == AIGameModeMacroCall.Push)
+                    {
+                        reason = "macro_push";
+                        return 16f;
+                    }
+
+                    if (macroState.Call == AIGameModeMacroCall.Reset)
+                    {
+                        reason = "macro_reset";
+                        return 10f;
+                    }
+
+                    if (macroState.Call == AIGameModeMacroCall.Hold)
+                    {
+                        reason = selfCarrier ? "carrier_hold" : "zone_hold";
+                        return selfCarrier ? -18f : 8f;
+                    }
+                    break;
+            }
+
+            return 0f;
+        }
+
         private AIActionScore ScoreRetreat(
             AITargetInfo targetInfo,
             uint currentTick,
@@ -988,16 +1150,7 @@ namespace MOBA.Core.Simulation.AI
             if (GemGrabMode.Instance != null && GemGrabMode.Instance.IsTeamBehind(_self.Team))
                 score += 8f;
 
-            if (macroState.Call == AIGameModeMacroCall.Push)
-                score += 12f;
-            else if (macroState.Call == AIGameModeMacroCall.Reset)
-                score += 18f;
-            else if (macroState.Call == AIGameModeMacroCall.Hold &&
-                     _self.State != null &&
-                     _self.State.CarriedGemCount > 0)
-            {
-                score -= 18f;
-            }
+            score += GetApproachMacroDelta(macroState);
 
             return MakeScore(
      AIActionType.Approach,
@@ -1045,12 +1198,7 @@ namespace MOBA.Core.Simulation.AI
             if (Gem.HasAnyUnpickedWithin(_self.Position, 8f))
                 score += 35f;
 
-            if (macroState.Call == AIGameModeMacroCall.Push)
-                score += 12f;
-            else if (macroState.Call == AIGameModeMacroCall.Reset)
-                score += 8f;
-            else if (macroState.Call == AIGameModeMacroCall.Hold)
-                score -= 10f;
+            score += GetSearchMacroDelta(macroState);
 
             return MakeScore(
       AIActionType.Search,
@@ -1163,28 +1311,14 @@ namespace MOBA.Core.Simulation.AI
                 _lastObjectiveScoreReason += "|behind_+8";
             }
 
-            if (macroState.Call == AIGameModeMacroCall.Push)
+            float objectiveMacroDelta = GetObjectiveMacroDelta(
+                macroState,
+                _self.State != null && _self.State.CarriedGemCount > 0,
+                out string objectiveMacroReason);
+            if (Mathf.Abs(objectiveMacroDelta) > 0.01f)
             {
-                score += 16f;
-                _lastObjectiveScoreReason += "|macro_push_+16";
-            }
-            else if (macroState.Call == AIGameModeMacroCall.Reset)
-            {
-                score += 10f;
-                _lastObjectiveScoreReason += "|macro_reset_+10";
-            }
-            else if (macroState.Call == AIGameModeMacroCall.Hold)
-            {
-                if (_self.State != null && _self.State.CarriedGemCount > 0)
-                {
-                    score -= 18f;
-                    _lastObjectiveScoreReason += "|carrier_hold_-18";
-                }
-                else
-                {
-                    score += 8f;
-                    _lastObjectiveScoreReason += "|zone_hold_+8";
-                }
+                score += objectiveMacroDelta;
+                _lastObjectiveScoreReason += $"|{objectiveMacroReason}_{objectiveMacroDelta:+0.0;-0.0}";
             }
 
             float opponentObjectiveNeglect = AIOpponentModel.GetMaxObjectiveNeglect(

@@ -1,3 +1,4 @@
+using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
 using NUnit.Framework;
 using UnityEngine;
@@ -62,6 +63,32 @@ namespace MOBA.Tests.EditMode
 
             Assert.AreEqual(AITeamPlaybookCall.Reset, state.Call);
             Assert.AreEqual(AITeamLaneAssignment.Mid, state.Lane);
+        }
+
+        [Test]
+        public void Resolve_KnockoutResetStabilizesInsteadOfOverPushing()
+        {
+            AITeamPlaybookContext context = BaseContext(
+                106,
+                new AIGameModeMacroState(
+                    GameModeId.Knockout,
+                    AIGameModeMacroCall.Reset,
+                    AIGameModeObjectivePhase.Contest,
+                    0,
+                    0,
+                    2,
+                    0f,
+                    80f,
+                    false,
+                    false,
+                    false,
+                    false,
+                    "down_players"));
+
+            AITeamPlaybookState state = AITeamPlaybookDirector.Resolve(context);
+
+            Assert.AreEqual(AITeamPlaybookCall.Hold, state.Call);
+            Assert.AreEqual("knockout_stabilize", state.Reason);
         }
 
         [Test]

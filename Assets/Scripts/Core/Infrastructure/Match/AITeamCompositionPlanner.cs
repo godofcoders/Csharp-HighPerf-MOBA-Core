@@ -292,7 +292,9 @@ namespace MOBA.Core.Infrastructure
             if (!TeamHasRoleBucket(roster, team, RoleBucket.Control) &&
                 IsRoleBucket(archetype, RoleBucket.Control))
             {
-                score += mode == GameModeId.GemGrab ? 24f : 14f;
+                score += mode == GameModeId.HotZone
+                    ? 26f
+                    : mode == GameModeId.GemGrab ? 24f : 14f;
             }
 
             if (!TeamHasRoleBucket(roster, team, RoleBucket.LongRange) &&
@@ -304,7 +306,9 @@ namespace MOBA.Core.Infrastructure
             if (!TeamHasRoleBucket(roster, team, RoleBucket.Frontline) &&
                 IsRoleBucket(archetype, RoleBucket.Frontline))
             {
-                score += mode == GameModeId.Knockout ? 8f : 16f;
+                score += mode == GameModeId.BrawlBall
+                    ? 24f
+                    : mode == GameModeId.Knockout ? 8f : 16f;
             }
 
             return score;
@@ -330,6 +334,46 @@ namespace MOBA.Core.Infrastructure
                             return 8f;
                         case BrawlerArchetype.Tank:
                             return 4f;
+                    }
+                    break;
+
+                case GameModeId.BrawlBall:
+                    switch (archetype)
+                    {
+                        case BrawlerArchetype.Tank:
+                            return 24f;
+                        case BrawlerArchetype.Fighter:
+                            return 20f;
+                        case BrawlerArchetype.Controller:
+                            return 16f;
+                        case BrawlerArchetype.Assassin:
+                            return 14f;
+                        case BrawlerArchetype.Support:
+                            return 12f;
+                        case BrawlerArchetype.Sniper:
+                            return 8f;
+                        case BrawlerArchetype.Artillery:
+                            return 6f;
+                    }
+                    break;
+
+                case GameModeId.HotZone:
+                    switch (archetype)
+                    {
+                        case BrawlerArchetype.Controller:
+                            return 26f;
+                        case BrawlerArchetype.Tank:
+                            return 22f;
+                        case BrawlerArchetype.Support:
+                            return 18f;
+                        case BrawlerArchetype.Artillery:
+                            return 16f;
+                        case BrawlerArchetype.Fighter:
+                            return 14f;
+                        case BrawlerArchetype.Sniper:
+                            return 8f;
+                        case BrawlerArchetype.Assassin:
+                            return 6f;
                     }
                     break;
 

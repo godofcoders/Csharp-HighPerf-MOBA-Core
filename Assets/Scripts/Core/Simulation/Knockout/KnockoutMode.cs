@@ -33,6 +33,7 @@ namespace MOBA.Core.Simulation
         public int BlueRoundsWon { get; private set; }
         public int RedRoundsWon { get; private set; }
         public int CurrentRound { get; private set; } = 1;
+        public int RoundsToWin => _roundsToWin;
 
         private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
         private bool _roundEnding;
@@ -68,6 +69,45 @@ namespace MOBA.Core.Simulation
                 BrawlerController captured = b;
                 captured.State.OnDeath += () => HandleDeath(captured);
             }
+        }
+
+        public int GetTeamRoundsWon(TeamType team)
+        {
+            if (team == TeamType.Blue)
+                return BlueRoundsWon;
+
+            if (team == TeamType.Red)
+                return RedRoundsWon;
+
+            return 0;
+        }
+
+        public int GetAliveCount(TeamType team)
+        {
+            int count = 0;
+            for (int i = 0; i < _brawlers.Count; i++)
+            {
+                BrawlerController b = _brawlers[i];
+                if (b == null || b.Team != team || b.State == null || b.State.IsDead)
+                    continue;
+
+                count++;
+            }
+
+            return count;
+        }
+
+        public int GetRegisteredCount(TeamType team)
+        {
+            int count = 0;
+            for (int i = 0; i < _brawlers.Count; i++)
+            {
+                BrawlerController b = _brawlers[i];
+                if (b != null && b.Team == team)
+                    count++;
+            }
+
+            return count;
         }
 
         private void HandleDeath(BrawlerController dying)

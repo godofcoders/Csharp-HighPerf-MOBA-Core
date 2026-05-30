@@ -1,3 +1,4 @@
+using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
 using NUnit.Framework;
 
@@ -71,6 +72,104 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(AIGameModeMacroCall.Hold, state.Call);
             Assert.AreEqual(AIGameModeObjectivePhase.Contest, state.Phase);
             Assert.IsTrue(state.IsLeading);
+        }
+
+        [Test]
+        public void ResolveKnockout_Resets_WhenDownPlayers()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveKnockout(
+                ownRoundsWon: 0,
+                enemyRoundsWon: 0,
+                roundsToWin: 2,
+                ownAlive: 1,
+                enemyAlive: 3,
+                teamSize: 3,
+                matchTimeRemainingSeconds: 80f);
+
+            Assert.AreEqual(GameModeId.Knockout, state.Mode);
+            Assert.AreEqual(AIGameModeMacroCall.Reset, state.Call);
+            Assert.AreEqual(AIGameModeObjectivePhase.Contest, state.Phase);
+            Assert.AreEqual("down_players", state.Reason);
+        }
+
+        [Test]
+        public void ResolveKnockout_Pushes_WhenNumbersAdvantage()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveKnockout(
+                ownRoundsWon: 0,
+                enemyRoundsWon: 0,
+                roundsToWin: 2,
+                ownAlive: 3,
+                enemyAlive: 1,
+                teamSize: 3,
+                matchTimeRemainingSeconds: 80f);
+
+            Assert.AreEqual(AIGameModeMacroCall.Push, state.Call);
+            Assert.AreEqual("numbers_advantage", state.Reason);
+        }
+
+        [Test]
+        public void ResolveBrawlBall_DefendsWhenEnemyHasBall()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveBrawlBall(
+                ownGoals: 0,
+                enemyGoals: 1,
+                goalsToWin: 2,
+                ownHasBall: false,
+                enemyHasBall: true,
+                matchTimeRemainingSeconds: 90f);
+
+            Assert.AreEqual(GameModeId.BrawlBall, state.Mode);
+            Assert.AreEqual(AIGameModeMacroCall.Reset, state.Call);
+            Assert.AreEqual(AIGameModeObjectivePhase.FinalPressure, state.Phase);
+            Assert.AreEqual("defend_score_point", state.Reason);
+        }
+
+        [Test]
+        public void ResolveBrawlBall_PushesWithPossession()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveBrawlBall(
+                ownGoals: 0,
+                enemyGoals: 0,
+                goalsToWin: 2,
+                ownHasBall: true,
+                enemyHasBall: false,
+                matchTimeRemainingSeconds: 90f);
+
+            Assert.AreEqual(AIGameModeMacroCall.Push, state.Call);
+            Assert.AreEqual("ball_possession", state.Reason);
+        }
+
+        [Test]
+        public void ResolveHotZone_DeniesNearEnemyFinish()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveHotZone(
+                ownProgress: 72f,
+                enemyProgress: 95f,
+                progressToWin: 100f,
+                ownControllingZone: false,
+                enemyControllingZone: true,
+                matchTimeRemainingSeconds: 50f);
+
+            Assert.AreEqual(GameModeId.HotZone, state.Mode);
+            Assert.AreEqual(AIGameModeMacroCall.Reset, state.Call);
+            Assert.AreEqual(AIGameModeObjectivePhase.FinalPressure, state.Phase);
+            Assert.AreEqual("deny_zone_finish", state.Reason);
+        }
+
+        [Test]
+        public void ResolveHotZone_HoldsWhenLeadingAndControlling()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveHotZone(
+                ownProgress: 55f,
+                enemyProgress: 35f,
+                progressToWin: 100f,
+                ownControllingZone: true,
+                enemyControllingZone: false,
+                matchTimeRemainingSeconds: 70f);
+
+            Assert.AreEqual(AIGameModeMacroCall.Hold, state.Call);
+            Assert.AreEqual("hold_zone_lead", state.Reason);
         }
     }
 }

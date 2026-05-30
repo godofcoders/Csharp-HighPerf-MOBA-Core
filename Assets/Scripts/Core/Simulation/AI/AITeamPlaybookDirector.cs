@@ -1,4 +1,5 @@
 using UnityEngine;
+using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation.AI
 {
@@ -192,6 +193,12 @@ namespace MOBA.Core.Simulation.AI
 
             if (macroCall == AIGameModeMacroCall.Reset)
             {
+                if (context.MacroState.Mode == GameModeId.Knockout)
+                {
+                    reason = "knockout_stabilize";
+                    return AITeamPlaybookCall.Hold;
+                }
+
                 reason = "macro_reset";
                 return AITeamPlaybookCall.Reset;
             }

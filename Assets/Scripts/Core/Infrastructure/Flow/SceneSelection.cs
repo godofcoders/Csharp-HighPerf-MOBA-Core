@@ -42,5 +42,7 @@ namespace MOBA.Core.Infrastructure
     {
         GemGrab = 0,
         Knockout = 1,
+        BrawlBall = 2,
+        HotZone = 3,
     }
 }

@@ -62,6 +62,44 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void PickBotBrawler_BrawlBall_PrefersFrontlineProfile()
+        {
+            BrawlerDefinition sniper = MakeBrawler("Sniper", BrawlerArchetype.Sniper);
+            BrawlerDefinition tank = MakeBrawler("Tank", BrawlerArchetype.Tank);
+            BrawlerDefinition artillery = MakeBrawler("Artillery", BrawlerArchetype.Artillery);
+
+            AITeamCompositionPlanner.PickResult result =
+                AITeamCompositionPlanner.PickBotBrawler(
+                    new[] { sniper, artillery, tank },
+                    new List<MatchParticipant>(),
+                    TeamType.Red,
+                    GameModeId.BrawlBall,
+                    TestOptions());
+
+            Assert.AreSame(tank, result.Brawler);
+            StringAssert.Contains("mode=", result.Reason);
+        }
+
+        [Test]
+        public void PickBotBrawler_HotZone_PrefersControlProfile()
+        {
+            BrawlerDefinition fighter = MakeBrawler("Fighter", BrawlerArchetype.Fighter);
+            BrawlerDefinition controller = MakeBrawler("Controller", BrawlerArchetype.Controller);
+            BrawlerDefinition assassin = MakeBrawler("Assassin", BrawlerArchetype.Assassin);
+
+            AITeamCompositionPlanner.PickResult result =
+                AITeamCompositionPlanner.PickBotBrawler(
+                    new[] { fighter, assassin, controller },
+                    new List<MatchParticipant>(),
+                    TeamType.Blue,
+                    GameModeId.HotZone,
+                    TestOptions());
+
+            Assert.AreSame(controller, result.Brawler);
+            StringAssert.Contains("coverage=", result.Reason);
+        }
+
+        [Test]
         public void PickBotBrawler_AvoidsDuplicatingPlayerBrawlerOnSameTeam()
         {
             BrawlerDefinition playerPick = MakeBrawler("Colt", BrawlerArchetype.Sniper);

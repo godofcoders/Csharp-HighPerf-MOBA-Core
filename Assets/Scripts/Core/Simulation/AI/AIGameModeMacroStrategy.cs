@@ -1,4 +1,6 @@
 using MOBA.Core.Simulation;
+using MOBA.Core.Infrastructure;
+using UnityEngine;
 
 namespace MOBA.Core.Simulation.AI
 {
@@ -21,17 +23,22 @@ namespace MOBA.Core.Simulation.AI
 
     public readonly struct AIGameModeMacroState
     {
+        public readonly GameModeId Mode;
         public readonly AIGameModeMacroCall Call;
         public readonly AIGameModeObjectivePhase Phase;
         public readonly int OwnGems;
         public readonly int EnemyGems;
         public readonly int GemsToWin;
+        public readonly int OwnScore;
+        public readonly int EnemyScore;
+        public readonly int ScoreToWin;
         public readonly float WinTimerRemainingSeconds;
         public readonly float MatchTimeRemainingSeconds;
         public readonly bool IsLeading;
         public readonly bool IsBehind;
         public readonly bool OwnTeamHasCountdown;
         public readonly bool EnemyTeamHasCountdown;
+        public readonly string Reason;
 
         public AIGameModeMacroState(
             AIGameModeMacroCall call,
@@ -45,18 +52,54 @@ namespace MOBA.Core.Simulation.AI
             bool isBehind,
             bool ownTeamHasCountdown,
             bool enemyTeamHasCountdown)
+            : this(
+                GameModeId.GemGrab,
+                call,
+                phase,
+                ownGems,
+                enemyGems,
+                gemsToWin,
+                winTimerRemainingSeconds,
+                matchTimeRemainingSeconds,
+                isLeading,
+                isBehind,
+                ownTeamHasCountdown,
+                enemyTeamHasCountdown,
+                string.Empty)
         {
+        }
+
+        public AIGameModeMacroState(
+            GameModeId mode,
+            AIGameModeMacroCall call,
+            AIGameModeObjectivePhase phase,
+            int ownScore,
+            int enemyScore,
+            int scoreToWin,
+            float winTimerRemainingSeconds,
+            float matchTimeRemainingSeconds,
+            bool isLeading,
+            bool isBehind,
+            bool ownTeamHasCountdown,
+            bool enemyTeamHasCountdown,
+            string reason)
+        {
+            Mode = mode;
             Call = call;
             Phase = phase;
-            OwnGems = ownGems;
-            EnemyGems = enemyGems;
-            GemsToWin = gemsToWin;
+            OwnGems = ownScore;
+            EnemyGems = enemyScore;
+            GemsToWin = scoreToWin;
+            OwnScore = ownScore;
+            EnemyScore = enemyScore;
+            ScoreToWin = scoreToWin;
             WinTimerRemainingSeconds = winTimerRemainingSeconds;
             MatchTimeRemainingSeconds = matchTimeRemainingSeconds;
             IsLeading = isLeading;
             IsBehind = isBehind;
             OwnTeamHasCountdown = ownTeamHasCountdown;
             EnemyTeamHasCountdown = enemyTeamHasCountdown;
+            Reason = string.IsNullOrEmpty(reason) ? "none" : reason;
         }
 
         public static AIGameModeMacroState Neutral => new AIGameModeMacroState(
@@ -77,19 +120,89 @@ namespace MOBA.Core.Simulation.AI
             if (Phase == AIGameModeObjectivePhase.None)
                 return "Macro=None";
 
+            string scoreLabel = Mode == GameModeId.GemGrab
+                ? $"Gems={OwnScore}/{EnemyScore}/{ScoreToWin}"
+                : $"Score={OwnScore}/{EnemyScore}/{ScoreToWin}";
+
             return
+                $"Mode={Mode} " +
                 $"Macro={Call} " +
                 $"Phase={Phase} " +
-                $"Gems={OwnGems}/{EnemyGems}/{GemsToWin} " +
+                $"{scoreLabel} " +
                 $"Lead={IsLeading} Behind={IsBehind} " +
                 $"Timer={WinTimerRemainingSeconds:0.0} " +
-                $"Clock={MatchTimeRemainingSeconds:0.0}";
+                $"Clock={MatchTimeRemainingSeconds:0.0} " +
+                $"Reason={Reason}";
         }
     }
 
     public static class AIGameModeMacroStrategy
     {
         private const float FinalPressureSeconds = 30f;
+
+        public static AIGameModeMacroState ResolveCurrentMode(TeamType team)
+        {
+            if (team == TeamType.Neutral)
+                return AIGameModeMacroState.Neutral;
+
+            if (GemGrabMode.Instance != null)
+                return ResolveGemGrab(GemGrabMode.Instance, team);
+
+            if (KnockoutMode.Instance != null)
+                return ResolveKnockout(KnockoutMode.Instance, team);
+
+            switch (SceneSelection.SelectedMode)
+            {
+                case GameModeId.Knockout:
+                    return NeutralForMode(GameModeId.Knockout, "knockout_unavailable");
+
+                case GameModeId.BrawlBall:
+                    return ResolveBrawlBall(
+                        ownGoals: 0,
+                        enemyGoals: 0,
+                        goalsToWin: 2,
+                        ownHasBall: false,
+                        enemyHasBall: false,
+                        matchTimeRemainingSeconds: 0f);
+
+                case GameModeId.HotZone:
+                    return ResolveHotZone(
+                        ownProgress: 0f,
+                        enemyProgress: 0f,
+                        progressToWin: 100f,
+                        ownControllingZone: false,
+                        enemyControllingZone: false,
+                        matchTimeRemainingSeconds: 0f);
+
+                case GameModeId.GemGrab:
+                default:
+                    return NeutralForMode(GameModeId.GemGrab, "gem_grab_unavailable");
+            }
+        }
+
+        public static AIGameModeMacroState ResolveKnockout(
+            KnockoutMode mode,
+            TeamType team)
+        {
+            if (mode == null || team == TeamType.Neutral)
+                return NeutralForMode(GameModeId.Knockout, "knockout_unavailable");
+
+            TeamType enemyTeam = GetEnemyTeam(team);
+            int ownRegistered = mode.GetRegisteredCount(team);
+            int enemyRegistered = mode.GetRegisteredCount(enemyTeam);
+            int teamSize = ownRegistered > 0 || enemyRegistered > 0
+                ? Mathf.Max(ownRegistered, enemyRegistered)
+                : 3;
+
+            return ResolveKnockout(
+                mode.GetTeamRoundsWon(team),
+                mode.GetTeamRoundsWon(enemyTeam),
+                mode.RoundsToWin,
+                mode.GetAliveCount(team),
+                mode.GetAliveCount(enemyTeam),
+                teamSize,
+                matchTimeRemainingSeconds: 0f);
+        }
 
         public static AIGameModeMacroState ResolveGemGrab(
             GemGrabMode mode,
@@ -159,6 +272,217 @@ namespace MOBA.Core.Simulation.AI
                 enemyTeamHasCountdown);
         }
 
+        public static AIGameModeMacroState ResolveKnockout(
+            int ownRoundsWon,
+            int enemyRoundsWon,
+            int roundsToWin,
+            int ownAlive,
+            int enemyAlive,
+            int teamSize,
+            float matchTimeRemainingSeconds)
+        {
+            roundsToWin = Mathf.Max(1, roundsToWin);
+            teamSize = Mathf.Max(1, teamSize);
+            ownAlive = Mathf.Clamp(ownAlive, 0, teamSize);
+            enemyAlive = Mathf.Clamp(enemyAlive, 0, teamSize);
+
+            bool isLeading = ownRoundsWon > enemyRoundsWon;
+            bool isBehind = ownRoundsWon < enemyRoundsWon;
+            bool finalPressure = IsFinalPressure(matchTimeRemainingSeconds) ||
+                                 ownRoundsWon >= roundsToWin - 1 ||
+                                 enemyRoundsWon >= roundsToWin - 1;
+            bool anyDeaths = ownAlive < teamSize || enemyAlive < teamSize;
+
+            AIGameModeObjectivePhase phase = finalPressure
+                ? AIGameModeObjectivePhase.FinalPressure
+                : anyDeaths
+                    ? AIGameModeObjectivePhase.Contest
+                    : AIGameModeObjectivePhase.Opening;
+
+            AIGameModeMacroCall call;
+            string reason;
+
+            if (ownAlive <= 0 && enemyAlive > 0)
+            {
+                call = AIGameModeMacroCall.Reset;
+                reason = "round_lost";
+            }
+            else if (enemyAlive <= 0 && ownAlive > 0)
+            {
+                call = AIGameModeMacroCall.Hold;
+                reason = "round_secure";
+            }
+            else if (ownAlive < enemyAlive)
+            {
+                call = AIGameModeMacroCall.Reset;
+                reason = "down_players";
+            }
+            else if (ownAlive > enemyAlive)
+            {
+                call = AIGameModeMacroCall.Push;
+                reason = "numbers_advantage";
+            }
+            else if (finalPressure && isBehind)
+            {
+                call = AIGameModeMacroCall.Push;
+                reason = "match_point_behind";
+            }
+            else if (finalPressure && isLeading)
+            {
+                call = AIGameModeMacroCall.Hold;
+                reason = "match_point_lead";
+            }
+            else
+            {
+                call = AIGameModeMacroCall.Neutral;
+                reason = "even_round";
+            }
+
+            return new AIGameModeMacroState(
+                GameModeId.Knockout,
+                call,
+                phase,
+                ownRoundsWon,
+                enemyRoundsWon,
+                roundsToWin,
+                0f,
+                matchTimeRemainingSeconds,
+                isLeading,
+                isBehind,
+                false,
+                false,
+                reason);
+        }
+
+        public static AIGameModeMacroState ResolveBrawlBall(
+            int ownGoals,
+            int enemyGoals,
+            int goalsToWin,
+            bool ownHasBall,
+            bool enemyHasBall,
+            float matchTimeRemainingSeconds)
+        {
+            goalsToWin = Mathf.Max(1, goalsToWin);
+            bool isLeading = ownGoals > enemyGoals;
+            bool isBehind = ownGoals < enemyGoals;
+            bool finalPressure = IsFinalPressure(matchTimeRemainingSeconds) ||
+                                 ownGoals >= goalsToWin - 1 ||
+                                 enemyGoals >= goalsToWin - 1;
+
+            AIGameModeObjectivePhase phase = finalPressure
+                ? AIGameModeObjectivePhase.FinalPressure
+                : ownGoals == 0 && enemyGoals == 0 && !ownHasBall && !enemyHasBall
+                    ? AIGameModeObjectivePhase.Opening
+                    : AIGameModeObjectivePhase.Contest;
+
+            AIGameModeMacroCall call;
+            string reason;
+            if (ownHasBall)
+            {
+                call = AIGameModeMacroCall.Push;
+                reason = ownGoals >= goalsToWin - 1 ? "score_point" : "ball_possession";
+            }
+            else if (enemyHasBall)
+            {
+                call = AIGameModeMacroCall.Reset;
+                reason = enemyGoals >= goalsToWin - 1 ? "defend_score_point" : "enemy_ball";
+            }
+            else if (finalPressure && isBehind)
+            {
+                call = AIGameModeMacroCall.Push;
+                reason = "late_goal_needed";
+            }
+            else if (finalPressure && isLeading)
+            {
+                call = AIGameModeMacroCall.Hold;
+                reason = "protect_lead";
+            }
+            else
+            {
+                call = AIGameModeMacroCall.Neutral;
+                reason = "loose_ball";
+            }
+
+            return new AIGameModeMacroState(
+                GameModeId.BrawlBall,
+                call,
+                phase,
+                ownGoals,
+                enemyGoals,
+                goalsToWin,
+                0f,
+                matchTimeRemainingSeconds,
+                isLeading,
+                isBehind,
+                false,
+                false,
+                reason);
+        }
+
+        public static AIGameModeMacroState ResolveHotZone(
+            float ownProgress,
+            float enemyProgress,
+            float progressToWin,
+            bool ownControllingZone,
+            bool enemyControllingZone,
+            float matchTimeRemainingSeconds)
+        {
+            progressToWin = Mathf.Max(1f, progressToWin);
+            int ownScore = Mathf.RoundToInt(Mathf.Clamp(ownProgress, 0f, progressToWin));
+            int enemyScore = Mathf.RoundToInt(Mathf.Clamp(enemyProgress, 0f, progressToWin));
+            int scoreToWin = Mathf.RoundToInt(progressToWin);
+            bool isLeading = ownProgress > enemyProgress;
+            bool isBehind = ownProgress < enemyProgress;
+            bool finalPressure = IsFinalPressure(matchTimeRemainingSeconds) ||
+                                 ownProgress >= progressToWin - 10f ||
+                                 enemyProgress >= progressToWin - 10f;
+
+            AIGameModeObjectivePhase phase = finalPressure
+                ? AIGameModeObjectivePhase.FinalPressure
+                : ownProgress < 15f && enemyProgress < 15f
+                    ? AIGameModeObjectivePhase.Opening
+                    : AIGameModeObjectivePhase.Contest;
+
+            AIGameModeMacroCall call;
+            string reason;
+            if (enemyProgress >= progressToWin - 8f ||
+                (enemyControllingZone && isBehind))
+            {
+                call = AIGameModeMacroCall.Reset;
+                reason = "deny_zone_finish";
+            }
+            else if (ownControllingZone && isLeading)
+            {
+                call = AIGameModeMacroCall.Hold;
+                reason = "hold_zone_lead";
+            }
+            else if (isBehind || finalPressure)
+            {
+                call = AIGameModeMacroCall.Push;
+                reason = "contest_zone";
+            }
+            else
+            {
+                call = AIGameModeMacroCall.Neutral;
+                reason = "shared_zone_pressure";
+            }
+
+            return new AIGameModeMacroState(
+                GameModeId.HotZone,
+                call,
+                phase,
+                ownScore,
+                enemyScore,
+                scoreToWin,
+                0f,
+                matchTimeRemainingSeconds,
+                isLeading,
+                isBehind,
+                false,
+                false,
+                reason);
+        }
+
         private static AIGameModeObjectivePhase ResolvePhase(
             int ownGems,
             int enemyGems,
@@ -211,6 +535,30 @@ namespace MOBA.Core.Simulation.AI
                 return AIGameModeMacroCall.Hold;
 
             return AIGameModeMacroCall.Neutral;
+        }
+
+        private static AIGameModeMacroState NeutralForMode(GameModeId mode, string reason)
+        {
+            return new AIGameModeMacroState(
+                mode,
+                AIGameModeMacroCall.Neutral,
+                AIGameModeObjectivePhase.None,
+                0,
+                0,
+                0,
+                0f,
+                0f,
+                false,
+                false,
+                false,
+                false,
+                reason);
+        }
+
+        private static bool IsFinalPressure(float matchTimeRemainingSeconds)
+        {
+            return matchTimeRemainingSeconds > 0f &&
+                   matchTimeRemainingSeconds <= FinalPressureSeconds;
         }
 
         private static TeamType GetEnemyTeam(TeamType team)
