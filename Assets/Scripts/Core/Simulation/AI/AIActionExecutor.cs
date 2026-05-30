@@ -1275,8 +1275,76 @@ namespace MOBA.Core.Simulation.AI
             _lastTacticalPreferredRange = preferredRange;
             _lastTacticalTooCloseDistance = tooCloseDistance;
 
+            AICombatMicroMovementDecision microDecision =
+                ResolveCombatMicroMovement(
+                    dist,
+                    preferredRange,
+                    tooCloseDistance,
+                    currentTick);
+
             AITacticalMovementIntent intent;
             Vector3 destination;
+
+            if (microDecision.Style == AICombatMicroMoveStyle.ThrowerSpacing)
+            {
+                intent = AITacticalMovementIntent.RepositionAngle;
+                destination =
+                    selfPos +
+                    awayFromTarget * (_profile.TacticalKiteDistance * 0.95f) +
+                    side * (_profile.TacticalStrafeDistance * 0.45f);
+
+                return CommitTacticalMove(
+                    intent,
+                    destination,
+                    currentTick,
+                    $"micro_thrower_spacing dist={dist:0.0} preferred={preferredRange:0.0}");
+            }
+
+            if (microDecision.Style == AICombatMicroMoveStyle.ReloadBait &&
+                dist >= tooCloseDistance)
+            {
+                intent = AITacticalMovementIntent.RepositionAngle;
+                destination =
+                    selfPos +
+                    awayFromTarget * (_profile.TacticalKiteDistance * 0.45f) +
+                    side * (_profile.TacticalStrafeDistance * 0.65f);
+
+                return CommitTacticalMove(
+                    intent,
+                    destination,
+                    currentTick,
+                    $"micro_reload_bait dist={dist:0.0} preferred={preferredRange:0.0}");
+            }
+
+            if (microDecision.Style == AICombatMicroMoveStyle.DodgeFeint)
+            {
+                intent = AITacticalMovementIntent.Strafe;
+                destination =
+                    selfPos -
+                    side * (_profile.TacticalStrafeDistance * 0.65f) +
+                    awayFromTarget * (_profile.TacticalKiteDistance * 0.15f);
+
+                return CommitTacticalMove(
+                    intent,
+                    destination,
+                    currentTick,
+                    $"micro_dodge_feint dist={dist:0.0} preferred={preferredRange:0.0}");
+            }
+
+            if (microDecision.Style == AICombatMicroMoveStyle.PeekTiming)
+            {
+                intent = AITacticalMovementIntent.Strafe;
+                destination =
+                    selfPos +
+                    side * (_profile.TacticalStrafeDistance * 0.85f) +
+                    toTarget * 0.35f;
+
+                return CommitTacticalMove(
+                    intent,
+                    destination,
+                    currentTick,
+                    $"micro_peek_timing dist={dist:0.0} preferred={preferredRange:0.0}");
+            }
 
             if (dist < tooCloseDistance || dist < preferredRange * 0.65f)
             {
@@ -1316,6 +1384,28 @@ namespace MOBA.Core.Simulation.AI
                     currentTick,
                     $"combat_good_range dist={dist:0.0} preferred={preferredRange:0.0}");
             }
+        }
+
+        private AICombatMicroMovementDecision ResolveCombatMicroMovement(
+            float targetDistance,
+            float preferredRange,
+            float tooCloseDistance,
+            uint currentTick)
+        {
+            if (_brawler == null || _brawler.State == null || _brawler.State.Ammo == null)
+                return new AICombatMicroMovementDecision(AICombatMicroMoveStyle.None, "ammo_unknown");
+
+            return AICombatMicroUtility.ResolveMovementStyle(
+                _brawler.State.Ammo.AvailableBars,
+                _brawler.State.Ammo.MaxAmmo,
+                _brawler.State.Ammo.CurrentAmmo,
+                targetDistance,
+                preferredRange,
+                tooCloseDistance,
+                _profile.Archetype == BrawlerArchetype.Artillery,
+                _dangerMemory != null && _dangerMemory.HasDanger,
+                currentTick,
+                _brawler.EntityID);
         }
 
         private Vector3 BuildTacticalRepositionDestination(

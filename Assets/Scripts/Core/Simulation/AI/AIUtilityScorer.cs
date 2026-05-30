@@ -871,6 +871,13 @@ namespace MOBA.Core.Simulation.AI
             if (IsController) score += 12f;
             if (IsArtillery) score += 18f;
 
+            float ammoPressure = GetAmmoPressure();
+            if (ammoPressure > 0f)
+            {
+                float reloadHoldBonus = IsTank ? 5f : 12f;
+                score += ammoPressure * reloadHoldBonus;
+            }
+
             return MakeScore(
       AIActionType.HoldRange,
       score,
@@ -900,6 +907,13 @@ namespace MOBA.Core.Simulation.AI
             if (IsTank) score -= 8f;
             if (IsController) score += 10f;
             if (IsArtillery) score += 14f;
+
+            float ammoPressure = GetAmmoPressure();
+            if (ammoPressure > 0f)
+            {
+                float reloadRepositionBonus = IsArtillery ? 18f : 14f;
+                score += ammoPressure * reloadRepositionBonus;
+            }
 
             return MakeScore(
      AIActionType.Reposition,
@@ -960,6 +974,13 @@ namespace MOBA.Core.Simulation.AI
             if (IsSupport) score -= 6f;
             if (IsController) score -= 3f;
             if (IsArtillery) score -= 10f;
+
+            float ammoPressure = GetAmmoPressure();
+            if (ammoPressure > 0f)
+            {
+                float lowAmmoApproachPenalty = IsTank || IsAssassin ? 8f : 18f;
+                score -= ammoPressure * lowAmmoApproachPenalty;
+            }
 
             // Gem Grab: behind on gems → push harder. The behind-ness check
             // is null-safe so non-Gem-Grab matches and unit-test contexts
@@ -1307,6 +1328,35 @@ namespace MOBA.Core.Simulation.AI
             return _reactiveMemory != null
                 ? _reactiveMemory.GetDamagePressure(currentTick, _profile.ReactiveDamageMemoryTicks)
                 : 0f;
+        }
+
+        private float GetAmmoPressure()
+        {
+            return AICombatMicroUtility.GetAmmoPressure(
+                GetAvailableAmmo(),
+                GetMaxAmmo(),
+                GetCurrentAmmo());
+        }
+
+        private int GetAvailableAmmo()
+        {
+            return _self != null && _self.State != null && _self.State.Ammo != null
+                ? _self.State.Ammo.AvailableBars
+                : 3;
+        }
+
+        private int GetMaxAmmo()
+        {
+            return _self != null && _self.State != null && _self.State.Ammo != null
+                ? _self.State.Ammo.MaxAmmo
+                : 3;
+        }
+
+        private float GetCurrentAmmo()
+        {
+            return _self != null && _self.State != null && _self.State.Ammo != null
+                ? _self.State.Ammo.CurrentAmmo
+                : GetAvailableAmmo();
         }
 
         private float CalculateNearbyAllyPressure(Vector3 position, float radius)

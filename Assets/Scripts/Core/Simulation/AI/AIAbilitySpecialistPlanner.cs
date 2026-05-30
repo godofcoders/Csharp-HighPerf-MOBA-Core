@@ -90,15 +90,26 @@ namespace MOBA.Core.Simulation.AI
                     thrown.ImpactRadius,
                     out int enemyPressure);
 
+                int allyRisk = CountAlliesNear(point, thrown.ImpactRadius);
+                AIAmmoDisciplineDecision microDecision = EvaluateMainAttackMicro(
+                    requestedTarget,
+                    Mathf.Clamp01(0.46f + enemyPressure * 0.14f),
+                    enemyPressure,
+                    allyRisk,
+                    isAreaDenial: true);
+                if (microDecision.ShouldHoldFire)
+                    return false;
+
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "thrown_area_denial");
                 AppendAreaDenialDecision(
                     requestedTarget,
                     enemyPressure,
-                    CountAlliesNear(point, thrown.ImpactRadius),
+                    allyRisk,
                     thrown.LingeringHazard != null,
                     isSuper: false,
                     ref plan);
-                RecordComboSetup(requestedTarget, currentTick, point, enemyPressure, 0);
+                AppendMicroDecision(microDecision, ref plan);
+                RecordComboSetup(requestedTarget, currentTick, point, enemyPressure, allyRisk);
                 return true;
             }
 
@@ -119,15 +130,26 @@ namespace MOBA.Core.Simulation.AI
                     volley.ImpactRadius,
                     out int enemyPressure);
 
+                int allyRisk = CountAlliesNear(point, volley.ImpactRadius);
+                AIAmmoDisciplineDecision microDecision = EvaluateMainAttackMicro(
+                    requestedTarget,
+                    Mathf.Clamp01(0.44f + enemyPressure * 0.16f),
+                    enemyPressure,
+                    allyRisk,
+                    isAreaDenial: true);
+                if (microDecision.ShouldHoldFire)
+                    return false;
+
                 plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "volley_area_denial");
                 AppendAreaDenialDecision(
                     requestedTarget,
                     enemyPressure,
-                    CountAlliesNear(point, volley.ImpactRadius),
+                    allyRisk,
                     volley.LingeringHazard != null,
                     isSuper: false,
                     ref plan);
-                RecordComboSetup(requestedTarget, currentTick, point, enemyPressure, 0);
+                AppendMicroDecision(microDecision, ref plan);
+                RecordComboSetup(requestedTarget, currentTick, point, enemyPressure, allyRisk);
                 return true;
             }
 
@@ -176,6 +198,16 @@ namespace MOBA.Core.Simulation.AI
             }
 
             plan = BuildDirectionalPlan(requestedTarget, "default_main");
+            AIAmmoDisciplineDecision defaultMicroDecision = EvaluateMainAttackMicro(
+                requestedTarget,
+                EstimateDirectShotQuality(requestedTarget, abilityRange),
+                enemyCountInLane: 1,
+                allyCountInLane: 0,
+                isAreaDenial: false);
+            if (defaultMicroDecision.ShouldHoldFire)
+                return false;
+
+            AppendMicroDecision(defaultMicroDecision, ref plan);
             RecordComboSetup(
                 requestedTarget,
                 currentTick,
@@ -435,6 +467,20 @@ namespace MOBA.Core.Simulation.AI
             if (requireQualityGate && !result.ShouldFire)
                 return false;
 
+            AIAmmoDisciplineDecision microDecision = default;
+            if (ability.SlotType == AbilitySlotType.MainAttack)
+            {
+                microDecision = EvaluateMainAttackMicro(
+                    target,
+                    result.Quality,
+                    enemiesInLane,
+                    alliesInLane,
+                    isAreaDenial: false);
+
+                if (microDecision.ShouldHoldFire)
+                    return false;
+            }
+
             Vector3 direction = ability is BurstSequenceProjectileAbilityDefinition
                 ? BuildLinePressureDirection(result.AimPoint, range)
                 : result.AimPoint - _self.Position;
@@ -455,6 +501,9 @@ namespace MOBA.Core.Simulation.AI
                     IsSuperAbility(ability));
 
             AppendPackDecision(lineDecision, ref plan);
+
+            if (ability.SlotType == AbilitySlotType.MainAttack)
+                AppendMicroDecision(microDecision, ref plan);
 
             if (ability.SlotType == AbilitySlotType.MainAttack)
                 RecordComboSetup(target, currentTick, result.AimPoint, enemiesInLane, alliesInLane);
@@ -559,11 +608,21 @@ namespace MOBA.Core.Simulation.AI
                 currentTick,
                 out _);
 
+            AIAmmoDisciplineDecision microDecision = EvaluateMainAttackMicro(
+                bestTarget,
+                Mathf.Clamp01(0.42f + bestBounceTargets * 0.18f),
+                bestBounceTargets,
+                CountAlliesNear(bestTarget.Position, chain.BounceRadius),
+                isAreaDenial: false);
+            if (microDecision.ShouldHoldFire)
+                return false;
+
             plan = AIAbilityCastPlan.Directional(
                 bestTarget,
                 aimPoint - _self.Position,
                 $"chain_bounce targets={bestBounceTargets}");
 
+            AppendMicroDecision(microDecision, ref plan);
             RecordComboSetup(bestTarget, currentTick, aimPoint, bestBounceTargets, 0);
             return true;
         }
@@ -821,6 +880,52 @@ namespace MOBA.Core.Simulation.AI
             plan.Reason = $"{plan.Reason}|pack={decision.Reason}:{decision.Score:0}";
         }
 
+        private AIAmmoDisciplineDecision EvaluateMainAttackMicro(
+            ISpatialEntity target,
+            float shotQuality,
+            int enemyCountInLane,
+            int allyCountInLane,
+            bool isAreaDenial)
+        {
+            if (_self == null || _self.State == null || _self.State.Ammo == null)
+                return new AIAmmoDisciplineDecision(false, "ammo_unknown");
+
+            return AICombatMicroUtility.EvaluateAmmoDiscipline(
+                GetAvailableAmmo(),
+                GetMaxAmmo(),
+                GetCurrentAmmo(),
+                Mathf.Clamp01(shotQuality),
+                GetTargetHealthRatio(target),
+                IsTargetControlled(target),
+                Mathf.Max(0, enemyCountInLane),
+                Mathf.Max(0, allyCountInLane),
+                isAreaDenial);
+        }
+
+        private void AppendMicroDecision(
+            AIAmmoDisciplineDecision decision,
+            ref AIAbilityCastPlan plan)
+        {
+            if (string.IsNullOrEmpty(decision.Reason))
+                return;
+
+            plan.Reason = $"{plan.Reason}|micro={decision.Reason}";
+        }
+
+        private float EstimateDirectShotQuality(ISpatialEntity target, float range)
+        {
+            if (!SpatialEntityUtility.IsAlive(target))
+                return 0f;
+
+            float distance = Vector3.Distance(_self.Position, target.Position);
+            float rangeQuality = 1f - Mathf.Clamp01(distance / Mathf.Max(1f, range)) * 0.35f;
+
+            if (IsTargetControlled(target))
+                rangeQuality += 0.20f;
+
+            return Mathf.Clamp01(rangeQuality);
+        }
+
         private float GetTargetHealthRatio(ISpatialEntity target)
         {
             if (target is not BrawlerController brawler || brawler.State == null)
@@ -1063,6 +1168,20 @@ namespace MOBA.Core.Simulation.AI
             return _self != null && _self.State != null && _self.State.Ammo != null
                 ? _self.State.Ammo.AvailableBars
                 : 3;
+        }
+
+        private int GetMaxAmmo()
+        {
+            return _self != null && _self.State != null && _self.State.Ammo != null
+                ? _self.State.Ammo.MaxAmmo
+                : 3;
+        }
+
+        private float GetCurrentAmmo()
+        {
+            return _self != null && _self.State != null && _self.State.Ammo != null
+                ? _self.State.Ammo.CurrentAmmo
+                : GetAvailableAmmo();
         }
 
         private void CountFireLaneEntities(
