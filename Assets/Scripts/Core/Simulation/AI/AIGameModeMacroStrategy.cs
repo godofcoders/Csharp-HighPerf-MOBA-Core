@@ -145,6 +145,19 @@ namespace MOBA.Core.Simulation.AI
             if (team == TeamType.Neutral)
                 return AIGameModeMacroState.Neutral;
 
+            if (ServiceProvider.TryGet<IAIGameModeMacroStateProvider>(out var provider))
+            {
+                if (provider is UnityEngine.Object unityProvider && unityProvider == null)
+                {
+                    ServiceProvider.Unregister<IAIGameModeMacroStateProvider>();
+                }
+                else if (provider != null &&
+                         provider.TryResolveMacroState(team, out AIGameModeMacroState providedState))
+                {
+                    return providedState;
+                }
+            }
+
             if (GemGrabMode.Instance != null)
                 return ResolveGemGrab(GemGrabMode.Instance, team);
 

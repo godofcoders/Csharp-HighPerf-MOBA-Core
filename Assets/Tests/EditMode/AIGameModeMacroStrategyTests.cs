@@ -1,11 +1,19 @@
 using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation;
 using MOBA.Core.Simulation.AI;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace MOBA.Tests.EditMode
 {
     public class AIGameModeMacroStrategyTests
     {
+        [TearDown]
+        public void TearDown()
+        {
+            ServiceProvider.Unregister<IAIGameModeMacroStateProvider>();
+        }
+
         [Test]
         public void ResolveGemGrab_Holds_WhenOwnTeamHasCountdown()
         {
@@ -170,6 +178,94 @@ namespace MOBA.Tests.EditMode
 
             Assert.AreEqual(AIGameModeMacroCall.Hold, state.Call);
             Assert.AreEqual("hold_zone_lead", state.Reason);
+        }
+
+        [Test]
+        public void ResolveCurrentMode_UsesRegisteredRuntimeProvider()
+        {
+            ServiceProvider.Register<IAIGameModeMacroStateProvider>(
+                new FakeMacroStateProvider());
+
+            AIGameModeMacroState state =
+                AIGameModeMacroStrategy.ResolveCurrentMode(TeamType.Blue);
+
+            Assert.AreEqual(GameModeId.HotZone, state.Mode);
+            Assert.AreEqual(AIGameModeMacroCall.Push, state.Call);
+            Assert.AreEqual("runtime_provider", state.Reason);
+        }
+
+        [Test]
+        public void BrawlBallMode_ProvidesGoalAwareMacroState()
+        {
+            var gameObject = new GameObject("BrawlBallModeTest");
+            try
+            {
+                var mode = gameObject.AddComponent<BrawlBallMode>();
+                mode.RecordGoal(TeamType.Blue);
+
+                bool resolved = mode.TryResolveMacroState(
+                    TeamType.Blue,
+                    out AIGameModeMacroState state);
+
+                Assert.IsTrue(resolved);
+                Assert.AreEqual(GameModeId.BrawlBall, state.Mode);
+                Assert.AreEqual(AIGameModeMacroCall.Hold, state.Call);
+                Assert.AreEqual("protect_lead", state.Reason);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void HotZoneMode_ProvidesProgressAwareMacroState()
+        {
+            var gameObject = new GameObject("HotZoneModeTest");
+            try
+            {
+                var mode = gameObject.AddComponent<HotZoneMode>();
+                mode.SetProgressForDebug(35f, 55f);
+
+                bool resolved = mode.TryResolveMacroState(
+                    TeamType.Blue,
+                    out AIGameModeMacroState state);
+
+                Assert.IsTrue(resolved);
+                Assert.AreEqual(GameModeId.HotZone, state.Mode);
+                Assert.AreEqual(AIGameModeMacroCall.Push, state.Call);
+                Assert.AreEqual("contest_zone", state.Reason);
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        private sealed class FakeMacroStateProvider : IAIGameModeMacroStateProvider
+        {
+            public GameModeId ModeId => GameModeId.HotZone;
+
+            public bool TryResolveMacroState(
+                TeamType team,
+                out AIGameModeMacroState state)
+            {
+                state = new AIGameModeMacroState(
+                    GameModeId.HotZone,
+                    AIGameModeMacroCall.Push,
+                    AIGameModeObjectivePhase.Contest,
+                    20,
+                    40,
+                    100,
+                    0f,
+                    90f,
+                    false,
+                    true,
+                    false,
+                    false,
+                    "runtime_provider");
+                return true;
+            }
         }
     }
 }

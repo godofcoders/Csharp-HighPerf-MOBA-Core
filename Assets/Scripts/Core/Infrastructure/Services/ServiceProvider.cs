@@ -43,6 +43,21 @@ namespace MOBA.Core.Infrastructure
             return false;
         }
 
+        public static void Unregister<T>(T service)
+        {
+            var type = typeof(T);
+            if (!_services.TryGetValue(type, out var registeredService))
+                return;
+
+            if (ReferenceEquals(registeredService, service))
+                _services.Remove(type);
+        }
+
+        public static void Unregister<T>()
+        {
+            _services.Remove(typeof(T));
+        }
+
         public static void Clear() => _services.Clear();
     }
 }
