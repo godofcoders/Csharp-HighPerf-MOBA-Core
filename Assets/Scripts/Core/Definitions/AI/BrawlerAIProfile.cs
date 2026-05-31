@@ -86,6 +86,10 @@ namespace MOBA.Core.Simulation.AI
         public AIObjectiveType PreferredObjective = AIObjectiveType.MidControl;
         public float ObjectiveWeight = 1f;
 
+        [Header("Game Mode Macro")]
+        [Tooltip("Scales score deltas from mode-level push/hold/reset macro calls.")]
+        public float MacroActionBiasWeight = 1f;
+
         [Header("Team Tactics")]
         public float FocusFireWeight = 20f;
         public float RegroupWeight = 1f;
@@ -357,6 +361,7 @@ namespace MOBA.Core.Simulation.AI
 
                     PreferredObjective = AIObjectiveType.MidControl;
                     ObjectiveWeight = 1f;
+                    MacroActionBiasWeight = 0.95f;
 
                     FocusFireWeight = 25f;
                     RegroupWeight = 1.2f;
@@ -405,6 +410,7 @@ namespace MOBA.Core.Simulation.AI
 
                     PreferredObjective = AIObjectiveType.HotZone;
                     ObjectiveWeight = 1.25f;
+                    MacroActionBiasWeight = 1.10f;
 
                     FocusFireWeight = 18f;
                     RegroupWeight = 0.8f;
@@ -453,6 +459,7 @@ namespace MOBA.Core.Simulation.AI
 
                     PreferredObjective = AIObjectiveType.LanePressure;
                     ObjectiveWeight = 0.85f;
+                    MacroActionBiasWeight = 0.90f;
 
                     FocusFireWeight = 25f;
                     RegroupWeight = 0.7f;
@@ -501,6 +508,7 @@ namespace MOBA.Core.Simulation.AI
 
                     PreferredObjective = AIObjectiveType.GemMine;
                     ObjectiveWeight = 1.0f;
+                    MacroActionBiasWeight = 1.10f;
 
                     FocusFireWeight = 18f;
                     RegroupWeight = 1.15f;
@@ -551,6 +559,7 @@ namespace MOBA.Core.Simulation.AI
 
                     PreferredObjective = AIObjectiveType.HotZone;
                     ObjectiveWeight = 1.2f;
+                    MacroActionBiasWeight = 1.15f;
 
                     FocusFireWeight = 24f;
                     RegroupWeight = 0.9f;
@@ -604,6 +613,7 @@ namespace MOBA.Core.Simulation.AI
 
                     PreferredObjective = AIObjectiveType.HotZone;
                     ObjectiveWeight = 1.15f;
+                    MacroActionBiasWeight = 1.05f;
 
                     ClusterTargetBonus = 16f;
 
@@ -655,6 +665,7 @@ namespace MOBA.Core.Simulation.AI
 
                     PreferredObjective = AIObjectiveType.MidControl;
                     ObjectiveWeight = 1.0f;
+                    MacroActionBiasWeight = 1.0f;
 
                     FocusFireWeight = 22f;
                     RegroupWeight = 1.0f;

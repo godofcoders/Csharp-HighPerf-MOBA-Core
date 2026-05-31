@@ -683,166 +683,49 @@ namespace MOBA.Core.Simulation.AI
             return score;
         }
 
-        private float GetApproachMacroDelta(AIGameModeMacroState macroState)
-        {
-            bool selfCarrier = _self.State != null && _self.State.CarriedGemCount > 0;
-
-            switch (macroState.Mode)
-            {
-                case GameModeId.Knockout:
-                    if (macroState.Call == AIGameModeMacroCall.Push) return 14f;
-                    if (macroState.Call == AIGameModeMacroCall.Reset) return -16f;
-                    if (macroState.Call == AIGameModeMacroCall.Hold) return -8f;
-                    break;
-
-                case GameModeId.BrawlBall:
-                    if (macroState.Call == AIGameModeMacroCall.Push) return 18f;
-                    if (macroState.Call == AIGameModeMacroCall.Reset) return 10f;
-                    if (macroState.Call == AIGameModeMacroCall.Hold) return -4f;
-                    break;
-
-                case GameModeId.HotZone:
-                    if (macroState.Call == AIGameModeMacroCall.Push) return 10f;
-                    if (macroState.Call == AIGameModeMacroCall.Reset) return 12f;
-                    if (macroState.Call == AIGameModeMacroCall.Hold) return -4f;
-                    break;
-
-                case GameModeId.GemGrab:
-                default:
-                    if (macroState.Call == AIGameModeMacroCall.Push) return 12f;
-                    if (macroState.Call == AIGameModeMacroCall.Reset) return 18f;
-                    if (macroState.Call == AIGameModeMacroCall.Hold && selfCarrier) return -18f;
-                    break;
-            }
-
-            return 0f;
-        }
-
-        private float GetSearchMacroDelta(AIGameModeMacroState macroState)
-        {
-            switch (macroState.Mode)
-            {
-                case GameModeId.Knockout:
-                    if (macroState.Call == AIGameModeMacroCall.Push) return 6f;
-                    if (macroState.Call == AIGameModeMacroCall.Reset) return -4f;
-                    if (macroState.Call == AIGameModeMacroCall.Hold) return -8f;
-                    break;
-
-                case GameModeId.BrawlBall:
-                    if (macroState.Call == AIGameModeMacroCall.Push) return 14f;
-                    if (macroState.Call == AIGameModeMacroCall.Reset) return 10f;
-                    if (macroState.Call == AIGameModeMacroCall.Hold) return -4f;
-                    break;
-
-                case GameModeId.HotZone:
-                    if (macroState.Call == AIGameModeMacroCall.Push) return 14f;
-                    if (macroState.Call == AIGameModeMacroCall.Reset) return 16f;
-                    if (macroState.Call == AIGameModeMacroCall.Hold) return 4f;
-                    break;
-
-                case GameModeId.GemGrab:
-                default:
-                    if (macroState.Call == AIGameModeMacroCall.Push) return 12f;
-                    if (macroState.Call == AIGameModeMacroCall.Reset) return 8f;
-                    if (macroState.Call == AIGameModeMacroCall.Hold) return -10f;
-                    break;
-            }
-
-            return 0f;
-        }
-
-        private float GetObjectiveMacroDelta(
+        private float GetMacroActionDelta(
+            AIActionType actionType,
             AIGameModeMacroState macroState,
-            bool selfCarrier,
+            int selfCarriedGems,
+            int targetCarriedGems,
+            int allyCarriedGems)
+        {
+            return GetMacroActionDelta(
+                actionType,
+                macroState,
+                selfCarriedGems,
+                targetCarriedGems,
+                allyCarriedGems,
+                out _);
+        }
+
+        private float GetMacroActionDelta(
+            AIActionType actionType,
+            AIGameModeMacroState macroState,
+            int selfCarriedGems,
+            int targetCarriedGems,
+            int allyCarriedGems,
             out string reason)
         {
             reason = "macro_none";
 
-            switch (macroState.Mode)
-            {
-                case GameModeId.Knockout:
-                    if (macroState.Call == AIGameModeMacroCall.Push)
-                    {
-                        reason = "knockout_push";
-                        return 4f;
-                    }
+            if (_profile == null || _profile.MacroActionBiasWeight <= 0f)
+                return 0f;
 
-                    if (macroState.Call == AIGameModeMacroCall.Reset)
-                    {
-                        reason = "knockout_stabilize";
-                        return -10f;
-                    }
+            var context = new AIMacroActionContext(
+                macroState,
+                selfCarriedGems,
+                targetCarriedGems,
+                allyCarriedGems);
 
-                    if (macroState.Call == AIGameModeMacroCall.Hold)
-                    {
-                        reason = "knockout_hold";
-                        return -8f;
-                    }
-                    break;
+            AIMacroActionPolicyResult result =
+                AIMacroActionPolicy.Evaluate(actionType, context);
 
-                case GameModeId.BrawlBall:
-                    if (macroState.Call == AIGameModeMacroCall.Push)
-                    {
-                        reason = "ball_push";
-                        return 14f;
-                    }
+            reason = result.Reason;
+            if (!result.HasDelta)
+                return 0f;
 
-                    if (macroState.Call == AIGameModeMacroCall.Reset)
-                    {
-                        reason = "ball_defend";
-                        return 10f;
-                    }
-
-                    if (macroState.Call == AIGameModeMacroCall.Hold)
-                    {
-                        reason = "ball_hold";
-                        return 4f;
-                    }
-                    break;
-
-                case GameModeId.HotZone:
-                    if (macroState.Call == AIGameModeMacroCall.Push)
-                    {
-                        reason = "zone_push";
-                        return 20f;
-                    }
-
-                    if (macroState.Call == AIGameModeMacroCall.Reset)
-                    {
-                        reason = "zone_deny";
-                        return 22f;
-                    }
-
-                    if (macroState.Call == AIGameModeMacroCall.Hold)
-                    {
-                        reason = "zone_hold";
-                        return 14f;
-                    }
-                    break;
-
-                case GameModeId.GemGrab:
-                default:
-                    if (macroState.Call == AIGameModeMacroCall.Push)
-                    {
-                        reason = "macro_push";
-                        return 16f;
-                    }
-
-                    if (macroState.Call == AIGameModeMacroCall.Reset)
-                    {
-                        reason = "macro_reset";
-                        return 10f;
-                    }
-
-                    if (macroState.Call == AIGameModeMacroCall.Hold)
-                    {
-                        reason = selfCarrier ? "carrier_hold" : "zone_hold";
-                        return selfCarrier ? -18f : 8f;
-                    }
-                    break;
-            }
-
-            return 0f;
+            return result.Delta * Mathf.Max(0f, _profile.MacroActionBiasWeight);
         }
 
         private AIActionScore ScoreRetreat(
@@ -898,13 +781,12 @@ namespace MOBA.Core.Simulation.AI
             if (_self.State != null)
                 score += 6f * _self.State.CarriedGemCount;
 
-            if (_self.State.CarriedGemCount > 0)
-            {
-                if (macroState.Call == AIGameModeMacroCall.Hold)
-                    score += 8f * _self.State.CarriedGemCount;
-                else if (macroState.Call == AIGameModeMacroCall.Reset)
-                    score += 4f * _self.State.CarriedGemCount;
-            }
+            score += GetMacroActionDelta(
+                AIActionType.Retreat,
+                macroState,
+                _self.State.CarriedGemCount,
+                0,
+                0);
 
             return MakeScore(
     AIActionType.Retreat,
@@ -990,12 +872,14 @@ namespace MOBA.Core.Simulation.AI
             if (targetInfo.Target is BrawlerController carrierTarget &&
                 carrierTarget.State != null)
             {
-                score += 5f * carrierTarget.State.CarriedGemCount;
-
-                if (macroState.Call == AIGameModeMacroCall.Reset)
-                    score += 6f * carrierTarget.State.CarriedGemCount;
-                else if (macroState.Call == AIGameModeMacroCall.Push && carrierTarget.State.CarriedGemCount > 0)
-                    score += 8f;
+                int targetCarriedGems = carrierTarget.State.CarriedGemCount;
+                score += 5f * targetCarriedGems;
+                score += GetMacroActionDelta(
+                    AIActionType.UseSuper,
+                    macroState,
+                    0,
+                    targetCarriedGems,
+                    0);
             }
 
             return MakeScore(
@@ -1150,7 +1034,12 @@ namespace MOBA.Core.Simulation.AI
             if (GemGrabMode.Instance != null && GemGrabMode.Instance.IsTeamBehind(_self.Team))
                 score += 8f;
 
-            score += GetApproachMacroDelta(macroState);
+            score += GetMacroActionDelta(
+                AIActionType.Approach,
+                macroState,
+                _self.State != null ? _self.State.CarriedGemCount : 0,
+                0,
+                0);
 
             return MakeScore(
      AIActionType.Approach,
@@ -1198,7 +1087,12 @@ namespace MOBA.Core.Simulation.AI
             if (Gem.HasAnyUnpickedWithin(_self.Position, 8f))
                 score += 35f;
 
-            score += GetSearchMacroDelta(macroState);
+            score += GetMacroActionDelta(
+                AIActionType.Search,
+                macroState,
+                0,
+                0,
+                0);
 
             return MakeScore(
       AIActionType.Search,
@@ -1311,9 +1205,12 @@ namespace MOBA.Core.Simulation.AI
                 _lastObjectiveScoreReason += "|behind_+8";
             }
 
-            float objectiveMacroDelta = GetObjectiveMacroDelta(
+            float objectiveMacroDelta = GetMacroActionDelta(
+                AIActionType.Objective,
                 macroState,
-                _self.State != null && _self.State.CarriedGemCount > 0,
+                _self.State != null ? _self.State.CarriedGemCount : 0,
+                0,
+                0,
                 out string objectiveMacroReason);
             if (Mathf.Abs(objectiveMacroDelta) > 0.01f)
             {
@@ -1389,10 +1286,12 @@ namespace MOBA.Core.Simulation.AI
                 // Gem carriers should regroup more safely.
                 score += 5f * _self.State.CarriedGemCount;
 
-                if (macroState.Call == AIGameModeMacroCall.Hold)
-                    score += 8f * _self.State.CarriedGemCount;
-                else if (macroState.Call == AIGameModeMacroCall.Reset)
-                    score += 4f * _self.State.CarriedGemCount;
+                score += GetMacroActionDelta(
+                    AIActionType.Regroup,
+                    macroState,
+                    _self.State.CarriedGemCount,
+                    0,
+                    0);
             }
 
             return MakeScore(
@@ -1414,15 +1313,19 @@ namespace MOBA.Core.Simulation.AI
             {
                 score += 40f;
 
-                if (ally.State != null && ally.State.CarriedGemCount > 0)
-                    score += 8f * ally.State.CarriedGemCount;
+                int allyCarriedGems = ally.State != null
+                    ? ally.State.CarriedGemCount
+                    : 0;
 
-                if (macroState.Call == AIGameModeMacroCall.Hold &&
-                    ally.State != null &&
-                    ally.State.CarriedGemCount > 0)
-                {
-                    score += 10f * ally.State.CarriedGemCount;
-                }
+                if (allyCarriedGems > 0)
+                    score += 8f * allyCarriedGems;
+
+                score += GetMacroActionDelta(
+                    AIActionType.Peel,
+                    macroState,
+                    0,
+                    0,
+                    allyCarriedGems);
             }
 
             float teamplay = _self.Definition != null ? _self.Definition.TeamplayWeight : 1f;

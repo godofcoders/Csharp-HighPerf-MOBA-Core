@@ -141,6 +141,7 @@ namespace MOBA.Core.Simulation.AI
 
             float objective = MultiplierOrOne(ObjectiveMultiplier);
             profile.ObjectiveWeight *= objective;
+            profile.MacroActionBiasWeight *= objective;
             profile.MapLaneControlPreference *= objective;
             profile.MapChokeControlPreference *= objective;
         }

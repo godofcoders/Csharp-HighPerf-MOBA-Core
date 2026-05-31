@@ -298,6 +298,7 @@ namespace MOBA.Core.Simulation.AI
             profile.NonCombatActionCommitmentTicks = ClampTicks(profile.NonCombatActionCommitmentTicks, 1, 120);
             profile.EmergencyOverrideScore = Mathf.Clamp(profile.EmergencyOverrideScore, 60f, 120f);
             profile.FocusFireWeight = Mathf.Clamp(profile.FocusFireWeight, 0f, 45f);
+            profile.MacroActionBiasWeight = Mathf.Clamp(profile.MacroActionBiasWeight, 0f, 2f);
             profile.OverFocusedTargetPenaltyPerAlly = Mathf.Clamp(profile.OverFocusedTargetPenaltyPerAlly, 0f, 45f);
             profile.MaxOverFocusedTargetPenalty = Mathf.Clamp(profile.MaxOverFocusedTargetPenalty, 0f, 70f);
             profile.TeamRoleCoordinationWeight = Mathf.Clamp(profile.TeamRoleCoordinationWeight, 0f, 2f);

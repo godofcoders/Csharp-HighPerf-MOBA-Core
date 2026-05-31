@@ -72,6 +72,7 @@ namespace MOBA.Tests.EditMode
                 catalog);
 
             Assert.Greater(profile.ObjectiveWeight, 1f);
+            Assert.Greater(profile.MacroActionBiasWeight, 1f);
             Assert.Greater(profile.ApproachWeight, 1.5f);
             Assert.Less((int)profile.AttackCadenceTicks, 10);
             Assert.AreSame(
