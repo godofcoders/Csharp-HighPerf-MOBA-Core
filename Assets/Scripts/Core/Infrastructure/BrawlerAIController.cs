@@ -76,6 +76,15 @@ namespace MOBA.Core.Infrastructure
         public string LastObjectiveName =>
             _actionExecutor != null ? _actionExecutor.LastObjectiveName : string.Empty;
 
+        public AIObjectiveType LastObjectiveType =>
+            _actionExecutor != null ? _actionExecutor.LastObjectiveType : AIObjectiveType.None;
+
+        public float LastObjectiveRadius =>
+            _actionExecutor != null ? _actionExecutor.LastObjectiveRadius : 0f;
+
+        public bool LastObjectiveIsRuntime =>
+            _actionExecutor != null && _actionExecutor.LastObjectiveIsRuntime;
+
         public float LastObjectiveAllyPressure =>
             _utilityScorer != null ? _utilityScorer.LastObjectiveAllyPressure : 0f;
 
@@ -504,6 +513,9 @@ _actionExecutor != null
             {
                 _debugSnapshot.ObjectiveDebug =
                     $"Obj={LastObjectiveName} " +
+                    $"Type={LastObjectiveType} " +
+                    $"Runtime={LastObjectiveIsRuntime} " +
+                    $"Radius={LastObjectiveRadius:0.0} " +
                     $"Center={FormatVector(LastObjectiveCenter)} " +
                     $"Slot={FormatVector(LastObjectiveSlot)} " +
                     $"Dest={FormatVector(LastObjectiveDestination)} " +
@@ -976,7 +988,9 @@ $"Map={LastMapRouteDebug}";
 
             if (HasObjectiveDebug)
             {
-                Gizmos.DrawWireSphere(LastObjectiveCenter, 0.35f);
+                Gizmos.DrawWireSphere(
+                    LastObjectiveCenter,
+                    Mathf.Max(0.35f, LastObjectiveRadius));
                 Gizmos.DrawWireSphere(LastObjectiveSlot, 0.45f);
                 Gizmos.DrawLine(LastObjectiveCenter, LastObjectiveSlot);
             }

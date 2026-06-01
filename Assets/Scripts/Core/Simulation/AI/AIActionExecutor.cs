@@ -24,6 +24,9 @@ namespace MOBA.Core.Simulation.AI
         private Vector3 _lastObjectiveSlot;
         private Vector3 _lastObjectiveDestination;
         private string _lastObjectiveName;
+        private AIObjectiveType _lastObjectiveType;
+        private float _lastObjectiveRadius;
+        private bool _lastObjectiveIsRuntime;
         private bool _hasObjectiveDebug;
 
         public bool HasObjectiveDebug => _hasObjectiveDebug;
@@ -31,6 +34,9 @@ namespace MOBA.Core.Simulation.AI
         public Vector3 LastObjectiveSlot => _lastObjectiveSlot;
         public Vector3 LastObjectiveDestination => _lastObjectiveDestination;
         public string LastObjectiveName => _lastObjectiveName;
+        public AIObjectiveType LastObjectiveType => _lastObjectiveType;
+        public float LastObjectiveRadius => _lastObjectiveRadius;
+        public bool LastObjectiveIsRuntime => _lastObjectiveIsRuntime;
         private AITacticalMovementIntent _lastTacticalMovementIntent;
         private Vector3 _lastTacticalMoveDestination;
         private Vector3 _lastTacticalTargetPosition;
@@ -479,7 +485,7 @@ namespace MOBA.Core.Simulation.AI
             Vector3 slotPosition = AIObjectiveSlotUtility.GetObjectiveSlotPosition(
                 _brawler,
                 _profile,
-                objectivePosition);
+                objective);
 
             Vector3 destination = ResolveMapAwareDestination(
                 slotPosition,
@@ -489,6 +495,9 @@ namespace MOBA.Core.Simulation.AI
             _lastObjectiveSlot = slotPosition;
             _lastObjectiveDestination = destination;
             _lastObjectiveName = objective.Name;
+            _lastObjectiveType = objective.ObjectiveType;
+            _lastObjectiveRadius = objective.Radius;
+            _lastObjectiveIsRuntime = objective.IsRuntime;
             _hasObjectiveDebug = true;
 
             _navAgent.RequestDestination(destination, 1f);

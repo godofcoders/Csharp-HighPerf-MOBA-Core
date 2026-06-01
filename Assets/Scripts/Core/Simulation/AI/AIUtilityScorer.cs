@@ -1136,23 +1136,37 @@ namespace MOBA.Core.Simulation.AI
             }
 
             Vector3 objectivePosition = objective.Position;
+            float objectiveRadius = Mathf.Max(0.5f, objective.Radius);
 
             float dist = Vector3.Distance(
                 _self.Position,
                 objectivePosition);
 
             float score = 45f;
-            _lastObjectiveScoreReason = "base_45";
+            _lastObjectiveScoreReason =
+                $"base_45|type_{objective.ObjectiveType}|radius_{objectiveRadius:0.0}";
+
+            if (objective.IsRuntime)
+                _lastObjectiveScoreReason += "|runtime";
+
+            float weightDelta = Mathf.Clamp((objective.Weight - 50f) * 0.15f, -10f, 18f);
+            if (Mathf.Abs(weightDelta) > 0.01f)
+            {
+                score += weightDelta;
+                _lastObjectiveScoreReason += $"|weight_{weightDelta:+0.0;-0.0}";
+            }
 
             // Far from objective: moving toward it is useful.
-            if (dist > 4f)
+            float farDistance = Mathf.Max(4f, objectiveRadius + 1.5f);
+            if (dist > farDistance)
             {
                 score += 20f;
                 _lastObjectiveScoreReason += "|far_+20";
             }
 
             // Already near objective: no need to over-prioritize objective movement.
-            if (dist < 2.5f)
+            float nearDistance = Mathf.Max(1.5f, objectiveRadius * 0.75f);
+            if (dist < nearDistance)
             {
                 score -= 20f;
                 _lastObjectiveScoreReason += "|near_-20";
@@ -1162,7 +1176,7 @@ namespace MOBA.Core.Simulation.AI
             // If allies are already near the objective, reduce desire to also go there.
             float allyPressure = CalculateNearbyAllyPressure(
                 objectivePosition,
-                4.5f);
+                Mathf.Max(4.5f, objectiveRadius + 1.5f));
 
             float crowdingPenalty = allyPressure * GetObjectiveCrowdingPenalty();
 

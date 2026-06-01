@@ -47,6 +47,7 @@ namespace MOBA.Tests.EditMode
             Assert.IsTrue(objective.IsRuntime);
             Assert.AreEqual(AIObjectiveType.Ball, objective.ObjectiveType);
             Assert.AreEqual("RuntimeBall", objective.Name);
+            Assert.AreEqual(2f, objective.Radius);
         }
 
         [Test]

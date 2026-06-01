@@ -22,7 +22,7 @@ namespace MOBA.Core.Simulation.AI
             ObjectiveType = objectiveType;
             Position = position;
             Weight = weight;
-            Radius = radius;
+            Radius = Mathf.Max(0.5f, radius);
             Name = string.IsNullOrEmpty(name) ? objectiveType.ToString() : name;
             IsRuntime = isRuntime;
         }
