@@ -59,9 +59,16 @@ namespace MOBA.Core.Simulation.AI
             float arrivalDistance = 0.6f,
             bool highPriority = false)
         {
+            target = FlattenToMovementPlane(target);
             _arrivalDistance = arrivalDistance;
 
             if (!_hasDestination)
+            {
+                ForceRepath(target, highPriority);
+                return;
+            }
+
+            if (_routeBlocked && _clock.CurrentTick >= _nextRepathTick)
             {
                 ForceRepath(target, highPriority);
                 return;
@@ -80,16 +87,17 @@ namespace MOBA.Core.Simulation.AI
 
         public void ForceRepath(Vector3 target, bool highPriority = false)
         {
+            target = FlattenToMovementPlane(target);
             bool destinationChanged = !_hasDestination ||
                                       (target - _destination).sqrMagnitude >=
                                       (_repathDistanceThreshold * _repathDistanceThreshold);
 
-            _destination = target;
-            if (destinationChanged)
-                ResetDestinationProgress(target);
-
             if (SimulationClock.Pathfinder == null)
             {
+                _destination = target;
+                if (destinationChanged)
+                    ResetDestinationProgress(target);
+
                 _hasDestination = true;
                 _path = null;
                 _pathIndex = 0;
@@ -101,6 +109,41 @@ namespace MOBA.Core.Simulation.AI
 
             var start = SimulationClock.Pathfinder.GetGridCoords(_brawler.Position);
             var end = SimulationClock.Pathfinder.GetGridCoords(target);
+            var requestedEnd = end;
+            bool foundStart = true;
+            bool foundEnd = true;
+
+            if (!SimulationClock.Pathfinder.IsWalkable(start))
+                foundStart = SimulationClock.Pathfinder.TryGetNearestWalkableCoords(start, 3, out start);
+
+            if (!SimulationClock.Pathfinder.IsWalkable(end))
+                foundEnd = SimulationClock.Pathfinder.TryGetNearestWalkableCoords(end, 3, out end);
+
+            if (!foundStart || !foundEnd)
+            {
+                _destination = target;
+                if (destinationChanged)
+                    ResetDestinationProgress(target);
+
+                _hasDestination = true;
+                _path = null;
+                _pathIndex = 0;
+                _routeBlocked = true;
+                _consecutiveRouteFailures++;
+                _nextRepathTick = _clock.CurrentTick + _repathCooldownTicks;
+                return;
+            }
+
+            if (end != requestedEnd)
+                target = FlattenToMovementPlane(SimulationClock.Pathfinder.GetWorldPos(end));
+
+            destinationChanged = !_hasDestination ||
+                                 (target - _destination).sqrMagnitude >=
+                                 (_repathDistanceThreshold * _repathDistanceThreshold);
+
+            _destination = target;
+            if (destinationChanged)
+                ResetDestinationProgress(target);
 
             if (!AIBudgetCoordinator.TryAcquirePathQuery(
                     _clock.CurrentTick,
@@ -154,7 +197,7 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
-            float distToDestinationSq = (_destination - _brawler.Position).sqrMagnitude;
+            float distToDestinationSq = GetPlanarDelta(_destination).sqrMagnitude;
             if (distToDestinationSq <= (_arrivalDistance * _arrivalDistance))
             {
                 Stop();
@@ -172,7 +215,7 @@ namespace MOBA.Core.Simulation.AI
 
             if (_path == null || _pathIndex >= _path.Count)
             {
-                Vector3 directDir = _destination - _brawler.Position;
+                Vector3 directDir = GetPlanarDelta(_destination);
                 if (directDir.sqrMagnitude > 0.0001f)
                     _commandSource?.QueueMove(directDir.normalized);
                 else
@@ -182,22 +225,24 @@ namespace MOBA.Core.Simulation.AI
             }
 
             Vector3 nodeWorld = SimulationClock.Pathfinder.GetWorldPos(_path[_pathIndex].X, _path[_pathIndex].Y);
+            nodeWorld = FlattenToMovementPlane(nodeWorld);
 
-            if ((nodeWorld - _brawler.Position).sqrMagnitude <= 0.25f)
+            if (GetPlanarDelta(nodeWorld).sqrMagnitude <= 0.25f)
             {
                 _pathIndex++;
 
                 if (_pathIndex >= _path.Count)
                 {
-                    Vector3 finalDir = _destination - _brawler.Position;
+                    Vector3 finalDir = GetPlanarDelta(_destination);
                     _commandSource?.QueueMove(finalDir.sqrMagnitude > 0.0001f ? finalDir.normalized : Vector3.zero);
                     return;
                 }
 
                 nodeWorld = SimulationClock.Pathfinder.GetWorldPos(_path[_pathIndex].X, _path[_pathIndex].Y);
+                nodeWorld = FlattenToMovementPlane(nodeWorld);
             }
 
-            Vector3 dir = nodeWorld - _brawler.Position;
+            Vector3 dir = GetPlanarDelta(nodeWorld);
             _commandSource?.QueueMove(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero);
         }
 
@@ -211,7 +256,7 @@ namespace MOBA.Core.Simulation.AI
             if (!_hasDestination || profile == null || !profile.EnableFailureRecovery)
                 return false;
 
-            float distance = Mathf.Sqrt(Mathf.Max(0f, (_destination - _brawler.Position).sqrMagnitude));
+            float distance = Mathf.Sqrt(Mathf.Max(0f, GetPlanarDelta(_destination).sqrMagnitude));
             uint ageTicks = currentTick >= _destinationRequestTick
                 ? currentTick - _destinationRequestTick
                 : 0u;
@@ -269,8 +314,7 @@ namespace MOBA.Core.Simulation.AI
             if (profile == null || !profile.EnableFailureRecovery)
                 return false;
 
-            Vector3 directionToDestination = _destination - _brawler.Position;
-            directionToDestination.y = 0f;
+            Vector3 directionToDestination = GetPlanarDelta(_destination);
 
             if (directionToDestination.sqrMagnitude <= 0.001f)
                 directionToDestination = _brawler.transform.forward;
@@ -340,11 +384,11 @@ namespace MOBA.Core.Simulation.AI
                     continue;
                 }
 
-                Vector3 resolvedWorld = pathfinder.GetWorldPos(candidateCoords);
+                Vector3 resolvedWorld = FlattenToMovementPlane(pathfinder.GetWorldPos(candidateCoords));
                 float directionScore = Vector3.Dot(
-                    (resolvedWorld - _brawler.Position).normalized,
+                    GetPlanarDelta(resolvedWorld).normalized,
                     direction);
-                float destinationSeparation = Vector3.Distance(resolvedWorld, _destination);
+                float destinationSeparation = GetPlanarDelta(resolvedWorld, _destination).magnitude;
                 float score = (directionScore * 10f) + destinationSeparation - (pathLength * 0.35f);
 
                 if (!found || score > bestScore)
@@ -358,7 +402,7 @@ namespace MOBA.Core.Simulation.AI
             if (!found)
                 return false;
 
-            recoveryDestination = pathfinder.GetWorldPos(bestCoords);
+            recoveryDestination = FlattenToMovementPlane(pathfinder.GetWorldPos(bestCoords));
             _arrivalDistance = 0.35f;
             ForceRepath(recoveryDestination, highPriority: true);
             _routeBlocked = false;
@@ -372,8 +416,8 @@ namespace MOBA.Core.Simulation.AI
             if ((currentTick - _lastSampleTick) < _stuckSampleInterval)
                 return;
 
-            float movedSq = (_brawler.Position - _lastSamplePosition).sqrMagnitude;
-            float distToDestinationSq = (_destination - _brawler.Position).sqrMagnitude;
+            float movedSq = GetPlanarDelta(_brawler.Position, _lastSamplePosition).sqrMagnitude;
+            float distToDestinationSq = GetPlanarDelta(_destination).sqrMagnitude;
 
             if (movedSq < (_stuckMoveThreshold * _stuckMoveThreshold) &&
                 distToDestinationSq > (_arrivalDistance * _arrivalDistance))
@@ -396,7 +440,7 @@ namespace MOBA.Core.Simulation.AI
         {
             _destinationRequestTick = _clock.CurrentTick;
             _destinationStartPosition = _brawler.Position;
-            _destinationStartDistanceSq = (target - _destinationStartPosition).sqrMagnitude;
+            _destinationStartDistanceSq = GetPlanarDelta(target, _destinationStartPosition).sqrMagnitude;
             _bestDistanceToDestinationSq = _destinationStartDistanceSq;
             _lastSamplePosition = _brawler.Position;
             _lastSampleTick = _clock.CurrentTick;
@@ -466,6 +510,24 @@ namespace MOBA.Core.Simulation.AI
             return _profile != null && _profile.BudgetDeferredPathTicks > 0u
                 ? _profile.BudgetDeferredPathTicks
                 : 1u;
+        }
+
+        private Vector3 FlattenToMovementPlane(Vector3 value)
+        {
+            value.y = _brawler.Position.y;
+            return value;
+        }
+
+        private Vector3 GetPlanarDelta(Vector3 destination)
+        {
+            return GetPlanarDelta(destination, _brawler.Position);
+        }
+
+        private static Vector3 GetPlanarDelta(Vector3 destination, Vector3 origin)
+        {
+            Vector3 delta = destination - origin;
+            delta.y = 0f;
+            return delta;
         }
     }
 }

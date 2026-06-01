@@ -922,7 +922,8 @@ namespace MOBA.Core.Simulation.AI
                     return;
                 }
             }
-            _navAgent.Stop();
+
+            RunFallbackWander(currentTick);
         }
 
         private bool TryRunPlaybookPressureSearch(uint currentTick)
@@ -949,7 +950,13 @@ namespace MOBA.Core.Simulation.AI
         {
             if (currentTick >= _nextFallbackWanderTick || !_navAgent.HasDestination)
             {
-                Vector2 random2D = Random.insideUnitCircle * _profile.FallbackWanderRadius;
+                float minimumStep = Mathf.Max(0.5f, _profile.TacticalMinimumStepDistance);
+                float radius = Mathf.Max(minimumStep, _profile.FallbackWanderRadius);
+                Vector2 random2D = Random.insideUnitCircle;
+                if (random2D.sqrMagnitude <= 0.0001f)
+                    random2D = Vector2.right;
+
+                random2D = random2D.normalized * Random.Range(minimumStep, radius);
                 _fallbackWanderPoint = _brawler.Position + new Vector3(random2D.x, 0f, random2D.y);
                 RequestMapAwareDestination(
                     _fallbackWanderPoint,
