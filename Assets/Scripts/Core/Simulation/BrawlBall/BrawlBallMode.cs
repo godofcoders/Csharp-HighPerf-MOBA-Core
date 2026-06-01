@@ -138,6 +138,17 @@ namespace MOBA.Core.Simulation
             bool ownHasBall = _ballCarrier != null && _ballCarrier.Team == team;
             bool enemyHasBall = _ballCarrier != null && _ballCarrier.Team == enemyTeam;
 
+            int friendlyPresence = ownHasBall ? 1 : 0;
+            int enemyPresence = enemyHasBall ? 1 : 0;
+            AIObjectiveControlState controlState =
+                AIObjectiveControlUtility.ResolveForTeam(
+                    ownHasBall
+                        ? team
+                        : (enemyHasBall ? enemyTeam : TeamType.Neutral),
+                    team,
+                    friendlyPresence,
+                    enemyPresence);
+
             float weight = 84f;
             if (enemyHasBall)
                 weight += 18f;
@@ -150,7 +161,10 @@ namespace MOBA.Core.Simulation
                 weight,
                 2.75f,
                 "RuntimeBall",
-                true);
+                true,
+                controlState,
+                friendlyPresence,
+                enemyPresence);
             return true;
         }
     }

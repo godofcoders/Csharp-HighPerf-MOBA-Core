@@ -15,8 +15,7 @@ namespace MOBA.Core.Simulation
 
         public TeamType GetControllingTeam()
         {
-            int blueCount = CountLiveOccupants(_blueOccupants);
-            int redCount = CountLiveOccupants(_redOccupants);
+            GetLiveOccupantCounts(out int blueCount, out int redCount);
 
             if (blueCount > 0 && redCount == 0)
                 return TeamType.Blue;
@@ -30,6 +29,12 @@ namespace MOBA.Core.Simulation
         public bool IsControlledBy(TeamType team)
         {
             return GetControllingTeam() == team;
+        }
+
+        public void GetLiveOccupantCounts(out int blueCount, out int redCount)
+        {
+            blueCount = CountLiveOccupants(_blueOccupants);
+            redCount = CountLiveOccupants(_redOccupants);
         }
 
         private void OnTriggerEnter(Collider other)

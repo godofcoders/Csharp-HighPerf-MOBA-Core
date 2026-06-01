@@ -27,6 +27,9 @@ namespace MOBA.Core.Simulation.AI
         private AIObjectiveType _lastObjectiveType;
         private float _lastObjectiveRadius;
         private bool _lastObjectiveIsRuntime;
+        private AIObjectiveControlState _lastObjectiveControlState;
+        private int _lastObjectiveFriendlyPresence;
+        private int _lastObjectiveEnemyPresence;
         private bool _hasObjectiveDebug;
 
         public bool HasObjectiveDebug => _hasObjectiveDebug;
@@ -37,6 +40,9 @@ namespace MOBA.Core.Simulation.AI
         public AIObjectiveType LastObjectiveType => _lastObjectiveType;
         public float LastObjectiveRadius => _lastObjectiveRadius;
         public bool LastObjectiveIsRuntime => _lastObjectiveIsRuntime;
+        public AIObjectiveControlState LastObjectiveControlState => _lastObjectiveControlState;
+        public int LastObjectiveFriendlyPresence => _lastObjectiveFriendlyPresence;
+        public int LastObjectiveEnemyPresence => _lastObjectiveEnemyPresence;
         private AITacticalMovementIntent _lastTacticalMovementIntent;
         private Vector3 _lastTacticalMoveDestination;
         private Vector3 _lastTacticalTargetPosition;
@@ -498,6 +504,9 @@ namespace MOBA.Core.Simulation.AI
             _lastObjectiveType = objective.ObjectiveType;
             _lastObjectiveRadius = objective.Radius;
             _lastObjectiveIsRuntime = objective.IsRuntime;
+            _lastObjectiveControlState = objective.ControlState;
+            _lastObjectiveFriendlyPresence = objective.FriendlyPresence;
+            _lastObjectiveEnemyPresence = objective.EnemyPresence;
             _hasObjectiveDebug = true;
 
             _navAgent.RequestDestination(destination, 1f);

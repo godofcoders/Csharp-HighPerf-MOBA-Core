@@ -85,6 +85,17 @@ namespace MOBA.Core.Infrastructure
         public bool LastObjectiveIsRuntime =>
             _actionExecutor != null && _actionExecutor.LastObjectiveIsRuntime;
 
+        public AIObjectiveControlState LastObjectiveControlState =>
+            _actionExecutor != null
+                ? _actionExecutor.LastObjectiveControlState
+                : AIObjectiveControlState.Unknown;
+
+        public int LastObjectiveFriendlyPresence =>
+            _actionExecutor != null ? _actionExecutor.LastObjectiveFriendlyPresence : 0;
+
+        public int LastObjectiveEnemyPresence =>
+            _actionExecutor != null ? _actionExecutor.LastObjectiveEnemyPresence : 0;
+
         public float LastObjectiveAllyPressure =>
             _utilityScorer != null ? _utilityScorer.LastObjectiveAllyPressure : 0f;
 
@@ -516,6 +527,8 @@ _actionExecutor != null
                     $"Type={LastObjectiveType} " +
                     $"Runtime={LastObjectiveIsRuntime} " +
                     $"Radius={LastObjectiveRadius:0.0} " +
+                    $"Control={LastObjectiveControlState} " +
+                    $"Presence={LastObjectiveFriendlyPresence}:{LastObjectiveEnemyPresence} " +
                     $"Center={FormatVector(LastObjectiveCenter)} " +
                     $"Slot={FormatVector(LastObjectiveSlot)} " +
                     $"Dest={FormatVector(LastObjectiveDestination)} " +

@@ -48,6 +48,9 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(AIObjectiveType.Ball, objective.ObjectiveType);
             Assert.AreEqual("RuntimeBall", objective.Name);
             Assert.AreEqual(2f, objective.Radius);
+            Assert.AreEqual(AIObjectiveControlState.Contested, objective.ControlState);
+            Assert.AreEqual(1, objective.FriendlyPresence);
+            Assert.AreEqual(1, objective.EnemyPresence);
         }
 
         [Test]
@@ -80,6 +83,7 @@ namespace MOBA.Tests.EditMode
             Assert.IsFalse(objective.IsRuntime);
             Assert.AreEqual(AIObjectiveType.HotZone, objective.ObjectiveType);
             Assert.AreEqual("AuthoredHotZone", objective.Name);
+            Assert.AreEqual(AIObjectiveControlState.Unknown, objective.ControlState);
         }
 
         private sealed class FakeRuntimeObjectiveProvider : IAIRuntimeObjectiveProvider
@@ -98,7 +102,10 @@ namespace MOBA.Tests.EditMode
                     weight,
                     2f,
                     name,
-                    true);
+                    true,
+                    AIObjectiveControlState.Contested,
+                    1,
+                    1);
             }
 
             public GameModeId ModeId => GameModeId.BrawlBall;

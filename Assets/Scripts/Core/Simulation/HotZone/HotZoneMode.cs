@@ -145,10 +145,32 @@ namespace MOBA.Core.Simulation
                 if (point == null)
                     continue;
 
-                TeamType controllingTeam = point.GetControllingTeam();
+                point.GetLiveOccupantCounts(
+                    out int bluePresence,
+                    out int redPresence);
+
+                int friendlyPresence = team == TeamType.Blue
+                    ? bluePresence
+                    : redPresence;
+                int enemyPresence = team == TeamType.Blue
+                    ? redPresence
+                    : bluePresence;
+
+                TeamType controllingTeam = ResolveControllingTeam(
+                    bluePresence,
+                    redPresence);
+                AIObjectiveControlState controlState =
+                    AIObjectiveControlUtility.ResolveForTeam(
+                        controllingTeam,
+                        team,
+                        friendlyPresence,
+                        enemyPresence);
+
                 float weight = 78f * point.ControlWeight;
 
-                if (controllingTeam == enemyTeam)
+                if (controlState == AIObjectiveControlState.Contested)
+                    weight += 18f;
+                else if (controllingTeam == enemyTeam)
                     weight += 22f;
                 else if (controllingTeam == TeamType.Neutral)
                     weight += 12f;
@@ -168,7 +190,10 @@ namespace MOBA.Core.Simulation
                         weight,
                         3.5f,
                         point.name,
-                        true);
+                        true,
+                        controlState,
+                        friendlyPresence,
+                        enemyPresence);
                     found = true;
                 }
             }
@@ -203,6 +228,17 @@ namespace MOBA.Core.Simulation
                 return _cachedRedControl;
 
             return 0f;
+        }
+
+        private static TeamType ResolveControllingTeam(int bluePresence, int redPresence)
+        {
+            if (bluePresence > 0 && redPresence == 0)
+                return TeamType.Blue;
+
+            if (redPresence > 0 && bluePresence == 0)
+                return TeamType.Red;
+
+            return TeamType.Neutral;
         }
 
         private void RefreshControlCache()

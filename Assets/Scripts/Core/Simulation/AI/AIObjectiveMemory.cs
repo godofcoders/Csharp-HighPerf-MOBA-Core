@@ -122,6 +122,13 @@ namespace MOBA.Core.Simulation.AI
             if (candidate.IsRuntime)
                 score += 6f;
 
+            score += AIObjectiveControlUtility.GetSelectionScoreDelta(
+                candidate.ControlState);
+
+            score += AIObjectiveControlUtility.GetSelectionPresenceDelta(
+                candidate.FriendlyPresence,
+                candidate.EnemyPresence);
+
             return score;
         }
     }

@@ -1156,6 +1156,25 @@ namespace MOBA.Core.Simulation.AI
                 _lastObjectiveScoreReason += $"|weight_{weightDelta:+0.0;-0.0}";
             }
 
+            float controlDelta = AIObjectiveControlUtility.GetUtilityScoreDelta(
+                objective.ControlState);
+            if (Mathf.Abs(controlDelta) > 0.01f)
+            {
+                score += controlDelta;
+                _lastObjectiveScoreReason +=
+                    $"|control_{objective.ControlState}_{controlDelta:+0.0;-0.0}";
+            }
+
+            float presenceDelta = AIObjectiveControlUtility.GetUtilityPresenceDelta(
+                objective.FriendlyPresence,
+                objective.EnemyPresence);
+            if (Mathf.Abs(presenceDelta) > 0.01f)
+            {
+                score += presenceDelta;
+                _lastObjectiveScoreReason +=
+                    $"|presence_{objective.FriendlyPresence}:{objective.EnemyPresence}_{presenceDelta:+0.0;-0.0}";
+            }
+
             // Far from objective: moving toward it is useful.
             float farDistance = Mathf.Max(4f, objectiveRadius + 1.5f);
             if (dist > farDistance)
