@@ -16,6 +16,8 @@ namespace MOBA.Core.Simulation.AI
         private readonly AIDangerMemory _dangerMemory;
         private readonly AISpacingUtility _spacingUtility;
         private readonly AICommandSource _commandSource;
+        private readonly AIObjectiveSlotCommitment _objectiveSlotCommitment =
+            new AIObjectiveSlotCommitment();
 
         private uint _nextFallbackWanderTick;
         private Vector3 _fallbackWanderPoint;
@@ -31,6 +33,7 @@ namespace MOBA.Core.Simulation.AI
         private int _lastObjectiveFriendlyPresence;
         private int _lastObjectiveEnemyPresence;
         private AIObjectiveSlotRole _lastObjectiveSlotRole;
+        private AIObjectiveSlotRole _lastObjectiveDesiredSlotRole;
         private bool _hasObjectiveDebug;
 
         public bool HasObjectiveDebug => _hasObjectiveDebug;
@@ -45,6 +48,9 @@ namespace MOBA.Core.Simulation.AI
         public int LastObjectiveFriendlyPresence => _lastObjectiveFriendlyPresence;
         public int LastObjectiveEnemyPresence => _lastObjectiveEnemyPresence;
         public AIObjectiveSlotRole LastObjectiveSlotRole => _lastObjectiveSlotRole;
+        public AIObjectiveSlotRole LastObjectiveDesiredSlotRole => _lastObjectiveDesiredSlotRole;
+        public string LastObjectiveSlotCommitmentDebug =>
+            _objectiveSlotCommitment.LastDebugSummary;
         private AITacticalMovementIntent _lastTacticalMovementIntent;
         private Vector3 _lastTacticalMoveDestination;
         private Vector3 _lastTacticalTargetPosition;
@@ -466,6 +472,7 @@ namespace MOBA.Core.Simulation.AI
             if (targetInfo.HasLiveTarget)
             {
                 _hasObjectiveDebug = false;
+                _objectiveSlotCommitment.Reset();
                 _navAgent.Stop();
                 return;
             }
@@ -473,6 +480,7 @@ namespace MOBA.Core.Simulation.AI
             if (_objectiveMemory == null)
             {
                 _hasObjectiveDebug = false;
+                _objectiveSlotCommitment.Reset();
                 _navAgent.Stop();
                 return;
             }
@@ -484,6 +492,7 @@ namespace MOBA.Core.Simulation.AI
                     out AIObjectiveCandidate objective))
             {
                 _hasObjectiveDebug = false;
+                _objectiveSlotCommitment.Reset();
                 _navAgent.Stop();
                 return;
             }
@@ -492,9 +501,11 @@ namespace MOBA.Core.Simulation.AI
             BrawlerArchetype archetype = _profile != null
                 ? _profile.Archetype
                 : BrawlerArchetype.Fighter;
-            AIObjectiveSlotRole slotRole = AIObjectiveSlotUtility.GetObjectiveSlotRole(
+            AIObjectiveSlotRole slotRole = _objectiveSlotCommitment.SelectRole(
+                objective,
                 archetype,
-                objective);
+                _currentExecuteTick,
+                out AIObjectiveSlotRole desiredSlotRole);
 
             Vector3 slotPosition = AIObjectiveSlotUtility.GetObjectiveSlotPosition(
                 _brawler.Team,
@@ -521,6 +532,7 @@ namespace MOBA.Core.Simulation.AI
             _lastObjectiveFriendlyPresence = objective.FriendlyPresence;
             _lastObjectiveEnemyPresence = objective.EnemyPresence;
             _lastObjectiveSlotRole = slotRole;
+            _lastObjectiveDesiredSlotRole = desiredSlotRole;
             _hasObjectiveDebug = true;
 
             _navAgent.RequestDestination(destination, 1f);

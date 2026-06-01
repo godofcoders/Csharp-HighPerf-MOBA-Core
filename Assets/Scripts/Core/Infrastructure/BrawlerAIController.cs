@@ -101,6 +101,16 @@ namespace MOBA.Core.Infrastructure
                 ? _actionExecutor.LastObjectiveSlotRole
                 : AIObjectiveSlotRole.Default;
 
+        public AIObjectiveSlotRole LastObjectiveDesiredSlotRole =>
+            _actionExecutor != null
+                ? _actionExecutor.LastObjectiveDesiredSlotRole
+                : AIObjectiveSlotRole.Default;
+
+        public string LastObjectiveSlotCommitmentDebug =>
+            _actionExecutor != null
+                ? _actionExecutor.LastObjectiveSlotCommitmentDebug
+                : "SlotCommit=None";
+
         public float LastObjectiveAllyPressure =>
             _utilityScorer != null ? _utilityScorer.LastObjectiveAllyPressure : 0f;
 
@@ -535,6 +545,7 @@ _actionExecutor != null
                     $"Control={LastObjectiveControlState} " +
                     $"Presence={LastObjectiveFriendlyPresence}:{LastObjectiveEnemyPresence} " +
                     $"SlotRole={LastObjectiveSlotRole} " +
+                    $"DesiredRole={LastObjectiveDesiredSlotRole} " +
                     $"Center={FormatVector(LastObjectiveCenter)} " +
                     $"Slot={FormatVector(LastObjectiveSlot)} " +
                     $"Dest={FormatVector(LastObjectiveDestination)} " +
@@ -542,6 +553,7 @@ _actionExecutor != null
                     $"Penalty={LastObjectiveCrowdingPenalty:0.0} " +
                     $"Raw={LastObjectiveRawScore:0.0} " +
                     $"Final={LastObjectiveFinalScore:0.0} " +
+                    $"{LastObjectiveSlotCommitmentDebug} " +
                     $"Reason={LastObjectiveScoreReason}";
 
             }
