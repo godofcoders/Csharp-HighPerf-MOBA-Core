@@ -1116,12 +1116,6 @@ namespace MOBA.Core.Simulation.AI
             _lastObjectiveFinalScore = 0f;
             _lastObjectiveScoreReason = "not_evaluated";
 
-            if (_objectiveMemory == null || !_objectiveMemory.HasAnyObjectives())
-            {
-                _lastObjectiveScoreReason = "no_objectives";
-                return new AIActionScore(AIActionType.Objective, 0f);
-            }
-
             // Combat always overrides objective movement.
             // Objective is a map-control fallback, not a replacement for fighting.
             if (targetInfo.HasLiveTarget)
@@ -1130,17 +1124,18 @@ namespace MOBA.Core.Simulation.AI
                 return new AIActionScore(AIActionType.Objective, 0f);
             }
 
-            var objective = _objectiveMemory.GetBestObjective(
-                _self.Position,
-                _profile.PreferredObjective);
-
-            if (objective == null)
+            if (_objectiveMemory == null ||
+                !_objectiveMemory.TryGetBestObjective(
+                    _self.Position,
+                    _profile.PreferredObjective,
+                    _self.Team,
+                    out AIObjectiveCandidate objective))
             {
-                _lastObjectiveScoreReason = "no_best_objective";
+                _lastObjectiveScoreReason = "no_objectives";
                 return new AIActionScore(AIActionType.Objective, 0f);
             }
 
-            Vector3 objectivePosition = objective.transform.position;
+            Vector3 objectivePosition = objective.Position;
 
             float dist = Vector3.Distance(
                 _self.Position,

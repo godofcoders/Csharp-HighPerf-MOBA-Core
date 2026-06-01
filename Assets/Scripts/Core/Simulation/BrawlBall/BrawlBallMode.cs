@@ -4,7 +4,9 @@ using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
-    public sealed class BrawlBallMode : MonoBehaviour, IAIGameModeMacroStateProvider
+    public sealed class BrawlBallMode : MonoBehaviour,
+        IAIGameModeMacroStateProvider,
+        IAIRuntimeObjectiveProvider
     {
         public static BrawlBallMode Instance { get; private set; }
 
@@ -39,12 +41,16 @@ namespace MOBA.Core.Simulation
         private void OnEnable()
         {
             if (Instance == this)
+            {
                 ServiceProvider.Register<IAIGameModeMacroStateProvider>(this);
+                ServiceProvider.Register<IAIRuntimeObjectiveProvider>(this);
+            }
         }
 
         private void OnDisable()
         {
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
+            ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
         private void OnDestroy()
@@ -53,6 +59,7 @@ namespace MOBA.Core.Simulation
                 Instance = null;
 
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
+            ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
         public void SetBallCarrier(BrawlerController carrier)
@@ -110,6 +117,40 @@ namespace MOBA.Core.Simulation
                 ownHasBall,
                 enemyHasBall,
                 matchTimeRemainingSeconds: 0f);
+            return true;
+        }
+
+        public bool TryGetRuntimeObjective(
+            TeamType team,
+            AIObjectiveType preferredType,
+            Vector3 selfPosition,
+            out AIObjectiveCandidate objective)
+        {
+            objective = default;
+
+            if (team == TeamType.Neutral ||
+                (_ballCarrier == null && _ballTransform == null))
+            {
+                return false;
+            }
+
+            TeamType enemyTeam = team == TeamType.Blue ? TeamType.Red : TeamType.Blue;
+            bool ownHasBall = _ballCarrier != null && _ballCarrier.Team == team;
+            bool enemyHasBall = _ballCarrier != null && _ballCarrier.Team == enemyTeam;
+
+            float weight = 84f;
+            if (enemyHasBall)
+                weight += 18f;
+            else if (!ownHasBall)
+                weight += 10f;
+
+            objective = new AIObjectiveCandidate(
+                AIObjectiveType.Ball,
+                BallPosition,
+                weight,
+                2.75f,
+                "RuntimeBall",
+                true);
             return true;
         }
     }

@@ -463,18 +463,18 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
-            var objective = _objectiveMemory.GetBestObjective(
-                _brawler.Position,
-                _profile.PreferredObjective);
-
-            if (objective == null)
+            if (!_objectiveMemory.TryGetBestObjective(
+                    _brawler.Position,
+                    _profile.PreferredObjective,
+                    _brawler.Team,
+                    out AIObjectiveCandidate objective))
             {
                 _hasObjectiveDebug = false;
                 _navAgent.Stop();
                 return;
             }
 
-            Vector3 objectivePosition = objective.transform.position;
+            Vector3 objectivePosition = objective.Position;
 
             Vector3 slotPosition = AIObjectiveSlotUtility.GetObjectiveSlotPosition(
                 _brawler,
@@ -488,7 +488,7 @@ namespace MOBA.Core.Simulation.AI
             _lastObjectiveCenter = objectivePosition;
             _lastObjectiveSlot = slotPosition;
             _lastObjectiveDestination = destination;
-            _lastObjectiveName = objective.name;
+            _lastObjectiveName = objective.Name;
             _hasObjectiveDebug = true;
 
             _navAgent.RequestDestination(destination, 1f);
@@ -864,14 +864,14 @@ namespace MOBA.Core.Simulation.AI
 
             if (_objectiveMemory != null)
             {
-                var objective = _objectiveMemory.GetBestObjective(
-                    _brawler.Position,
-                    _profile.PreferredObjective);
-
-                if (objective != null)
+                if (_objectiveMemory.TryGetBestObjective(
+                        _brawler.Position,
+                        _profile.PreferredObjective,
+                        _brawler.Team,
+                        out AIObjectiveCandidate objective))
                 {
                     RequestMapAwareDestination(
-                        objective.transform.position,
+                        objective.Position,
                         1.0f,
                         AIMapRouteIntent.Objective);
 

@@ -370,20 +370,21 @@ _actionExecutor != null
         {
             objectivePoint = default;
 
-            if (_objectiveMemory == null ||
-                !_objectiveMemory.HasAnyObjectives())
+            if (_objectiveMemory == null)
             {
                 return false;
             }
 
-            AIObjectivePoint objective = _objectiveMemory.GetBestObjective(
-                _brawler.Position,
-                _profile != null ? _profile.PreferredObjective : AIObjectiveType.None);
-
-            if (objective == null)
+            if (!_objectiveMemory.TryGetBestObjective(
+                    _brawler.Position,
+                    _profile != null ? _profile.PreferredObjective : AIObjectiveType.None,
+                    _brawler.Team,
+                    out AIObjectiveCandidate objective))
+            {
                 return false;
+            }
 
-            objectivePoint = objective.transform.position;
+            objectivePoint = objective.Position;
             return true;
         }
 

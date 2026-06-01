@@ -4,7 +4,9 @@ using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
-    public sealed class HotZoneMode : MonoBehaviour, IAIGameModeMacroStateProvider
+    public sealed class HotZoneMode : MonoBehaviour,
+        IAIGameModeMacroStateProvider,
+        IAIRuntimeObjectiveProvider
     {
         public static HotZoneMode Instance { get; private set; }
 
@@ -40,12 +42,16 @@ namespace MOBA.Core.Simulation
         private void OnEnable()
         {
             if (Instance == this)
+            {
                 ServiceProvider.Register<IAIGameModeMacroStateProvider>(this);
+                ServiceProvider.Register<IAIRuntimeObjectiveProvider>(this);
+            }
         }
 
         private void OnDisable()
         {
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
+            ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
         private void Start()
@@ -63,6 +69,7 @@ namespace MOBA.Core.Simulation
                 Instance = null;
 
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
+            ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
         private void Update()
@@ -111,6 +118,62 @@ namespace MOBA.Core.Simulation
                 IsTeamControllingAnyZone(enemyTeam),
                 matchTimeRemainingSeconds: 0f);
             return true;
+        }
+
+        public bool TryGetRuntimeObjective(
+            TeamType team,
+            AIObjectiveType preferredType,
+            Vector3 selfPosition,
+            out AIObjectiveCandidate objective)
+        {
+            objective = default;
+
+            if (team == TeamType.Neutral ||
+                _controlPoints == null ||
+                _controlPoints.Length == 0)
+            {
+                return false;
+            }
+
+            TeamType enemyTeam = team == TeamType.Blue ? TeamType.Red : TeamType.Blue;
+            bool found = false;
+            float bestScore = float.MinValue;
+
+            for (int i = 0; i < _controlPoints.Length; i++)
+            {
+                HotZoneControlPoint point = _controlPoints[i];
+                if (point == null)
+                    continue;
+
+                TeamType controllingTeam = point.GetControllingTeam();
+                float weight = 78f * point.ControlWeight;
+
+                if (controllingTeam == enemyTeam)
+                    weight += 22f;
+                else if (controllingTeam == TeamType.Neutral)
+                    weight += 12f;
+                else if (controllingTeam == team)
+                    weight += 6f;
+
+                Vector3 position = point.transform.position;
+                float distSq = (position - selfPosition).sqrMagnitude;
+                float score = weight - distSq * 0.04f;
+
+                if (!found || score > bestScore)
+                {
+                    bestScore = score;
+                    objective = new AIObjectiveCandidate(
+                        AIObjectiveType.HotZone,
+                        position,
+                        weight,
+                        3.5f,
+                        point.name,
+                        true);
+                    found = true;
+                }
+            }
+
+            return found;
         }
 
         public float GetTeamProgress(TeamType team)
