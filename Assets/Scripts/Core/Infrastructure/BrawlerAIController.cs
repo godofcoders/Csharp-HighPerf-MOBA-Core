@@ -96,6 +96,11 @@ namespace MOBA.Core.Infrastructure
         public int LastObjectiveEnemyPresence =>
             _actionExecutor != null ? _actionExecutor.LastObjectiveEnemyPresence : 0;
 
+        public AIObjectiveSlotRole LastObjectiveSlotRole =>
+            _actionExecutor != null
+                ? _actionExecutor.LastObjectiveSlotRole
+                : AIObjectiveSlotRole.Default;
+
         public float LastObjectiveAllyPressure =>
             _utilityScorer != null ? _utilityScorer.LastObjectiveAllyPressure : 0f;
 
@@ -529,6 +534,7 @@ _actionExecutor != null
                     $"Radius={LastObjectiveRadius:0.0} " +
                     $"Control={LastObjectiveControlState} " +
                     $"Presence={LastObjectiveFriendlyPresence}:{LastObjectiveEnemyPresence} " +
+                    $"SlotRole={LastObjectiveSlotRole} " +
                     $"Center={FormatVector(LastObjectiveCenter)} " +
                     $"Slot={FormatVector(LastObjectiveSlot)} " +
                     $"Dest={FormatVector(LastObjectiveDestination)} " +

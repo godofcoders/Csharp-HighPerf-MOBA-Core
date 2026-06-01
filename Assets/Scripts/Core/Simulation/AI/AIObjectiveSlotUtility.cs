@@ -4,6 +4,17 @@ using UnityEngine;
 
 namespace MOBA.Core.Simulation.AI
 {
+    public enum AIObjectiveSlotRole
+    {
+        Default,
+        Contest,
+        Breaker,
+        Anchor,
+        Perimeter,
+        Flank,
+        Pressure
+    }
+
     /// <summary>
     /// Provides stable tactical positions around an objective.
     ///
@@ -46,21 +57,73 @@ namespace MOBA.Core.Simulation.AI
             BrawlerArchetype archetype = profile != null
                 ? profile.Archetype
                 : BrawlerArchetype.Fighter;
+            AIObjectiveSlotRole slotRole = GetObjectiveSlotRole(
+                archetype,
+                objective);
 
             return GetObjectiveSlotPosition(
                 self.Team,
                 archetype,
                 self.EntityID,
                 objective.Position,
-                objective.Radius);
+                objective.Radius,
+                slotRole,
+                objective.FriendlyPresence,
+                objective.EnemyPresence);
         }
 
         public static Vector3 GetObjectiveSlotPosition(
             TeamType team,
             BrawlerArchetype archetype,
-            uint entityId,
+            int entityId,
             Vector3 objectivePosition,
             float objectiveRadius)
+        {
+            return GetObjectiveSlotPosition(
+                team,
+                archetype,
+                entityId,
+                objectivePosition,
+                objectiveRadius,
+                AIObjectiveSlotRole.Default,
+                0,
+                0);
+        }
+
+        public static Vector3 GetObjectiveSlotPosition(
+            TeamType team,
+            BrawlerArchetype archetype,
+            int entityId,
+            Vector3 objectivePosition,
+            float objectiveRadius,
+            AIObjectiveControlState controlState,
+            int friendlyPresence,
+            int enemyPresence)
+        {
+            return GetObjectiveSlotPosition(
+                team,
+                archetype,
+                entityId,
+                objectivePosition,
+                objectiveRadius,
+                GetObjectiveSlotRole(
+                    archetype,
+                    controlState,
+                    friendlyPresence,
+                    enemyPresence),
+                friendlyPresence,
+                enemyPresence);
+        }
+
+        public static Vector3 GetObjectiveSlotPosition(
+            TeamType team,
+            BrawlerArchetype archetype,
+            int entityId,
+            Vector3 objectivePosition,
+            float objectiveRadius,
+            AIObjectiveSlotRole slotRole,
+            int friendlyPresence,
+            int enemyPresence)
         {
             Vector3 teamForward = GetTeamForward(team);
             Vector3 teamRight = new Vector3(teamForward.z, 0f, -teamForward.x);
@@ -74,7 +137,88 @@ namespace MOBA.Core.Simulation.AI
                 sideSign,
                 radiusScale);
 
+            offset = ApplySlotRoleOffset(
+                offset,
+                slotRole,
+                teamForward,
+                teamRight,
+                sideSign,
+                radiusScale,
+                friendlyPresence,
+                enemyPresence);
+
             return objectivePosition + offset;
+        }
+
+        public static AIObjectiveSlotRole GetObjectiveSlotRole(
+            BrawlerArchetype archetype,
+            AIObjectiveCandidate objective)
+        {
+            return GetObjectiveSlotRole(
+                archetype,
+                objective.ControlState,
+                objective.FriendlyPresence,
+                objective.EnemyPresence);
+        }
+
+        public static AIObjectiveSlotRole GetObjectiveSlotRole(
+            BrawlerArchetype archetype,
+            AIObjectiveControlState controlState,
+            int friendlyPresence,
+            int enemyPresence)
+        {
+            bool friendlySaturated =
+                friendlyPresence >= enemyPresence + 2;
+
+            switch (controlState)
+            {
+                case AIObjectiveControlState.EnemyControlled:
+                    if (IsFrontline(archetype))
+                        return AIObjectiveSlotRole.Breaker;
+
+                    return archetype == BrawlerArchetype.Assassin
+                        ? AIObjectiveSlotRole.Flank
+                        : AIObjectiveSlotRole.Pressure;
+
+                case AIObjectiveControlState.Contested:
+                    if (friendlySaturated && archetype != BrawlerArchetype.Tank)
+                        return AIObjectiveSlotRole.Perimeter;
+
+                    if (IsFrontline(archetype) ||
+                        archetype == BrawlerArchetype.Controller)
+                    {
+                        return AIObjectiveSlotRole.Contest;
+                    }
+
+                    return archetype == BrawlerArchetype.Assassin
+                        ? AIObjectiveSlotRole.Flank
+                        : AIObjectiveSlotRole.Perimeter;
+
+                case AIObjectiveControlState.FriendlyControlled:
+                    if (IsFrontline(archetype) ||
+                        archetype == BrawlerArchetype.Controller)
+                    {
+                        return AIObjectiveSlotRole.Anchor;
+                    }
+
+                    return archetype == BrawlerArchetype.Assassin
+                        ? AIObjectiveSlotRole.Flank
+                        : AIObjectiveSlotRole.Perimeter;
+
+                case AIObjectiveControlState.Neutral:
+                    if (IsFrontline(archetype) ||
+                        archetype == BrawlerArchetype.Controller)
+                    {
+                        return AIObjectiveSlotRole.Contest;
+                    }
+
+                    return archetype == BrawlerArchetype.Assassin
+                        ? AIObjectiveSlotRole.Flank
+                        : AIObjectiveSlotRole.Perimeter;
+
+                default:
+                    return AIObjectiveSlotRole.Default;
+            }
         }
 
         private static Vector3 GetArchetypeOffset(
@@ -129,9 +273,70 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
+        private static Vector3 ApplySlotRoleOffset(
+            Vector3 baseOffset,
+            AIObjectiveSlotRole slotRole,
+            Vector3 teamForward,
+            Vector3 teamRight,
+            int sideSign,
+            float radiusScale,
+            int friendlyPresence,
+            int enemyPresence)
+        {
+            friendlyPresence = Mathf.Max(0, friendlyPresence);
+            enemyPresence = Mathf.Max(0, enemyPresence);
+
+            float friendlySaturation =
+                Mathf.Clamp(friendlyPresence - enemyPresence, 0, 3) *
+                0.35f *
+                radiusScale;
+            float enemyPressure =
+                Mathf.Clamp(enemyPresence - friendlyPresence, 0, 3) *
+                0.25f *
+                radiusScale;
+
+            switch (slotRole)
+            {
+                case AIObjectiveSlotRole.Breaker:
+                    return baseOffset * 0.82f +
+                           teamForward * (0.35f * radiusScale + enemyPressure);
+
+                case AIObjectiveSlotRole.Contest:
+                    return baseOffset * 0.92f +
+                           teamRight * sideSign * friendlySaturation;
+
+                case AIObjectiveSlotRole.Anchor:
+                    return baseOffset -
+                           teamForward * (0.55f * radiusScale + friendlySaturation);
+
+                case AIObjectiveSlotRole.Perimeter:
+                    return baseOffset * 1.16f -
+                           teamForward * 0.35f * radiusScale +
+                           teamRight * sideSign * friendlySaturation;
+
+                case AIObjectiveSlotRole.Flank:
+                    return baseOffset * 1.08f +
+                           teamRight * sideSign * (0.65f * radiusScale + enemyPressure);
+
+                case AIObjectiveSlotRole.Pressure:
+                    return baseOffset * 1.04f +
+                           teamForward * (0.25f * radiusScale + enemyPressure) +
+                           teamRight * sideSign * 0.35f * radiusScale;
+
+                default:
+                    return baseOffset;
+            }
+        }
+
         private static float GetRadiusScale(float objectiveRadius)
         {
             return Mathf.Clamp(Mathf.Max(0.5f, objectiveRadius) / 3f, 0.70f, 1.65f);
+        }
+
+        private static bool IsFrontline(BrawlerArchetype archetype)
+        {
+            return archetype == BrawlerArchetype.Tank ||
+                   archetype == BrawlerArchetype.Fighter;
         }
 
         private static Vector3 GetTeamForward(TeamType team)
@@ -152,16 +357,9 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
-        private static int GetStableSideSign(BrawlerController self)
+        private static int GetStableSideSign(int entityId)
         {
-            // Stable split so bots do not randomly flip sides every frame.
-            // Even id → right side, odd id → left side.
-            return GetStableSideSign(self.EntityID);
-        }
-
-        private static int GetStableSideSign(uint entityId)
-        {
-            return (entityId % 2u == 0u) ? 1 : -1;
+            return (entityId % 2 == 0) ? 1 : -1;
         }
     }
 }

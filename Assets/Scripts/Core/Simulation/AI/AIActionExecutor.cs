@@ -30,6 +30,7 @@ namespace MOBA.Core.Simulation.AI
         private AIObjectiveControlState _lastObjectiveControlState;
         private int _lastObjectiveFriendlyPresence;
         private int _lastObjectiveEnemyPresence;
+        private AIObjectiveSlotRole _lastObjectiveSlotRole;
         private bool _hasObjectiveDebug;
 
         public bool HasObjectiveDebug => _hasObjectiveDebug;
@@ -43,6 +44,7 @@ namespace MOBA.Core.Simulation.AI
         public AIObjectiveControlState LastObjectiveControlState => _lastObjectiveControlState;
         public int LastObjectiveFriendlyPresence => _lastObjectiveFriendlyPresence;
         public int LastObjectiveEnemyPresence => _lastObjectiveEnemyPresence;
+        public AIObjectiveSlotRole LastObjectiveSlotRole => _lastObjectiveSlotRole;
         private AITacticalMovementIntent _lastTacticalMovementIntent;
         private Vector3 _lastTacticalMoveDestination;
         private Vector3 _lastTacticalTargetPosition;
@@ -487,11 +489,22 @@ namespace MOBA.Core.Simulation.AI
             }
 
             Vector3 objectivePosition = objective.Position;
+            BrawlerArchetype archetype = _profile != null
+                ? _profile.Archetype
+                : BrawlerArchetype.Fighter;
+            AIObjectiveSlotRole slotRole = AIObjectiveSlotUtility.GetObjectiveSlotRole(
+                archetype,
+                objective);
 
             Vector3 slotPosition = AIObjectiveSlotUtility.GetObjectiveSlotPosition(
-                _brawler,
-                _profile,
-                objective);
+                _brawler.Team,
+                archetype,
+                _brawler.EntityID,
+                objective.Position,
+                objective.Radius,
+                slotRole,
+                objective.FriendlyPresence,
+                objective.EnemyPresence);
 
             Vector3 destination = ResolveMapAwareDestination(
                 slotPosition,
@@ -507,6 +520,7 @@ namespace MOBA.Core.Simulation.AI
             _lastObjectiveControlState = objective.ControlState;
             _lastObjectiveFriendlyPresence = objective.FriendlyPresence;
             _lastObjectiveEnemyPresence = objective.EnemyPresence;
+            _lastObjectiveSlotRole = slotRole;
             _hasObjectiveDebug = true;
 
             _navAgent.RequestDestination(destination, 1f);
