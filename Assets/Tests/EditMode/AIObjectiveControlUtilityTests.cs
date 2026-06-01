@@ -1,4 +1,4 @@
-using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation;
 using MOBA.Core.Simulation.AI;
 using NUnit.Framework;
 

@@ -640,7 +640,9 @@ $"Map={LastMapRouteDebug}";
             _reactiveMemory = new AIReactiveMemory();
             _dangerMemory = new AIDangerMemory();
             _failureRecovery = new AIFailureRecoveryMemory();
-            _humanization = new AIHumanizationController(_profile, _brawler.EntityID);
+            _humanization = new AIHumanizationController(
+                _profile,
+                unchecked((uint)_brawler.EntityID));
 
             _perception = new AIPerception(
                 _profile.DetectionRadius,

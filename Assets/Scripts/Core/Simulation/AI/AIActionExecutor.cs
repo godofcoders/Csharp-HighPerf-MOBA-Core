@@ -1281,7 +1281,7 @@ namespace MOBA.Core.Simulation.AI
         {
             // Keep side stable, but split bots by identity.
             if (_lastStrafeSide == 0)
-                _lastStrafeSide = (_brawler.EntityID % 2u == 0u) ? 1 : -1;
+                _lastStrafeSide = (_brawler.EntityID % 2 == 0) ? 1 : -1;
 
             return _lastStrafeSide;
         }
