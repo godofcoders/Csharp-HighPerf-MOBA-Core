@@ -59,7 +59,7 @@ namespace MOBA.Core.Simulation.AI
             float arrivalDistance = 0.6f,
             bool highPriority = false)
         {
-            target = FlattenToMovementPlane(target);
+            target = ClampTargetToPathfinderBounds(FlattenToMovementPlane(target));
             _arrivalDistance = arrivalDistance;
 
             if (!_hasDestination)
@@ -87,7 +87,7 @@ namespace MOBA.Core.Simulation.AI
 
         public void ForceRepath(Vector3 target, bool highPriority = false)
         {
-            target = FlattenToMovementPlane(target);
+            target = ClampTargetToPathfinderBounds(FlattenToMovementPlane(target));
             bool destinationChanged = !_hasDestination ||
                                       (target - _destination).sqrMagnitude >=
                                       (_repathDistanceThreshold * _repathDistanceThreshold);
@@ -110,14 +110,21 @@ namespace MOBA.Core.Simulation.AI
             var start = SimulationClock.Pathfinder.GetGridCoords(_brawler.Position);
             var end = SimulationClock.Pathfinder.GetGridCoords(target);
             var requestedEnd = end;
+            int endpointRepairRadius = GetEndpointRepairRadius(SimulationClock.Pathfinder);
             bool foundStart = true;
             bool foundEnd = true;
 
             if (!SimulationClock.Pathfinder.IsWalkable(start))
-                foundStart = SimulationClock.Pathfinder.TryGetNearestWalkableCoords(start, 3, out start);
+                foundStart = SimulationClock.Pathfinder.TryGetNearestWalkableCoords(
+                    start,
+                    endpointRepairRadius,
+                    out start);
 
             if (!SimulationClock.Pathfinder.IsWalkable(end))
-                foundEnd = SimulationClock.Pathfinder.TryGetNearestWalkableCoords(end, 3, out end);
+                foundEnd = SimulationClock.Pathfinder.TryGetNearestWalkableCoords(
+                    end,
+                    endpointRepairRadius,
+                    out end);
 
             if (!foundStart || !foundEnd)
             {
@@ -512,10 +519,45 @@ namespace MOBA.Core.Simulation.AI
                 : 1u;
         }
 
+        private int GetEndpointRepairRadius(AStarSolver pathfinder)
+        {
+            int profileRadius = _profile != null
+                ? Mathf.CeilToInt(Mathf.Max(0f, _profile.MapDestinationSearchRadius) / Mathf.Max(0.1f, pathfinder.CellSize))
+                : 0;
+
+            return Mathf.Max(
+                3,
+                profileRadius,
+                Mathf.Max(pathfinder.Width, pathfinder.Height) / 2);
+        }
+
         private Vector3 FlattenToMovementPlane(Vector3 value)
         {
             value.y = _brawler.Position.y;
             return value;
+        }
+
+        private Vector3 ClampTargetToPathfinderBounds(Vector3 target)
+        {
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null || !IsOutsidePathfinderBounds(pathfinder, target))
+                return target;
+
+            return FlattenToMovementPlane(
+                pathfinder.GetWorldPos(pathfinder.GetGridCoords(target)));
+        }
+
+        private static bool IsOutsidePathfinderBounds(AStarSolver pathfinder, Vector3 target)
+        {
+            float minX = pathfinder.Origin.x;
+            float minZ = pathfinder.Origin.z;
+            float maxX = minX + pathfinder.Width * pathfinder.CellSize;
+            float maxZ = minZ + pathfinder.Height * pathfinder.CellSize;
+
+            return target.x < minX ||
+                   target.x >= maxX ||
+                   target.z < minZ ||
+                   target.z >= maxZ;
         }
 
         private Vector3 GetPlanarDelta(Vector3 destination)

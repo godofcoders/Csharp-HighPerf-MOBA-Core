@@ -11,6 +11,12 @@ namespace MOBA.Core.Infrastructure
         public float CellSize = 1.0f;
         public LayerMask ObstacleLayer;
 
+        [Header("Grounding")]
+        [Tooltip("Layer mask used to decide whether a grid cell has playable ground under it. If unset, all non-obstacle layers are probed.")]
+        public LayerMask GroundLayer;
+        public float GroundProbeHeight = 6f;
+        public float GroundProbeDistance = 12f;
+
         [Header("Visualization")]
         public bool ShowDebugGrid = true;
 
@@ -28,6 +34,30 @@ namespace MOBA.Core.Infrastructure
             // Calculate origin so the grid is centered on this GameObject
             Vector3 origin = transform.position - new Vector3(Width * CellSize / 2, 0, Height * CellSize / 2);
             _mapData = new MapData(Width, Height, CellSize, origin);
+            bool[,] groundedGrid = new bool[Width, Height];
+            int groundedCells = 0;
+            int groundMask = ResolveGroundMask();
+
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    Vector3 worldPos = GetWorldPos(x, y);
+                    bool hasGround = HasPlayableGround(worldPos, groundMask);
+                    groundedGrid[x, y] = hasGround;
+
+                    if (hasGround)
+                        groundedCells++;
+                }
+            }
+
+            bool requireGround = groundedCells > 0;
+            if (!requireGround)
+            {
+                Debug.LogWarning(
+                    "[MAP] Bake found no playable ground hits. Falling back to obstacle-only walkability. " +
+                    "Assign GroundLayer or add ground colliders to prevent AI from using void cells.");
+            }
 
             for (int x = 0; x < Width; x++)
             {
@@ -40,9 +70,12 @@ namespace MOBA.Core.Infrastructure
                     bool isBlocked = Physics.CheckBox(worldPos + Vector3.up,
                         new Vector3(CellSize / 2.1f, 0.5f, CellSize / 2.1f),
                         Quaternion.identity,
-                        ObstacleLayer);
+                        ObstacleLayer,
+                        QueryTriggerInteraction.Ignore);
 
-                    _mapData.WalkabilityGrid[x, y] = !isBlocked;
+                    _mapData.WalkabilityGrid[x, y] =
+                        !isBlocked &&
+                        (!requireGround || groundedGrid[x, y]);
 
                     bool isBush = Physics.CheckBox(worldPos + Vector3.up, new Vector3(CellSize / 2.1f, 0.5f, CellSize / 2.1f), Quaternion.identity, BushLayer);
                     _mapData.BushGrid[x, y] = isBush;
@@ -53,6 +86,29 @@ namespace MOBA.Core.Infrastructure
 
             Debug.Log($"[MAP] Bake Complete: {Width}x{Height} grid. SemanticZones={semanticZoneCount}");
             return _mapData;
+        }
+
+        private int ResolveGroundMask()
+        {
+            if (GroundLayer.value != 0)
+                return GroundLayer.value;
+
+            return Physics.DefaultRaycastLayers & ~ObstacleLayer.value;
+        }
+
+        private bool HasPlayableGround(Vector3 worldPos, int groundMask)
+        {
+            if (groundMask == 0)
+                return false;
+
+            Vector3 probeOrigin = worldPos + Vector3.up * Mathf.Max(0.1f, GroundProbeHeight);
+            float probeDistance = Mathf.Max(0.1f, GroundProbeDistance);
+            return Physics.Raycast(
+                probeOrigin,
+                Vector3.down,
+                probeDistance,
+                groundMask,
+                QueryTriggerInteraction.Ignore);
         }
 
         private int BakeMapSemantics()
