@@ -133,7 +133,7 @@ namespace MOBA.Core.Simulation.AI
                     break;
 
                 case AIActionType.Retreat:
-                    RunRetreat(targetInfo);
+                    RunRetreat(targetInfo, currentTick);
                     break;
 
                 case AIActionType.Evade:
@@ -711,11 +711,13 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
-        private void RunRetreat(AITargetInfo targetInfo)
+        private void RunRetreat(AITargetInfo targetInfo, uint currentTick)
         {
             if (!targetInfo.HasLiveTarget)
             {
-                _navAgent.Stop();
+                if (!TryRunRetreatWithoutTarget(currentTick))
+                    RunFallbackWander(currentTick);
+
                 return;
             }
 
@@ -732,6 +734,59 @@ namespace MOBA.Core.Simulation.AI
                 true,
                 targetInfo.Target.Position,
                 GetTacticalPreferredRange(GetAbilityIdealRange()));
+        }
+
+        private bool TryRunRetreatWithoutTarget(uint currentTick)
+        {
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetRegroupPoint(currentTick, out var regroupPoint))
+            {
+                RequestMapAwareDestination(
+                    regroupPoint,
+                    1.0f,
+                    AIMapRouteIntent.Regroup);
+                return true;
+            }
+
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetThreatCenter(currentTick, out var threatCenter, out _))
+            {
+                Vector3 retreatPoint = _spacingUtility.GetRetreatPosition(
+                    threatCenter,
+                    _profile.RetreatStepDistance,
+                    _profile.AllyAvoidanceRadius,
+                    _profile.AllyAvoidanceWeight);
+
+                RequestMapAwareDestination(
+                    retreatPoint,
+                    0.5f,
+                    AIMapRouteIntent.CombatRetreat,
+                    true,
+                    threatCenter,
+                    GetTacticalPreferredRange(GetAbilityIdealRange()));
+                return true;
+            }
+
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetEnemyHotspot(currentTick, out var enemyHotspot, out _))
+            {
+                Vector3 retreatPoint = _spacingUtility.GetRetreatPosition(
+                    enemyHotspot,
+                    _profile.RetreatStepDistance,
+                    _profile.AllyAvoidanceRadius,
+                    _profile.AllyAvoidanceWeight);
+
+                RequestMapAwareDestination(
+                    retreatPoint,
+                    0.5f,
+                    AIMapRouteIntent.CombatRetreat,
+                    true,
+                    enemyHotspot,
+                    GetTacticalPreferredRange(GetAbilityIdealRange()));
+                return true;
+            }
+
+            return false;
         }
 
         private void RunEvade(
@@ -855,6 +910,9 @@ namespace MOBA.Core.Simulation.AI
 
         private void RunSearch(AITargetInfo targetInfo, uint currentTick)
         {
+            if (TryRunGemPickupSearch())
+                return;
+
             if (targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
             {
                 RequestMapAwareDestination(
@@ -926,6 +984,28 @@ namespace MOBA.Core.Simulation.AI
             RunFallbackWander(currentTick);
         }
 
+        private bool TryRunGemPickupSearch()
+        {
+            if (_profile == null ||
+                _profile.GemPickupSearchRadius <= 0f ||
+                !Gem.TryGetBestUnpickedWithin(
+                    _brawler.Position,
+                    _profile.GemPickupSearchRadius,
+                    out Vector3 gemPosition,
+                    out _,
+                    out _))
+            {
+                return false;
+            }
+
+            RequestMapAwareDestination(
+                gemPosition,
+                0.65f,
+                AIMapRouteIntent.Objective);
+
+            return true;
+        }
+
         private bool TryRunPlaybookPressureSearch(uint currentTick)
         {
             if (_teamCoordinator == null ||
@@ -970,7 +1050,7 @@ namespace MOBA.Core.Simulation.AI
         {
             if (!targetInfo.HasLiveTarget)
             {
-                _navAgent.Stop();
+                RunFallbackWander(currentTick);
                 return;
             }
 
@@ -1005,7 +1085,7 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
-            _navAgent.Stop();
+            RunFallbackWander(currentTick);
         }
 
         private void RunPeel(uint currentTick, float attackRange, float idealRange, float superRange)
@@ -1015,7 +1095,7 @@ namespace MOBA.Core.Simulation.AI
                 if (TryRunPlaybookEscort(currentTick))
                     return;
 
-                _navAgent.Stop();
+                RunFallbackWander(currentTick);
                 return;
             }
 

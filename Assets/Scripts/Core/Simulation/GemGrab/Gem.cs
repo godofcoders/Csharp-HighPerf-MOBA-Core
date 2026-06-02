@@ -64,6 +64,56 @@ namespace MOBA.Core.Simulation
             return false;
         }
 
+        public static bool TryGetBestUnpickedWithin(
+            Vector3 origin,
+            float radius,
+            out Vector3 position,
+            out int value,
+            out float distance)
+        {
+            position = Vector3.zero;
+            value = 0;
+            distance = 0f;
+
+            if (radius <= 0f)
+                return false;
+
+            float radiusSq = radius * radius;
+            float bestScore = float.MinValue;
+            float bestDistanceSq = 0f;
+            bool found = false;
+
+            for (int i = 0; i < _all.Count; i++)
+            {
+                Gem gem = _all[i];
+                if (gem == null || gem.IsPickedUp)
+                    continue;
+
+                Vector3 gemPosition = gem.transform.position;
+                float dx = gemPosition.x - origin.x;
+                float dz = gemPosition.z - origin.z;
+                float distanceSq = dx * dx + dz * dz;
+                if (distanceSq > radiusSq)
+                    continue;
+
+                float score = gem.Value * 8f - distanceSq;
+                if (!found || score > bestScore)
+                {
+                    found = true;
+                    bestScore = score;
+                    bestDistanceSq = distanceSq;
+                    position = gemPosition;
+                    value = gem.Value;
+                }
+            }
+
+            if (!found)
+                return false;
+
+            distance = Mathf.Sqrt(bestDistanceSq);
+            return true;
+        }
+
         protected override void OnEnable()
         {
             base.OnEnable();

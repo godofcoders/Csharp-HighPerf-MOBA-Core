@@ -737,32 +737,66 @@ namespace MOBA.Core.Simulation.AI
                 return new AIActionScore(AIActionType.Retreat, 0f);
 
             float score = 0f;
+            bool hasRetreatReason = false;
             float healthRatio = _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value);
 
             if (healthRatio <= _profile.LowHealthRetreatRatio)
+            {
                 score += 70f;
+                hasRetreatReason = true;
+            }
 
             if (_self.State.HasStatus(StatusEffectType.Burn))
+            {
                 score += 25f;
+                hasRetreatReason = true;
+            }
 
             if (_self.State.HasStatus(StatusEffectType.Stun))
-                score -= 1000f;
+                return new AIActionScore(AIActionType.Retreat, 0f);
 
             if (targetInfo.HasLiveTarget)
             {
                 float dist = Vector3.Distance(_self.Position, targetInfo.Target.Position);
                 if (dist <= _profile.GetTooCloseDistance(GetAbilityIdealRange()))
+                {
                     score += 20f;
+                    hasRetreatReason = true;
+                }
             }
 
             float reactivePressure = GetReactiveDamagePressure(currentTick);
             if (reactivePressure > 0f)
             {
                 score += reactivePressure * _profile.ReactiveRetreatPressureBonus;
+                hasRetreatReason = true;
 
                 if (healthRatio <= _profile.ReactiveEmergencyHealthRatio)
                     score += reactivePressure * 30f;
             }
+
+            int selfCarriedGems = _self.State.CarriedGemCount;
+            if (selfCarriedGems > 0)
+            {
+                score += 6f * selfCarriedGems;
+                hasRetreatReason = true;
+            }
+
+            float macroDelta = GetMacroActionDelta(
+                AIActionType.Retreat,
+                macroState,
+                selfCarriedGems,
+                0,
+                0);
+            if (Mathf.Abs(macroDelta) > 0.01f)
+            {
+                score += macroDelta;
+                if (macroDelta > 0f)
+                    hasRetreatReason = true;
+            }
+
+            if (!hasRetreatReason)
+                return new AIActionScore(AIActionType.Retreat, 0f);
 
             float roleSurvival = _self.Definition != null ? _self.Definition.SurvivalInstinct : 1f;
             score *= roleSurvival;
@@ -773,20 +807,6 @@ namespace MOBA.Core.Simulation.AI
             if (IsAssassin) score -= 6f;
             if (IsController) score += 5f;
             if (IsArtillery) score += 12f;
-
-            // Gem Grab: every gem you carry makes retreat MORE attractive.
-            // Dying with gems hands them to the enemy. +6 per gem is enough
-            // that a 3-gem brawler gets a noticeable shift but a 1-gem
-            // brawler isn't yanked off objectives.
-            if (_self.State != null)
-                score += 6f * _self.State.CarriedGemCount;
-
-            score += GetMacroActionDelta(
-                AIActionType.Retreat,
-                macroState,
-                _self.State.CarriedGemCount,
-                0,
-                0);
 
             return MakeScore(
     AIActionType.Retreat,
@@ -1084,8 +1104,21 @@ namespace MOBA.Core.Simulation.AI
                 score += Mathf.Clamp(hotspotPressure * 4f, 4f, 14f);
             }
 
-            if (Gem.HasAnyUnpickedWithin(_self.Position, 8f))
-                score += 35f;
+            if (Gem.TryGetBestUnpickedWithin(
+                    _self.Position,
+                    _profile.GemPickupSearchRadius,
+                    out _,
+                    out int gemValue,
+                    out float gemDistance))
+            {
+                float pickupRadius = Mathf.Max(0.1f, _profile.GemPickupSearchRadius);
+                float closeBonus = Mathf.Clamp01(1f - gemDistance / pickupRadius) *
+                                   _profile.GemPickupCloseRangeBonus;
+
+                score += _profile.GemPickupBaseScore;
+                score += gemValue * _profile.GemPickupValueScore;
+                score += closeBonus;
+            }
 
             score += GetMacroActionDelta(
                 AIActionType.Search,
@@ -1333,28 +1366,28 @@ namespace MOBA.Core.Simulation.AI
             uint currentTick,
             AIGameModeMacroState macroState)
         {
-            float score = 0f;
-
-            if (_teamCoordinator != null &&
-                _teamCoordinator.TryGetAllyUnderThreat(currentTick, out var ally) &&
-                ally != null)
+            if (_teamCoordinator == null ||
+                !_teamCoordinator.TryGetAllyUnderThreat(currentTick, out var ally) ||
+                ally == null)
             {
-                score += 40f;
-
-                int allyCarriedGems = ally.State != null
-                    ? ally.State.CarriedGemCount
-                    : 0;
-
-                if (allyCarriedGems > 0)
-                    score += 8f * allyCarriedGems;
-
-                score += GetMacroActionDelta(
-                    AIActionType.Peel,
-                    macroState,
-                    0,
-                    0,
-                    allyCarriedGems);
+                return new AIActionScore(AIActionType.Peel, 0f);
             }
+
+            float score = 40f;
+
+            int allyCarriedGems = ally.State != null
+                ? ally.State.CarriedGemCount
+                : 0;
+
+            if (allyCarriedGems > 0)
+                score += 8f * allyCarriedGems;
+
+            score += GetMacroActionDelta(
+                AIActionType.Peel,
+                macroState,
+                0,
+                0,
+                allyCarriedGems);
 
             float teamplay = _self.Definition != null ? _self.Definition.TeamplayWeight : 1f;
             score *= teamplay;

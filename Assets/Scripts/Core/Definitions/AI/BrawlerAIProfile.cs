@@ -54,6 +54,14 @@ namespace MOBA.Core.Simulation.AI
 
         [Header("Search / Shared Memory")]
         public uint SharedHotspotMemoryTicks = 120;
+        [Tooltip("How far non-combat bots look for loose Gem Grab gems before falling back to map pressure.")]
+        public float GemPickupSearchRadius = 11f;
+        [Tooltip("Base search utility added when a loose gem is available.")]
+        public float GemPickupBaseScore = 42f;
+        [Tooltip("Additional search utility per gem value on the pickup.")]
+        public float GemPickupValueScore = 8f;
+        [Tooltip("Extra search utility for nearby gems, fading to zero at GemPickupSearchRadius.")]
+        public float GemPickupCloseRangeBonus = 22f;
 
         [Header("Super Usage")]
         public bool EnableSuperUsage = true;
