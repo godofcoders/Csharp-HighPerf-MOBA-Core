@@ -14,6 +14,8 @@ namespace MOBA.Core.Simulation.AI
         private readonly AITeamCoordinator _teamCoordinator;
         private readonly AIReactiveMemory _reactiveMemory;
         private readonly AIDangerMemory _dangerMemory;
+        private readonly AIChaseDisengageMemory _chaseDisengageMemory =
+            new AIChaseDisengageMemory();
 
         private readonly uint _threatForgetTicks = 240;
 
@@ -39,6 +41,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastTeamRoleDebug = "RoleCoord=None";
         private string _lastMacroDebug = "Macro=None";
         private string _lastPlaybookDebug = "Playbook=None";
+        private string _lastChaseDebug = "Chase=None";
         private uint _lastLaneEvaluationTick;
         private bool _hasLaneEvaluation;
         private bool _lastCanHoldLane;
@@ -52,6 +55,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastTeamRoleDebug => _lastTeamRoleDebug;
         public string LastMacroDebug => _lastMacroDebug;
         public string LastPlaybookDebug => _lastPlaybookDebug;
+        public string LastChaseDebug => _lastChaseDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -997,7 +1001,11 @@ namespace MOBA.Core.Simulation.AI
             AIGameModeMacroState macroState)
         {
             if (!targetInfo.HasLiveTarget)
+            {
+                _chaseDisengageMemory.Reset();
+                _lastChaseDebug = "Chase=None Reason=no_target";
                 return new AIActionScore(AIActionType.Approach, 0f);
+            }
 
             float attackRange = GetAbilityMaxRange();
             float dist = Vector3.Distance(_self.Position, targetInfo.Target.Position);
@@ -1018,6 +1026,7 @@ namespace MOBA.Core.Simulation.AI
             score += GetChaseDisciplineDelta(
                 targetInfo,
                 dist,
+                currentTick,
                 macroState);
 
             if (_teamCoordinator != null &&
@@ -1606,6 +1615,7 @@ namespace MOBA.Core.Simulation.AI
         private float GetChaseDisciplineDelta(
             AITargetInfo targetInfo,
             float distance,
+            uint currentTick,
             AIGameModeMacroState macroState)
         {
             if (targetInfo == null ||
@@ -1614,6 +1624,8 @@ namespace MOBA.Core.Simulation.AI
                 targetBrawler.State == null ||
                 _profile == null)
             {
+                _chaseDisengageMemory.Reset();
+                _lastChaseDebug = "Chase=None Reason=no_target";
                 return 0f;
             }
 
@@ -1629,6 +1641,38 @@ namespace MOBA.Core.Simulation.AI
             float laneWeight = Mathf.Max(0f, _profile.LaneDisciplineWeight);
             bool targetIsLow = targetHealthRatio <= threshold;
             int targetCarriedGems = targetBrawler.State.CarriedGemCount;
+            bool preserveLaneShape = ShouldPreserveLaneShape(
+                macroState,
+                targetCarriedGems,
+                currentTick);
+            bool badChaseMapPosition = IsBadChaseMapPosition(targetBrawler.Position);
+            AIChaseDisengageDecision chaseDecision =
+                _chaseDisengageMemory.Evaluate(
+                    new AIChaseDisengageContext
+                    {
+                        TargetEntityId = targetBrawler.EntityID,
+                        Tick = currentTick,
+                        Distance = distance,
+                        TargetHealthRatio = targetHealthRatio,
+                        ChaseHealthThreshold = threshold,
+                        MaxChaseDistance = maxChaseDistance,
+                        SelfCarriedGems = _self.State != null
+                            ? _self.State.CarriedGemCount
+                            : 0,
+                        TargetCarriedGems = targetCarriedGems,
+                        PreserveLaneShape = preserveLaneShape,
+                        TargetInBadMapPosition = badChaseMapPosition,
+                        CommitTicks = _profile.LowHealthChaseCommitTicks,
+                        MaxTicks = _profile.LowHealthChaseMaxTicks,
+                        CooldownTicks = _profile.LowHealthChaseCooldownTicks,
+                        BreakDistanceMultiplier =
+                            _profile.LowHealthChaseBreakDistanceMultiplier,
+                        CommitScoreBonus = _profile.ChaseCommitScoreBonus,
+                        DisengageScorePenalty =
+                            _profile.ChaseDisengageScorePenalty,
+                        BadMapPenalty = _profile.BadMapChasePenalty
+                    });
+            _lastChaseDebug = chaseDecision.GetDebugSummary();
 
             if (targetIsLow)
             {
@@ -1644,35 +1688,73 @@ namespace MOBA.Core.Simulation.AI
                     delta -= overDistance * Mathf.Max(0f, _profile.UnsafeChasePenalty) * 0.35f;
                 }
 
-                if (ShouldPreserveLaneShape(macroState, targetCarriedGems) &&
+                if (preserveLaneShape &&
                     distance > maxChaseDistance * 0.70f)
                 {
                     float valuableTargetDiscount = targetCarriedGems > 0 ? 0.55f : 1f;
                     delta -= _profile.UnsafeChasePenalty * valuableTargetDiscount * laneWeight;
                 }
 
+                if (badChaseMapPosition && preserveLaneShape && targetCarriedGems <= 0)
+                    delta -= _profile.BadMapChasePenalty;
+
+                delta += chaseDecision.ScoreDelta;
+                if (chaseDecision.ShouldDisengage)
+                {
+                    return Mathf.Min(
+                        delta,
+                        -_profile.ChaseDisengageScorePenalty * 0.55f);
+                }
+
                 return Mathf.Clamp(
                     delta,
-                    -_profile.UnsafeChasePenalty * 1.5f,
-                    _profile.LowHealthChaseApproachBonus * 1.8f + targetCarriedGems * 4f);
+                    -Mathf.Max(
+                        _profile.UnsafeChasePenalty,
+                        _profile.ChaseDisengageScorePenalty) * 1.5f,
+                    _profile.LowHealthChaseApproachBonus * 1.8f +
+                    _profile.ChaseCommitScoreBonus +
+                    targetCarriedGems * 4f);
+            }
+
+            if (targetCarriedGems > 0)
+            {
+                float pickupValuePressure = targetCarriedGems * 5f;
+                float distancePressure = Mathf.Clamp01(
+                    1f - distance / Mathf.Max(1f, maxChaseDistance * 1.25f));
+                float delta = pickupValuePressure * (0.65f + distancePressure * 0.55f);
+
+                if (badChaseMapPosition)
+                    delta -= _profile.BadMapChasePenalty * 0.35f;
+
+                delta += chaseDecision.ScoreDelta;
+
+                return Mathf.Clamp(
+                    delta,
+                    -_profile.ChaseDisengageScorePenalty,
+                    _profile.LowHealthChaseApproachBonus +
+                    _profile.ChaseCommitScoreBonus +
+                    targetCarriedGems * 6f);
             }
 
             if (_profile.UseLaneDiscipline &&
-                ShouldPreserveLaneShape(macroState, targetCarriedGems) &&
+                preserveLaneShape &&
                 distance > maxChaseDistance)
             {
                 float overDistance = distance - maxChaseDistance;
-                return -Mathf.Min(
+                float lanePenalty = -Mathf.Min(
                     _profile.UnsafeChasePenalty * laneWeight,
                     overDistance * 6f * laneWeight);
+
+                return lanePenalty + Mathf.Min(0f, chaseDecision.ScoreDelta);
             }
 
-            return 0f;
+            return Mathf.Min(0f, chaseDecision.ScoreDelta);
         }
 
         private bool ShouldPreserveLaneShape(
             AIGameModeMacroState macroState,
-            int targetCarriedGems)
+            int targetCarriedGems,
+            uint currentTick)
         {
             if (_self.State == null)
                 return false;
@@ -1686,6 +1768,17 @@ namespace MOBA.Core.Simulation.AI
             if (_self.State.CarriedGemCount > 0)
                 return true;
 
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetLaneOwnership(
+                    currentTick,
+                    out AITeamLaneOwnershipSnapshot laneOwnership) &&
+                (laneOwnership.ShouldRotate ||
+                 laneOwnership.AssignedLaneAbandoned ||
+                 laneOwnership.CurrentLaneOverOwned))
+            {
+                return targetCarriedGems <= 0;
+            }
+
             if (macroState.Call == AIGameModeMacroCall.Reset ||
                 macroState.Call == AIGameModeMacroCall.Hold ||
                 macroState.OwnTeamHasCountdown)
@@ -1694,6 +1787,31 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return IsBacklineRole() && targetCarriedGems <= 0;
+        }
+
+        private bool IsBadChaseMapPosition(Vector3 targetPosition)
+        {
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return false;
+
+            Vector2Int targetCoords = pathfinder.GetGridCoords(targetPosition);
+            if (!pathfinder.IsWalkable(targetCoords))
+                return true;
+
+            AIMapSemanticCell semantic = pathfinder.GetSemanticCell(targetCoords);
+            if (semantic.HasTag(AIMapSemanticTag.DangerCorridor))
+                return true;
+
+            if (semantic.HasTag(AIMapSemanticTag.Choke) &&
+                !IsTank &&
+                !IsAssassin)
+            {
+                return true;
+            }
+
+            int walkableNeighbors = pathfinder.CountWalkableNeighbors(targetCoords);
+            return walkableNeighbors <= 2 && !IsTank;
         }
 
         private float GetObjectiveCrowdingPenalty()

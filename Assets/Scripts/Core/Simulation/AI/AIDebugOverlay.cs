@@ -54,6 +54,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Team Roles: {snapshot.TeamRoleDebug}");
             GUILayout.Label($"Macro: {snapshot.MacroDebug}");
             GUILayout.Label($"Playbook: {snapshot.PlaybookDebug}");
+            GUILayout.Label($"Chase: {snapshot.ChaseDebug}");
             GUILayout.Label($"Reactive: {snapshot.ReactiveDebug}");
             GUILayout.Label($"Danger: {snapshot.DangerDebug}");
             GUILayout.Label($"Recovery: {snapshot.FailureRecoveryDebug}");
@@ -132,6 +133,7 @@ namespace MOBA.Core.Simulation.AI
                     $"TeamRoles={snapshot.TeamRoleDebug} | " +
                     $"Macro={snapshot.MacroDebug} | " +
                     $"Playbook={snapshot.PlaybookDebug} | " +
+                    $"Chase={snapshot.ChaseDebug} | " +
                     $"Reactive={snapshot.ReactiveDebug} | " +
                     $"Danger={snapshot.DangerDebug} | " +
                     $"Recovery={snapshot.FailureRecoveryDebug} | " +

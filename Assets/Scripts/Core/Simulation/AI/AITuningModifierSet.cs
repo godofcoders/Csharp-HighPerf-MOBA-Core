@@ -120,6 +120,11 @@ namespace MOBA.Core.Simulation.AI
             profile.FinisherBonus *= aggression;
             profile.LowHealthChaseMaxDistance *= aggression;
             profile.LowHealthChaseApproachBonus *= aggression;
+            profile.LowHealthChaseMaxTicks = ScaleTicks(
+                profile.LowHealthChaseMaxTicks,
+                aggression,
+                1u);
+            profile.ChaseCommitScoreBonus *= aggression;
 
             float safety = MultiplierOrOne(SafetyMultiplier);
             profile.RetreatWeight *= safety;
@@ -131,6 +136,12 @@ namespace MOBA.Core.Simulation.AI
             profile.ReactiveRepositionPressureBonus *= safety;
             profile.FailureRecoveryDetourDistance *= safety;
             profile.UnsafeChasePenalty *= safety;
+            profile.LowHealthChaseCooldownTicks = ScaleTicks(
+                profile.LowHealthChaseCooldownTicks,
+                safety,
+                1u);
+            profile.ChaseDisengageScorePenalty *= safety;
+            profile.BadMapChasePenalty *= safety;
 
             float teamplay = MultiplierOrOne(TeamplayMultiplier);
             profile.PeelWeight *= teamplay;
@@ -142,6 +153,7 @@ namespace MOBA.Core.Simulation.AI
             profile.AllyAvoidanceWeight *= teamplay;
             profile.AllySupportRange *= teamplay;
             profile.LaneDisciplineWeight *= teamplay;
+            profile.ChaseDisengageScorePenalty *= teamplay;
 
             float objective = MultiplierOrOne(ObjectiveMultiplier);
             profile.ObjectiveWeight *= objective;

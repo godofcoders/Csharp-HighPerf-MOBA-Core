@@ -126,6 +126,13 @@ namespace MOBA.Core.Simulation.AI
                     profile.LowHealthChaseMaxDistance *= 0.92f;
                     profile.LowHealthChaseApproachBonus *= 0.85f;
                     profile.UnsafeChasePenalty *= 1.15f;
+                    profile.LowHealthChaseMaxTicks =
+                        ScaleTicks(profile.LowHealthChaseMaxTicks, 0.85f, 1);
+                    profile.LowHealthChaseCooldownTicks =
+                        ScaleTicks(profile.LowHealthChaseCooldownTicks, 1.20f, 1);
+                    profile.ChaseCommitScoreBonus *= 0.85f;
+                    profile.ChaseDisengageScorePenalty *= 1.12f;
+                    profile.BadMapChasePenalty *= 1.15f;
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -188,6 +195,13 @@ namespace MOBA.Core.Simulation.AI
                     profile.LowHealthChaseMaxDistance *= 1.08f;
                     profile.LowHealthChaseApproachBonus *= 1.12f;
                     profile.UnsafeChasePenalty *= 0.90f;
+                    profile.LowHealthChaseMaxTicks =
+                        ScaleTicks(profile.LowHealthChaseMaxTicks, 1.12f, 1);
+                    profile.LowHealthChaseCooldownTicks =
+                        ScaleTicks(profile.LowHealthChaseCooldownTicks, 0.85f, 1);
+                    profile.ChaseCommitScoreBonus *= 1.12f;
+                    profile.ChaseDisengageScorePenalty *= 0.92f;
+                    profile.BadMapChasePenalty *= 0.90f;
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -236,6 +250,15 @@ namespace MOBA.Core.Simulation.AI
                     profile.LowHealthChaseMaxDistance *= 1.10f;
                     profile.LowHealthChaseApproachBonus *= 1.18f;
                     profile.UnsafeChasePenalty *= 0.85f;
+                    profile.LowHealthChaseCommitTicks =
+                        ScaleTicks(profile.LowHealthChaseCommitTicks, 1.12f, 1);
+                    profile.LowHealthChaseMaxTicks =
+                        ScaleTicks(profile.LowHealthChaseMaxTicks, 1.15f, 1);
+                    profile.LowHealthChaseCooldownTicks =
+                        ScaleTicks(profile.LowHealthChaseCooldownTicks, 0.85f, 1);
+                    profile.ChaseCommitScoreBonus *= 1.18f;
+                    profile.ChaseDisengageScorePenalty *= 0.85f;
+                    profile.BadMapChasePenalty *= 0.85f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -272,6 +295,15 @@ namespace MOBA.Core.Simulation.AI
                     profile.LowHealthChaseMaxDistance *= 0.90f;
                     profile.LowHealthChaseApproachBonus *= 0.85f;
                     profile.UnsafeChasePenalty *= 1.18f;
+                    profile.LowHealthChaseCommitTicks =
+                        ScaleTicks(profile.LowHealthChaseCommitTicks, 0.90f, 1);
+                    profile.LowHealthChaseMaxTicks =
+                        ScaleTicks(profile.LowHealthChaseMaxTicks, 0.82f, 1);
+                    profile.LowHealthChaseCooldownTicks =
+                        ScaleTicks(profile.LowHealthChaseCooldownTicks, 1.18f, 1);
+                    profile.ChaseCommitScoreBonus *= 0.85f;
+                    profile.ChaseDisengageScorePenalty *= 1.15f;
+                    profile.BadMapChasePenalty *= 1.15f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -298,6 +330,8 @@ namespace MOBA.Core.Simulation.AI
                     profile.LaneDisciplineWeight *= 1.12f;
                     profile.LaneHoldObjectiveBonus *= 1.12f;
                     profile.LaneHoldSearchScore *= 1.08f;
+                    profile.ChaseDisengageScorePenalty *= 1.08f;
+                    profile.BadMapChasePenalty *= 1.08f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -334,6 +368,14 @@ namespace MOBA.Core.Simulation.AI
             profile.LowHealthChaseMaxDistance = Mathf.Clamp(profile.LowHealthChaseMaxDistance, 2f, 16f);
             profile.LowHealthChaseApproachBonus = Mathf.Clamp(profile.LowHealthChaseApproachBonus, 0f, 70f);
             profile.UnsafeChasePenalty = Mathf.Clamp(profile.UnsafeChasePenalty, 0f, 80f);
+            profile.LowHealthChaseCommitTicks = ClampTicks(profile.LowHealthChaseCommitTicks, 1, 90);
+            profile.LowHealthChaseMaxTicks = ClampTicks(profile.LowHealthChaseMaxTicks, 10, 240);
+            profile.LowHealthChaseCooldownTicks = ClampTicks(profile.LowHealthChaseCooldownTicks, 1, 180);
+            profile.LowHealthChaseBreakDistanceMultiplier =
+                Mathf.Clamp(profile.LowHealthChaseBreakDistanceMultiplier, 1.05f, 2.5f);
+            profile.ChaseCommitScoreBonus = Mathf.Clamp(profile.ChaseCommitScoreBonus, 0f, 35f);
+            profile.ChaseDisengageScorePenalty = Mathf.Clamp(profile.ChaseDisengageScorePenalty, 0f, 90f);
+            profile.BadMapChasePenalty = Mathf.Clamp(profile.BadMapChasePenalty, 0f, 60f);
 
             profile.TacticalMoveRetargetTicks = ClampTicks(profile.TacticalMoveRetargetTicks, 1, 45);
             profile.TacticalMoveHeartbeatTicks = ClampTicks(profile.TacticalMoveHeartbeatTicks, 1, 60);
@@ -481,6 +523,27 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.UnsafeChasePenalty <= 0f)
                 profile.UnsafeChasePenalty = 30f;
+
+            if (profile.LowHealthChaseCommitTicks == 0u)
+                profile.LowHealthChaseCommitTicks = 18u;
+
+            if (profile.LowHealthChaseMaxTicks == 0u)
+                profile.LowHealthChaseMaxTicks = 90u;
+
+            if (profile.LowHealthChaseCooldownTicks == 0u)
+                profile.LowHealthChaseCooldownTicks = 28u;
+
+            if (profile.LowHealthChaseBreakDistanceMultiplier <= 0f)
+                profile.LowHealthChaseBreakDistanceMultiplier = 1.35f;
+
+            if (profile.ChaseCommitScoreBonus <= 0f)
+                profile.ChaseCommitScoreBonus = 10f;
+
+            if (profile.ChaseDisengageScorePenalty <= 0f)
+                profile.ChaseDisengageScorePenalty = 42f;
+
+            if (profile.BadMapChasePenalty <= 0f)
+                profile.BadMapChasePenalty = 24f;
         }
 
         private static void ApplyFairPlayGuardrails(BrawlerAIProfile profile)

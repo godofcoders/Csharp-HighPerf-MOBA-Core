@@ -116,6 +116,20 @@ namespace MOBA.Core.Simulation.AI
         public float LowHealthChaseApproachBonus = 28f;
         [Tooltip("Approach score removed when a chase would overextend from lane or safety.")]
         public float UnsafeChasePenalty = 30f;
+        [Tooltip("Ticks a valid chase receives commitment pressure before normal break-off checks fully apply.")]
+        public uint LowHealthChaseCommitTicks = 18;
+        [Tooltip("Maximum ticks to chase a non-carrier target before disengaging.")]
+        public uint LowHealthChaseMaxTicks = 90;
+        [Tooltip("Ticks to suppress repeat chase attempts after a break-off.")]
+        public uint LowHealthChaseCooldownTicks = 28;
+        [Tooltip("Distance multiplier beyond LowHealthChaseMaxDistance where active chases must break off.")]
+        public float LowHealthChaseBreakDistanceMultiplier = 1.35f;
+        [Tooltip("Score added while a chase is inside its committed pursuit window.")]
+        public float ChaseCommitScoreBonus = 10f;
+        [Tooltip("Approach score removed when chase memory decides to break off.")]
+        public float ChaseDisengageScorePenalty = 42f;
+        [Tooltip("Approach score removed when a chase would enter bad map geometry without a valuable target.")]
+        public float BadMapChasePenalty = 24f;
 
         [Header("Game Mode Macro")]
         [Tooltip("Scales score deltas from mode-level push/hold/reset macro calls.")]
@@ -776,6 +790,13 @@ namespace MOBA.Core.Simulation.AI
             LowHealthChaseMaxDistance = 8.5f;
             LowHealthChaseApproachBonus = 28f;
             UnsafeChasePenalty = 30f;
+            LowHealthChaseCommitTicks = 18;
+            LowHealthChaseMaxTicks = 90;
+            LowHealthChaseCooldownTicks = 28;
+            LowHealthChaseBreakDistanceMultiplier = 1.35f;
+            ChaseCommitScoreBonus = 10f;
+            ChaseDisengageScorePenalty = 42f;
+            BadMapChasePenalty = 24f;
 
             switch (archetype)
             {
@@ -786,6 +807,11 @@ namespace MOBA.Core.Simulation.AI
                     LowHealthChaseMaxDistance = 7f;
                     LowHealthChaseApproachBonus = 18f;
                     UnsafeChasePenalty = 36f;
+                    LowHealthChaseCommitTicks = 14;
+                    LowHealthChaseMaxTicks = 60;
+                    ChaseCommitScoreBonus = 7f;
+                    ChaseDisengageScorePenalty = 50f;
+                    BadMapChasePenalty = 30f;
                     break;
 
                 case BrawlerArchetype.Tank:
@@ -794,6 +820,10 @@ namespace MOBA.Core.Simulation.AI
                     LowHealthChaseMaxDistance = 7.5f;
                     LowHealthChaseApproachBonus = 22f;
                     UnsafeChasePenalty = 24f;
+                    LowHealthChaseCommitTicks = 20;
+                    LowHealthChaseMaxTicks = 100;
+                    ChaseDisengageScorePenalty = 34f;
+                    BadMapChasePenalty = 16f;
                     break;
 
                 case BrawlerArchetype.Assassin:
@@ -804,6 +834,12 @@ namespace MOBA.Core.Simulation.AI
                     LowHealthChaseMaxDistance = 10.5f;
                     LowHealthChaseApproachBonus = 40f;
                     UnsafeChasePenalty = 18f;
+                    LowHealthChaseCommitTicks = 24;
+                    LowHealthChaseMaxTicks = 120;
+                    LowHealthChaseBreakDistanceMultiplier = 1.55f;
+                    ChaseCommitScoreBonus = 16f;
+                    ChaseDisengageScorePenalty = 30f;
+                    BadMapChasePenalty = 14f;
                     break;
 
                 case BrawlerArchetype.Support:
@@ -813,6 +849,11 @@ namespace MOBA.Core.Simulation.AI
                     LowHealthChaseMaxDistance = 7f;
                     LowHealthChaseApproachBonus = 16f;
                     UnsafeChasePenalty = 38f;
+                    LowHealthChaseCommitTicks = 12;
+                    LowHealthChaseMaxTicks = 55;
+                    ChaseCommitScoreBonus = 6f;
+                    ChaseDisengageScorePenalty = 52f;
+                    BadMapChasePenalty = 30f;
                     break;
 
                 case BrawlerArchetype.Controller:
@@ -822,6 +863,11 @@ namespace MOBA.Core.Simulation.AI
                     LowHealthChaseMaxDistance = 8f;
                     LowHealthChaseApproachBonus = 22f;
                     UnsafeChasePenalty = 32f;
+                    LowHealthChaseCommitTicks = 16;
+                    LowHealthChaseMaxTicks = 75;
+                    ChaseCommitScoreBonus = 8f;
+                    ChaseDisengageScorePenalty = 44f;
+                    BadMapChasePenalty = 28f;
                     break;
 
                 case BrawlerArchetype.Artillery:
@@ -831,6 +877,11 @@ namespace MOBA.Core.Simulation.AI
                     LowHealthChaseMaxDistance = 7f;
                     LowHealthChaseApproachBonus = 14f;
                     UnsafeChasePenalty = 40f;
+                    LowHealthChaseCommitTicks = 12;
+                    LowHealthChaseMaxTicks = 55;
+                    ChaseCommitScoreBonus = 5f;
+                    ChaseDisengageScorePenalty = 54f;
+                    BadMapChasePenalty = 32f;
                     break;
 
                 case BrawlerArchetype.Fighter:

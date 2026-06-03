@@ -182,6 +182,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastMacroDebug : "Macro=None";
         public string PlaybookDebug =>
             _utilityScorer != null ? _utilityScorer.LastPlaybookDebug : "Playbook=None";
+        public string ChaseDebug =>
+            _utilityScorer != null ? _utilityScorer.LastChaseDebug : "Chase=None";
         public string OpponentModelDebug => _lastOpponentModelDebug;
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
@@ -502,6 +504,7 @@ _actionExecutor != null
                 _debugSnapshot.TeamSignalDebug = $"{threatSignal} {hotspotSignal}";
                 _debugSnapshot.TeamRoleDebug = TeamRoleDebug;
                 _debugSnapshot.PlaybookDebug = PlaybookDebug;
+                _debugSnapshot.ChaseDebug = ChaseDebug;
             }
             else
             {
@@ -510,6 +513,7 @@ _actionExecutor != null
                 _debugSnapshot.TeamRoleDebug = "RoleCoord=None";
                 _debugSnapshot.MacroDebug = "Macro=None";
                 _debugSnapshot.PlaybookDebug = "Playbook=None";
+                _debugSnapshot.ChaseDebug = "Chase=None";
             }
 
             _lastReactiveDebug = _reactiveMemory != null && _profile != null
