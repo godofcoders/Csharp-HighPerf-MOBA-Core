@@ -270,6 +270,7 @@ _actionExecutor != null
                 _humanization?.Reset();
                 _teamCoordinator?.ClearTargetFocusCount();
                 _teamCoordinator?.ClearActionIntent();
+                _teamCoordinator?.ClearLaneOwnership();
 
                 _commandSource?.ClearQueuedCommands();
 
@@ -290,6 +291,7 @@ _actionExecutor != null
                 _humanization?.Reset();
                 _teamCoordinator?.ClearTargetFocusCount();
                 _teamCoordinator?.ClearActionIntent();
+                _teamCoordinator?.ClearLaneOwnership();
                 _commandSource?.QueueMove(Vector3.zero);
                 return;
             }

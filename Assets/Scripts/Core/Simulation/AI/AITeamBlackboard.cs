@@ -38,6 +38,7 @@ namespace MOBA.Core.Simulation.AI
 
             public AITeamFocusTracker FocusTracker;
             public AITeamActionTracker ActionTracker;
+            public AITeamLaneOwnershipTracker LaneOwnershipTracker;
             public TeamPositionSignal EnemyHotspot;
             public TeamPositionSignal ThreatCenter;
         }
@@ -402,6 +403,65 @@ namespace MOBA.Core.Simulation.AI
             data.ActionTracker.Clear();
         }
 
+        public static void ReportLaneOwnership(
+            TeamType team,
+            int botEntityId,
+            AITeamLaneAssignment lane,
+            Vector3 position,
+            uint currentTick)
+        {
+            if (botEntityId == 0)
+                return;
+
+            ref TeamData data = ref GetData(team);
+            EnsureLaneOwnershipTracker(ref data);
+            data.LaneOwnershipTracker.ReportLane(
+                botEntityId,
+                lane,
+                position,
+                currentTick);
+        }
+
+        public static bool TryGetLaneOwnership(
+            TeamType team,
+            int botEntityId,
+            uint currentTick,
+            uint maxAgeTicks,
+            out AITeamLaneOwnershipSnapshot snapshot)
+        {
+            if (botEntityId == 0)
+            {
+                snapshot = AITeamLaneOwnershipSnapshot.None(botEntityId, currentTick);
+                return false;
+            }
+
+            ref TeamData data = ref GetData(team);
+            EnsureLaneOwnershipTracker(ref data);
+            snapshot = data.LaneOwnershipTracker.GetSnapshot(
+                botEntityId,
+                currentTick,
+                maxAgeTicks);
+
+            return snapshot.HasValue;
+        }
+
+        public static void ClearLaneOwnership(TeamType team, int botEntityId)
+        {
+            if (botEntityId == 0)
+                return;
+
+            ref TeamData data = ref GetData(team);
+            EnsureLaneOwnershipTracker(ref data);
+            data.LaneOwnershipTracker.ClearLane(botEntityId);
+        }
+
+        public static void ClearTeamLaneOwnership(TeamType team)
+        {
+            ref TeamData data = ref GetData(team);
+            EnsureLaneOwnershipTracker(ref data);
+            data.LaneOwnershipTracker.Clear();
+        }
+
         private static void EnsureFocusTracker(ref TeamData data)
         {
             if (data.FocusTracker == null)
@@ -412,6 +472,12 @@ namespace MOBA.Core.Simulation.AI
         {
             if (data.ActionTracker == null)
                 data.ActionTracker = new AITeamActionTracker();
+        }
+
+        private static void EnsureLaneOwnershipTracker(ref TeamData data)
+        {
+            if (data.LaneOwnershipTracker == null)
+                data.LaneOwnershipTracker = new AITeamLaneOwnershipTracker();
         }
 
         private static void ReportPositionSignal(

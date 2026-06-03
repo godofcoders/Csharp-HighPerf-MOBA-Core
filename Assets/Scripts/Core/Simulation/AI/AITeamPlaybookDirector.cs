@@ -1,4 +1,5 @@
 using UnityEngine;
+using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation.AI
@@ -31,8 +32,11 @@ namespace MOBA.Core.Simulation.AI
         public int BotEntityId;
         public uint Tick;
         public Vector3 SelfPosition;
+        public BrawlerArchetype Archetype;
         public float HealthRatio;
         public AIGameModeMacroState MacroState;
+        public bool HasLaneOwnership;
+        public AITeamLaneOwnershipSnapshot LaneOwnership;
 
         public bool SelfIsCarrier;
         public int SelfCarriedGems;
@@ -250,7 +254,7 @@ namespace MOBA.Core.Simulation.AI
             AITeamPlaybookCall call,
             AITeamPlaybookContext context)
         {
-            AITeamLaneAssignment baseLane = ResolveBaseLane(context.BotEntityId);
+            AITeamLaneAssignment baseLane = ResolveBaseLane(context);
 
             switch (call)
             {
@@ -303,7 +307,19 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
-        private static AITeamLaneAssignment ResolveBaseLane(int botEntityId)
+        private static AITeamLaneAssignment ResolveBaseLane(
+            AITeamPlaybookContext context)
+        {
+            if (context.HasLaneOwnership &&
+                context.LaneOwnership.HasRecommendedLane)
+            {
+                return context.LaneOwnership.RecommendedLane;
+            }
+
+            return ResolveStableBaseLane(context.BotEntityId);
+        }
+
+        private static AITeamLaneAssignment ResolveStableBaseLane(int botEntityId)
         {
             int lane = (botEntityId & 0x7fffffff) % 3;
             switch (lane)

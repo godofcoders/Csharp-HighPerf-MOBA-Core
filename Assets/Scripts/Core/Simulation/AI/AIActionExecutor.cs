@@ -1107,6 +1107,15 @@ namespace MOBA.Core.Simulation.AI
                 _brawler.EntityID);
 
             if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetLaneOwnership(
+                    currentTick,
+                    out AITeamLaneOwnershipSnapshot laneOwnership) &&
+                laneOwnership.HasRecommendedLane)
+            {
+                lane = laneOwnership.RecommendedLane;
+            }
+
+            if (_teamCoordinator != null &&
                 _teamCoordinator.TryGetPlaybookState(currentTick, out AITeamPlaybookState playbookState) &&
                 playbookState.Lane != AITeamLaneAssignment.None)
             {

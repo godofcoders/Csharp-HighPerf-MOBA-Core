@@ -144,6 +144,33 @@ namespace MOBA.Tests.EditMode
                 AITeamPlaybookDirector.Resolve(BaseContext(32, AIGameModeMacroCall.Push)).Lane);
         }
 
+        [Test]
+        public void Resolve_UsesLaneOwnershipRecommendation_ForPushLane()
+        {
+            AITeamPlaybookContext context = BaseContext(31, AIGameModeMacroCall.Push);
+            context.HasLaneOwnership = true;
+            context.LaneOwnership = new AITeamLaneOwnershipSnapshot(
+                31,
+                100u,
+                AITeamLaneAssignment.Mid,
+                AITeamLaneAssignment.Mid,
+                AITeamLaneAssignment.Right,
+                AITeamLaneAssignment.Right,
+                AITeamLaneAssignment.Mid,
+                1,
+                2,
+                0,
+                false,
+                true,
+                true,
+                "rebalance_underowned");
+
+            AITeamPlaybookState state = AITeamPlaybookDirector.Resolve(context);
+
+            Assert.AreEqual(AITeamPlaybookCall.Push, state.Call);
+            Assert.AreEqual(AITeamLaneAssignment.Right, state.Lane);
+        }
+
         private static AITeamPlaybookContext BaseContext(
             int botEntityId,
             AIGameModeMacroCall macroCall)

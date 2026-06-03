@@ -1,4 +1,5 @@
 using UnityEngine;
+using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
 
@@ -16,16 +17,21 @@ namespace MOBA.Core.Simulation.AI
         private const uint ActionIntentMemoryTicks = 12;
         private const uint CarrierMemoryTicks = 90;
         private const uint PlaybookMemoryTicks = 20;
+        private const uint LaneOwnershipMemoryTicks = 45;
 
         private AITeamPlaybookState _lastPlaybookState;
+        private AITeamLaneOwnershipSnapshot _lastLaneOwnership;
         private string _lastPlaybookDebug = "Playbook=None";
+        private string _lastLaneOwnershipDebug = "LaneOwn=None";
 
         public string LastPlaybookDebug => _lastPlaybookDebug;
+        public string LastLaneOwnershipDebug => _lastLaneOwnershipDebug;
 
         public AITeamCoordinator(BrawlerController self)
         {
             _self = self;
             _lastPlaybookState = AITeamPlaybookState.None(0u);
+            _lastLaneOwnership = AITeamLaneOwnershipSnapshot.None(0, 0u);
         }
 
         public void UpdateTeamSignals(AITargetInfo targetInfo, uint currentTick)
@@ -94,7 +100,16 @@ namespace MOBA.Core.Simulation.AI
             if (_self == null || _self.State == null || _self.State.IsDead)
             {
                 _lastPlaybookState = AITeamPlaybookState.None(currentTick);
-                _lastPlaybookDebug = _lastPlaybookState.GetDebugSummary();
+                _lastLaneOwnership = AITeamLaneOwnershipSnapshot.None(
+                    _self != null ? _self.EntityID : 0,
+                    currentTick);
+                _lastLaneOwnershipDebug = _lastLaneOwnership.GetDebugSummary();
+                _lastPlaybookDebug =
+                    $"{_lastPlaybookState.GetDebugSummary()} {_lastLaneOwnershipDebug}";
+
+                if (_self != null)
+                    AITeamBlackboard.ClearLaneOwnership(_self.Team, _self.EntityID);
+
                 return _lastPlaybookState;
             }
 
@@ -104,12 +119,29 @@ namespace MOBA.Core.Simulation.AI
                 currentTick);
 
             _lastPlaybookState = AITeamPlaybookDirector.Resolve(context);
-            _lastPlaybookDebug = _lastPlaybookState.GetDebugSummary();
 
             AITeamBlackboard.ReportPlaybookState(
                 _self.Team,
                 _lastPlaybookState,
                 currentTick);
+
+            AITeamBlackboard.ReportLaneOwnership(
+                _self.Team,
+                _self.EntityID,
+                ResolveLaneReport(_lastPlaybookState, context),
+                _self.Position,
+                currentTick);
+
+            AITeamBlackboard.TryGetLaneOwnership(
+                _self.Team,
+                _self.EntityID,
+                currentTick,
+                LaneOwnershipMemoryTicks,
+                out _lastLaneOwnership);
+
+            _lastLaneOwnershipDebug = _lastLaneOwnership.GetDebugSummary();
+            _lastPlaybookDebug =
+                $"{_lastPlaybookState.GetDebugSummary()} {_lastLaneOwnershipDebug}";
 
             return _lastPlaybookState;
         }
@@ -180,6 +212,25 @@ namespace MOBA.Core.Simulation.AI
                 out state);
         }
 
+        public bool TryGetLaneOwnership(
+            uint currentTick,
+            out AITeamLaneOwnershipSnapshot snapshot)
+        {
+            if (_lastLaneOwnership.HasValue &&
+                currentTick - _lastLaneOwnership.Tick <= LaneOwnershipMemoryTicks)
+            {
+                snapshot = _lastLaneOwnership;
+                return true;
+            }
+
+            return AITeamBlackboard.TryGetLaneOwnership(
+                _self.Team,
+                _self.EntityID,
+                currentTick,
+                LaneOwnershipMemoryTicks,
+                out snapshot);
+        }
+
         public void ReportTargetFocusCount(int targetEntityId)
         {
             if (_self == null)
@@ -244,6 +295,16 @@ namespace MOBA.Core.Simulation.AI
                 _self.EntityID);
         }
 
+        public void ClearLaneOwnership()
+        {
+            if (_self == null)
+                return;
+
+            AITeamBlackboard.ClearLaneOwnership(
+                _self.Team,
+                _self.EntityID);
+        }
+
         public int GetActionIntentCount(AIActionType actionType, uint currentTick)
         {
             if (_self == null)
@@ -293,6 +354,9 @@ namespace MOBA.Core.Simulation.AI
                 BotEntityId = _self.EntityID,
                 Tick = currentTick,
                 SelfPosition = _self.Position,
+                Archetype = _self.Definition != null
+                    ? _self.Definition.Archetype
+                    : BrawlerArchetype.Fighter,
                 HealthRatio = healthRatio,
                 MacroState = macroState,
                 SelfIsCarrier = _self.State.CarriedGemCount > 0,
@@ -309,8 +373,40 @@ namespace MOBA.Core.Simulation.AI
             PopulateThreatenedAllyContext(ref context, currentTick);
             PopulateFocusContext(ref context, targetInfo, currentTick);
             PopulatePositionSignalContext(ref context, currentTick);
+            PopulateLaneOwnershipContext(ref context, currentTick);
 
             return context;
+        }
+
+        private void PopulateLaneOwnershipContext(
+            ref AITeamPlaybookContext context,
+            uint currentTick)
+        {
+            AITeamBlackboard.TryGetLaneOwnership(
+                _self.Team,
+                _self.EntityID,
+                currentTick,
+                LaneOwnershipMemoryTicks,
+                out AITeamLaneOwnershipSnapshot laneOwnership);
+
+            context.LaneOwnership = laneOwnership;
+            context.HasLaneOwnership = laneOwnership.HasValue;
+        }
+
+        private AITeamLaneAssignment ResolveLaneReport(
+            AITeamPlaybookState state,
+            AITeamPlaybookContext context)
+        {
+            if (state.Lane != AITeamLaneAssignment.None)
+                return state.Lane;
+
+            if (context.HasLaneOwnership &&
+                context.LaneOwnership.HasRecommendedLane)
+            {
+                return context.LaneOwnership.RecommendedLane;
+            }
+
+            return AILaneDisciplineUtility.ResolveAssignedLane(_self.EntityID);
         }
 
         private void PopulateCarrierContext(

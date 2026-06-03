@@ -133,7 +133,7 @@ namespace MOBA.Core.Simulation.AI
                 macroState,
                 currentTick);
 
-            _lastPlaybookDebug = state.GetDebugSummary();
+            _lastPlaybookDebug = _teamCoordinator.LastPlaybookDebug;
             return state;
         }
 
@@ -1544,6 +1544,15 @@ namespace MOBA.Core.Simulation.AI
             Vector3 anchorPoint = Vector3.zero;
             bool hasAnchor = false;
             AITeamLaneAssignment lane = AILaneDisciplineUtility.ResolveAssignedLane(_self.EntityID);
+
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetLaneOwnership(
+                    currentTick,
+                    out AITeamLaneOwnershipSnapshot laneOwnership) &&
+                laneOwnership.HasRecommendedLane)
+            {
+                lane = laneOwnership.RecommendedLane;
+            }
 
             if (_teamCoordinator != null &&
                 _teamCoordinator.TryGetPlaybookState(currentTick, out AITeamPlaybookState playbookState))
