@@ -153,6 +153,15 @@ namespace MOBA.Core.Simulation.AI
             profile.TacticalKiteDistance *= movement;
             profile.TacticalMinimumStepDistance *= movement;
             profile.RepositionStepDistance *= movement;
+            if (profile.TacticalDirectionFlipCooldownTicks == 0u)
+                profile.TacticalDirectionFlipCooldownTicks = 24u;
+
+            if (profile.TacticalDestinationSwitchDistance <= 0f)
+                profile.TacticalDestinationSwitchDistance = 1.2f;
+
+            if (profile.TacticalDestinationBlend <= 0f)
+                profile.TacticalDestinationBlend = 0.55f;
+
             profile.TacticalMoveRetargetTicks = ScaleTicks(
                 profile.TacticalMoveRetargetTicks,
                 InverseMultiplier(movement),
@@ -161,6 +170,11 @@ namespace MOBA.Core.Simulation.AI
                 profile.TacticalMoveHeartbeatTicks,
                 InverseMultiplier(movement),
                 1u);
+            profile.TacticalDirectionFlipCooldownTicks = ScaleTicks(
+                profile.TacticalDirectionFlipCooldownTicks,
+                InverseMultiplier(movement),
+                1u);
+            profile.TacticalDestinationSwitchDistance *= movement;
 
             float danger = MultiplierOrOne(DangerAvoidanceMultiplier);
             profile.DangerScanRadius *= danger;

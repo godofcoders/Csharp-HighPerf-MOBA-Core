@@ -53,9 +53,12 @@ namespace MOBA.Core.Simulation.AI
             _objectiveSlotCommitment.LastDebugSummary;
         private AITacticalMovementIntent _lastTacticalMovementIntent;
         private Vector3 _lastTacticalMoveDestination;
+        private Vector3 _lastTacticalMoveDirection;
         private Vector3 _lastTacticalTargetPosition;
         private uint _nextTacticalMoveRetargetTick;
+        private uint _lastTacticalDirectionFlipTick;
         private int _lastStrafeSide = 1;
+        private bool _hasTacticalMoveDirection;
         public AITacticalMovementIntent LastTacticalMovementIntent => _lastTacticalMovementIntent;
         public Vector3 LastTacticalMoveDestination => _lastTacticalMoveDestination;
 
@@ -177,6 +180,7 @@ namespace MOBA.Core.Simulation.AI
             _hasMapRouteCache = false;
             _nextTacticalMoveRetargetTick = currentTick;
             _lastStrafeSide = -GetStableStrafeSide();
+            _hasTacticalMoveDirection = false;
 
             string reason = $"recovery_{request.Reason}";
             _pendingTacticalRefreshReason = string.IsNullOrEmpty(_pendingTacticalRefreshReason)
@@ -1204,8 +1208,7 @@ namespace MOBA.Core.Simulation.AI
         {
             _pendingTacticalRefreshReason = refreshReason;
 
-            if (refreshReason == "movement_heartbeat" ||
-                refreshReason == "missing_destination")
+            if (refreshReason == "movement_heartbeat")
             {
                 _lastStrafeSide = -GetStableStrafeSide();
             }
@@ -1224,10 +1227,12 @@ namespace MOBA.Core.Simulation.AI
                 intent != AITacticalMovementIntent.None,
                 _lastTacticalTargetPosition,
                 _lastTacticalPreferredRange);
+            destination = StabilizeTacticalDestination(intent, destination, currentTick);
 
             _lastTacticalMovementIntent = intent;
             _lastTacticalMoveDestination = destination;
             _lastTacticalRetargetTick = currentTick;
+            RecordTacticalMoveDirection(destination, currentTick);
             _lastTacticalMoveReason = string.IsNullOrEmpty(_pendingTacticalRefreshReason)
                 ? reason
                 : $"{reason}|refresh={_pendingTacticalRefreshReason}";
@@ -1278,9 +1283,139 @@ namespace MOBA.Core.Simulation.AI
 
         private bool IsNearLastTacticalDestination()
         {
-            float minimumStep = Mathf.Max(0.25f, _profile.TacticalMinimumStepDistance);
-            float distSq = (_lastTacticalMoveDestination - _brawler.Position).sqrMagnitude;
+            float minimumStep = GetTacticalMinimumStepDistance();
+            Vector3 offset = _lastTacticalMoveDestination - _brawler.Position;
+            offset.y = 0f;
+            float distSq = offset.sqrMagnitude;
             return distSq <= minimumStep * minimumStep;
+        }
+
+        private Vector3 StabilizeTacticalDestination(
+            AITacticalMovementIntent intent,
+            Vector3 destination,
+            uint currentTick)
+        {
+            if (IsCriticalTacticalIntent(intent) ||
+                IsCriticalTacticalIntent(_lastTacticalMovementIntent) ||
+                _lastTacticalMovementIntent == AITacticalMovementIntent.None ||
+                !_navAgent.HasDestination)
+            {
+                return destination;
+            }
+
+            uint stabilizationMemoryTicks = GetTacticalDirectionFlipCooldownTicks() * 2u;
+            if ((currentTick - _lastTacticalRetargetTick) > stabilizationMemoryTicks)
+                return destination;
+
+            Vector3 candidateOffset = destination - _brawler.Position;
+            candidateOffset.y = 0f;
+
+            Vector3 currentOffset = _lastTacticalMoveDestination - _brawler.Position;
+            currentOffset.y = 0f;
+
+            float minimumStep = GetTacticalMinimumStepDistance();
+            if (candidateOffset.sqrMagnitude <= minimumStep * minimumStep ||
+                currentOffset.sqrMagnitude <= minimumStep * minimumStep)
+            {
+                return destination;
+            }
+
+            Vector3 destinationDelta = destination - _lastTacticalMoveDestination;
+            destinationDelta.y = 0f;
+
+            float switchDistance = GetTacticalDestinationSwitchDistance();
+            bool stillTravelling = !IsNearLastTacticalDestination();
+            if (stillTravelling &&
+                destinationDelta.sqrMagnitude < switchDistance * switchDistance)
+            {
+                AppendPendingTacticalRefreshReason("stabilized_small_delta");
+                return _lastTacticalMoveDestination;
+            }
+
+            Vector3 candidateDirection = candidateOffset.normalized;
+            Vector3 currentDirection = _hasTacticalMoveDirection
+                ? _lastTacticalMoveDirection
+                : currentOffset.normalized;
+
+            bool reversingDirection = Vector3.Dot(candidateDirection, currentDirection) < -0.35f;
+            if (reversingDirection && !CanFlipTacticalDirection(currentTick))
+            {
+                AppendPendingTacticalRefreshReason("stabilized_flip_cooldown");
+                return _lastTacticalMoveDestination;
+            }
+
+            float blend = GetTacticalDestinationBlend();
+            if (stillTravelling && blend < 0.99f)
+            {
+                Vector3 blendedDestination = Vector3.Lerp(
+                    _lastTacticalMoveDestination,
+                    destination,
+                    blend);
+                blendedDestination.y = _brawler.Position.y;
+                AppendPendingTacticalRefreshReason("stabilized_blend");
+                return blendedDestination;
+            }
+
+            return destination;
+        }
+
+        private bool CanFlipTacticalDirection(uint currentTick)
+        {
+            if (!_hasTacticalMoveDirection)
+                return true;
+
+            uint cooldownTicks = GetTacticalDirectionFlipCooldownTicks();
+            return (currentTick - _lastTacticalDirectionFlipTick) >= cooldownTicks;
+        }
+
+        private void RecordTacticalMoveDirection(Vector3 destination, uint currentTick)
+        {
+            Vector3 direction = destination - _brawler.Position;
+            direction.y = 0f;
+
+            if (direction.sqrMagnitude <= 0.001f)
+                return;
+
+            direction.Normalize();
+
+            if (!_hasTacticalMoveDirection ||
+                Vector3.Dot(direction, _lastTacticalMoveDirection) < -0.35f)
+            {
+                _lastTacticalDirectionFlipTick = currentTick;
+            }
+
+            _lastTacticalMoveDirection = direction;
+            _hasTacticalMoveDirection = true;
+        }
+
+        private uint GetTacticalDirectionFlipCooldownTicks()
+        {
+            return _profile.TacticalDirectionFlipCooldownTicks == 0u
+                ? 24u
+                : _profile.TacticalDirectionFlipCooldownTicks;
+        }
+
+        private float GetTacticalDestinationSwitchDistance()
+        {
+            return Mathf.Max(
+                0.25f,
+                _profile.TacticalDestinationSwitchDistance <= 0f
+                    ? 1.2f
+                    : _profile.TacticalDestinationSwitchDistance);
+        }
+
+        private float GetTacticalDestinationBlend()
+        {
+            float blend = _profile.TacticalDestinationBlend <= 0f
+                ? 0.55f
+                : _profile.TacticalDestinationBlend;
+
+            return Mathf.Clamp(blend, 0.05f, 1f);
+        }
+
+        private float GetTacticalMinimumStepDistance()
+        {
+            return Mathf.Max(0.25f, _profile.TacticalMinimumStepDistance);
         }
 
         private Vector3 EnsureMeaningfulTacticalDestination(
@@ -1290,7 +1425,7 @@ namespace MOBA.Core.Simulation.AI
             Vector3 offset = destination - _brawler.Position;
             offset.y = 0f;
 
-            float minimumStep = Mathf.Max(0.25f, _profile.TacticalMinimumStepDistance);
+            float minimumStep = GetTacticalMinimumStepDistance();
             if (offset.sqrMagnitude >= minimumStep * minimumStep)
                 return destination;
 

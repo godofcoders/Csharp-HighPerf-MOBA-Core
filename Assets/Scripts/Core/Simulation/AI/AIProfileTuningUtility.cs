@@ -24,6 +24,7 @@ namespace MOBA.Core.Simulation.AI
             profile.Difficulty = difficulty;
             profile.Personality = personality;
 
+            EnsureTacticalStabilizationDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -90,6 +91,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBacklineAnchorBonus *= 0.75f;
                     profile.TacticalMoveRetargetTicks = ScaleTicks(profile.TacticalMoveRetargetTicks, 1.35f, 1);
                     profile.TacticalMoveHeartbeatTicks = ScaleTicks(profile.TacticalMoveHeartbeatTicks, 1.25f, 1);
+                    profile.TacticalDirectionFlipCooldownTicks =
+                        ScaleTicks(profile.TacticalDirectionFlipCooldownTicks, 1.20f, 1);
+                    profile.TacticalDestinationSwitchDistance *= 1.10f;
+                    profile.TacticalDestinationBlend *= 0.90f;
                     profile.DangerScanRadius *= 0.85f;
                     profile.DangerReactionTimeSeconds *= 0.80f;
                     profile.DangerEvadePressureThreshold *= 1.15f;
@@ -140,6 +145,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBacklineAnchorBonus *= 1.10f;
                     profile.TacticalMoveRetargetTicks = ScaleTicks(profile.TacticalMoveRetargetTicks, 0.80f, 1);
                     profile.TacticalMoveHeartbeatTicks = ScaleTicks(profile.TacticalMoveHeartbeatTicks, 0.80f, 1);
+                    profile.TacticalDirectionFlipCooldownTicks =
+                        ScaleTicks(profile.TacticalDirectionFlipCooldownTicks, 0.85f, 1);
+                    profile.TacticalDestinationSwitchDistance *= 0.90f;
+                    profile.TacticalDestinationBlend *= 1.10f;
                     profile.TacticalMinimumStepDistance *= 1.10f;
                     profile.DangerScanRadius *= 1.10f;
                     profile.DangerReactionTimeSeconds *= 1.15f;
@@ -271,6 +280,8 @@ namespace MOBA.Core.Simulation.AI
 
         private static void Normalize(BrawlerAIProfile profile)
         {
+            EnsureTacticalStabilizationDefaults(profile);
+
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
 
@@ -288,6 +299,9 @@ namespace MOBA.Core.Simulation.AI
             profile.TacticalMoveRetargetTicks = ClampTicks(profile.TacticalMoveRetargetTicks, 1, 45);
             profile.TacticalMoveHeartbeatTicks = ClampTicks(profile.TacticalMoveHeartbeatTicks, 1, 60);
             profile.TacticalDestinationStaleDistance = Mathf.Clamp(profile.TacticalDestinationStaleDistance, 0.25f, 4f);
+            profile.TacticalDirectionFlipCooldownTicks = ClampTicks(profile.TacticalDirectionFlipCooldownTicks, 1, 90);
+            profile.TacticalDestinationSwitchDistance = Mathf.Clamp(profile.TacticalDestinationSwitchDistance, 0.25f, 4f);
+            profile.TacticalDestinationBlend = Mathf.Clamp(profile.TacticalDestinationBlend, 0.05f, 1f);
             profile.TacticalMinimumStepDistance = Mathf.Clamp(profile.TacticalMinimumStepDistance, 0.25f, 2f);
             profile.TacticalStrafeDistance = Mathf.Clamp(profile.TacticalStrafeDistance, 0.4f, 4f);
             profile.TacticalKiteDistance = Mathf.Clamp(profile.TacticalKiteDistance, 0.5f, 5f);
@@ -370,6 +384,18 @@ namespace MOBA.Core.Simulation.AI
                 ClampTicks(profile.HumanizationPressureMistakeCooldownTicks, 20, 300);
             profile.HumanizationPersonalityExpression =
                 Mathf.Clamp(profile.HumanizationPersonalityExpression, 0f, 2f);
+        }
+
+        private static void EnsureTacticalStabilizationDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.TacticalDirectionFlipCooldownTicks == 0u)
+                profile.TacticalDirectionFlipCooldownTicks = 24u;
+
+            if (profile.TacticalDestinationSwitchDistance <= 0f)
+                profile.TacticalDestinationSwitchDistance = 1.2f;
+
+            if (profile.TacticalDestinationBlend <= 0f)
+                profile.TacticalDestinationBlend = 0.55f;
         }
 
         private static void ApplyFairPlayGuardrails(BrawlerAIProfile profile)

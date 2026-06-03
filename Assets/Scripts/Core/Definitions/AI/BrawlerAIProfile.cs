@@ -173,6 +173,15 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Retarget tactical movement early when the enemy has moved this far from the position used by the last tactical plan.")]
         public float TacticalDestinationStaleDistance = 1.25f;
 
+        [Tooltip("Minimum ticks before normal tactical movement may reverse direction. Emergency retreats ignore this.")]
+        public uint TacticalDirectionFlipCooldownTicks = 24;
+
+        [Tooltip("How far a new tactical destination must differ before replacing the current one while the bot is still travelling.")]
+        public float TacticalDestinationSwitchDistance = 1.2f;
+
+        [Tooltip("How strongly normal tactical movement adopts a new destination. Lower values preserve the current lane longer.")]
+        [Range(0.05f, 1f)] public float TacticalDestinationBlend = 0.55f;
+
         [Tooltip("Minimum distance a tactical move should ask the bot to travel. Prevents tiny stale destinations from turning into stationary aim.")]
         public float TacticalMinimumStepDistance = 0.75f;
 
@@ -712,11 +721,61 @@ namespace MOBA.Core.Simulation.AI
                     break;
             }
 
+            ApplyTacticalStabilizationDefaults(archetype);
             ApplyMapIntelligenceDefaults(archetype);
             ApplyReactiveCombatDefaults(archetype);
             ApplyDangerAvoidanceDefaults(archetype);
             ApplyFailureRecoveryDefaults(archetype);
             ApplyProductionBudgetDefaults(archetype);
+        }
+
+        private void ApplyTacticalStabilizationDefaults(BrawlerArchetype archetype)
+        {
+            switch (archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                    TacticalDirectionFlipCooldownTicks = 28;
+                    TacticalDestinationSwitchDistance = 1.35f;
+                    TacticalDestinationBlend = 0.45f;
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    TacticalDirectionFlipCooldownTicks = 18;
+                    TacticalDestinationSwitchDistance = 1.0f;
+                    TacticalDestinationBlend = 0.65f;
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    TacticalDirectionFlipCooldownTicks = 16;
+                    TacticalDestinationSwitchDistance = 0.95f;
+                    TacticalDestinationBlend = 0.7f;
+                    break;
+
+                case BrawlerArchetype.Support:
+                    TacticalDirectionFlipCooldownTicks = 26;
+                    TacticalDestinationSwitchDistance = 1.3f;
+                    TacticalDestinationBlend = 0.5f;
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    TacticalDirectionFlipCooldownTicks = 24;
+                    TacticalDestinationSwitchDistance = 1.2f;
+                    TacticalDestinationBlend = 0.55f;
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    TacticalDirectionFlipCooldownTicks = 30;
+                    TacticalDestinationSwitchDistance = 1.4f;
+                    TacticalDestinationBlend = 0.45f;
+                    break;
+
+                case BrawlerArchetype.Fighter:
+                default:
+                    TacticalDirectionFlipCooldownTicks = 22;
+                    TacticalDestinationSwitchDistance = 1.15f;
+                    TacticalDestinationBlend = 0.6f;
+                    break;
+            }
         }
 
         private void ApplyMapIntelligenceDefaults(BrawlerArchetype archetype)
