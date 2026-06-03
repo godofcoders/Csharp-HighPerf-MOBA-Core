@@ -55,6 +55,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Macro: {snapshot.MacroDebug}");
             GUILayout.Label($"Playbook: {snapshot.PlaybookDebug}");
             GUILayout.Label($"Chase: {snapshot.ChaseDebug}");
+            GUILayout.Label($"Gem Pickup: {snapshot.GemPickupDebug}");
             GUILayout.Label($"Reactive: {snapshot.ReactiveDebug}");
             GUILayout.Label($"Danger: {snapshot.DangerDebug}");
             GUILayout.Label($"Recovery: {snapshot.FailureRecoveryDebug}");
@@ -134,6 +135,7 @@ namespace MOBA.Core.Simulation.AI
                     $"Macro={snapshot.MacroDebug} | " +
                     $"Playbook={snapshot.PlaybookDebug} | " +
                     $"Chase={snapshot.ChaseDebug} | " +
+                    $"GemPickup={snapshot.GemPickupDebug} | " +
                     $"Reactive={snapshot.ReactiveDebug} | " +
                     $"Danger={snapshot.DangerDebug} | " +
                     $"Recovery={snapshot.FailureRecoveryDebug} | " +

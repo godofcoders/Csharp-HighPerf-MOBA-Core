@@ -184,6 +184,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastPlaybookDebug : "Playbook=None";
         public string ChaseDebug =>
             _utilityScorer != null ? _utilityScorer.LastChaseDebug : "Chase=None";
+        public string GemPickupDebug =>
+            _utilityScorer != null ? _utilityScorer.LastGemPickupDebug : "GemPickup=None";
         public string OpponentModelDebug => _lastOpponentModelDebug;
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
@@ -505,6 +507,7 @@ _actionExecutor != null
                 _debugSnapshot.TeamRoleDebug = TeamRoleDebug;
                 _debugSnapshot.PlaybookDebug = PlaybookDebug;
                 _debugSnapshot.ChaseDebug = ChaseDebug;
+                _debugSnapshot.GemPickupDebug = GemPickupDebug;
             }
             else
             {
@@ -514,6 +517,7 @@ _actionExecutor != null
                 _debugSnapshot.MacroDebug = "Macro=None";
                 _debugSnapshot.PlaybookDebug = "Playbook=None";
                 _debugSnapshot.ChaseDebug = "Chase=None";
+                _debugSnapshot.GemPickupDebug = "GemPickup=None";
             }
 
             _lastReactiveDebug = _reactiveMemory != null && _profile != null

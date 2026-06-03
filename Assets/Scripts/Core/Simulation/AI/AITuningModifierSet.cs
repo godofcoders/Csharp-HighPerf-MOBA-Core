@@ -118,6 +118,7 @@ namespace MOBA.Core.Simulation.AI
             profile.InRangeTargetBonus *= aggression;
             profile.LowHealthTargetBias *= aggression;
             profile.FinisherBonus *= aggression;
+            profile.GemPickupMinimumScore *= InverseMultiplier(aggression);
             profile.LowHealthChaseMaxDistance *= aggression;
             profile.LowHealthChaseApproachBonus *= aggression;
             profile.LowHealthChaseMaxTicks = ScaleTicks(
@@ -135,6 +136,8 @@ namespace MOBA.Core.Simulation.AI
             profile.ReactiveRetreatPressureBonus *= safety;
             profile.ReactiveRepositionPressureBonus *= safety;
             profile.FailureRecoveryDetourDistance *= safety;
+            profile.GemPickupCarrierSafetyPenalty *= safety;
+            profile.GemPickupThreatPenalty *= safety;
             profile.UnsafeChasePenalty *= safety;
             profile.LowHealthChaseCooldownTicks = ScaleTicks(
                 profile.LowHealthChaseCooldownTicks,
@@ -158,6 +161,12 @@ namespace MOBA.Core.Simulation.AI
             float objective = MultiplierOrOne(ObjectiveMultiplier);
             profile.ObjectiveWeight *= objective;
             profile.MacroActionBiasWeight *= objective;
+            profile.GemPickupBaseScore *= objective;
+            profile.GemPickupValueScore *= objective;
+            profile.GemPickupCloseRangeBonus *= objective;
+            profile.GemPickupSecureThresholdBonus *= objective;
+            profile.GemPickupDenyThresholdBonus *= objective;
+            profile.GemPickupCountdownResetBonus *= objective;
             profile.MapLaneControlPreference *= objective;
             profile.MapChokeControlPreference *= objective;
             profile.LaneHoldObjectiveBonus *= objective;

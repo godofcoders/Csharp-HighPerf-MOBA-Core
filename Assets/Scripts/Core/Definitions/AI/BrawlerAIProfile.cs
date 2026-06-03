@@ -62,6 +62,22 @@ namespace MOBA.Core.Simulation.AI
         public float GemPickupValueScore = 8f;
         [Tooltip("Extra search utility for nearby gems, fading to zero at GemPickupSearchRadius.")]
         public float GemPickupCloseRangeBonus = 22f;
+        [Tooltip("Loose gems within this radius are treated as a cluster/dropped pile for pickup urgency.")]
+        public float GemPickupClusterRadius = 1.75f;
+        [Tooltip("Minimum evaluated pickup score before Search movement commits to a gem.")]
+        public float GemPickupMinimumScore = 30f;
+        [Tooltip("Bonus when a pickup can put our team at or above the Gem Grab win threshold.")]
+        public float GemPickupSecureThresholdBonus = 34f;
+        [Tooltip("Bonus when a pickup denies the enemy reaching or extending threshold pressure.")]
+        public float GemPickupDenyThresholdBonus = 30f;
+        [Tooltip("Bonus when enemy countdown is active and loose gems can help reset pressure.")]
+        public float GemPickupCountdownResetBonus = 38f;
+        [Tooltip("Penalty for risky carrier pickups during own countdown/hold states.")]
+        public float GemPickupCarrierSafetyPenalty = 10f;
+        [Tooltip("Radius around known enemy pressure where gem pickups are considered contested.")]
+        public float GemPickupThreatRadius = 4.5f;
+        [Tooltip("Score removed at full enemy pressure near a gem unless the pickup is strategically urgent.")]
+        public float GemPickupThreatPenalty = 24f;
 
         [Header("Super Usage")]
         public bool EnableSuperUsage = true;
@@ -768,6 +784,7 @@ namespace MOBA.Core.Simulation.AI
                     break;
             }
 
+            ApplyGemGrabObjectiveDefaults(archetype);
             ApplyLaneDisciplineDefaults(archetype);
             ApplyTacticalStabilizationDefaults(archetype);
             ApplyMapIntelligenceDefaults(archetype);
@@ -775,6 +792,64 @@ namespace MOBA.Core.Simulation.AI
             ApplyDangerAvoidanceDefaults(archetype);
             ApplyFailureRecoveryDefaults(archetype);
             ApplyProductionBudgetDefaults(archetype);
+        }
+
+        private void ApplyGemGrabObjectiveDefaults(BrawlerArchetype archetype)
+        {
+            GemPickupSearchRadius = 11f;
+            GemPickupBaseScore = 42f;
+            GemPickupValueScore = 8f;
+            GemPickupCloseRangeBonus = 22f;
+            GemPickupClusterRadius = 1.75f;
+            GemPickupMinimumScore = 30f;
+            GemPickupSecureThresholdBonus = 34f;
+            GemPickupDenyThresholdBonus = 30f;
+            GemPickupCountdownResetBonus = 38f;
+            GemPickupCarrierSafetyPenalty = 10f;
+            GemPickupThreatRadius = 4.5f;
+            GemPickupThreatPenalty = 24f;
+
+            switch (archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                    GemPickupMinimumScore = 36f;
+                    GemPickupCarrierSafetyPenalty = 13f;
+                    GemPickupThreatPenalty = 30f;
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    GemPickupMinimumScore = 24f;
+                    GemPickupThreatPenalty = 16f;
+                    GemPickupCarrierSafetyPenalty = 7f;
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    GemPickupSearchRadius = 12f;
+                    GemPickupMinimumScore = 26f;
+                    GemPickupDenyThresholdBonus = 34f;
+                    GemPickupThreatPenalty = 18f;
+                    break;
+
+                case BrawlerArchetype.Support:
+                    GemPickupMinimumScore = 34f;
+                    GemPickupSecureThresholdBonus = 38f;
+                    GemPickupCarrierSafetyPenalty = 12f;
+                    GemPickupThreatPenalty = 28f;
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    GemPickupMinimumScore = 30f;
+                    GemPickupSecureThresholdBonus = 36f;
+                    GemPickupDenyThresholdBonus = 34f;
+                    GemPickupThreatPenalty = 24f;
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    GemPickupMinimumScore = 38f;
+                    GemPickupCarrierSafetyPenalty = 14f;
+                    GemPickupThreatPenalty = 32f;
+                    break;
+            }
         }
 
         private void ApplyLaneDisciplineDefaults(BrawlerArchetype archetype)

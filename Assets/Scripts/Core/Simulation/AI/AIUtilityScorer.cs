@@ -42,6 +42,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastMacroDebug = "Macro=None";
         private string _lastPlaybookDebug = "Playbook=None";
         private string _lastChaseDebug = "Chase=None";
+        private string _lastGemPickupDebug = "GemPickup=None";
         private uint _lastLaneEvaluationTick;
         private bool _hasLaneEvaluation;
         private bool _lastCanHoldLane;
@@ -56,6 +57,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastMacroDebug => _lastMacroDebug;
         public string LastPlaybookDebug => _lastPlaybookDebug;
         public string LastChaseDebug => _lastChaseDebug;
+        public string LastGemPickupDebug => _lastGemPickupDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -1122,20 +1124,14 @@ namespace MOBA.Core.Simulation.AI
                 score += Mathf.Clamp(hotspotPressure * 4f, 4f, 14f);
             }
 
-            if (Gem.TryGetBestUnpickedWithin(
-                    _self.Position,
-                    _profile.GemPickupSearchRadius,
-                    out _,
-                    out int gemValue,
-                    out float gemDistance))
+            if (TryResolveGemPickupDecision(
+                    macroState,
+                    currentTick,
+                    out AIGemPickupDecision gemDecision))
             {
-                float pickupRadius = Mathf.Max(0.1f, _profile.GemPickupSearchRadius);
-                float closeBonus = Mathf.Clamp01(1f - gemDistance / pickupRadius) *
-                                   _profile.GemPickupCloseRangeBonus;
-
-                score += _profile.GemPickupBaseScore;
-                score += gemValue * _profile.GemPickupValueScore;
-                score += closeBonus;
+                score += gemDecision.ShouldPickup
+                    ? gemDecision.Score
+                    : Mathf.Max(0f, gemDecision.Score * 0.20f);
             }
 
             if (CanHoldAssignedLane(currentTick, out _))
@@ -1155,6 +1151,46 @@ namespace MOBA.Core.Simulation.AI
       AIActionType.Search,
       score,
       _profile.SearchWeight);
+        }
+
+        private bool TryResolveGemPickupDecision(
+            AIGameModeMacroState macroState,
+            uint currentTick,
+            out AIGemPickupDecision decision)
+        {
+            bool hasThreatCenter = false;
+            Vector3 threatCenter = Vector3.zero;
+            float threatPressure = 0f;
+            bool hasEnemyHotspot = false;
+            Vector3 enemyHotspot = Vector3.zero;
+            float hotspotPressure = 0f;
+
+            if (_teamCoordinator != null)
+            {
+                hasThreatCenter = _teamCoordinator.TryGetThreatCenter(
+                    currentTick,
+                    out threatCenter,
+                    out threatPressure);
+                hasEnemyHotspot = _teamCoordinator.TryGetEnemyHotspot(
+                    currentTick,
+                    out enemyHotspot,
+                    out hotspotPressure);
+            }
+
+            bool shouldPickup = AIGemGrabObjectiveUtility.TryFindBestPickup(
+                _self,
+                _profile,
+                macroState,
+                hasThreatCenter,
+                threatCenter,
+                threatPressure,
+                hasEnemyHotspot,
+                enemyHotspot,
+                hotspotPressure,
+                out decision);
+
+            _lastGemPickupDebug = decision.GetDebugSummary();
+            return decision.HasPickup && (shouldPickup || decision.Score > 0f);
         }
 
         private AIActionScore ScoreWander()

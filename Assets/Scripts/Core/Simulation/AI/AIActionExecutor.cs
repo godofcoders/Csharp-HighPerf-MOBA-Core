@@ -925,7 +925,7 @@ namespace MOBA.Core.Simulation.AI
 
         private void RunSearch(AITargetInfo targetInfo, uint currentTick)
         {
-            if (TryRunGemPickupSearch())
+            if (TryRunGemPickupSearch(currentTick))
                 return;
 
             if (targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
@@ -1002,22 +1002,50 @@ namespace MOBA.Core.Simulation.AI
             RunFallbackWander(currentTick);
         }
 
-        private bool TryRunGemPickupSearch()
+        private bool TryRunGemPickupSearch(uint currentTick)
         {
-            if (_profile == null ||
-                _profile.GemPickupSearchRadius <= 0f ||
-                !Gem.TryGetBestUnpickedWithin(
-                    _brawler.Position,
-                    _profile.GemPickupSearchRadius,
-                    out Vector3 gemPosition,
-                    out _,
-                    out _))
+            if (_profile == null || _profile.GemPickupSearchRadius <= 0f)
+                return false;
+
+            bool hasThreatCenter = false;
+            Vector3 threatCenter = Vector3.zero;
+            float threatPressure = 0f;
+            bool hasEnemyHotspot = false;
+            Vector3 enemyHotspot = Vector3.zero;
+            float hotspotPressure = 0f;
+
+            if (_teamCoordinator != null)
+            {
+                hasThreatCenter = _teamCoordinator.TryGetThreatCenter(
+                    currentTick,
+                    out threatCenter,
+                    out threatPressure);
+                hasEnemyHotspot = _teamCoordinator.TryGetEnemyHotspot(
+                    currentTick,
+                    out enemyHotspot,
+                    out hotspotPressure);
+            }
+
+            AIGameModeMacroState macroState =
+                AIGameModeMacroStrategy.ResolveCurrentMode(_brawler.Team);
+
+            if (!AIGemGrabObjectiveUtility.TryFindBestPickup(
+                    _brawler,
+                    _profile,
+                    macroState,
+                    hasThreatCenter,
+                    threatCenter,
+                    threatPressure,
+                    hasEnemyHotspot,
+                    enemyHotspot,
+                    hotspotPressure,
+                    out AIGemPickupDecision decision))
             {
                 return false;
             }
 
             RequestMapAwareDestination(
-                gemPosition,
+                decision.Position,
                 0.65f,
                 AIMapRouteIntent.Objective);
 

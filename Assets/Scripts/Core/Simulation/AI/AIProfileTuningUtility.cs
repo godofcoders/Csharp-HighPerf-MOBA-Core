@@ -25,6 +25,7 @@ namespace MOBA.Core.Simulation.AI
             profile.Personality = personality;
 
             EnsureTacticalStabilizationDefaults(profile);
+            EnsureGemGrabObjectiveDefaults(profile);
             EnsureLaneDisciplineDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
@@ -122,6 +123,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationPressureMistakeCooldownTicks =
                         ScaleTicks(profile.HumanizationPressureMistakeCooldownTicks, 0.75f, 1);
                     profile.HumanizationPersonalityExpression *= 1.15f;
+                    profile.GemPickupMinimumScore *= 1.10f;
+                    profile.GemPickupSecureThresholdBonus *= 0.90f;
+                    profile.GemPickupDenyThresholdBonus *= 0.90f;
+                    profile.GemPickupCarrierSafetyPenalty *= 1.15f;
+                    profile.GemPickupThreatPenalty *= 1.12f;
                     profile.LaneDisciplineWeight *= 1.10f;
                     profile.LowHealthChaseMaxDistance *= 0.92f;
                     profile.LowHealthChaseApproachBonus *= 0.85f;
@@ -191,6 +197,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationPressureMistakeCooldownTicks =
                         ScaleTicks(profile.HumanizationPressureMistakeCooldownTicks, 1.4f, 1);
                     profile.HumanizationPersonalityExpression *= 0.80f;
+                    profile.GemPickupMinimumScore *= 0.92f;
+                    profile.GemPickupSecureThresholdBonus *= 1.10f;
+                    profile.GemPickupDenyThresholdBonus *= 1.10f;
+                    profile.GemPickupCarrierSafetyPenalty *= 0.92f;
+                    profile.GemPickupThreatPenalty *= 0.90f;
                     profile.LaneDisciplineWeight *= 0.95f;
                     profile.LowHealthChaseMaxDistance *= 1.08f;
                     profile.LowHealthChaseApproachBonus *= 1.12f;
@@ -246,6 +257,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationFakeOutScoreBonus *= 1.18f;
                     profile.HumanizationPressureMistakeChance *= 1.10f;
                     profile.HumanizationPersonalityExpression *= 1.20f;
+                    profile.GemPickupMinimumScore *= 0.90f;
+                    profile.GemPickupDenyThresholdBonus *= 1.12f;
+                    profile.GemPickupThreatPenalty *= 0.90f;
                     profile.LaneDisciplineWeight *= 0.85f;
                     profile.LowHealthChaseMaxDistance *= 1.10f;
                     profile.LowHealthChaseApproachBonus *= 1.18f;
@@ -291,6 +305,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationPressureMistakeChance *= 0.85f;
                     profile.HumanizationPressureMistakePenalty *= 1.10f;
                     profile.HumanizationPersonalityExpression *= 1.10f;
+                    profile.GemPickupMinimumScore *= 1.12f;
+                    profile.GemPickupCarrierSafetyPenalty *= 1.15f;
+                    profile.GemPickupThreatPenalty *= 1.15f;
                     profile.LaneDisciplineWeight *= 1.15f;
                     profile.LowHealthChaseMaxDistance *= 0.90f;
                     profile.LowHealthChaseApproachBonus *= 0.85f;
@@ -327,6 +344,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationFakeOutChance *= 0.80f;
                     profile.HumanizationPressureMistakeChance *= 0.80f;
                     profile.HumanizationPersonalityExpression *= 1.05f;
+                    profile.GemPickupSecureThresholdBonus *= 1.08f;
+                    profile.GemPickupDenyThresholdBonus *= 1.08f;
+                    profile.GemPickupCountdownResetBonus *= 1.08f;
                     profile.LaneDisciplineWeight *= 1.12f;
                     profile.LaneHoldObjectiveBonus *= 1.12f;
                     profile.LaneHoldSearchScore *= 1.08f;
@@ -343,6 +363,7 @@ namespace MOBA.Core.Simulation.AI
         private static void Normalize(BrawlerAIProfile profile)
         {
             EnsureTacticalStabilizationDefaults(profile);
+            EnsureGemGrabObjectiveDefaults(profile);
             EnsureLaneDisciplineDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
@@ -358,6 +379,18 @@ namespace MOBA.Core.Simulation.AI
             profile.RegroupHealthThreshold = Mathf.Clamp(profile.RegroupHealthThreshold, 0.10f, 0.85f);
             profile.PreferredAttackRangeRatio = Mathf.Clamp(profile.PreferredAttackRangeRatio, 0.55f, 1.20f);
             profile.TooCloseRangeRatio = Mathf.Clamp(profile.TooCloseRangeRatio, 0.20f, 0.75f);
+            profile.GemPickupSearchRadius = Mathf.Clamp(profile.GemPickupSearchRadius, 2f, 18f);
+            profile.GemPickupBaseScore = Mathf.Clamp(profile.GemPickupBaseScore, 0f, 90f);
+            profile.GemPickupValueScore = Mathf.Clamp(profile.GemPickupValueScore, 0f, 30f);
+            profile.GemPickupCloseRangeBonus = Mathf.Clamp(profile.GemPickupCloseRangeBonus, 0f, 60f);
+            profile.GemPickupClusterRadius = Mathf.Clamp(profile.GemPickupClusterRadius, 0.5f, 4f);
+            profile.GemPickupMinimumScore = Mathf.Clamp(profile.GemPickupMinimumScore, 0f, 100f);
+            profile.GemPickupSecureThresholdBonus = Mathf.Clamp(profile.GemPickupSecureThresholdBonus, 0f, 80f);
+            profile.GemPickupDenyThresholdBonus = Mathf.Clamp(profile.GemPickupDenyThresholdBonus, 0f, 80f);
+            profile.GemPickupCountdownResetBonus = Mathf.Clamp(profile.GemPickupCountdownResetBonus, 0f, 90f);
+            profile.GemPickupCarrierSafetyPenalty = Mathf.Clamp(profile.GemPickupCarrierSafetyPenalty, 0f, 40f);
+            profile.GemPickupThreatRadius = Mathf.Clamp(profile.GemPickupThreatRadius, 1f, 10f);
+            profile.GemPickupThreatPenalty = Mathf.Clamp(profile.GemPickupThreatPenalty, 0f, 70f);
             profile.LaneDisciplineWeight = Mathf.Clamp(profile.LaneDisciplineWeight, 0f, 2f);
             profile.LaneHoldObjectiveBonus = Mathf.Clamp(profile.LaneHoldObjectiveBonus, 0f, 35f);
             profile.LaneHoldSearchScore = Mathf.Clamp(profile.LaneHoldSearchScore, 0f, 45f);
@@ -493,6 +526,45 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.NavigationStuckMoveThreshold <= 0f)
                 profile.NavigationStuckMoveThreshold = 0.08f;
+        }
+
+        private static void EnsureGemGrabObjectiveDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.GemPickupSearchRadius <= 0f)
+                profile.GemPickupSearchRadius = 11f;
+
+            if (profile.GemPickupBaseScore <= 0f)
+                profile.GemPickupBaseScore = 42f;
+
+            if (profile.GemPickupValueScore <= 0f)
+                profile.GemPickupValueScore = 8f;
+
+            if (profile.GemPickupCloseRangeBonus <= 0f)
+                profile.GemPickupCloseRangeBonus = 22f;
+
+            if (profile.GemPickupClusterRadius <= 0f)
+                profile.GemPickupClusterRadius = 1.75f;
+
+            if (profile.GemPickupMinimumScore <= 0f)
+                profile.GemPickupMinimumScore = 30f;
+
+            if (profile.GemPickupSecureThresholdBonus <= 0f)
+                profile.GemPickupSecureThresholdBonus = 34f;
+
+            if (profile.GemPickupDenyThresholdBonus <= 0f)
+                profile.GemPickupDenyThresholdBonus = 30f;
+
+            if (profile.GemPickupCountdownResetBonus <= 0f)
+                profile.GemPickupCountdownResetBonus = 38f;
+
+            if (profile.GemPickupCarrierSafetyPenalty <= 0f)
+                profile.GemPickupCarrierSafetyPenalty = 10f;
+
+            if (profile.GemPickupThreatRadius <= 0f)
+                profile.GemPickupThreatRadius = 4.5f;
+
+            if (profile.GemPickupThreatPenalty <= 0f)
+                profile.GemPickupThreatPenalty = 24f;
         }
 
         private static void EnsureLaneDisciplineDefaults(BrawlerAIProfile profile)
