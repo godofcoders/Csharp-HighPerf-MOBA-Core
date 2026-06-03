@@ -31,11 +31,21 @@ namespace MOBA.Core.Simulation.AI
         public bool PreferChokeControl;
         public bool PreferThrowerSafePosition;
         public bool PreferWallAwarePressure;
+        public bool PenalizeWallHug;
+        public bool PreferEscapeSpace;
+        public bool PreferCoverDance;
+        public bool PreferFireLanePressure;
+        public bool PreferThrowerSpacing;
         public float CoverPeekWeight;
         public float LaneControlWeight;
         public float ChokeControlWeight;
         public float ThrowerSafePositionWeight;
         public float WallPressureWeight;
+        public float WallHugPenalty;
+        public float EscapeSpaceWeight;
+        public float CoverDanceWeight;
+        public float FireLanePressureWeight;
+        public float ThrowerSpacingWeight;
         public uint CurrentTick;
         public bool HighPriority;
     }

@@ -24,6 +24,7 @@ namespace MOBA.Tests.EditMode
                 BrawlerArchetype.Sniper);
 
             Assert.IsTrue(evaluation.IsCoverPeek);
+            Assert.IsTrue(evaluation.IsCornerPeek);
             Assert.Greater(evaluation.Score, 0f);
             StringAssert.Contains("cover_peek", evaluation.Reason);
         }
@@ -141,6 +142,102 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void EvaluateCandidate_PenalizesWallHugTrapCells()
+        {
+            MapData map = MakeMap(5, 5, true);
+            AStarSolver solver = new AStarSolver(map);
+
+            AIMapControlEvaluation evaluation = AIMapControlUtility.EvaluateCandidate(
+                solver,
+                new Vector2Int(2, 2),
+                new Vector2Int(0, 0),
+                new Vector2Int(4, 4),
+                default,
+                MakeRequest(hasThreat: false, wallHug: true),
+                BrawlerArchetype.Sniper);
+
+            Assert.IsTrue(evaluation.IsWallHug);
+            Assert.Less(evaluation.Score, 0f);
+            StringAssert.Contains("wall_hug", evaluation.Reason);
+        }
+
+        [Test]
+        public void EvaluateCandidate_RewardsOpenEscapeSpaceOverBoundaryTrap()
+        {
+            MapData map = MakeMap(5, 5, true);
+            AStarSolver solver = new AStarSolver(map);
+            AIMapNavigationRequest request = MakeRequest(
+                hasThreat: false,
+                wallHug: true,
+                escapeSpace: true);
+
+            AIMapControlEvaluation open = AIMapControlUtility.EvaluateCandidate(
+                solver,
+                new Vector2Int(2, 2),
+                new Vector2Int(2, 2),
+                new Vector2Int(4, 4),
+                default,
+                request,
+                BrawlerArchetype.Support);
+
+            AIMapControlEvaluation boundary = AIMapControlUtility.EvaluateCandidate(
+                solver,
+                new Vector2Int(2, 2),
+                new Vector2Int(0, 0),
+                new Vector2Int(4, 4),
+                default,
+                request,
+                BrawlerArchetype.Support);
+
+            Assert.IsTrue(open.HasEscapeSpace);
+            Assert.IsTrue(boundary.IsWallHug);
+            Assert.Greater(open.Score, boundary.Score);
+            StringAssert.Contains("escape_space", open.Reason);
+        }
+
+        [Test]
+        public void EvaluateCandidate_RewardsDirectFireLaneWithExitSpace()
+        {
+            MapData map = MakeMap(7, 5, true);
+            AStarSolver solver = new AStarSolver(map);
+
+            AIMapControlEvaluation evaluation = AIMapControlUtility.EvaluateCandidate(
+                solver,
+                new Vector2Int(1, 2),
+                new Vector2Int(2, 2),
+                new Vector2Int(6, 2),
+                new Vector2Int(6, 2),
+                MakeRequest(hasThreat: true, fireLane: true, escapeSpace: true),
+                BrawlerArchetype.Sniper);
+
+            Assert.IsTrue(evaluation.HasFireLanePressure);
+            Assert.IsTrue(evaluation.HasEscapeSpace);
+            Assert.Greater(evaluation.Score, 0f);
+            StringAssert.Contains("fire_lane", evaluation.Reason);
+        }
+
+        [Test]
+        public void EvaluateCandidate_RewardsThrowerSpacingBehindCover()
+        {
+            MapData map = MakeMap(7, 5, true);
+            map.WalkabilityGrid[3, 2] = false;
+            AStarSolver solver = new AStarSolver(map);
+
+            AIMapControlEvaluation evaluation = AIMapControlUtility.EvaluateCandidate(
+                solver,
+                new Vector2Int(1, 2),
+                new Vector2Int(2, 2),
+                new Vector2Int(6, 2),
+                new Vector2Int(6, 2),
+                MakeRequest(hasThreat: true, throwerSpacing: true),
+                BrawlerArchetype.Artillery);
+
+            Assert.IsTrue(evaluation.HasThrowerSpacing);
+            Assert.Greater(evaluation.Score, 0f);
+            StringAssert.Contains("thrower_spacing", evaluation.Reason);
+        }
+
+        [Test]
         public void EvaluateCandidate_RewardsDesignerAuthoredLane()
         {
             MapData map = MakeMap(5, 5, true);
@@ -246,7 +343,12 @@ namespace MOBA.Tests.EditMode
             bool laneControl = false,
             bool chokeControl = false,
             bool throwerSafe = false,
-            bool wallPressure = false)
+            bool wallPressure = false,
+            bool wallHug = false,
+            bool escapeSpace = false,
+            bool coverDance = false,
+            bool fireLane = false,
+            bool throwerSpacing = false)
         {
             return new AIMapNavigationRequest
             {
@@ -256,13 +358,24 @@ namespace MOBA.Tests.EditMode
                 PreferChokeControl = chokeControl,
                 PreferThrowerSafePosition = throwerSafe,
                 PreferWallAwarePressure = wallPressure,
+                PenalizeWallHug = wallHug,
+                PreferEscapeSpace = escapeSpace,
+                PreferCoverDance = coverDance,
+                PreferFireLanePressure = fireLane,
+                PreferThrowerSpacing = throwerSpacing,
                 CoverPeekWeight = 10f,
                 LaneControlWeight = 10f,
                 ChokeControlWeight = 10f,
                 ThrowerSafePositionWeight = 12f,
                 WallPressureWeight = 8f,
+                WallHugPenalty = 10f,
+                EscapeSpaceWeight = 8f,
+                CoverDanceWeight = 6f,
+                FireLanePressureWeight = 9f,
+                ThrowerSpacingWeight = 12f,
                 ChokepointPenalty = 10f,
-                ExposedPositionPenalty = 8f
+                ExposedPositionPenalty = 8f,
+                PreferredThreatDistance = 4f
             };
         }
 

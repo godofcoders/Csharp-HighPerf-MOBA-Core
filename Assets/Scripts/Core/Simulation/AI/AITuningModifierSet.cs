@@ -240,6 +240,11 @@ namespace MOBA.Core.Simulation.AI
             profile.MapThreatAvoidanceWeight *= mapSafety;
             profile.MapThrowerSafePositionPreference *= mapSafety;
             profile.MapCoverPeekPreference *= mapSafety;
+            profile.MapWallHugPenalty *= mapSafety;
+            profile.MapEscapeSpacePreference *= mapSafety;
+            profile.MapCoverDancePreference *= mapSafety;
+            profile.MapThrowerSpacingPreference *= mapSafety;
+            profile.MapFireLanePressurePreference *= InverseMultiplier(mapSafety);
         }
 
         private void ApplyHumanization(BrawlerAIProfile profile)

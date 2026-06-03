@@ -126,6 +126,11 @@ namespace MOBA.Tests.EditMode
             profile.MaxMapResolvesPerTick = -5;
             profile.MaxPathQueriesPerTick = -5;
             profile.MaxPathTouchedNodesPerTick = -5;
+            profile.MapWallHugPenalty = 99f;
+            profile.MapEscapeSpacePreference = 99f;
+            profile.MapCoverDancePreference = 99f;
+            profile.MapFireLanePressurePreference = 99f;
+            profile.MapThrowerSpacingPreference = 99f;
             profile.HumanizationReactionJitterTicks = 999;
             profile.HumanizationActionScoreJitter = 99f;
             profile.HumanizationFakeOutScoreBonus = 99f;
@@ -151,6 +156,11 @@ namespace MOBA.Tests.EditMode
             Assert.GreaterOrEqual(profile.MaxMapResolvesPerTick, 1);
             Assert.GreaterOrEqual(profile.MaxPathQueriesPerTick, 1);
             Assert.GreaterOrEqual(profile.MaxPathTouchedNodesPerTick, 64);
+            Assert.LessOrEqual(profile.MapWallHugPenalty, 35f);
+            Assert.LessOrEqual(profile.MapEscapeSpacePreference, 30f);
+            Assert.LessOrEqual(profile.MapCoverDancePreference, 30f);
+            Assert.LessOrEqual(profile.MapFireLanePressurePreference, 35f);
+            Assert.LessOrEqual(profile.MapThrowerSpacingPreference, 35f);
             Assert.LessOrEqual((int)profile.HumanizationReactionJitterTicks, 8);
             Assert.LessOrEqual(profile.HumanizationActionScoreJitter, 6f);
             Assert.LessOrEqual(profile.HumanizationFakeOutScoreBonus, 16f);

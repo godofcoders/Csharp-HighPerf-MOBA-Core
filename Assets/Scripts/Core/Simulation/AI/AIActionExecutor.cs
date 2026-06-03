@@ -404,6 +404,11 @@ namespace MOBA.Core.Simulation.AI
                 routeIntent == AIMapRouteIntent.Search ||
                 routeIntent == AIMapRouteIntent.Regroup;
 
+            bool geometryRoute =
+                combatRoute ||
+                mapControlRoute ||
+                defensiveRoute;
+
             bool controlRole =
                 _profile.Archetype == BrawlerArchetype.Controller ||
                 _profile.Archetype == BrawlerArchetype.Artillery ||
@@ -455,11 +460,23 @@ namespace MOBA.Core.Simulation.AI
                                           (combatRoute ||
                                            routeIntent == AIMapRouteIntent.Objective ||
                                            routeIntent == AIMapRouteIntent.Search),
+                PenalizeWallHug = geometryRoute,
+                PreferEscapeSpace = geometryRoute,
+                PreferCoverDance = hasThreatPosition && combatRoute,
+                PreferFireLanePressure = hasThreatPosition && directFireRoute,
+                PreferThrowerSpacing = hasThreatPosition &&
+                                       _profile.Archetype == BrawlerArchetype.Artillery &&
+                                       combatRoute,
                 CoverPeekWeight = _profile.MapCoverPeekPreference,
                 LaneControlWeight = _profile.MapLaneControlPreference,
                 ChokeControlWeight = _profile.MapChokeControlPreference,
                 ThrowerSafePositionWeight = _profile.MapThrowerSafePositionPreference,
                 WallPressureWeight = _profile.MapWallPressurePreference,
+                WallHugPenalty = _profile.MapWallHugPenalty,
+                EscapeSpaceWeight = _profile.MapEscapeSpacePreference,
+                CoverDanceWeight = _profile.MapCoverDancePreference,
+                FireLanePressureWeight = _profile.MapFireLanePressurePreference,
+                ThrowerSpacingWeight = _profile.MapThrowerSpacingPreference,
                 CurrentTick = _currentExecuteTick,
                 HighPriority = IsCriticalRoute(routeIntent)
             };

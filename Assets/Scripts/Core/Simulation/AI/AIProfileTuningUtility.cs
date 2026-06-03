@@ -1,4 +1,5 @@
 using UnityEngine;
+using MOBA.Core.Definitions;
 
 namespace MOBA.Core.Simulation.AI
 {
@@ -27,6 +28,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureTacticalStabilizationDefaults(profile);
             EnsureGemGrabObjectiveDefaults(profile);
             EnsureLaneDisciplineDefaults(profile);
+            EnsureMapGeometryDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -110,6 +112,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapLineOfSightCoverPreference *= 0.80f;
                     profile.MapExposedPositionPenalty *= 0.75f;
                     profile.MapOpenShotPreference *= 0.80f;
+                    profile.MapEscapeSpacePreference *= 0.90f;
+                    profile.MapCoverDancePreference *= 0.85f;
+                    profile.MapFireLanePressurePreference *= 0.80f;
+                    profile.MapThrowerSpacingPreference *= 0.85f;
+                    profile.MapWallHugPenalty *= 0.90f;
                     profile.NavigationStuckSampleLimit += 1;
                     profile.StaleDestinationRecoveryTicks = ScaleTicks(profile.StaleDestinationRecoveryTicks, 1.25f, 1);
                     profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 1.25f, 1);
@@ -185,6 +192,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapLineOfSightCoverPreference *= 1.12f;
                     profile.MapExposedPositionPenalty *= 1.10f;
                     profile.MapOpenShotPreference *= 1.12f;
+                    profile.MapEscapeSpacePreference *= 1.08f;
+                    profile.MapCoverDancePreference *= 1.12f;
+                    profile.MapFireLanePressurePreference *= 1.15f;
+                    profile.MapThrowerSpacingPreference *= 1.12f;
+                    profile.MapWallHugPenalty *= 1.08f;
                     profile.StaleDestinationRecoveryTicks = ScaleTicks(profile.StaleDestinationRecoveryTicks, 0.85f, 1);
                     profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 0.85f, 1);
                     profile.FailedCastSuppressionTicks = ScaleTicks(profile.FailedCastSuppressionTicks, 0.85f, 1);
@@ -252,6 +264,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapLineOfSightCoverPreference *= 0.85f;
                     profile.MapExposedPositionPenalty *= 0.85f;
                     profile.MapOpenShotPreference *= 1.15f;
+                    profile.MapEscapeSpacePreference *= 0.92f;
+                    profile.MapCoverDancePreference *= 1.12f;
+                    profile.MapFireLanePressurePreference *= 1.15f;
+                    profile.MapThrowerSpacingPreference *= 0.92f;
+                    profile.MapWallHugPenalty *= 0.92f;
                     profile.FailureRecoveryDetourDistance *= 0.95f;
                     profile.HumanizationFakeOutChance *= 1.25f;
                     profile.HumanizationFakeOutScoreBonus *= 1.18f;
@@ -299,6 +316,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapLineOfSightCoverPreference *= 1.18f;
                     profile.MapExposedPositionPenalty *= 1.15f;
                     profile.MapOpenShotPreference *= 0.92f;
+                    profile.MapEscapeSpacePreference *= 1.15f;
+                    profile.MapCoverDancePreference *= 1.08f;
+                    profile.MapFireLanePressurePreference *= 0.92f;
+                    profile.MapThrowerSpacingPreference *= 1.10f;
+                    profile.MapWallHugPenalty *= 1.15f;
                     profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 0.90f, 1);
                     profile.FailureRecoveryDetourDistance *= 1.08f;
                     profile.HumanizationFakeOutChance *= 0.90f;
@@ -340,6 +362,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBacklineAnchorBonus *= 1.10f;
                     profile.MapLineOfSightCoverPreference *= 1.08f;
                     profile.MapOpenShotPreference *= 1.05f;
+                    profile.MapEscapeSpacePreference *= 1.08f;
+                    profile.MapCoverDancePreference *= 1.05f;
+                    profile.MapFireLanePressurePreference *= 1.05f;
+                    profile.MapThrowerSpacingPreference *= 1.05f;
+                    profile.MapWallHugPenalty *= 1.05f;
                     profile.FailedCastSuppressionTicks = ScaleTicks(profile.FailedCastSuppressionTicks, 1.10f, 1);
                     profile.HumanizationFakeOutChance *= 0.80f;
                     profile.HumanizationPressureMistakeChance *= 0.80f;
@@ -365,6 +392,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureTacticalStabilizationDefaults(profile);
             EnsureGemGrabObjectiveDefaults(profile);
             EnsureLaneDisciplineDefaults(profile);
+            EnsureMapGeometryDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
@@ -449,6 +477,16 @@ namespace MOBA.Core.Simulation.AI
             profile.MapChokepointPenalty = Mathf.Clamp(profile.MapChokepointPenalty, 0f, 35f);
             profile.MapThreatAvoidanceWeight = Mathf.Clamp(profile.MapThreatAvoidanceWeight, 0f, 12f);
             profile.MapPathCostWeight = Mathf.Clamp(profile.MapPathCostWeight, 0f, 2f);
+            profile.MapCoverPeekPreference = Mathf.Clamp(profile.MapCoverPeekPreference, 0f, 35f);
+            profile.MapLaneControlPreference = Mathf.Clamp(profile.MapLaneControlPreference, 0f, 35f);
+            profile.MapChokeControlPreference = Mathf.Clamp(profile.MapChokeControlPreference, 0f, 40f);
+            profile.MapThrowerSafePositionPreference = Mathf.Clamp(profile.MapThrowerSafePositionPreference, 0f, 40f);
+            profile.MapWallPressurePreference = Mathf.Clamp(profile.MapWallPressurePreference, 0f, 35f);
+            profile.MapWallHugPenalty = Mathf.Clamp(profile.MapWallHugPenalty, 0f, 35f);
+            profile.MapEscapeSpacePreference = Mathf.Clamp(profile.MapEscapeSpacePreference, 0f, 30f);
+            profile.MapCoverDancePreference = Mathf.Clamp(profile.MapCoverDancePreference, 0f, 30f);
+            profile.MapFireLanePressurePreference = Mathf.Clamp(profile.MapFireLanePressurePreference, 0f, 35f);
+            profile.MapThrowerSpacingPreference = Mathf.Clamp(profile.MapThrowerSpacingPreference, 0f, 35f);
 
             profile.DangerScanRadius = Mathf.Clamp(profile.DangerScanRadius, 3f, 12f);
             profile.DangerPersonalSpace = Mathf.Clamp(profile.DangerPersonalSpace, 0.1f, 1.5f);
@@ -526,6 +564,76 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.NavigationStuckMoveThreshold <= 0f)
                 profile.NavigationStuckMoveThreshold = 0.08f;
+        }
+
+        private static void EnsureMapGeometryDefaults(BrawlerAIProfile profile)
+        {
+            float wallHugPenalty = 9f;
+            float escapeSpace = 5f;
+            float coverDance = 5f;
+            float fireLane = 5f;
+            float throwerSpacing = 0f;
+
+            switch (profile.Archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                    wallHugPenalty = 12f;
+                    escapeSpace = 7f;
+                    coverDance = 8f;
+                    fireLane = 11f;
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    wallHugPenalty = 5f;
+                    escapeSpace = 4f;
+                    coverDance = 2f;
+                    fireLane = 3f;
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    wallHugPenalty = 8f;
+                    escapeSpace = 6f;
+                    coverDance = 7f;
+                    fireLane = 5f;
+                    break;
+
+                case BrawlerArchetype.Support:
+                    wallHugPenalty = 11f;
+                    escapeSpace = 8f;
+                    coverDance = 6f;
+                    fireLane = 5f;
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    wallHugPenalty = 9f;
+                    escapeSpace = 6f;
+                    coverDance = 7f;
+                    fireLane = 8f;
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    wallHugPenalty = 11f;
+                    escapeSpace = 7f;
+                    coverDance = 5f;
+                    fireLane = 0f;
+                    throwerSpacing = 13f;
+                    break;
+            }
+
+            if (profile.MapWallHugPenalty <= 0f)
+                profile.MapWallHugPenalty = wallHugPenalty;
+
+            if (profile.MapEscapeSpacePreference <= 0f)
+                profile.MapEscapeSpacePreference = escapeSpace;
+
+            if (profile.MapCoverDancePreference <= 0f)
+                profile.MapCoverDancePreference = coverDance;
+
+            if (profile.MapFireLanePressurePreference <= 0f && fireLane > 0f)
+                profile.MapFireLanePressurePreference = fireLane;
+
+            if (profile.MapThrowerSpacingPreference <= 0f && throwerSpacing > 0f)
+                profile.MapThrowerSpacingPreference = throwerSpacing;
         }
 
         private static void EnsureGemGrabObjectiveDefaults(BrawlerAIProfile profile)

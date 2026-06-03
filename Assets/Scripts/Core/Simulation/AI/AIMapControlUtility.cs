@@ -12,6 +12,12 @@ namespace MOBA.Core.Simulation.AI
         public bool IsChokeControl;
         public bool IsThrowerSafe;
         public bool HasWallPressure;
+        public bool IsCornerPeek;
+        public bool HasEscapeSpace;
+        public bool IsWallHug;
+        public bool HasCoverDance;
+        public bool HasFireLanePressure;
+        public bool HasThrowerSpacing;
         public bool IsDangerCorridor;
     }
 
@@ -40,6 +46,9 @@ namespace MOBA.Core.Simulation.AI
             bool nearCover = pathfinder.IsNearObstacle(candidateCoords);
             bool insideChoke = pathfinder.IsChokepoint(candidateCoords);
             bool adjacentChoke = HasAdjacentChoke(pathfinder, candidateCoords);
+            int walkableNeighbors = pathfinder.CountWalkableNeighbors(candidateCoords);
+            int blockedNeighbors = pathfinder.CountBlockedNeighbors(candidateCoords);
+            int cardinalExits = CountCardinalWalkableNeighbors(pathfinder, candidateCoords);
             AIMapSemanticCell semantic = pathfinder.GetSemanticCell(candidateCoords);
             bool hasCoverBetween = hasThreat &&
                                    AIMapNavigationUtility.HasCoverBetween(
@@ -50,12 +59,13 @@ namespace MOBA.Core.Simulation.AI
             if (request.PreferCoverPeek)
             {
                 ApplyCoverPeekScore(
-                    pathfinder,
-                    candidateCoords,
                     nearCover,
                     insideChoke,
                     hasThreat,
                     hasCoverBetween,
+                    walkableNeighbors,
+                    blockedNeighbors,
+                    cardinalExits,
                     request,
                     ref evaluation);
             }
@@ -103,6 +113,28 @@ namespace MOBA.Core.Simulation.AI
                     ref evaluation);
             }
 
+            if (request.PenalizeWallHug ||
+                request.PreferEscapeSpace ||
+                request.PreferCoverDance ||
+                request.PreferFireLanePressure ||
+                request.PreferThrowerSpacing)
+            {
+                ApplyCombatGeometryScore(
+                    pathfinder,
+                    candidateCoords,
+                    threatCoords,
+                    hasThreat,
+                    nearCover,
+                    insideChoke,
+                    hasCoverBetween,
+                    walkableNeighbors,
+                    blockedNeighbors,
+                    cardinalExits,
+                    request,
+                    archetype,
+                    ref evaluation);
+            }
+
             if (semantic.HasAny)
             {
                 ApplySemanticScore(
@@ -120,29 +152,40 @@ namespace MOBA.Core.Simulation.AI
         }
 
         private static void ApplyCoverPeekScore(
-            AStarSolver pathfinder,
-            Vector2Int candidateCoords,
             bool nearCover,
             bool insideChoke,
             bool hasThreat,
             bool hasCoverBetween,
+            int walkableNeighbors,
+            int blockedNeighbors,
+            int cardinalExits,
             in AIMapNavigationRequest request,
             ref AIMapControlEvaluation evaluation)
         {
             if (!hasThreat || !nearCover || hasCoverBetween)
                 return;
 
-            float exitFactor = Mathf.Clamp01(pathfinder.CountWalkableNeighbors(candidateCoords) / 5f);
+            if (cardinalExits <= 0)
+                return;
+
+            bool cornerPeek = blockedNeighbors > 0 &&
+                              cardinalExits >= 2 &&
+                              walkableNeighbors >= 4 &&
+                              !insideChoke;
+            float exitFactor = Mathf.Clamp01((cardinalExits * 0.70f + walkableNeighbors * 0.30f) / 5f);
             float chokeFactor = insideChoke ? 0.65f : 1f;
+            float cornerFactor = cornerPeek ? 1.12f : 1f;
             float score = Mathf.Max(0f, request.CoverPeekWeight) *
                           Mathf.Max(0.35f, exitFactor) *
-                          chokeFactor;
+                          chokeFactor *
+                          cornerFactor;
 
             if (score <= 0f)
                 return;
 
             evaluation.Score += score;
             evaluation.IsCoverPeek = true;
+            evaluation.IsCornerPeek = cornerPeek;
             AppendReason(ref evaluation, $"cover_peek+{score:0.0}");
         }
 
@@ -298,6 +341,188 @@ namespace MOBA.Core.Simulation.AI
             AppendReason(ref evaluation, $"wall_block-{penalty:0.0}");
         }
 
+        private static void ApplyCombatGeometryScore(
+            AStarSolver pathfinder,
+            Vector2Int candidateCoords,
+            Vector2Int threatCoords,
+            bool hasThreat,
+            bool nearCover,
+            bool insideChoke,
+            bool hasCoverBetween,
+            int walkableNeighbors,
+            int blockedNeighbors,
+            int cardinalExits,
+            in AIMapNavigationRequest request,
+            BrawlerArchetype archetype,
+            ref AIMapControlEvaluation evaluation)
+        {
+            bool wallHug = nearCover &&
+                           (cardinalExits <= 1 ||
+                            walkableNeighbors <= 3 ||
+                            blockedNeighbors >= 5);
+            bool hasEscapeSpace = cardinalExits >= 3 &&
+                                  walkableNeighbors >= 5 &&
+                                  !insideChoke;
+
+            if (request.PenalizeWallHug && wallHug)
+            {
+                float weight = Mathf.Max(0f, request.WallHugPenalty);
+                if (weight > 0f)
+                {
+                    float blockedFactor = Mathf.Clamp01(blockedNeighbors / 6f);
+                    float exitFactor = cardinalExits <= 1 ? 1f : 0.70f;
+                    float roleFactor = archetype == BrawlerArchetype.Tank
+                        ? 0.65f
+                        : 1f;
+
+                    if (archetype == BrawlerArchetype.Artillery &&
+                        hasThreat &&
+                        hasCoverBetween &&
+                        cardinalExits >= 2)
+                    {
+                        roleFactor = 0.45f;
+                    }
+
+                    float penalty = weight *
+                                    (0.60f + blockedFactor * 0.40f) *
+                                    exitFactor *
+                                    roleFactor;
+
+                    evaluation.Score -= penalty;
+                    evaluation.IsWallHug = true;
+                    AppendReason(ref evaluation, $"wall_hug-{penalty:0.0}");
+                }
+            }
+
+            if (request.PreferEscapeSpace && hasEscapeSpace)
+            {
+                float weight = Mathf.Max(0f, request.EscapeSpaceWeight);
+                if (weight > 0f)
+                {
+                    float roleFactor = AIMapNavigationUtility.IsFragileArchetype(archetype)
+                        ? 1.15f
+                        : 1f;
+                    float exitFactor = Mathf.Clamp01((cardinalExits + walkableNeighbors * 0.25f) / 5f);
+                    float score = weight *
+                                  (0.55f + exitFactor * 0.45f) *
+                                  roleFactor;
+
+                    evaluation.Score += score;
+                    evaluation.HasEscapeSpace = true;
+                    AppendReason(ref evaluation, $"escape_space+{score:0.0}");
+                }
+            }
+
+            if (request.PreferCoverDance &&
+                hasThreat &&
+                nearCover &&
+                cardinalExits >= 2 &&
+                !insideChoke)
+            {
+                float weight = Mathf.Max(0f, request.CoverDanceWeight);
+                if (weight > 0f)
+                {
+                    bool cornerPeek = !hasCoverBetween &&
+                                      blockedNeighbors > 0 &&
+                                      walkableNeighbors >= 4;
+                    float coverFactor = hasCoverBetween ? 0.82f : 1f;
+                    float cornerFactor = cornerPeek ? 1.18f : 1f;
+                    float exitFactor = Mathf.Clamp01((cardinalExits + walkableNeighbors * 0.20f) / 5f);
+                    float score = weight *
+                                  (0.50f + exitFactor * 0.50f) *
+                                  coverFactor *
+                                  cornerFactor;
+
+                    evaluation.Score += score;
+                    evaluation.HasCoverDance = true;
+                    if (cornerPeek)
+                        evaluation.IsCornerPeek = true;
+
+                    AppendReason(ref evaluation, $"cover_dance+{score:0.0}");
+                }
+            }
+
+            if (request.PreferFireLanePressure &&
+                hasThreat &&
+                !hasCoverBetween &&
+                !insideChoke &&
+                cardinalExits >= 2)
+            {
+                float weight = Mathf.Max(0f, request.FireLanePressureWeight);
+                if (weight > 0f)
+                {
+                    float distance = GridDistanceWorld(candidateCoords, threatCoords, pathfinder.CellSize);
+                    float preferredDistance = Mathf.Max(1f, request.PreferredThreatDistance);
+                    float distanceFactor = Mathf.Clamp01(distance / preferredDistance);
+                    float exitFactor = Mathf.Clamp01((cardinalExits + walkableNeighbors * 0.20f) / 5f);
+                    float coverFactor = nearCover ? 1.08f : 0.90f;
+                    float wallHugFactor = wallHug ? 0.72f : 1f;
+                    float score = weight *
+                                  (0.45f + distanceFactor * 0.35f + exitFactor * 0.20f) *
+                                  coverFactor *
+                                  wallHugFactor;
+
+                    evaluation.Score += score;
+                    evaluation.HasFireLanePressure = true;
+                    AppendReason(ref evaluation, $"fire_lane+{score:0.0}");
+                }
+            }
+
+            if (request.PreferThrowerSpacing &&
+                hasThreat &&
+                archetype == BrawlerArchetype.Artillery)
+            {
+                ApplyThrowerSpacingScore(
+                    pathfinder,
+                    candidateCoords,
+                    threatCoords,
+                    hasCoverBetween,
+                    insideChoke,
+                    walkableNeighbors,
+                    cardinalExits,
+                    request,
+                    ref evaluation);
+            }
+        }
+
+        private static void ApplyThrowerSpacingScore(
+            AStarSolver pathfinder,
+            Vector2Int candidateCoords,
+            Vector2Int threatCoords,
+            bool hasCoverBetween,
+            bool insideChoke,
+            int walkableNeighbors,
+            int cardinalExits,
+            in AIMapNavigationRequest request,
+            ref AIMapControlEvaluation evaluation)
+        {
+            float weight = Mathf.Max(0f, request.ThrowerSpacingWeight);
+            if (weight <= 0f)
+                return;
+
+            if (!hasCoverBetween)
+            {
+                float penalty = weight * 0.25f;
+                evaluation.Score -= penalty;
+                AppendReason(ref evaluation, $"thrower_spacing_exposed-{penalty:0.0}");
+                return;
+            }
+
+            if (insideChoke || cardinalExits < 2)
+                return;
+
+            float distance = GridDistanceWorld(candidateCoords, threatCoords, pathfinder.CellSize);
+            float preferredDistance = Mathf.Max(1f, request.PreferredThreatDistance);
+            float distanceFactor = Mathf.Clamp01(distance / preferredDistance);
+            float exitFactor = Mathf.Clamp01((cardinalExits + walkableNeighbors * 0.20f) / 5f);
+            float score = weight *
+                          (0.45f + distanceFactor * 0.35f + exitFactor * 0.20f);
+
+            evaluation.Score += score;
+            evaluation.HasThrowerSpacing = true;
+            AppendReason(ref evaluation, $"thrower_spacing+{score:0.0}");
+        }
+
         private static bool HasAdjacentChoke(AStarSolver pathfinder, Vector2Int coords)
         {
             for (int x = -1; x <= 1; x++)
@@ -412,6 +637,32 @@ namespace MOBA.Core.Simulation.AI
                    intent == AIMapRouteIntent.Objective ||
                    intent == AIMapRouteIntent.Search ||
                    intent == AIMapRouteIntent.Regroup;
+        }
+
+        private static int CountCardinalWalkableNeighbors(AStarSolver pathfinder, Vector2Int coords)
+        {
+            int count = 0;
+
+            if (pathfinder.IsWalkable(new Vector2Int(coords.x + 1, coords.y)))
+                count++;
+
+            if (pathfinder.IsWalkable(new Vector2Int(coords.x - 1, coords.y)))
+                count++;
+
+            if (pathfinder.IsWalkable(new Vector2Int(coords.x, coords.y + 1)))
+                count++;
+
+            if (pathfinder.IsWalkable(new Vector2Int(coords.x, coords.y - 1)))
+                count++;
+
+            return count;
+        }
+
+        private static float GridDistanceWorld(Vector2Int from, Vector2Int to, float cellSize)
+        {
+            int dx = from.x - to.x;
+            int dy = from.y - to.y;
+            return Mathf.Sqrt((dx * dx) + (dy * dy)) * Mathf.Max(0.1f, cellSize);
         }
 
         private static float Cross(Vector2 a, Vector2 b)
