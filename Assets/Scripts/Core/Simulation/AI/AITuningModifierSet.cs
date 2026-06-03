@@ -118,6 +118,8 @@ namespace MOBA.Core.Simulation.AI
             profile.InRangeTargetBonus *= aggression;
             profile.LowHealthTargetBias *= aggression;
             profile.FinisherBonus *= aggression;
+            profile.LowHealthChaseMaxDistance *= aggression;
+            profile.LowHealthChaseApproachBonus *= aggression;
 
             float safety = MultiplierOrOne(SafetyMultiplier);
             profile.RetreatWeight *= safety;
@@ -128,6 +130,7 @@ namespace MOBA.Core.Simulation.AI
             profile.ReactiveRetreatPressureBonus *= safety;
             profile.ReactiveRepositionPressureBonus *= safety;
             profile.FailureRecoveryDetourDistance *= safety;
+            profile.UnsafeChasePenalty *= safety;
 
             float teamplay = MultiplierOrOne(TeamplayMultiplier);
             profile.PeelWeight *= teamplay;
@@ -138,12 +141,15 @@ namespace MOBA.Core.Simulation.AI
             profile.OverFocusedTargetPenaltyPerAlly *= teamplay;
             profile.AllyAvoidanceWeight *= teamplay;
             profile.AllySupportRange *= teamplay;
+            profile.LaneDisciplineWeight *= teamplay;
 
             float objective = MultiplierOrOne(ObjectiveMultiplier);
             profile.ObjectiveWeight *= objective;
             profile.MacroActionBiasWeight *= objective;
             profile.MapLaneControlPreference *= objective;
             profile.MapChokeControlPreference *= objective;
+            profile.LaneHoldObjectiveBonus *= objective;
+            profile.LaneHoldSearchScore *= objective;
         }
 
         private void ApplyMovementAndMap(BrawlerAIProfile profile)

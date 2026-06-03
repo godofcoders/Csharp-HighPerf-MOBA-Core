@@ -39,6 +39,10 @@ namespace MOBA.Core.Simulation.AI
         private string _lastTeamRoleDebug = "RoleCoord=None";
         private string _lastMacroDebug = "Macro=None";
         private string _lastPlaybookDebug = "Playbook=None";
+        private uint _lastLaneEvaluationTick;
+        private bool _hasLaneEvaluation;
+        private bool _lastCanHoldLane;
+        private string _lastLaneHoldReason = "lane_not_evaluated";
 
         public float LastObjectiveAllyPressure => _lastObjectiveAllyPressure;
         public float LastObjectiveCrowdingPenalty => _lastObjectiveCrowdingPenalty;
@@ -1011,6 +1015,11 @@ namespace MOBA.Core.Simulation.AI
                     score += 15f;
             }
 
+            score += GetChaseDisciplineDelta(
+                targetInfo,
+                dist,
+                macroState);
+
             if (_teamCoordinator != null &&
                 _teamCoordinator.TryGetFocusTarget(currentTick, out var focusTarget) &&
                 SpatialEntityUtility.IsAlive(focusTarget) &&
@@ -1118,6 +1127,12 @@ namespace MOBA.Core.Simulation.AI
                 score += _profile.GemPickupBaseScore;
                 score += gemValue * _profile.GemPickupValueScore;
                 score += closeBonus;
+            }
+
+            if (CanHoldAssignedLane(currentTick, out _))
+            {
+                score += _profile.LaneHoldSearchScore *
+                         Mathf.Max(0f, _profile.LaneDisciplineWeight);
             }
 
             score += GetMacroActionDelta(
@@ -1289,6 +1304,14 @@ namespace MOBA.Core.Simulation.AI
                 float neglectBonus = opponentObjectiveNeglect * 14f;
                 score += neglectBonus;
                 _lastObjectiveScoreReason += $"|opp_neglect_+{neglectBonus:0.0}";
+            }
+
+            if (CanHoldAssignedLane(currentTick, out string laneReason))
+            {
+                float laneBonus = _profile.LaneHoldObjectiveBonus *
+                                  Mathf.Max(0f, _profile.LaneDisciplineWeight);
+                score += laneBonus;
+                _lastObjectiveScoreReason += $"|lane_{laneBonus:+0.0;-0.0}_{laneReason}";
             }
 
             _lastObjectiveRawScore = score;
@@ -1498,6 +1521,172 @@ namespace MOBA.Core.Simulation.AI
 
             return pressure;
         }
+
+        private bool CanHoldAssignedLane(uint currentTick, out string reason)
+        {
+            if (_hasLaneEvaluation && _lastLaneEvaluationTick == currentTick)
+            {
+                reason = _lastLaneHoldReason;
+                return _lastCanHoldLane;
+            }
+
+            _hasLaneEvaluation = true;
+            _lastLaneEvaluationTick = currentTick;
+            _lastCanHoldLane = false;
+            _lastLaneHoldReason = "lane_disabled";
+
+            if (_profile == null || !_profile.UseLaneDiscipline)
+            {
+                reason = _lastLaneHoldReason;
+                return false;
+            }
+
+            Vector3 anchorPoint = Vector3.zero;
+            bool hasAnchor = false;
+            AITeamLaneAssignment lane = AILaneDisciplineUtility.ResolveAssignedLane(_self.EntityID);
+
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetPlaybookState(currentTick, out AITeamPlaybookState playbookState))
+            {
+                if (playbookState.Lane != AITeamLaneAssignment.None)
+                    lane = playbookState.Lane;
+
+                if (playbookState.HasAnchorPoint)
+                {
+                    anchorPoint = playbookState.AnchorPoint;
+                    hasAnchor = true;
+                }
+                else if (playbookState.HasPressurePoint)
+                {
+                    anchorPoint = playbookState.PressurePoint;
+                    hasAnchor = true;
+                }
+            }
+
+            if (!hasAnchor &&
+                _objectiveMemory != null &&
+                _objectiveMemory.TryGetBestObjective(
+                    _self.Position,
+                    _profile.PreferredObjective,
+                    _self.Team,
+                    out AIObjectiveCandidate objective))
+            {
+                anchorPoint = objective.Position;
+                hasAnchor = true;
+            }
+
+            if (!hasAnchor)
+            {
+                _lastLaneHoldReason = "lane_no_anchor";
+                reason = _lastLaneHoldReason;
+                return false;
+            }
+
+            _lastCanHoldLane = AILaneDisciplineUtility.TryResolveLaneHoldPoint(
+                _self,
+                _profile,
+                lane,
+                anchorPoint,
+                out _,
+                out _lastLaneHoldReason);
+
+            reason = _lastLaneHoldReason;
+            return _lastCanHoldLane;
+        }
+
+        private float GetChaseDisciplineDelta(
+            AITargetInfo targetInfo,
+            float distance,
+            AIGameModeMacroState macroState)
+        {
+            if (targetInfo == null ||
+                !targetInfo.HasLiveTarget ||
+                !(targetInfo.Target is BrawlerController targetBrawler) ||
+                targetBrawler.State == null ||
+                _profile == null)
+            {
+                return 0f;
+            }
+
+            float threshold = Mathf.Clamp(
+                _profile.LowHealthChaseHealthThreshold > 0f
+                    ? _profile.LowHealthChaseHealthThreshold
+                    : _profile.FinisherHealthThreshold,
+                0.05f,
+                0.85f);
+            float targetHealthRatio = targetBrawler.State.CurrentHealth /
+                                      Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
+            float maxChaseDistance = Mathf.Max(1f, _profile.LowHealthChaseMaxDistance);
+            float laneWeight = Mathf.Max(0f, _profile.LaneDisciplineWeight);
+            bool targetIsLow = targetHealthRatio <= threshold;
+            int targetCarriedGems = targetBrawler.State.CarriedGemCount;
+
+            if (targetIsLow)
+            {
+                float securePressure = Mathf.Clamp01((threshold - targetHealthRatio) / threshold);
+                float delta = _profile.LowHealthChaseApproachBonus * (0.55f + securePressure);
+
+                if (targetCarriedGems > 0)
+                    delta += targetCarriedGems * 4f;
+
+                if (distance > maxChaseDistance)
+                {
+                    float overDistance = distance - maxChaseDistance;
+                    delta -= overDistance * Mathf.Max(0f, _profile.UnsafeChasePenalty) * 0.35f;
+                }
+
+                if (ShouldPreserveLaneShape(macroState, targetCarriedGems) &&
+                    distance > maxChaseDistance * 0.70f)
+                {
+                    float valuableTargetDiscount = targetCarriedGems > 0 ? 0.55f : 1f;
+                    delta -= _profile.UnsafeChasePenalty * valuableTargetDiscount * laneWeight;
+                }
+
+                return Mathf.Clamp(
+                    delta,
+                    -_profile.UnsafeChasePenalty * 1.5f,
+                    _profile.LowHealthChaseApproachBonus * 1.8f + targetCarriedGems * 4f);
+            }
+
+            if (_profile.UseLaneDiscipline &&
+                ShouldPreserveLaneShape(macroState, targetCarriedGems) &&
+                distance > maxChaseDistance)
+            {
+                float overDistance = distance - maxChaseDistance;
+                return -Mathf.Min(
+                    _profile.UnsafeChasePenalty * laneWeight,
+                    overDistance * 6f * laneWeight);
+            }
+
+            return 0f;
+        }
+
+        private bool ShouldPreserveLaneShape(
+            AIGameModeMacroState macroState,
+            int targetCarriedGems)
+        {
+            if (_self.State == null)
+                return false;
+
+            float healthRatio = _self.State.CurrentHealth /
+                                Mathf.Max(1f, _self.State.MaxHealth.Value);
+
+            if (healthRatio <= _profile.LowHealthRetreatRatio + 0.15f)
+                return true;
+
+            if (_self.State.CarriedGemCount > 0)
+                return true;
+
+            if (macroState.Call == AIGameModeMacroCall.Reset ||
+                macroState.Call == AIGameModeMacroCall.Hold ||
+                macroState.OwnTeamHasCountdown)
+            {
+                return targetCarriedGems <= 0;
+            }
+
+            return IsBacklineRole() && targetCarriedGems <= 0;
+        }
+
         private float GetObjectiveCrowdingPenalty()
         {
             if (IsTank)

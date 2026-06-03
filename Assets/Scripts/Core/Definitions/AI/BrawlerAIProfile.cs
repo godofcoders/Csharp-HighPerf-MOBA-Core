@@ -94,6 +94,29 @@ namespace MOBA.Core.Simulation.AI
         public AIObjectiveType PreferredObjective = AIObjectiveType.MidControl;
         public float ObjectiveWeight = 1f;
 
+        [Header("Lane Discipline")]
+        public bool UseLaneDiscipline = true;
+        [Tooltip("Scales lane hold and lane break penalties. Higher values make bots preserve formation more strongly.")]
+        public float LaneDisciplineWeight = 1f;
+        [Tooltip("Score added to map-control objective posture when this bot can hold its assigned lane.")]
+        public float LaneHoldObjectiveBonus = 10f;
+        [Tooltip("Score added to search/idle posture when lane holding is available.")]
+        public float LaneHoldSearchScore = 18f;
+        [Tooltip("How far from a lane anchor to search for authored lane cells.")]
+        public float LaneHoldSearchRadius = 7f;
+        [Tooltip("Side offset used for procedural left/right lanes when no semantic lane cell is authored.")]
+        public float LaneSideOffset = 5f;
+        [Tooltip("Forward offset used when holding lane around an objective or pressure point.")]
+        public float LaneForwardOffset = 1.5f;
+        [Tooltip("Target health ratio where chase pressure starts being considered.")]
+        public float LowHealthChaseHealthThreshold = 0.32f;
+        [Tooltip("Maximum distance for normal low-health chase pressure before lane discipline starts resisting.")]
+        public float LowHealthChaseMaxDistance = 8.5f;
+        [Tooltip("Approach score added for a secure low-health chase.")]
+        public float LowHealthChaseApproachBonus = 28f;
+        [Tooltip("Approach score removed when a chase would overextend from lane or safety.")]
+        public float UnsafeChasePenalty = 30f;
+
         [Header("Game Mode Macro")]
         [Tooltip("Scales score deltas from mode-level push/hold/reset macro calls.")]
         public float MacroActionBiasWeight = 1f;
@@ -731,12 +754,89 @@ namespace MOBA.Core.Simulation.AI
                     break;
             }
 
+            ApplyLaneDisciplineDefaults(archetype);
             ApplyTacticalStabilizationDefaults(archetype);
             ApplyMapIntelligenceDefaults(archetype);
             ApplyReactiveCombatDefaults(archetype);
             ApplyDangerAvoidanceDefaults(archetype);
             ApplyFailureRecoveryDefaults(archetype);
             ApplyProductionBudgetDefaults(archetype);
+        }
+
+        private void ApplyLaneDisciplineDefaults(BrawlerArchetype archetype)
+        {
+            UseLaneDiscipline = true;
+            LaneDisciplineWeight = 1f;
+            LaneHoldObjectiveBonus = 10f;
+            LaneHoldSearchScore = 18f;
+            LaneHoldSearchRadius = 7f;
+            LaneSideOffset = 5f;
+            LaneForwardOffset = 1.5f;
+            LowHealthChaseHealthThreshold = 0.32f;
+            LowHealthChaseMaxDistance = 8.5f;
+            LowHealthChaseApproachBonus = 28f;
+            UnsafeChasePenalty = 30f;
+
+            switch (archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                    LaneDisciplineWeight = 1.25f;
+                    LaneHoldObjectiveBonus = 12f;
+                    LaneHoldSearchScore = 20f;
+                    LowHealthChaseMaxDistance = 7f;
+                    LowHealthChaseApproachBonus = 18f;
+                    UnsafeChasePenalty = 36f;
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    LaneDisciplineWeight = 0.85f;
+                    LaneHoldObjectiveBonus = 8f;
+                    LowHealthChaseMaxDistance = 7.5f;
+                    LowHealthChaseApproachBonus = 22f;
+                    UnsafeChasePenalty = 24f;
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    LaneDisciplineWeight = 0.70f;
+                    LaneHoldObjectiveBonus = 6f;
+                    LaneHoldSearchScore = 14f;
+                    LowHealthChaseHealthThreshold = 0.42f;
+                    LowHealthChaseMaxDistance = 10.5f;
+                    LowHealthChaseApproachBonus = 40f;
+                    UnsafeChasePenalty = 18f;
+                    break;
+
+                case BrawlerArchetype.Support:
+                    LaneDisciplineWeight = 1.20f;
+                    LaneHoldObjectiveBonus = 12f;
+                    LaneHoldSearchScore = 20f;
+                    LowHealthChaseMaxDistance = 7f;
+                    LowHealthChaseApproachBonus = 16f;
+                    UnsafeChasePenalty = 38f;
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    LaneDisciplineWeight = 1.25f;
+                    LaneHoldObjectiveBonus = 14f;
+                    LaneHoldSearchScore = 22f;
+                    LowHealthChaseMaxDistance = 8f;
+                    LowHealthChaseApproachBonus = 22f;
+                    UnsafeChasePenalty = 32f;
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    LaneDisciplineWeight = 1.30f;
+                    LaneHoldObjectiveBonus = 12f;
+                    LaneHoldSearchScore = 21f;
+                    LowHealthChaseMaxDistance = 7f;
+                    LowHealthChaseApproachBonus = 14f;
+                    UnsafeChasePenalty = 40f;
+                    break;
+
+                case BrawlerArchetype.Fighter:
+                default:
+                    break;
+            }
         }
 
         private void ApplyTacticalStabilizationDefaults(BrawlerArchetype archetype)

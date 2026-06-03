@@ -521,6 +521,17 @@ namespace MOBA.Core.Simulation.AI
                 objective.FriendlyPresence,
                 objective.EnemyPresence);
 
+            if (TryResolveLaneHoldPoint(
+                    objective.Position,
+                    _currentExecuteTick,
+                    out Vector3 lanePosition,
+                    out _))
+            {
+                float laneBlend = Mathf.Clamp01(
+                    Mathf.Max(0f, _profile.LaneDisciplineWeight) * 0.45f);
+                slotPosition = Vector3.Lerp(slotPosition, lanePosition, laneBlend);
+            }
+
             Vector3 destination = ResolveMapAwareDestination(
                 slotPosition,
                 AIMapRouteIntent.Objective);
@@ -955,6 +966,9 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
+            if (TryRunLaneHold(currentTick))
+                return;
+
             if (AITeamMemory.TryGetRecentHotspot(
                 _brawler.Team,
                 currentTick,
@@ -1010,6 +1024,59 @@ namespace MOBA.Core.Simulation.AI
             return true;
         }
 
+        private bool TryRunLaneHold(uint currentTick)
+        {
+            if (_profile == null || !_profile.UseLaneDiscipline)
+                return false;
+
+            Vector3 anchorPoint = Vector3.zero;
+            bool hasAnchor = false;
+
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetPlaybookState(currentTick, out AITeamPlaybookState playbookState))
+            {
+                if (playbookState.HasAnchorPoint)
+                {
+                    anchorPoint = playbookState.AnchorPoint;
+                    hasAnchor = true;
+                }
+                else if (playbookState.HasPressurePoint)
+                {
+                    anchorPoint = playbookState.PressurePoint;
+                    hasAnchor = true;
+                }
+            }
+
+            if (!hasAnchor &&
+                _objectiveMemory != null &&
+                _objectiveMemory.TryGetBestObjective(
+                    _brawler.Position,
+                    _profile.PreferredObjective,
+                    _brawler.Team,
+                    out AIObjectiveCandidate objective))
+            {
+                anchorPoint = objective.Position;
+                hasAnchor = true;
+            }
+
+            if (!hasAnchor ||
+                !TryResolveLaneHoldPoint(
+                    anchorPoint,
+                    currentTick,
+                    out Vector3 lanePoint,
+                    out _))
+            {
+                return false;
+            }
+
+            RequestMapAwareDestination(
+                lanePoint,
+                1.0f,
+                AIMapRouteIntent.Search);
+
+            return true;
+        }
+
         private bool TryRunPlaybookPressureSearch(uint currentTick)
         {
             if (_teamCoordinator == null ||
@@ -1028,6 +1095,31 @@ namespace MOBA.Core.Simulation.AI
                 GetTacticalPreferredRange(GetAbilityIdealRange()));
 
             return true;
+        }
+
+        private bool TryResolveLaneHoldPoint(
+            Vector3 anchorPoint,
+            uint currentTick,
+            out Vector3 lanePoint,
+            out string reason)
+        {
+            AITeamLaneAssignment lane = AILaneDisciplineUtility.ResolveAssignedLane(
+                _brawler.EntityID);
+
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetPlaybookState(currentTick, out AITeamPlaybookState playbookState) &&
+                playbookState.Lane != AITeamLaneAssignment.None)
+            {
+                lane = playbookState.Lane;
+            }
+
+            return AILaneDisciplineUtility.TryResolveLaneHoldPoint(
+                _brawler,
+                _profile,
+                lane,
+                anchorPoint,
+                out lanePoint,
+                out reason);
         }
 
         private void RunFallbackWander(uint currentTick)

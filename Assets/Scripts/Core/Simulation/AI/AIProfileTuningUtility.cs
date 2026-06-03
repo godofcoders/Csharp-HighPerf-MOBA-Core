@@ -25,6 +25,7 @@ namespace MOBA.Core.Simulation.AI
             profile.Personality = personality;
 
             EnsureTacticalStabilizationDefaults(profile);
+            EnsureLaneDisciplineDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -121,6 +122,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationPressureMistakeCooldownTicks =
                         ScaleTicks(profile.HumanizationPressureMistakeCooldownTicks, 0.75f, 1);
                     profile.HumanizationPersonalityExpression *= 1.15f;
+                    profile.LaneDisciplineWeight *= 1.10f;
+                    profile.LowHealthChaseMaxDistance *= 0.92f;
+                    profile.LowHealthChaseApproachBonus *= 0.85f;
+                    profile.UnsafeChasePenalty *= 1.15f;
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -179,6 +184,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationPressureMistakeCooldownTicks =
                         ScaleTicks(profile.HumanizationPressureMistakeCooldownTicks, 1.4f, 1);
                     profile.HumanizationPersonalityExpression *= 0.80f;
+                    profile.LaneDisciplineWeight *= 0.95f;
+                    profile.LowHealthChaseMaxDistance *= 1.08f;
+                    profile.LowHealthChaseApproachBonus *= 1.12f;
+                    profile.UnsafeChasePenalty *= 0.90f;
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -223,6 +232,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationFakeOutScoreBonus *= 1.18f;
                     profile.HumanizationPressureMistakeChance *= 1.10f;
                     profile.HumanizationPersonalityExpression *= 1.20f;
+                    profile.LaneDisciplineWeight *= 0.85f;
+                    profile.LowHealthChaseMaxDistance *= 1.10f;
+                    profile.LowHealthChaseApproachBonus *= 1.18f;
+                    profile.UnsafeChasePenalty *= 0.85f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -255,6 +268,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationPressureMistakeChance *= 0.85f;
                     profile.HumanizationPressureMistakePenalty *= 1.10f;
                     profile.HumanizationPersonalityExpression *= 1.10f;
+                    profile.LaneDisciplineWeight *= 1.15f;
+                    profile.LowHealthChaseMaxDistance *= 0.90f;
+                    profile.LowHealthChaseApproachBonus *= 0.85f;
+                    profile.UnsafeChasePenalty *= 1.18f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -278,6 +295,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationFakeOutChance *= 0.80f;
                     profile.HumanizationPressureMistakeChance *= 0.80f;
                     profile.HumanizationPersonalityExpression *= 1.05f;
+                    profile.LaneDisciplineWeight *= 1.12f;
+                    profile.LaneHoldObjectiveBonus *= 1.12f;
+                    profile.LaneHoldSearchScore *= 1.08f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -289,6 +309,7 @@ namespace MOBA.Core.Simulation.AI
         private static void Normalize(BrawlerAIProfile profile)
         {
             EnsureTacticalStabilizationDefaults(profile);
+            EnsureLaneDisciplineDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
@@ -303,6 +324,16 @@ namespace MOBA.Core.Simulation.AI
             profile.RegroupHealthThreshold = Mathf.Clamp(profile.RegroupHealthThreshold, 0.10f, 0.85f);
             profile.PreferredAttackRangeRatio = Mathf.Clamp(profile.PreferredAttackRangeRatio, 0.55f, 1.20f);
             profile.TooCloseRangeRatio = Mathf.Clamp(profile.TooCloseRangeRatio, 0.20f, 0.75f);
+            profile.LaneDisciplineWeight = Mathf.Clamp(profile.LaneDisciplineWeight, 0f, 2f);
+            profile.LaneHoldObjectiveBonus = Mathf.Clamp(profile.LaneHoldObjectiveBonus, 0f, 35f);
+            profile.LaneHoldSearchScore = Mathf.Clamp(profile.LaneHoldSearchScore, 0f, 45f);
+            profile.LaneHoldSearchRadius = Mathf.Clamp(profile.LaneHoldSearchRadius, 1f, 20f);
+            profile.LaneSideOffset = Mathf.Clamp(profile.LaneSideOffset, 0.5f, 12f);
+            profile.LaneForwardOffset = Mathf.Clamp(profile.LaneForwardOffset, -4f, 6f);
+            profile.LowHealthChaseHealthThreshold = Mathf.Clamp(profile.LowHealthChaseHealthThreshold, 0.10f, 0.70f);
+            profile.LowHealthChaseMaxDistance = Mathf.Clamp(profile.LowHealthChaseMaxDistance, 2f, 16f);
+            profile.LowHealthChaseApproachBonus = Mathf.Clamp(profile.LowHealthChaseApproachBonus, 0f, 70f);
+            profile.UnsafeChasePenalty = Mathf.Clamp(profile.UnsafeChasePenalty, 0f, 80f);
 
             profile.TacticalMoveRetargetTicks = ClampTicks(profile.TacticalMoveRetargetTicks, 1, 45);
             profile.TacticalMoveHeartbeatTicks = ClampTicks(profile.TacticalMoveHeartbeatTicks, 1, 60);
@@ -420,6 +451,36 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.NavigationStuckMoveThreshold <= 0f)
                 profile.NavigationStuckMoveThreshold = 0.08f;
+        }
+
+        private static void EnsureLaneDisciplineDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.LaneDisciplineWeight <= 0f)
+                profile.LaneDisciplineWeight = 1f;
+
+            if (profile.LaneHoldObjectiveBonus <= 0f)
+                profile.LaneHoldObjectiveBonus = 10f;
+
+            if (profile.LaneHoldSearchScore <= 0f)
+                profile.LaneHoldSearchScore = 18f;
+
+            if (profile.LaneHoldSearchRadius <= 0f)
+                profile.LaneHoldSearchRadius = 7f;
+
+            if (profile.LaneSideOffset <= 0f)
+                profile.LaneSideOffset = 5f;
+
+            if (profile.LowHealthChaseHealthThreshold <= 0f)
+                profile.LowHealthChaseHealthThreshold = 0.32f;
+
+            if (profile.LowHealthChaseMaxDistance <= 0f)
+                profile.LowHealthChaseMaxDistance = 8.5f;
+
+            if (profile.LowHealthChaseApproachBonus <= 0f)
+                profile.LowHealthChaseApproachBonus = 28f;
+
+            if (profile.UnsafeChasePenalty <= 0f)
+                profile.UnsafeChasePenalty = 30f;
         }
 
         private static void ApplyFairPlayGuardrails(BrawlerAIProfile profile)
