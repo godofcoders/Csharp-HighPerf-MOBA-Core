@@ -182,6 +182,12 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("How strongly normal tactical movement adopts a new destination. Lower values preserve the current lane longer.")]
         [Range(0.05f, 1f)] public float TacticalDestinationBlend = 0.55f;
 
+        [Tooltip("Maximum AI movement input turn per simulation tick. Prevents instant left/right movement and rotation snaps.")]
+        public float AIMoveInputTurnRateDegreesPerTick = 28f;
+
+        [Tooltip("Maximum AI movement input turn per tick for high-priority routes such as evade/recovery.")]
+        public float AIHighPriorityMoveInputTurnRateDegreesPerTick = 80f;
+
         [Tooltip("Minimum distance a tactical move should ask the bot to travel. Prevents tiny stale destinations from turning into stationary aim.")]
         public float TacticalMinimumStepDistance = 0.75f;
 
@@ -264,6 +270,10 @@ namespace MOBA.Core.Simulation.AI
 
         [Header("Failure Recovery")]
         public bool EnableFailureRecovery = true;
+        [Tooltip("Ticks between navigation movement-progress samples. Lower values detect obstacle stalls sooner.")]
+        public uint NavigationStuckSampleIntervalTicks = 8;
+        [Tooltip("Minimum movement between stuck samples before the bot is considered to be making progress.")]
+        public float NavigationStuckMoveThreshold = 0.08f;
         [Tooltip("Navigation samples that must report no meaningful movement before recovery opens.")]
         public int NavigationStuckSampleLimit = 2;
         [Tooltip("Blocked route reports needed before the bot attempts a local detour.")]
@@ -737,36 +747,48 @@ namespace MOBA.Core.Simulation.AI
                     TacticalDirectionFlipCooldownTicks = 28;
                     TacticalDestinationSwitchDistance = 1.35f;
                     TacticalDestinationBlend = 0.45f;
+                    AIMoveInputTurnRateDegreesPerTick = 24f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 72f;
                     break;
 
                 case BrawlerArchetype.Tank:
                     TacticalDirectionFlipCooldownTicks = 18;
                     TacticalDestinationSwitchDistance = 1.0f;
                     TacticalDestinationBlend = 0.65f;
+                    AIMoveInputTurnRateDegreesPerTick = 32f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 90f;
                     break;
 
                 case BrawlerArchetype.Assassin:
                     TacticalDirectionFlipCooldownTicks = 16;
                     TacticalDestinationSwitchDistance = 0.95f;
                     TacticalDestinationBlend = 0.7f;
+                    AIMoveInputTurnRateDegreesPerTick = 38f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 110f;
                     break;
 
                 case BrawlerArchetype.Support:
                     TacticalDirectionFlipCooldownTicks = 26;
                     TacticalDestinationSwitchDistance = 1.3f;
                     TacticalDestinationBlend = 0.5f;
+                    AIMoveInputTurnRateDegreesPerTick = 26f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 76f;
                     break;
 
                 case BrawlerArchetype.Controller:
                     TacticalDirectionFlipCooldownTicks = 24;
                     TacticalDestinationSwitchDistance = 1.2f;
                     TacticalDestinationBlend = 0.55f;
+                    AIMoveInputTurnRateDegreesPerTick = 28f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 82f;
                     break;
 
                 case BrawlerArchetype.Artillery:
                     TacticalDirectionFlipCooldownTicks = 30;
                     TacticalDestinationSwitchDistance = 1.4f;
                     TacticalDestinationBlend = 0.45f;
+                    AIMoveInputTurnRateDegreesPerTick = 24f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 72f;
                     break;
 
                 case BrawlerArchetype.Fighter:
@@ -774,6 +796,8 @@ namespace MOBA.Core.Simulation.AI
                     TacticalDirectionFlipCooldownTicks = 22;
                     TacticalDestinationSwitchDistance = 1.15f;
                     TacticalDestinationBlend = 0.6f;
+                    AIMoveInputTurnRateDegreesPerTick = 30f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 86f;
                     break;
             }
         }
@@ -1018,6 +1042,8 @@ namespace MOBA.Core.Simulation.AI
         private void ApplyFailureRecoveryDefaults(BrawlerArchetype archetype)
         {
             EnableFailureRecovery = true;
+            NavigationStuckSampleIntervalTicks = 8;
+            NavigationStuckMoveThreshold = 0.08f;
             NavigationStuckSampleLimit = 2;
             BlockedRouteRecoveryLimit = 1;
             StaleDestinationRecoveryTicks = 90;

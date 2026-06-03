@@ -1,12 +1,16 @@
 using System.Collections.Generic;
 using UnityEngine;
+using MOBA.Core.Simulation.AI;
 
 namespace MOBA.Core.Simulation
 {
     public class AICommandSource : IBrawlerCommandSource
     {
+        private readonly BrawlerAIProfile _profile;
         private Vector3 _moveDirection;
+        private Vector3 _smoothedMoveDirection;
         private bool _moveQueued;
+        private bool _hasSmoothedMoveDirection;
 
         private Vector3 _mainAttackDirection;
         private Vector3 _mainAttackTargetPoint;
@@ -23,7 +27,17 @@ namespace MOBA.Core.Simulation
 
         private bool _hyperchargeQueued;
 
+        public AICommandSource(BrawlerAIProfile profile = null)
+        {
+            _profile = profile;
+        }
+
         public void QueueMove(Vector3 direction)
+        {
+            QueueMove(direction, highPriority: false);
+        }
+
+        public void QueueMove(Vector3 direction, bool highPriority)
         {
             if (direction.sqrMagnitude <= 0.01f)
             {
@@ -32,7 +46,7 @@ namespace MOBA.Core.Simulation
                 return;
             }
 
-            _moveDirection = direction.normalized;
+            _moveDirection = ResolveSmoothedMoveDirection(direction, highPriority);
             _moveQueued = true;
         }
 
@@ -85,7 +99,9 @@ namespace MOBA.Core.Simulation
         public void ClearQueuedCommands()
         {
             _moveDirection = Vector3.zero;
+            _smoothedMoveDirection = Vector3.zero;
             _moveQueued = false;
+            _hasSmoothedMoveDirection = false;
 
             _mainAttackDirection = Vector3.zero;
             _mainAttackTargetPoint = Vector3.zero;
@@ -101,6 +117,52 @@ namespace MOBA.Core.Simulation
             _superQueued = false;
 
             _hyperchargeQueued = false;
+        }
+
+        private Vector3 ResolveSmoothedMoveDirection(Vector3 direction, bool highPriority)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.01f)
+                return Vector3.zero;
+
+            Vector3 targetDirection = direction.normalized;
+            if (!_hasSmoothedMoveDirection)
+            {
+                _smoothedMoveDirection = targetDirection;
+                _hasSmoothedMoveDirection = true;
+                return targetDirection;
+            }
+
+            float turnRateDegrees = highPriority
+                ? GetHighPriorityTurnRateDegrees()
+                : GetTurnRateDegrees();
+            float maxRadians = Mathf.Max(1f, turnRateDegrees) * Mathf.Deg2Rad;
+
+            Vector3 smoothed = Vector3.RotateTowards(
+                _smoothedMoveDirection,
+                targetDirection,
+                maxRadians,
+                0f);
+
+            if (smoothed.sqrMagnitude <= 0.01f)
+                smoothed = targetDirection;
+
+            _smoothedMoveDirection = smoothed.normalized;
+            return _smoothedMoveDirection;
+        }
+
+        private float GetTurnRateDegrees()
+        {
+            return _profile != null && _profile.AIMoveInputTurnRateDegreesPerTick > 0f
+                ? _profile.AIMoveInputTurnRateDegreesPerTick
+                : 28f;
+        }
+
+        private float GetHighPriorityTurnRateDegrees()
+        {
+            return _profile != null && _profile.AIHighPriorityMoveInputTurnRateDegreesPerTick > 0f
+                ? _profile.AIHighPriorityMoveInputTurnRateDegreesPerTick
+                : 80f;
         }
 
         public void CollectCommands(List<BrawlerCommand> output, uint currentTick)

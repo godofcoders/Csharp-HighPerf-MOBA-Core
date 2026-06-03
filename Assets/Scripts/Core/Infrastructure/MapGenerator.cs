@@ -17,6 +17,12 @@ namespace MOBA.Core.Infrastructure
         public float GroundProbeHeight = 6f;
         public float GroundProbeDistance = 12f;
 
+        [Header("Navigation Clearance")]
+        [Tooltip("Approximate brawler body radius used when baking walkable cells. Keeps AI paths away from obstacle edges.")]
+        public float AgentRadius = 0.5f;
+        [Tooltip("Extra clearance between brawler bodies and baked obstacle cells.")]
+        public float AgentObstacleClearance = 0.1f;
+
         [Header("Visualization")]
         public bool ShowDebugGrid = true;
 
@@ -37,6 +43,7 @@ namespace MOBA.Core.Infrastructure
             bool[,] groundedGrid = new bool[Width, Height];
             int groundedCells = 0;
             int groundMask = ResolveGroundMask();
+            Vector3 obstacleProbeExtents = GetObstacleProbeExtents();
 
             for (int x = 0; x < Width; x++)
             {
@@ -68,7 +75,7 @@ namespace MOBA.Core.Infrastructure
                     // Check for obstacles using a small box check
                     // We check slightly above the ground to hit walls
                     bool isBlocked = Physics.CheckBox(worldPos + Vector3.up,
-                        new Vector3(CellSize / 2.1f, 0.5f, CellSize / 2.1f),
+                        obstacleProbeExtents,
                         Quaternion.identity,
                         ObstacleLayer,
                         QueryTriggerInteraction.Ignore);
@@ -86,6 +93,16 @@ namespace MOBA.Core.Infrastructure
 
             Debug.Log($"[MAP] Bake Complete: {Width}x{Height} grid. SemanticZones={semanticZoneCount}");
             return _mapData;
+        }
+
+        private Vector3 GetObstacleProbeExtents()
+        {
+            float baseExtent = CellSize / 2.1f;
+            float agentRadius = AgentRadius > 0f ? AgentRadius : 0.5f;
+            float obstacleClearance = AgentObstacleClearance > 0f ? AgentObstacleClearance : 0.1f;
+            float clearanceExtent = agentRadius + obstacleClearance;
+            float horizontalExtent = Mathf.Max(baseExtent, clearanceExtent);
+            return new Vector3(horizontalExtent, 0.5f, horizontalExtent);
         }
 
         private int ResolveGroundMask()

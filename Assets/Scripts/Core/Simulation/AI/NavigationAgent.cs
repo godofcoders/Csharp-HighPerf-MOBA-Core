@@ -22,6 +22,7 @@ namespace MOBA.Core.Simulation.AI
         private float _destinationStartDistanceSq;
         private float _bestDistanceToDestinationSq;
         private bool _routeBlocked;
+        private bool _currentDestinationHighPriority;
 
         private uint _nextRepathTick;
         private readonly uint _repathCooldownTicks = 12;
@@ -29,8 +30,6 @@ namespace MOBA.Core.Simulation.AI
 
         private Vector3 _lastSamplePosition;
         private uint _lastSampleTick;
-        private readonly uint _stuckSampleInterval = 15;
-        private readonly float _stuckMoveThreshold = 0.15f;
         private int _consecutiveStuckSamples;
         private int _consecutiveRouteFailures;
 
@@ -61,6 +60,7 @@ namespace MOBA.Core.Simulation.AI
         {
             target = ClampTargetToPathfinderBounds(FlattenToMovementPlane(target));
             _arrivalDistance = arrivalDistance;
+            _currentDestinationHighPriority = highPriority;
 
             if (!_hasDestination)
             {
@@ -88,6 +88,7 @@ namespace MOBA.Core.Simulation.AI
         public void ForceRepath(Vector3 target, bool highPriority = false)
         {
             target = ClampTargetToPathfinderBounds(FlattenToMovementPlane(target));
+            _currentDestinationHighPriority = highPriority;
             bool destinationChanged = !_hasDestination ||
                                       (target - _destination).sqrMagnitude >=
                                       (_repathDistanceThreshold * _repathDistanceThreshold);
@@ -193,14 +194,14 @@ namespace MOBA.Core.Simulation.AI
             _routeBlocked = false;
             _consecutiveStuckSamples = 0;
             _consecutiveRouteFailures = 0;
-            _commandSource?.QueueMove(Vector3.zero);
+            QueueMove(Vector3.zero);
         }
 
         public void Tick()
         {
             if (!_hasDestination)
             {
-                _commandSource?.QueueMove(Vector3.zero);
+                QueueMove(Vector3.zero);
                 return;
             }
 
@@ -216,17 +217,23 @@ namespace MOBA.Core.Simulation.AI
 
             if (_routeBlocked)
             {
-                _commandSource?.QueueMove(Vector3.zero);
-                return;
+                if (_clock.CurrentTick >= _nextRepathTick)
+                    ForceRepath(_destination, highPriority: true);
+
+                if (_routeBlocked)
+                {
+                    QueueMove(Vector3.zero);
+                    return;
+                }
             }
 
             if (_path == null || _pathIndex >= _path.Count)
             {
                 Vector3 directDir = GetPlanarDelta(_destination);
                 if (directDir.sqrMagnitude > 0.0001f)
-                    _commandSource?.QueueMove(directDir.normalized);
+                    QueueMove(directDir.normalized);
                 else
-                    _commandSource?.QueueMove(Vector3.zero);
+                    QueueMove(Vector3.zero);
 
                 return;
             }
@@ -241,7 +248,7 @@ namespace MOBA.Core.Simulation.AI
                 if (_pathIndex >= _path.Count)
                 {
                     Vector3 finalDir = GetPlanarDelta(_destination);
-                    _commandSource?.QueueMove(finalDir.sqrMagnitude > 0.0001f ? finalDir.normalized : Vector3.zero);
+                    QueueMove(finalDir.sqrMagnitude > 0.0001f ? finalDir.normalized : Vector3.zero);
                     return;
                 }
 
@@ -250,7 +257,7 @@ namespace MOBA.Core.Simulation.AI
             }
 
             Vector3 dir = GetPlanarDelta(nodeWorld);
-            _commandSource?.QueueMove(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero);
+            QueueMove(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero);
         }
 
         public bool TryGetFailureSignal(
@@ -420,19 +427,20 @@ namespace MOBA.Core.Simulation.AI
         private void UpdateStuckCheck()
         {
             uint currentTick = _clock.CurrentTick;
-            if ((currentTick - _lastSampleTick) < _stuckSampleInterval)
+            if ((currentTick - _lastSampleTick) < GetStuckSampleIntervalTicks())
                 return;
 
             float movedSq = GetPlanarDelta(_brawler.Position, _lastSamplePosition).sqrMagnitude;
             float distToDestinationSq = GetPlanarDelta(_destination).sqrMagnitude;
+            float stuckMoveThreshold = GetStuckMoveThreshold();
 
-            if (movedSq < (_stuckMoveThreshold * _stuckMoveThreshold) &&
+            if (movedSq < (stuckMoveThreshold * stuckMoveThreshold) &&
                 distToDestinationSq > (_arrivalDistance * _arrivalDistance))
             {
                 _consecutiveStuckSamples++;
 
                 if (currentTick >= _nextRepathTick && !_routeBlocked)
-                    ForceRepath(_destination);
+                    ForceRepath(_destination, highPriority: true);
             }
             else
             {
@@ -517,6 +525,25 @@ namespace MOBA.Core.Simulation.AI
             return _profile != null && _profile.BudgetDeferredPathTicks > 0u
                 ? _profile.BudgetDeferredPathTicks
                 : 1u;
+        }
+
+        private void QueueMove(Vector3 direction)
+        {
+            _commandSource?.QueueMove(direction, _currentDestinationHighPriority);
+        }
+
+        private uint GetStuckSampleIntervalTicks()
+        {
+            return _profile != null && _profile.NavigationStuckSampleIntervalTicks > 0u
+                ? _profile.NavigationStuckSampleIntervalTicks
+                : 8u;
+        }
+
+        private float GetStuckMoveThreshold()
+        {
+            return _profile != null && _profile.NavigationStuckMoveThreshold > 0f
+                ? _profile.NavigationStuckMoveThreshold
+                : 0.08f;
         }
 
         private int GetEndpointRepairRadius(AStarSolver pathfinder)

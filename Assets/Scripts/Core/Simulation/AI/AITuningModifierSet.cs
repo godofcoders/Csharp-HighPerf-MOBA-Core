@@ -162,6 +162,18 @@ namespace MOBA.Core.Simulation.AI
             if (profile.TacticalDestinationBlend <= 0f)
                 profile.TacticalDestinationBlend = 0.55f;
 
+            if (profile.AIMoveInputTurnRateDegreesPerTick <= 0f)
+                profile.AIMoveInputTurnRateDegreesPerTick = 28f;
+
+            if (profile.AIHighPriorityMoveInputTurnRateDegreesPerTick <= 0f)
+                profile.AIHighPriorityMoveInputTurnRateDegreesPerTick = 80f;
+
+            if (profile.NavigationStuckSampleIntervalTicks == 0u)
+                profile.NavigationStuckSampleIntervalTicks = 8u;
+
+            if (profile.NavigationStuckMoveThreshold <= 0f)
+                profile.NavigationStuckMoveThreshold = 0.08f;
+
             profile.TacticalMoveRetargetTicks = ScaleTicks(
                 profile.TacticalMoveRetargetTicks,
                 InverseMultiplier(movement),
@@ -175,6 +187,13 @@ namespace MOBA.Core.Simulation.AI
                 InverseMultiplier(movement),
                 1u);
             profile.TacticalDestinationSwitchDistance *= movement;
+            profile.AIMoveInputTurnRateDegreesPerTick *= movement;
+            profile.AIHighPriorityMoveInputTurnRateDegreesPerTick *= movement;
+            profile.NavigationStuckSampleIntervalTicks = ScaleTicks(
+                profile.NavigationStuckSampleIntervalTicks,
+                InverseMultiplier(movement),
+                1u);
+            profile.NavigationStuckMoveThreshold *= movement;
 
             float danger = MultiplierOrOne(DangerAvoidanceMultiplier);
             profile.DangerScanRadius *= danger;

@@ -630,7 +630,7 @@ $"Map={LastMapRouteDebug}";
 
             _targetInfo = new AITargetInfo();
 
-            _commandSource = new AICommandSource();
+            _commandSource = new AICommandSource(_profile);
             _brawler.SetCommandSource(_commandSource);
 
             _navAgent = new NavigationAgent(_brawler, _commandSource, _profile);

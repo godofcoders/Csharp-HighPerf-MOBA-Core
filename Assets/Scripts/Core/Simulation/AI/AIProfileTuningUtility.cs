@@ -95,6 +95,10 @@ namespace MOBA.Core.Simulation.AI
                         ScaleTicks(profile.TacticalDirectionFlipCooldownTicks, 1.20f, 1);
                     profile.TacticalDestinationSwitchDistance *= 1.10f;
                     profile.TacticalDestinationBlend *= 0.90f;
+                    profile.AIMoveInputTurnRateDegreesPerTick *= 0.85f;
+                    profile.AIHighPriorityMoveInputTurnRateDegreesPerTick *= 0.90f;
+                    profile.NavigationStuckSampleIntervalTicks =
+                        ScaleTicks(profile.NavigationStuckSampleIntervalTicks, 1.15f, 1);
                     profile.DangerScanRadius *= 0.85f;
                     profile.DangerReactionTimeSeconds *= 0.80f;
                     profile.DangerEvadePressureThreshold *= 1.15f;
@@ -149,6 +153,10 @@ namespace MOBA.Core.Simulation.AI
                         ScaleTicks(profile.TacticalDirectionFlipCooldownTicks, 0.85f, 1);
                     profile.TacticalDestinationSwitchDistance *= 0.90f;
                     profile.TacticalDestinationBlend *= 1.10f;
+                    profile.AIMoveInputTurnRateDegreesPerTick *= 1.10f;
+                    profile.AIHighPriorityMoveInputTurnRateDegreesPerTick *= 1.10f;
+                    profile.NavigationStuckSampleIntervalTicks =
+                        ScaleTicks(profile.NavigationStuckSampleIntervalTicks, 0.85f, 1);
                     profile.TacticalMinimumStepDistance *= 1.10f;
                     profile.DangerScanRadius *= 1.10f;
                     profile.DangerReactionTimeSeconds *= 1.15f;
@@ -302,6 +310,8 @@ namespace MOBA.Core.Simulation.AI
             profile.TacticalDirectionFlipCooldownTicks = ClampTicks(profile.TacticalDirectionFlipCooldownTicks, 1, 90);
             profile.TacticalDestinationSwitchDistance = Mathf.Clamp(profile.TacticalDestinationSwitchDistance, 0.25f, 4f);
             profile.TacticalDestinationBlend = Mathf.Clamp(profile.TacticalDestinationBlend, 0.05f, 1f);
+            profile.AIMoveInputTurnRateDegreesPerTick = Mathf.Clamp(profile.AIMoveInputTurnRateDegreesPerTick, 8f, 120f);
+            profile.AIHighPriorityMoveInputTurnRateDegreesPerTick = Mathf.Clamp(profile.AIHighPriorityMoveInputTurnRateDegreesPerTick, 20f, 180f);
             profile.TacticalMinimumStepDistance = Mathf.Clamp(profile.TacticalMinimumStepDistance, 0.25f, 2f);
             profile.TacticalStrafeDistance = Mathf.Clamp(profile.TacticalStrafeDistance, 0.4f, 4f);
             profile.TacticalKiteDistance = Mathf.Clamp(profile.TacticalKiteDistance, 0.5f, 5f);
@@ -346,6 +356,8 @@ namespace MOBA.Core.Simulation.AI
             profile.DangerMapSearchRadius = Mathf.Clamp(profile.DangerMapSearchRadius, 0.5f, 3f);
 
             profile.NavigationStuckSampleLimit = Mathf.Clamp(profile.NavigationStuckSampleLimit, 1, 5);
+            profile.NavigationStuckSampleIntervalTicks = ClampTicks(profile.NavigationStuckSampleIntervalTicks, 3, 30);
+            profile.NavigationStuckMoveThreshold = Mathf.Clamp(profile.NavigationStuckMoveThreshold, 0.03f, 0.35f);
             profile.BlockedRouteRecoveryLimit = Mathf.Clamp(profile.BlockedRouteRecoveryLimit, 1, 4);
             profile.StaleDestinationRecoveryTicks = ClampTicks(profile.StaleDestinationRecoveryTicks, 20, 240);
             profile.StaleDestinationProgressThreshold = Mathf.Clamp(profile.StaleDestinationProgressThreshold, 0.1f, 3f);
@@ -396,6 +408,18 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.TacticalDestinationBlend <= 0f)
                 profile.TacticalDestinationBlend = 0.55f;
+
+            if (profile.AIMoveInputTurnRateDegreesPerTick <= 0f)
+                profile.AIMoveInputTurnRateDegreesPerTick = 28f;
+
+            if (profile.AIHighPriorityMoveInputTurnRateDegreesPerTick <= 0f)
+                profile.AIHighPriorityMoveInputTurnRateDegreesPerTick = 80f;
+
+            if (profile.NavigationStuckSampleIntervalTicks == 0u)
+                profile.NavigationStuckSampleIntervalTicks = 8u;
+
+            if (profile.NavigationStuckMoveThreshold <= 0f)
+                profile.NavigationStuckMoveThreshold = 0.08f;
         }
 
         private static void ApplyFairPlayGuardrails(BrawlerAIProfile profile)
