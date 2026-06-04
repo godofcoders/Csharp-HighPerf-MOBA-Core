@@ -104,7 +104,18 @@ namespace MOBA.Core.Simulation.AI
                 case GameModeId.GemGrab:
                 default:
                     if (call == AIGameModeMacroCall.Push) return Result(12f, "macro_push");
-                    if (call == AIGameModeMacroCall.Reset) return Result(18f, "macro_reset");
+                    if (call == AIGameModeMacroCall.Reset)
+                    {
+                        if (context.MacroState.EnemyTeamHasCountdown)
+                        {
+                            return Result(
+                                28f + GetCountdownUrgency(context.MacroState) * 10f,
+                                "countdown_reset");
+                        }
+
+                        return Result(18f, "macro_reset");
+                    }
+
                     if (call == AIGameModeMacroCall.Hold && context.SelfIsCarrier)
                         return Result(-18f, "carrier_hold");
                     break;
@@ -141,7 +152,18 @@ namespace MOBA.Core.Simulation.AI
                 case GameModeId.GemGrab:
                 default:
                     if (call == AIGameModeMacroCall.Push) return Result(12f, "macro_push");
-                    if (call == AIGameModeMacroCall.Reset) return Result(8f, "macro_reset");
+                    if (call == AIGameModeMacroCall.Reset)
+                    {
+                        if (context.MacroState.EnemyTeamHasCountdown)
+                        {
+                            return Result(
+                                12f + GetCountdownUrgency(context.MacroState) * 8f,
+                                "countdown_reset");
+                        }
+
+                        return Result(8f, "macro_reset");
+                    }
+
                     if (call == AIGameModeMacroCall.Hold) return Result(-10f, "macro_hold");
                     break;
             }
@@ -177,7 +199,18 @@ namespace MOBA.Core.Simulation.AI
                 case GameModeId.GemGrab:
                 default:
                     if (call == AIGameModeMacroCall.Push) return Result(16f, "macro_push");
-                    if (call == AIGameModeMacroCall.Reset) return Result(10f, "macro_reset");
+                    if (call == AIGameModeMacroCall.Reset)
+                    {
+                        if (context.MacroState.EnemyTeamHasCountdown)
+                        {
+                            return Result(
+                                16f + GetCountdownUrgency(context.MacroState) * 10f,
+                                "countdown_reset");
+                        }
+
+                        return Result(10f, "macro_reset");
+                    }
+
                     if (call == AIGameModeMacroCall.Hold)
                         return context.SelfIsCarrier
                             ? Result(-18f, "carrier_hold")
@@ -195,7 +228,17 @@ namespace MOBA.Core.Simulation.AI
                 return AIMacroActionPolicyResult.None;
 
             if (context.MacroState.Call == AIGameModeMacroCall.Hold)
+            {
+                if (context.MacroState.OwnTeamHasCountdown)
+                {
+                    float urgency = GetCountdownUrgency(context.MacroState);
+                    return Result(
+                        (12f + urgency * 4f) * context.SelfCarriedGems,
+                        "countdown_carrier_hold");
+                }
+
                 return Result(8f * context.SelfCarriedGems, "carrier_hold");
+            }
 
             if (context.MacroState.Call == AIGameModeMacroCall.Reset)
                 return Result(4f * context.SelfCarriedGems, "carrier_reset");
@@ -212,6 +255,14 @@ namespace MOBA.Core.Simulation.AI
                 return AIMacroActionPolicyResult.None;
             }
 
+            if (context.MacroState.OwnTeamHasCountdown)
+            {
+                float urgency = GetCountdownUrgency(context.MacroState);
+                return Result(
+                    (12f + urgency * 4f) * context.AllyCarriedGems,
+                    "countdown_protect_carrier");
+            }
+
             return Result(10f * context.AllyCarriedGems, "protect_carrier");
         }
 
@@ -222,12 +273,41 @@ namespace MOBA.Core.Simulation.AI
                 return AIMacroActionPolicyResult.None;
 
             if (context.MacroState.Call == AIGameModeMacroCall.Reset)
+            {
+                if (context.MacroState.EnemyTeamHasCountdown)
+                {
+                    float urgency = GetCountdownUrgency(context.MacroState);
+                    return Result(
+                        (8f + urgency * 2f) * context.TargetCarriedGems,
+                        "countdown_carrier_reset");
+                }
+
                 return Result(6f * context.TargetCarriedGems, "carrier_reset");
+            }
 
             if (context.MacroState.Call == AIGameModeMacroCall.Push)
                 return Result(8f, "carrier_pressure");
 
             return AIMacroActionPolicyResult.None;
+        }
+
+        private static float GetCountdownUrgency(AIGameModeMacroState state)
+        {
+            if (!state.OwnTeamHasCountdown && !state.EnemyTeamHasCountdown)
+                return 0f;
+
+            if (state.WinTimerRemainingSeconds <= 0f)
+                return 0.35f;
+
+            return Clamp01((10f - state.WinTimerRemainingSeconds) / 10f);
+        }
+
+        private static float Clamp01(float value)
+        {
+            if (value <= 0f)
+                return 0f;
+
+            return value >= 1f ? 1f : value;
         }
 
         private static AIMacroActionPolicyResult Result(float delta, string reason)

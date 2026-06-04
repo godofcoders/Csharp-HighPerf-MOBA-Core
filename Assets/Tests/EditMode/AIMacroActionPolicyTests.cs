@@ -73,9 +73,62 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual("carrier_reset", result.Reason);
         }
 
+        [Test]
+        public void Evaluate_EnemyCountdownResetBoostsObjectivePressure()
+        {
+            AIMacroActionPolicyResult result = AIMacroActionPolicy.Evaluate(
+                AIActionType.Objective,
+                new AIMacroActionContext(
+                    MacroState(
+                        GameModeId.GemGrab,
+                        AIGameModeMacroCall.Reset,
+                        enemyCountdown: true,
+                        winTimerRemainingSeconds: 3f)));
+
+            Assert.AreEqual(23f, result.Delta, 0.001f);
+            Assert.AreEqual("countdown_reset", result.Reason);
+        }
+
+        [Test]
+        public void Evaluate_EnemyCountdownSuperPressureScalesAgainstCarrier()
+        {
+            AIMacroActionPolicyResult result = AIMacroActionPolicy.Evaluate(
+                AIActionType.UseSuper,
+                new AIMacroActionContext(
+                    MacroState(
+                        GameModeId.GemGrab,
+                        AIGameModeMacroCall.Reset,
+                        enemyCountdown: true,
+                        winTimerRemainingSeconds: 2f),
+                    targetCarriedGems: 3));
+
+            Assert.AreEqual(28.8f, result.Delta, 0.001f);
+            Assert.AreEqual("countdown_carrier_reset", result.Reason);
+        }
+
+        [Test]
+        public void Evaluate_OwnCountdownCarrierSafetyScalesWithTimerPressure()
+        {
+            AIMacroActionPolicyResult result = AIMacroActionPolicy.Evaluate(
+                AIActionType.Retreat,
+                new AIMacroActionContext(
+                    MacroState(
+                        GameModeId.GemGrab,
+                        AIGameModeMacroCall.Hold,
+                        ownCountdown: true,
+                        winTimerRemainingSeconds: 4f),
+                    selfCarriedGems: 4));
+
+            Assert.AreEqual(57.6f, result.Delta, 0.001f);
+            Assert.AreEqual("countdown_carrier_hold", result.Reason);
+        }
+
         private static AIGameModeMacroState MacroState(
             GameModeId mode,
-            AIGameModeMacroCall call)
+            AIGameModeMacroCall call,
+            bool ownCountdown = false,
+            bool enemyCountdown = false,
+            float winTimerRemainingSeconds = 0f)
         {
             return new AIGameModeMacroState(
                 mode,
@@ -84,12 +137,12 @@ namespace MOBA.Tests.EditMode
                 0,
                 0,
                 10,
-                0f,
+                winTimerRemainingSeconds,
                 90f,
                 false,
                 false,
-                false,
-                false,
+                ownCountdown,
+                enemyCountdown,
                 "test");
         }
     }

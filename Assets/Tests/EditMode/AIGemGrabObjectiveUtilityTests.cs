@@ -100,5 +100,32 @@ namespace MOBA.Tests.EditMode
             Assert.IsTrue(evaluation.IsDenyPickup);
             Assert.IsTrue(evaluation.Reason.Contains("reset_countdown"));
         }
+
+        [Test]
+        public void EvaluateCandidate_AddsUrgentResetPressure_WhenEnemyCountdownIsLate()
+        {
+            AIGemPickupEvaluation evaluation = AIGemGrabObjectiveUtility.EvaluateCandidate(
+                _profile,
+                new AIGemPickupCandidateContext(
+                    0,
+                    6,
+                    10,
+                    10,
+                    1,
+                    1,
+                    6f,
+                    11f,
+                    1f,
+                    1.6f,
+                    false,
+                    true,
+                    AIGameModeMacroCall.Reset,
+                    _profile.GemPickupMinimumScore,
+                    winTimerRemainingSeconds: 2f));
+
+            Assert.IsTrue(evaluation.ShouldPickup);
+            Assert.IsTrue(evaluation.IsDenyPickup);
+            Assert.IsTrue(evaluation.Reason.Contains("urgent_reset"));
+        }
     }
 }

@@ -98,6 +98,7 @@ namespace MOBA.Core.Simulation.AI
         public readonly bool EnemyCountdown;
         public readonly AIGameModeMacroCall MacroCall;
         public readonly float MinimumScore;
+        public readonly float WinTimerRemainingSeconds;
 
         public AIGemPickupCandidateContext(
             int selfCarriedGems,
@@ -113,7 +114,8 @@ namespace MOBA.Core.Simulation.AI
             bool ownCountdown,
             bool enemyCountdown,
             AIGameModeMacroCall macroCall,
-            float minimumScore)
+            float minimumScore,
+            float winTimerRemainingSeconds = 0f)
         {
             SelfCarriedGems = selfCarriedGems;
             OwnGems = ownGems;
@@ -129,6 +131,7 @@ namespace MOBA.Core.Simulation.AI
             EnemyCountdown = enemyCountdown;
             MacroCall = macroCall;
             MinimumScore = minimumScore;
+            WinTimerRemainingSeconds = winTimerRemainingSeconds;
         }
     }
 
@@ -240,7 +243,8 @@ namespace MOBA.Core.Simulation.AI
                         macroState.OwnTeamHasCountdown,
                         macroState.EnemyTeamHasCountdown,
                         macroState.Call,
-                        profile.GemPickupMinimumScore));
+                        profile.GemPickupMinimumScore,
+                        macroState.WinTimerRemainingSeconds));
 
                 if (!found || evaluation.Score > best.Score)
                 {
@@ -304,6 +308,9 @@ namespace MOBA.Core.Simulation.AI
                 isDenyPickup ||
                 context.MacroCall == AIGameModeMacroCall.Reset ||
                 context.MacroCall == AIGameModeMacroCall.Push;
+            float countdownUrgency = context.EnemyCountdown
+                ? CalculateCountdownUrgency(context.WinTimerRemainingSeconds)
+                : 0f;
 
             float score =
                 profile.GemPickupBaseScore +
@@ -336,7 +343,16 @@ namespace MOBA.Core.Simulation.AI
             }
 
             if (context.EnemyCountdown)
+            {
                 score += profile.GemPickupCountdownResetBonus;
+
+                if (countdownUrgency > 0f)
+                {
+                    float urgentResetBonus = 18f * countdownUrgency;
+                    score += urgentResetBonus;
+                    reason += $"|urgent_reset_{urgentResetBonus:0.0}";
+                }
+            }
 
             if (context.MacroCall == AIGameModeMacroCall.Reset)
                 score += 18f;
@@ -346,6 +362,9 @@ namespace MOBA.Core.Simulation.AI
                 score -= 10f;
 
             float threatPenaltyScale = strategicPickup ? 0.45f : 1f;
+            if (context.EnemyCountdown && countdownUrgency >= 0.50f)
+                threatPenaltyScale = Mathf.Min(threatPenaltyScale, 0.30f);
+
             score -= context.ThreatPressure *
                      profile.GemPickupThreatPenalty *
                      threatPenaltyScale;
@@ -453,6 +472,14 @@ namespace MOBA.Core.Simulation.AI
             float dx = a.x - b.x;
             float dz = a.z - b.z;
             return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
+        private static float CalculateCountdownUrgency(float remainingSeconds)
+        {
+            if (remainingSeconds <= 0f)
+                return 0.35f;
+
+            return Mathf.Clamp01((10f - remainingSeconds) / 10f);
         }
     }
 }
