@@ -22,6 +22,7 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(AITeamPlaybookCall.EscortCarrier, state.Call);
             Assert.AreEqual(AITeamLaneAssignment.Escort, state.Lane);
             Assert.AreEqual(AITeamEscortFormationRole.Shadow, state.EscortRole);
+            Assert.AreEqual(2, state.EscortSlot);
             Assert.AreEqual(500, state.CarrierEntityId);
             Assert.IsTrue(state.HasEscortTargetPoint);
         }
@@ -38,13 +39,14 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(AITeamPlaybookCall.EscortCarrier, state.Call);
             Assert.AreEqual(AITeamLaneAssignment.Anchor, state.Lane);
             Assert.AreEqual(AITeamEscortFormationRole.CarrierAnchor, state.EscortRole);
+            Assert.AreEqual(-1, state.EscortSlot);
             Assert.AreEqual(102, state.CarrierEntityId);
         }
 
         [Test]
         public void Resolve_ScreensCarrier_WhenFrontlineEscortSeesThreatPressure()
         {
-            AITeamPlaybookContext context = BaseContext(30, AIGameModeMacroCall.Hold);
+            AITeamPlaybookContext context = BaseContext(32, AIGameModeMacroCall.Hold);
             context.Archetype = BrawlerArchetype.Tank;
             context.HasAllyCarrier = true;
             context.AllyCarrierEntityId = 500;
@@ -58,7 +60,8 @@ namespace MOBA.Tests.EditMode
 
             Assert.AreEqual(AITeamPlaybookCall.EscortCarrier, state.Call);
             Assert.AreEqual(AITeamEscortFormationRole.Screen, state.EscortRole);
-            Assert.AreEqual(AITeamLaneAssignment.Flank, state.Lane);
+            Assert.AreEqual(1, state.EscortSlot);
+            Assert.AreEqual(AITeamLaneAssignment.Escort, state.Lane);
             Assert.Greater(state.EscortTargetPoint.x, context.AllyCarrierPosition.x);
             Assert.AreEqual(context.AllyCarrierPosition.z, state.EscortTargetPoint.z, 0.01f);
         }
@@ -66,7 +69,7 @@ namespace MOBA.Tests.EditMode
         [Test]
         public void Resolve_FlanksFromCarrier_WhenBacklineEscortSeesThreatPressure()
         {
-            AITeamPlaybookContext context = BaseContext(32, AIGameModeMacroCall.Hold);
+            AITeamPlaybookContext context = BaseContext(30, AIGameModeMacroCall.Hold);
             context.Archetype = BrawlerArchetype.Sniper;
             context.HasAllyCarrier = true;
             context.AllyCarrierEntityId = 500;
@@ -80,9 +83,30 @@ namespace MOBA.Tests.EditMode
 
             Assert.AreEqual(AITeamPlaybookCall.EscortCarrier, state.Call);
             Assert.AreEqual(AITeamEscortFormationRole.PressureFlank, state.EscortRole);
+            Assert.AreEqual(2, state.EscortSlot);
             Assert.AreEqual(AITeamLaneAssignment.Flank, state.Lane);
             Assert.Greater(state.EscortTargetPoint.x, context.AllyCarrierPosition.x);
             Assert.AreNotEqual(context.AllyCarrierPosition.z, state.EscortTargetPoint.z);
+        }
+
+        [Test]
+        public void Resolve_KeepsExtraFrontlineEscortAsShadow_WhenScreenSlotIsOccupiedByBudget()
+        {
+            AITeamPlaybookContext context = BaseContext(30, AIGameModeMacroCall.Hold);
+            context.Archetype = BrawlerArchetype.Tank;
+            context.HasAllyCarrier = true;
+            context.AllyCarrierEntityId = 500;
+            context.AllyCarrierGemCount = 8;
+            context.AllyCarrierPosition = new Vector3(4f, 0f, 2f);
+            context.HasThreatCenter = true;
+            context.ThreatCenterPosition = new Vector3(8f, 0f, 2f);
+            context.ThreatCenterPressure = 2f;
+
+            AITeamPlaybookState state = AITeamPlaybookDirector.Resolve(context);
+
+            Assert.AreEqual(2, state.EscortSlot);
+            Assert.AreEqual(AITeamEscortFormationRole.Shadow, state.EscortRole);
+            Assert.AreEqual(AITeamLaneAssignment.Escort, state.Lane);
         }
 
         [Test]

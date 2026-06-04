@@ -90,6 +90,7 @@ namespace MOBA.Core.Simulation.AI
         public readonly int CarrierEntityId;
         public readonly int FocusTargetEntityId;
         public readonly AITeamEscortFormationRole EscortRole;
+        public readonly int EscortSlot;
         public readonly float Urgency;
         public readonly uint Tick;
         public readonly bool HasAnchorPoint;
@@ -108,6 +109,7 @@ namespace MOBA.Core.Simulation.AI
             int carrierEntityId,
             int focusTargetEntityId,
             AITeamEscortFormationRole escortRole,
+            int escortSlot,
             float urgency,
             uint tick,
             bool hasAnchorPoint,
@@ -123,6 +125,7 @@ namespace MOBA.Core.Simulation.AI
             CarrierEntityId = carrierEntityId;
             FocusTargetEntityId = focusTargetEntityId;
             EscortRole = escortRole;
+            EscortSlot = escortSlot;
             Urgency = urgency;
             Tick = tick;
             HasAnchorPoint = hasAnchorPoint;
@@ -142,6 +145,7 @@ namespace MOBA.Core.Simulation.AI
                 0,
                 0,
                 AITeamEscortFormationRole.None,
+                -1,
                 0f,
                 tick,
                 false,
@@ -162,6 +166,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Carrier={CarrierEntityId} " +
                 $"Focus={FocusTargetEntityId} " +
                 $"EscortRole={EscortRole} " +
+                $"EscortSlot={EscortSlot} " +
                 $"Reason={Reason}";
         }
     }
@@ -179,10 +184,14 @@ namespace MOBA.Core.Simulation.AI
             if (call == AITeamPlaybookCall.None)
                 return AITeamPlaybookState.None(context.Tick);
 
-            AITeamLaneAssignment lane = ResolveLane(call, context);
+            int escortSlot = ResolveEscortSlot(call, context);
+            AITeamEscortFormationRole escortRole = ResolveEscortRole(
+                call,
+                context,
+                escortSlot);
+            AITeamLaneAssignment lane = ResolveLane(call, context, escortRole);
             Vector3 anchorPoint = ResolveAnchorPoint(call, context, out bool hasAnchorPoint);
             Vector3 pressurePoint = ResolvePressurePoint(context, out bool hasPressurePoint);
-            AITeamEscortFormationRole escortRole = ResolveEscortRole(call, lane, context);
             Vector3 escortTargetPoint = ResolveEscortTargetPoint(
                 context,
                 escortRole,
@@ -201,6 +210,7 @@ namespace MOBA.Core.Simulation.AI
                 carrierEntityId,
                 context.FocusTargetEntityId,
                 escortRole,
+                escortSlot,
                 urgency,
                 context.Tick,
                 hasAnchorPoint,
@@ -278,7 +288,8 @@ namespace MOBA.Core.Simulation.AI
 
         private static AITeamLaneAssignment ResolveLane(
             AITeamPlaybookCall call,
-            AITeamPlaybookContext context)
+            AITeamPlaybookContext context,
+            AITeamEscortFormationRole escortRole)
         {
             AITeamLaneAssignment baseLane = ResolveBaseLane(context);
 
@@ -288,11 +299,8 @@ namespace MOBA.Core.Simulation.AI
                     if (context.SelfIsCarrier)
                         return AITeamLaneAssignment.Anchor;
 
-                    if (ShouldScreenCarrier(context) ||
-                        ShouldFlankFromCarrier(context))
-                    {
+                    if (escortRole == AITeamEscortFormationRole.PressureFlank)
                         return AITeamLaneAssignment.Flank;
-                    }
 
                     return AITeamLaneAssignment.Escort;
 
@@ -443,8 +451,8 @@ namespace MOBA.Core.Simulation.AI
 
         private static AITeamEscortFormationRole ResolveEscortRole(
             AITeamPlaybookCall call,
-            AITeamLaneAssignment lane,
-            AITeamPlaybookContext context)
+            AITeamPlaybookContext context,
+            int escortSlot)
         {
             if (call != AITeamPlaybookCall.EscortCarrier)
                 return AITeamEscortFormationRole.None;
@@ -455,31 +463,50 @@ namespace MOBA.Core.Simulation.AI
             if (!context.HasAllyCarrier)
                 return AITeamEscortFormationRole.None;
 
-            if (ShouldScreenCarrier(context))
-                return AITeamEscortFormationRole.Screen;
+            if (!HasCarrierPressure(context))
+                return AITeamEscortFormationRole.Shadow;
 
-            if (ShouldFlankFromCarrier(context) || lane == AITeamLaneAssignment.Flank)
-                return AITeamEscortFormationRole.PressureFlank;
+            switch (escortSlot)
+            {
+                case 1:
+                    return CanScreenCarrier(context)
+                        ? AITeamEscortFormationRole.Screen
+                        : AITeamEscortFormationRole.Shadow;
 
-            return AITeamEscortFormationRole.Shadow;
+                case 2:
+                    return CanFlankFromCarrier(context)
+                        ? AITeamEscortFormationRole.PressureFlank
+                        : AITeamEscortFormationRole.Shadow;
+
+                default:
+                    return AITeamEscortFormationRole.Shadow;
+            }
         }
 
-        private static bool ShouldScreenCarrier(AITeamPlaybookContext context)
+        private static int ResolveEscortSlot(
+            AITeamPlaybookCall call,
+            AITeamPlaybookContext context)
         {
-            if (!HasCarrierPressure(context))
-                return false;
+            if (call != AITeamPlaybookCall.EscortCarrier ||
+                context.SelfIsCarrier ||
+                !context.HasAllyCarrier)
+            {
+                return -1;
+            }
 
+            return PositiveMod(context.BotEntityId + context.AllyCarrierEntityId, 3);
+        }
+
+        private static bool CanScreenCarrier(AITeamPlaybookContext context)
+        {
             return context.Archetype == BrawlerArchetype.Tank ||
                    context.Archetype == BrawlerArchetype.Fighter ||
                    context.Archetype == BrawlerArchetype.Controller ||
                    context.Archetype == BrawlerArchetype.Support;
         }
 
-        private static bool ShouldFlankFromCarrier(AITeamPlaybookContext context)
+        private static bool CanFlankFromCarrier(AITeamPlaybookContext context)
         {
-            if (!HasCarrierPressure(context))
-                return false;
-
             return context.Archetype == BrawlerArchetype.Assassin ||
                    context.Archetype == BrawlerArchetype.Sniper ||
                    context.Archetype == BrawlerArchetype.Artillery;
@@ -550,6 +577,12 @@ namespace MOBA.Core.Simulation.AI
                 default:
                     return Vector3.forward;
             }
+        }
+
+        private static int PositiveMod(int value, int divisor)
+        {
+            int mod = value % divisor;
+            return mod < 0 ? mod + divisor : mod;
         }
 
         private static int ResolveCarrierEntityId(AITeamPlaybookContext context)
