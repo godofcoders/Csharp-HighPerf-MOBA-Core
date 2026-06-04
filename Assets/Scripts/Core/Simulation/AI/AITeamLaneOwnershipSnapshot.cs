@@ -16,6 +16,9 @@ namespace MOBA.Core.Simulation.AI
         public readonly bool AssignedLaneAbandoned;
         public readonly bool CurrentLaneOverOwned;
         public readonly bool ShouldRotate;
+        public readonly bool RotationPending;
+        public readonly uint RotationAgeTicks;
+        public readonly uint RotationCooldownRemainingTicks;
         public readonly string Reason;
 
         public bool HasRecommendedLane =>
@@ -35,6 +38,9 @@ namespace MOBA.Core.Simulation.AI
             bool assignedLaneAbandoned,
             bool currentLaneOverOwned,
             bool shouldRotate,
+            bool rotationPending,
+            uint rotationAgeTicks,
+            uint rotationCooldownRemainingTicks,
             string reason)
         {
             HasValue = true;
@@ -51,6 +57,9 @@ namespace MOBA.Core.Simulation.AI
             AssignedLaneAbandoned = assignedLaneAbandoned;
             CurrentLaneOverOwned = currentLaneOverOwned;
             ShouldRotate = shouldRotate;
+            RotationPending = rotationPending;
+            RotationAgeTicks = rotationAgeTicks;
+            RotationCooldownRemainingTicks = rotationCooldownRemainingTicks;
             Reason = string.IsNullOrEmpty(reason) ? "stable" : reason;
         }
 
@@ -90,6 +99,9 @@ namespace MOBA.Core.Simulation.AI
                 $"Under={UnderOwnedLane} " +
                 $"Over={OverOwnedLane} " +
                 $"Rotate={ShouldRotate} " +
+                $"Pending={RotationPending} " +
+                $"Age={RotationAgeTicks} " +
+                $"Cd={RotationCooldownRemainingTicks} " +
                 $"Reason={Reason}";
         }
     }

@@ -6,6 +6,8 @@ namespace MOBA.Core.Simulation.AI
     public sealed class AITeamLaneOwnershipTracker
     {
         private const int LaneCount = 3;
+        private const uint RotationConfirmTicks = 10;
+        private const uint RotationCooldownTicks = 28;
 
         private struct LaneRecord
         {
@@ -14,9 +16,19 @@ namespace MOBA.Core.Simulation.AI
             public uint Tick;
         }
 
+        private struct RotationRecord
+        {
+            public AITeamLaneAssignment CandidateLane;
+            public uint CandidateFirstSeenTick;
+            public AITeamLaneAssignment LastCommittedLane;
+            public uint LastCommitTick;
+        }
+
         private readonly int[] _laneCounts = new int[LaneCount];
         private readonly Dictionary<int, LaneRecord> _botToLane =
             new Dictionary<int, LaneRecord>(8);
+        private readonly Dictionary<int, RotationRecord> _rotationRecords =
+            new Dictionary<int, RotationRecord>(8);
         private readonly List<int> _staleBotBuffer = new List<int>(8);
 
         public void ReportLane(
@@ -28,7 +40,7 @@ namespace MOBA.Core.Simulation.AI
             if (botEntityId == 0)
                 return;
 
-            ClearLane(botEntityId);
+            ClearLaneRecord(botEntityId, clearRotation: false);
 
             AITeamLaneAssignment mapLane = AILaneDisciplineUtility.ResolveMapLane(
                 lane,
@@ -47,18 +59,35 @@ namespace MOBA.Core.Simulation.AI
 
         public void ClearLane(int botEntityId)
         {
+            ClearLaneRecord(botEntityId, clearRotation: true);
+        }
+
+        private void ClearLaneRecord(int botEntityId, bool clearRotation)
+        {
             if (botEntityId == 0)
                 return;
 
             if (!_botToLane.TryGetValue(botEntityId, out LaneRecord previousRecord))
+            {
+                if (clearRotation)
+                    _rotationRecords.Remove(botEntityId);
+
                 return;
+            }
 
             _botToLane.Remove(botEntityId);
 
             if (!TryGetLaneIndex(previousRecord.Lane, out int laneIndex))
+            {
+                if (clearRotation)
+                    _rotationRecords.Remove(botEntityId);
+
                 return;
+            }
 
             _laneCounts[laneIndex] = Mathf.Max(0, _laneCounts[laneIndex] - 1);
+            if (clearRotation)
+                _rotationRecords.Remove(botEntityId);
         }
 
         public AITeamLaneOwnershipSnapshot GetSnapshot(
@@ -101,20 +130,45 @@ namespace MOBA.Core.Simulation.AI
 
             AITeamLaneAssignment recommendedLane = currentLane;
             string reason = "stable";
+            bool rotationPending = false;
+            uint rotationAgeTicks = 0u;
+            uint rotationCooldownRemainingTicks = 0u;
 
             if (assignedLaneAbandoned)
             {
                 recommendedLane = assignedLane;
                 reason = "recover_assigned";
+                _rotationRecords.Remove(botEntityId);
             }
             else if (shouldRotate)
             {
-                recommendedLane = underOwnedLane;
-                reason = "rebalance_underowned";
+                if (TryConfirmRotation(
+                        botEntityId,
+                        currentLane,
+                        underOwnedLane,
+                        currentTick,
+                        out rotationPending,
+                        out rotationAgeTicks,
+                        out rotationCooldownRemainingTicks,
+                        out string rotationReason))
+                {
+                    recommendedLane = underOwnedLane;
+                    reason = rotationReason;
+                }
+                else
+                {
+                    shouldRotate = false;
+                    reason = rotationReason;
+                }
             }
             else if (currentLaneOverOwned)
             {
                 reason = "anchor_overowned";
+                ClearRotationCandidate(botEntityId, currentLane);
+            }
+            else
+            {
+                ClearRotationCandidate(botEntityId, currentLane);
             }
 
             return new AITeamLaneOwnershipSnapshot(
@@ -131,6 +185,9 @@ namespace MOBA.Core.Simulation.AI
                 assignedLaneAbandoned,
                 currentLaneOverOwned,
                 shouldRotate,
+                rotationPending,
+                rotationAgeTicks,
+                rotationCooldownRemainingTicks,
                 reason);
         }
 
@@ -142,7 +199,110 @@ namespace MOBA.Core.Simulation.AI
             }
 
             _botToLane.Clear();
+            _rotationRecords.Clear();
             _staleBotBuffer.Clear();
+        }
+
+        private bool TryConfirmRotation(
+            int botEntityId,
+            AITeamLaneAssignment currentLane,
+            AITeamLaneAssignment candidateLane,
+            uint currentTick,
+            out bool pending,
+            out uint ageTicks,
+            out uint cooldownRemainingTicks,
+            out string reason)
+        {
+            pending = false;
+            ageTicks = 0u;
+            cooldownRemainingTicks = 0u;
+            reason = "rebalance_underowned";
+
+            if (candidateLane == AITeamLaneAssignment.None ||
+                candidateLane == currentLane)
+            {
+                ClearRotationCandidate(botEntityId, currentLane);
+                reason = "stable";
+                return false;
+            }
+
+            _rotationRecords.TryGetValue(botEntityId, out RotationRecord record);
+
+            if (record.LastCommittedLane != AITeamLaneAssignment.None &&
+                currentLane == record.LastCommittedLane)
+            {
+                record.CandidateLane = AITeamLaneAssignment.None;
+                _rotationRecords[botEntityId] = record;
+            }
+
+            if (record.LastCommittedLane == candidateLane &&
+                currentLane != candidateLane)
+            {
+                ageTicks = RotationConfirmTicks;
+                reason = "rebalance_underowned";
+                return true;
+            }
+
+            if (record.LastCommitTick > 0u)
+            {
+                uint elapsed = currentTick - record.LastCommitTick;
+                if (elapsed < RotationCooldownTicks)
+                {
+                    cooldownRemainingTicks = RotationCooldownTicks - elapsed;
+                    reason = "rotation_cooldown";
+                    return false;
+                }
+            }
+
+            if (record.CandidateLane != candidateLane)
+            {
+                record.CandidateLane = candidateLane;
+                record.CandidateFirstSeenTick = currentTick;
+                _rotationRecords[botEntityId] = record;
+                pending = true;
+                reason = "rebalance_pending";
+                return false;
+            }
+
+            ageTicks = currentTick - record.CandidateFirstSeenTick;
+            if (ageTicks < RotationConfirmTicks)
+            {
+                pending = true;
+                reason = "rebalance_pending";
+                _rotationRecords[botEntityId] = record;
+                return false;
+            }
+
+            record.LastCommittedLane = candidateLane;
+            record.LastCommitTick = currentTick;
+            _rotationRecords[botEntityId] = record;
+            reason = "rebalance_underowned";
+            return true;
+        }
+
+        private void ClearRotationCandidate(
+            int botEntityId,
+            AITeamLaneAssignment currentLane)
+        {
+            if (!_rotationRecords.TryGetValue(botEntityId, out RotationRecord record))
+                return;
+
+            if (record.LastCommittedLane != AITeamLaneAssignment.None &&
+                currentLane == record.LastCommittedLane)
+            {
+                record.CandidateLane = AITeamLaneAssignment.None;
+                _rotationRecords[botEntityId] = record;
+                return;
+            }
+
+            if (record.LastCommitTick == 0u)
+            {
+                _rotationRecords.Remove(botEntityId);
+                return;
+            }
+
+            record.CandidateLane = AITeamLaneAssignment.None;
+            _rotationRecords[botEntityId] = record;
         }
 
         private int[] BuildVirtualCounts(

@@ -163,6 +163,9 @@ namespace MOBA.Tests.EditMode
                 false,
                 true,
                 true,
+                false,
+                10u,
+                0u,
                 "rebalance_underowned");
 
             AITeamPlaybookState state = AITeamPlaybookDirector.Resolve(context);
