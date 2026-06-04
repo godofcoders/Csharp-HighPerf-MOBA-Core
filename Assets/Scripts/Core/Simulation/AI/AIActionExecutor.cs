@@ -1297,10 +1297,23 @@ namespace MOBA.Core.Simulation.AI
                 return false;
             }
 
+            bool pressureEscort =
+                playbookState.EscortRole == AITeamEscortFormationRole.Screen ||
+                playbookState.EscortRole == AITeamEscortFormationRole.PressureFlank;
+            AIMapRouteIntent routeIntent =
+                playbookState.EscortRole == AITeamEscortFormationRole.PressureFlank
+                    ? AIMapRouteIntent.Search
+                    : AIMapRouteIntent.Peel;
+
             RequestMapAwareDestination(
                 playbookState.EscortTargetPoint,
-                1.0f,
-                AIMapRouteIntent.Peel);
+                playbookState.EscortRole == AITeamEscortFormationRole.PressureFlank
+                    ? 0.75f
+                    : 1.0f,
+                routeIntent,
+                pressureEscort && playbookState.HasPressurePoint,
+                playbookState.PressurePoint,
+                GetTacticalPreferredRange(GetAbilityIdealRange()));
 
             return true;
         }

@@ -289,7 +289,11 @@ namespace MOBA.Core.Simulation.AI
                     return GetResetPlaybookDelta(actionType, selfCarrier);
 
                 case AITeamPlaybookCall.EscortCarrier:
-                    return GetEscortCarrierPlaybookDelta(actionType, playbookState.Lane, selfCarrier);
+                    return GetEscortCarrierPlaybookDelta(
+                        actionType,
+                        playbookState.Lane,
+                        playbookState.EscortRole,
+                        selfCarrier);
 
                 case AITeamPlaybookCall.PinchPressure:
                     return GetPinchPressurePlaybookDelta(actionType, playbookState.Lane);
@@ -370,6 +374,7 @@ namespace MOBA.Core.Simulation.AI
         private float GetEscortCarrierPlaybookDelta(
             AIActionType actionType,
             AITeamLaneAssignment lane,
+            AITeamEscortFormationRole escortRole,
             bool selfCarrier)
         {
             if (selfCarrier || lane == AITeamLaneAssignment.Anchor)
@@ -389,6 +394,48 @@ namespace MOBA.Core.Simulation.AI
                     case AIActionType.Objective:
                     case AIActionType.Search:
                         return -10f;
+                    default:
+                        return 0f;
+                }
+            }
+
+            if (escortRole == AITeamEscortFormationRole.Screen)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Peel:
+                        return 20f;
+                    case AIActionType.HoldRange:
+                        return 14f;
+                    case AIActionType.Reposition:
+                        return 12f;
+                    case AIActionType.Approach:
+                        return 4f;
+                    case AIActionType.Regroup:
+                        return 4f;
+                    case AIActionType.Search:
+                        return -10f;
+                    default:
+                        return 0f;
+                }
+            }
+
+            if (escortRole == AITeamEscortFormationRole.PressureFlank)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Reposition:
+                        return 16f;
+                    case AIActionType.HoldRange:
+                        return 12f;
+                    case AIActionType.Peel:
+                        return 10f;
+                    case AIActionType.Approach:
+                        return 6f;
+                    case AIActionType.UseSuper:
+                        return 4f;
+                    case AIActionType.Search:
+                        return -8f;
                     default:
                         return 0f;
                 }

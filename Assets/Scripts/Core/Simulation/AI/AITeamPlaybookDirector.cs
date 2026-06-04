@@ -27,6 +27,15 @@ namespace MOBA.Core.Simulation.AI
         Bait
     }
 
+    public enum AITeamEscortFormationRole
+    {
+        None,
+        CarrierAnchor,
+        Shadow,
+        Screen,
+        PressureFlank
+    }
+
     public struct AITeamPlaybookContext
     {
         public int BotEntityId;
@@ -80,6 +89,7 @@ namespace MOBA.Core.Simulation.AI
         public readonly Vector3 EscortTargetPoint;
         public readonly int CarrierEntityId;
         public readonly int FocusTargetEntityId;
+        public readonly AITeamEscortFormationRole EscortRole;
         public readonly float Urgency;
         public readonly uint Tick;
         public readonly bool HasAnchorPoint;
@@ -97,6 +107,7 @@ namespace MOBA.Core.Simulation.AI
             Vector3 escortTargetPoint,
             int carrierEntityId,
             int focusTargetEntityId,
+            AITeamEscortFormationRole escortRole,
             float urgency,
             uint tick,
             bool hasAnchorPoint,
@@ -111,6 +122,7 @@ namespace MOBA.Core.Simulation.AI
             EscortTargetPoint = escortTargetPoint;
             CarrierEntityId = carrierEntityId;
             FocusTargetEntityId = focusTargetEntityId;
+            EscortRole = escortRole;
             Urgency = urgency;
             Tick = tick;
             HasAnchorPoint = hasAnchorPoint;
@@ -129,6 +141,7 @@ namespace MOBA.Core.Simulation.AI
                 Vector3.zero,
                 0,
                 0,
+                AITeamEscortFormationRole.None,
                 0f,
                 tick,
                 false,
@@ -148,12 +161,18 @@ namespace MOBA.Core.Simulation.AI
                 $"Urg={Urgency:0.00} " +
                 $"Carrier={CarrierEntityId} " +
                 $"Focus={FocusTargetEntityId} " +
+                $"EscortRole={EscortRole} " +
                 $"Reason={Reason}";
         }
     }
 
     public static class AITeamPlaybookDirector
     {
+        private const float ShadowEscortDistance = 1.35f;
+        private const float ScreenEscortDistance = 1.85f;
+        private const float FlankEscortDistance = 1.70f;
+        private const float FlankEscortSideOffset = 1.55f;
+
         public static AITeamPlaybookState Resolve(AITeamPlaybookContext context)
         {
             AITeamPlaybookCall call = ResolveCall(context, out string reason);
@@ -163,7 +182,13 @@ namespace MOBA.Core.Simulation.AI
             AITeamLaneAssignment lane = ResolveLane(call, context);
             Vector3 anchorPoint = ResolveAnchorPoint(call, context, out bool hasAnchorPoint);
             Vector3 pressurePoint = ResolvePressurePoint(context, out bool hasPressurePoint);
-            Vector3 escortTargetPoint = ResolveEscortTargetPoint(context, out bool hasEscortTargetPoint);
+            AITeamEscortFormationRole escortRole = ResolveEscortRole(call, lane, context);
+            Vector3 escortTargetPoint = ResolveEscortTargetPoint(
+                context,
+                escortRole,
+                pressurePoint,
+                hasPressurePoint,
+                out bool hasEscortTargetPoint);
             int carrierEntityId = ResolveCarrierEntityId(context);
             float urgency = ResolveUrgency(call, context);
 
@@ -175,6 +200,7 @@ namespace MOBA.Core.Simulation.AI
                 escortTargetPoint,
                 carrierEntityId,
                 context.FocusTargetEntityId,
+                escortRole,
                 urgency,
                 context.Tick,
                 hasAnchorPoint,
@@ -261,6 +287,12 @@ namespace MOBA.Core.Simulation.AI
                 case AITeamPlaybookCall.EscortCarrier:
                     if (context.SelfIsCarrier)
                         return AITeamLaneAssignment.Anchor;
+
+                    if (ShouldScreenCarrier(context) ||
+                        ShouldFlankFromCarrier(context))
+                    {
+                        return AITeamLaneAssignment.Flank;
+                    }
 
                     return AITeamLaneAssignment.Escort;
 
@@ -384,6 +416,9 @@ namespace MOBA.Core.Simulation.AI
 
         private static Vector3 ResolveEscortTargetPoint(
             AITeamPlaybookContext context,
+            AITeamEscortFormationRole escortRole,
+            Vector3 pressurePoint,
+            bool hasPressurePoint,
             out bool hasEscortTargetPoint)
         {
             if (context.SelfIsCarrier)
@@ -395,11 +430,126 @@ namespace MOBA.Core.Simulation.AI
             if (context.HasAllyCarrier)
             {
                 hasEscortTargetPoint = true;
-                return context.AllyCarrierPosition;
+                return ResolveAllyCarrierFormationPoint(
+                    context,
+                    escortRole,
+                    pressurePoint,
+                    hasPressurePoint);
             }
 
             hasEscortTargetPoint = false;
             return Vector3.zero;
+        }
+
+        private static AITeamEscortFormationRole ResolveEscortRole(
+            AITeamPlaybookCall call,
+            AITeamLaneAssignment lane,
+            AITeamPlaybookContext context)
+        {
+            if (call != AITeamPlaybookCall.EscortCarrier)
+                return AITeamEscortFormationRole.None;
+
+            if (context.SelfIsCarrier)
+                return AITeamEscortFormationRole.CarrierAnchor;
+
+            if (!context.HasAllyCarrier)
+                return AITeamEscortFormationRole.None;
+
+            if (ShouldScreenCarrier(context))
+                return AITeamEscortFormationRole.Screen;
+
+            if (ShouldFlankFromCarrier(context) || lane == AITeamLaneAssignment.Flank)
+                return AITeamEscortFormationRole.PressureFlank;
+
+            return AITeamEscortFormationRole.Shadow;
+        }
+
+        private static bool ShouldScreenCarrier(AITeamPlaybookContext context)
+        {
+            if (!HasCarrierPressure(context))
+                return false;
+
+            return context.Archetype == BrawlerArchetype.Tank ||
+                   context.Archetype == BrawlerArchetype.Fighter ||
+                   context.Archetype == BrawlerArchetype.Controller ||
+                   context.Archetype == BrawlerArchetype.Support;
+        }
+
+        private static bool ShouldFlankFromCarrier(AITeamPlaybookContext context)
+        {
+            if (!HasCarrierPressure(context))
+                return false;
+
+            return context.Archetype == BrawlerArchetype.Assassin ||
+                   context.Archetype == BrawlerArchetype.Sniper ||
+                   context.Archetype == BrawlerArchetype.Artillery;
+        }
+
+        private static bool HasCarrierPressure(AITeamPlaybookContext context)
+        {
+            return context.HasThreatCenter ||
+                   context.HasEnemyHotspot ||
+                   context.MacroState.EnemyTeamHasCountdown;
+        }
+
+        private static Vector3 ResolveAllyCarrierFormationPoint(
+            AITeamPlaybookContext context,
+            AITeamEscortFormationRole escortRole,
+            Vector3 pressurePoint,
+            bool hasPressurePoint)
+        {
+            Vector3 carrier = context.AllyCarrierPosition;
+            Vector3 toPressure = ResolveCarrierPressureDirection(
+                carrier,
+                pressurePoint,
+                hasPressurePoint,
+                context.BotEntityId);
+            Vector3 side = new Vector3(toPressure.z, 0f, -toPressure.x);
+            if ((context.BotEntityId & 1) != 0)
+                side = -side;
+
+            switch (escortRole)
+            {
+                case AITeamEscortFormationRole.Screen:
+                    return carrier + toPressure * ScreenEscortDistance;
+
+                case AITeamEscortFormationRole.PressureFlank:
+                    return carrier +
+                           toPressure * FlankEscortDistance +
+                           side * FlankEscortSideOffset;
+
+                case AITeamEscortFormationRole.Shadow:
+                default:
+                    return carrier - toPressure * ShadowEscortDistance;
+            }
+        }
+
+        private static Vector3 ResolveCarrierPressureDirection(
+            Vector3 carrier,
+            Vector3 pressurePoint,
+            bool hasPressurePoint,
+            int botEntityId)
+        {
+            Vector3 direction = hasPressurePoint
+                ? pressurePoint - carrier
+                : Vector3.zero;
+            direction.y = 0f;
+
+            if (direction.sqrMagnitude > 0.001f)
+                return direction.normalized;
+
+            int lane = (botEntityId & 0x7fffffff) % 3;
+            switch (lane)
+            {
+                case 0:
+                    return Vector3.left;
+
+                case 2:
+                    return Vector3.right;
+
+                default:
+                    return Vector3.forward;
+            }
         }
 
         private static int ResolveCarrierEntityId(AITeamPlaybookContext context)
