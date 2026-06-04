@@ -6,8 +6,9 @@ namespace MOBA.Core.Simulation.AI
     public sealed class AITeamLaneOwnershipTracker
     {
         private const int LaneCount = 3;
-        private const uint RotationConfirmTicks = 10;
-        private const uint RotationCooldownTicks = 28;
+        private const uint RotationConfirmTicks = 14;
+        private const uint MidRotationExtraConfirmTicks = 8;
+        private const uint RotationCooldownTicks = 42;
 
         private struct LaneRecord
         {
@@ -117,6 +118,7 @@ namespace MOBA.Core.Simulation.AI
 
             int currentCount = GetLaneCount(counts, currentLane);
             int assignedCount = GetLaneCount(counts, assignedLane);
+            int underOwnedCount = GetLaneCount(counts, underOwnedLane);
             bool currentLaneOverOwned =
                 currentCount > 1 &&
                 underOwnedLane != AITeamLaneAssignment.None &&
@@ -124,9 +126,16 @@ namespace MOBA.Core.Simulation.AI
             bool assignedLaneAbandoned =
                 assignedLane != currentLane &&
                 assignedCount <= 0;
+            string laneIdentityReason = "stable";
             bool shouldRotate =
                 currentLaneOverOwned &&
-                !IsStableAnchorForLane(botEntityId, currentLane);
+                !IsStableAnchorForLane(botEntityId, currentLane) &&
+                CanRotateFromLaneIdentity(
+                    assignedLane,
+                    currentLane,
+                    currentCount,
+                    underOwnedCount,
+                    out laneIdentityReason);
 
             AITeamLaneAssignment recommendedLane = currentLane;
             string reason = "stable";
@@ -163,7 +172,9 @@ namespace MOBA.Core.Simulation.AI
             }
             else if (currentLaneOverOwned)
             {
-                reason = "anchor_overowned";
+                reason = IsStableAnchorForLane(botEntityId, currentLane)
+                    ? "anchor_overowned"
+                    : laneIdentityReason;
                 ClearRotationCandidate(botEntityId, currentLane);
             }
             else
@@ -238,7 +249,7 @@ namespace MOBA.Core.Simulation.AI
             if (record.LastCommittedLane == candidateLane &&
                 currentLane != candidateLane)
             {
-                ageTicks = RotationConfirmTicks;
+                ageTicks = GetRequiredRotationConfirmTicks(currentLane);
                 reason = "rebalance_underowned";
                 return true;
             }
@@ -265,7 +276,8 @@ namespace MOBA.Core.Simulation.AI
             }
 
             ageTicks = currentTick - record.CandidateFirstSeenTick;
-            if (ageTicks < RotationConfirmTicks)
+            uint requiredConfirmTicks = GetRequiredRotationConfirmTicks(currentLane);
+            if (ageTicks < requiredConfirmTicks)
             {
                 pending = true;
                 reason = "rebalance_pending";
@@ -278,6 +290,49 @@ namespace MOBA.Core.Simulation.AI
             _rotationRecords[botEntityId] = record;
             reason = "rebalance_underowned";
             return true;
+        }
+
+        private static bool CanRotateFromLaneIdentity(
+            AITeamLaneAssignment assignedLane,
+            AITeamLaneAssignment currentLane,
+            int currentCount,
+            int underOwnedCount,
+            out string reason)
+        {
+            reason = "rebalance_underowned";
+
+            if (currentLane == AITeamLaneAssignment.Mid &&
+                currentCount <= 2 &&
+                underOwnedCount <= 0)
+            {
+                reason = "mid_control_hold";
+                return false;
+            }
+
+            if (assignedLane == currentLane &&
+                currentCount <= 2 &&
+                underOwnedCount <= 0)
+            {
+                reason = "assigned_lane_hold";
+                return false;
+            }
+
+            if (assignedLane == currentLane &&
+                currentCount - underOwnedCount < 2)
+            {
+                reason = "assigned_lane_sticky";
+                return false;
+            }
+
+            return true;
+        }
+
+        private static uint GetRequiredRotationConfirmTicks(
+            AITeamLaneAssignment currentLane)
+        {
+            return currentLane == AITeamLaneAssignment.Mid
+                ? RotationConfirmTicks + MidRotationExtraConfirmTicks
+                : RotationConfirmTicks;
         }
 
         private void ClearRotationCandidate(
