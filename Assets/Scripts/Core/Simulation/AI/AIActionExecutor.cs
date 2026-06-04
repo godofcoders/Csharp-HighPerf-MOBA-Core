@@ -770,6 +770,9 @@ namespace MOBA.Core.Simulation.AI
 
         private bool TryRunRetreatWithoutTarget(uint currentTick)
         {
+            if (TryRunCarrierRefuge(currentTick, AIMapRouteIntent.CombatRetreat, 0.55f))
+                return true;
+
             if (_teamCoordinator != null &&
                 _teamCoordinator.TryGetRegroupPoint(currentTick, out var regroupPoint))
             {
@@ -819,6 +822,31 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return false;
+        }
+
+        private bool TryRunCarrierRefuge(
+            uint currentTick,
+            AIMapRouteIntent routeIntent,
+            float arrivalDistance)
+        {
+            if (_teamCoordinator == null ||
+                !_teamCoordinator.TryGetPlaybookState(currentTick, out AITeamPlaybookState playbookState) ||
+                playbookState.Call != AITeamPlaybookCall.EscortCarrier ||
+                playbookState.EscortRole != AITeamEscortFormationRole.CarrierAnchor ||
+                !playbookState.HasAnchorPoint)
+            {
+                return false;
+            }
+
+            RequestMapAwareDestination(
+                playbookState.AnchorPoint,
+                arrivalDistance,
+                routeIntent,
+                playbookState.HasPressurePoint,
+                playbookState.PressurePoint,
+                GetTacticalPreferredRange(GetAbilityIdealRange()));
+
+            return true;
         }
 
         private void RunEvade(
@@ -1226,6 +1254,9 @@ namespace MOBA.Core.Simulation.AI
 
         private void RunRegroup(uint currentTick)
         {
+            if (TryRunCarrierRefuge(currentTick, AIMapRouteIntent.Regroup, 0.75f))
+                return;
+
             if (_teamCoordinator != null && _teamCoordinator.TryGetRegroupPoint(currentTick, out var point))
             {
                 RequestMapAwareDestination(

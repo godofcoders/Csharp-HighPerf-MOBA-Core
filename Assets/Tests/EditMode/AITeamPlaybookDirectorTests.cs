@@ -44,6 +44,27 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void Resolve_MovesSelfCarrierRefugeAwayFromThreatPressure()
+        {
+            AITeamPlaybookContext context = BaseContext(102, AIGameModeMacroCall.Hold);
+            context.SelfPosition = new Vector3(4f, 0f, 2f);
+            context.SelfIsCarrier = true;
+            context.SelfCarriedGems = 8;
+            context.HasThreatCenter = true;
+            context.ThreatCenterPosition = new Vector3(8f, 0f, 2f);
+            context.ThreatCenterPressure = 2f;
+
+            AITeamPlaybookState state = AITeamPlaybookDirector.Resolve(context);
+
+            Assert.AreEqual(AITeamPlaybookCall.EscortCarrier, state.Call);
+            Assert.AreEqual(AITeamEscortFormationRole.CarrierAnchor, state.EscortRole);
+            Assert.IsTrue(state.HasAnchorPoint);
+            Assert.IsTrue(state.HasEscortTargetPoint);
+            Assert.Less(state.AnchorPoint.x, context.SelfPosition.x);
+            Assert.AreEqual(state.AnchorPoint, state.EscortTargetPoint);
+        }
+
+        [Test]
         public void Resolve_ScreensCarrier_WhenFrontlineEscortSeesThreatPressure()
         {
             AITeamPlaybookContext context = BaseContext(32, AIGameModeMacroCall.Hold);

@@ -177,6 +177,7 @@ namespace MOBA.Core.Simulation.AI
         private const float ScreenEscortDistance = 1.85f;
         private const float FlankEscortDistance = 1.70f;
         private const float FlankEscortSideOffset = 1.55f;
+        private const float CarrierRefugeDistance = 2.45f;
 
         public static AITeamPlaybookState Resolve(AITeamPlaybookContext context)
         {
@@ -190,8 +191,13 @@ namespace MOBA.Core.Simulation.AI
                 context,
                 escortSlot);
             AITeamLaneAssignment lane = ResolveLane(call, context, escortRole);
-            Vector3 anchorPoint = ResolveAnchorPoint(call, context, out bool hasAnchorPoint);
             Vector3 pressurePoint = ResolvePressurePoint(context, out bool hasPressurePoint);
+            Vector3 anchorPoint = ResolveAnchorPoint(
+                call,
+                context,
+                pressurePoint,
+                hasPressurePoint,
+                out bool hasAnchorPoint);
             Vector3 escortTargetPoint = ResolveEscortTargetPoint(
                 context,
                 escortRole,
@@ -376,13 +382,15 @@ namespace MOBA.Core.Simulation.AI
         private static Vector3 ResolveAnchorPoint(
             AITeamPlaybookCall call,
             AITeamPlaybookContext context,
+            Vector3 pressurePoint,
+            bool hasPressurePoint,
             out bool hasAnchorPoint)
         {
             if (call == AITeamPlaybookCall.EscortCarrier)
             {
                 hasAnchorPoint = true;
                 return context.SelfIsCarrier
-                    ? context.SelfPosition
+                    ? ResolveCarrierRefugePoint(context, pressurePoint, hasPressurePoint)
                     : context.AllyCarrierPosition;
             }
 
@@ -432,7 +440,7 @@ namespace MOBA.Core.Simulation.AI
             if (context.SelfIsCarrier)
             {
                 hasEscortTargetPoint = true;
-                return context.SelfPosition;
+                return ResolveCarrierRefugePoint(context, pressurePoint, hasPressurePoint);
             }
 
             if (context.HasAllyCarrier)
@@ -549,6 +557,23 @@ namespace MOBA.Core.Simulation.AI
                 default:
                     return carrier - toPressure * ShadowEscortDistance;
             }
+        }
+
+        private static Vector3 ResolveCarrierRefugePoint(
+            AITeamPlaybookContext context,
+            Vector3 pressurePoint,
+            bool hasPressurePoint)
+        {
+            if (!hasPressurePoint)
+                return context.SelfPosition;
+
+            Vector3 awayFromPressure = -ResolveCarrierPressureDirection(
+                context.SelfPosition,
+                pressurePoint,
+                hasPressurePoint,
+                context.BotEntityId);
+
+            return context.SelfPosition + awayFromPressure * CarrierRefugeDistance;
         }
 
         private static Vector3 ResolveCarrierPressureDirection(
