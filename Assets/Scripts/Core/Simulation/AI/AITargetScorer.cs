@@ -12,12 +12,24 @@ namespace MOBA.Core.Simulation.AI
         private readonly BrawlerAIProfile _profile;
         private readonly List<ISpatialEntity> _clusterBuffer;
         private readonly uint _threatForgetTicks = 240;
+        private AITeamCoordinator _teamCoordinator;
+
+        private const float CarrierThreatRadius = 5.5f;
+        private const float CarrierThreatCorridorWidth = 2.15f;
+        private const float CarrierThreatProximityBonus = 24f;
+        private const float CarrierThreatCorridorBonus = 16f;
+        private const float CarrierThreatMaxBonus = 42f;
 
         public AITargetScorer(BrawlerController self, BrawlerAIProfile profile, int initialCapacity = 16)
         {
             _self = self;
             _profile = profile;
             _clusterBuffer = new List<ISpatialEntity>(initialCapacity);
+        }
+
+        public void SetTeamCoordinator(AITeamCoordinator teamCoordinator)
+        {
+            _teamCoordinator = teamCoordinator;
         }
 
         public ISpatialEntity SelectBestTarget(List<ISpatialEntity> candidates, AITargetInfo memory, uint currentTick)
@@ -143,7 +155,11 @@ namespace MOBA.Core.Simulation.AI
 
             score -= overFocusPenalty;
 
-            // 7. Ability-aware bonus
+            // 7. Carrier-protection bonus. Escorts prefer enemies who are
+            // close to the carrier or entering the carrier-to-pressure lane.
+            score += ScoreCarrierThreatTarget(target, currentTick, targetEntityId);
+
+            // 8. Ability-aware bonus
             score += ScoreByAbilityShape(target);
 
             return score;
@@ -171,6 +187,144 @@ namespace MOBA.Core.Simulation.AI
 
             float rawPenalty = excessFocus * Mathf.Max(0f, _profile.OverFocusedTargetPenaltyPerAlly);
             return Mathf.Min(rawPenalty, Mathf.Max(0f, _profile.MaxOverFocusedTargetPenalty));
+        }
+
+        public static float CalculateCarrierThreatBonus(
+            AITeamPlaybookState playbookState,
+            Vector3 targetPosition,
+            bool selfIsCarrier,
+            out string reason)
+        {
+            reason = "carrier_threat_none";
+
+            if (!playbookState.IsActive ||
+                playbookState.Call != AITeamPlaybookCall.EscortCarrier ||
+                selfIsCarrier ||
+                playbookState.CarrierEntityId == 0 ||
+                !playbookState.HasAnchorPoint)
+            {
+                return 0f;
+            }
+
+            float bonus = 0f;
+            string parts = string.Empty;
+            Vector3 carrierPoint = playbookState.AnchorPoint;
+            float carrierDistance = XZDistance(targetPosition, carrierPoint);
+
+            if (carrierDistance <= CarrierThreatRadius)
+            {
+                float proximity = 1f - carrierDistance / CarrierThreatRadius;
+                bonus += proximity * CarrierThreatProximityBonus;
+                parts = AppendReason(parts, "near_carrier");
+            }
+
+            if (playbookState.HasPressurePoint)
+            {
+                float corridor = CalculatePressureCorridorThreat(
+                    carrierPoint,
+                    playbookState.PressurePoint,
+                    targetPosition);
+
+                if (corridor > 0f)
+                {
+                    bonus += corridor * CarrierThreatCorridorBonus;
+                    parts = AppendReason(parts, "pressure_lane");
+                }
+            }
+
+            if (bonus <= 0.01f)
+                return 0f;
+
+            switch (playbookState.EscortRole)
+            {
+                case AITeamEscortFormationRole.Screen:
+                    bonus *= 1.15f;
+                    break;
+
+                case AITeamEscortFormationRole.PressureFlank:
+                    bonus *= 1.05f;
+                    break;
+
+                case AITeamEscortFormationRole.Shadow:
+                    bonus *= 0.80f;
+                    break;
+            }
+
+            reason = $"carrier_threat:{parts}";
+            return Mathf.Clamp(bonus, 0f, CarrierThreatMaxBonus);
+        }
+
+        private float ScoreCarrierThreatTarget(
+            ISpatialEntity target,
+            uint currentTick,
+            int targetEntityId)
+        {
+            if (_teamCoordinator == null ||
+                _self == null ||
+                !SpatialEntityUtility.IsAlive(target) ||
+                !_teamCoordinator.TryGetPlaybookState(
+                    currentTick,
+                    out AITeamPlaybookState playbookState))
+            {
+                return 0f;
+            }
+
+            bool selfIsCarrier = playbookState.CarrierEntityId == _self.EntityID;
+            float bonus = CalculateCarrierThreatBonus(
+                playbookState,
+                target.Position,
+                selfIsCarrier,
+                out _);
+
+            if (bonus <= 0.01f)
+                return 0f;
+
+            if (playbookState.FocusTargetEntityId != 0 &&
+                playbookState.FocusTargetEntityId == targetEntityId)
+            {
+                bonus += 8f;
+            }
+
+            return Mathf.Clamp(bonus, 0f, CarrierThreatMaxBonus + 8f);
+        }
+
+        private static float CalculatePressureCorridorThreat(
+            Vector3 carrierPoint,
+            Vector3 pressurePoint,
+            Vector3 targetPosition)
+        {
+            Vector3 corridor = pressurePoint - carrierPoint;
+            corridor.y = 0f;
+            float lengthSq = corridor.sqrMagnitude;
+            if (lengthSq <= 0.001f)
+                return 0f;
+
+            Vector3 toTarget = targetPosition - carrierPoint;
+            toTarget.y = 0f;
+            float t = Mathf.Clamp01(Vector3.Dot(toTarget, corridor) / lengthSq);
+            Vector3 closest = carrierPoint + corridor * t;
+            float lateralDistance = XZDistance(targetPosition, closest);
+
+            if (lateralDistance > CarrierThreatCorridorWidth)
+                return 0f;
+
+            float lateralPressure = 1f - lateralDistance / CarrierThreatCorridorWidth;
+            float carrierSideBias = 1f - t * 0.35f;
+            return Mathf.Clamp01(lateralPressure * carrierSideBias);
+        }
+
+        private static float XZDistance(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x;
+            float dz = a.z - b.z;
+            return Mathf.Sqrt(dx * dx + dz * dz);
+        }
+
+        private static string AppendReason(string current, string value)
+        {
+            return string.IsNullOrEmpty(current)
+                ? value
+                : $"{current}|{value}";
         }
 
         private float ScoreByAbilityShape(ISpatialEntity target)

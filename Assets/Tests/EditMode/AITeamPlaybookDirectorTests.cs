@@ -111,6 +111,88 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void CarrierThreatBonus_FavorsEnemiesNearCarrierAnchor()
+        {
+            AITeamPlaybookContext context = BaseContext(32, AIGameModeMacroCall.Hold);
+            context.Archetype = BrawlerArchetype.Tank;
+            context.HasAllyCarrier = true;
+            context.AllyCarrierEntityId = 500;
+            context.AllyCarrierGemCount = 8;
+            context.AllyCarrierPosition = new Vector3(4f, 0f, 2f);
+            context.HasThreatCenter = true;
+            context.ThreatCenterPosition = new Vector3(8f, 0f, 2f);
+            context.ThreatCenterPressure = 2f;
+
+            AITeamPlaybookState state = AITeamPlaybookDirector.Resolve(context);
+
+            float nearBonus = AITargetScorer.CalculateCarrierThreatBonus(
+                state,
+                new Vector3(4.75f, 0f, 2f),
+                selfIsCarrier: false,
+                out _);
+            float farBonus = AITargetScorer.CalculateCarrierThreatBonus(
+                state,
+                new Vector3(4f, 0f, 9f),
+                selfIsCarrier: false,
+                out _);
+
+            Assert.Greater(nearBonus, 0f);
+            Assert.AreEqual(0f, farBonus);
+        }
+
+        [Test]
+        public void CarrierThreatBonus_RewardsCarrierPressureLane()
+        {
+            AITeamPlaybookContext context = BaseContext(32, AIGameModeMacroCall.Hold);
+            context.Archetype = BrawlerArchetype.Tank;
+            context.HasAllyCarrier = true;
+            context.AllyCarrierEntityId = 500;
+            context.AllyCarrierGemCount = 8;
+            context.AllyCarrierPosition = new Vector3(4f, 0f, 2f);
+            context.HasThreatCenter = true;
+            context.ThreatCenterPosition = new Vector3(8f, 0f, 2f);
+            context.ThreatCenterPressure = 2f;
+
+            AITeamPlaybookState state = AITeamPlaybookDirector.Resolve(context);
+
+            float laneBonus = AITargetScorer.CalculateCarrierThreatBonus(
+                state,
+                new Vector3(6.5f, 0f, 2f),
+                selfIsCarrier: false,
+                out string reason);
+            float offLaneBonus = AITargetScorer.CalculateCarrierThreatBonus(
+                state,
+                new Vector3(6.5f, 0f, 5.5f),
+                selfIsCarrier: false,
+                out _);
+
+            Assert.Greater(laneBonus, offLaneBonus);
+            Assert.IsTrue(reason.Contains("pressure_lane"));
+        }
+
+        [Test]
+        public void CarrierThreatBonus_DoesNotPushSelfCarrierIntoFights()
+        {
+            AITeamPlaybookContext context = BaseContext(102, AIGameModeMacroCall.Hold);
+            context.SelfPosition = new Vector3(4f, 0f, 2f);
+            context.SelfIsCarrier = true;
+            context.SelfCarriedGems = 8;
+            context.HasThreatCenter = true;
+            context.ThreatCenterPosition = new Vector3(8f, 0f, 2f);
+            context.ThreatCenterPressure = 2f;
+
+            AITeamPlaybookState state = AITeamPlaybookDirector.Resolve(context);
+
+            float bonus = AITargetScorer.CalculateCarrierThreatBonus(
+                state,
+                new Vector3(5f, 0f, 2f),
+                selfIsCarrier: true,
+                out _);
+
+            Assert.AreEqual(0f, bonus);
+        }
+
+        [Test]
         public void Resolve_KeepsExtraFrontlineEscortAsShadow_WhenScreenSlotIsOccupiedByBudget()
         {
             AITeamPlaybookContext context = BaseContext(30, AIGameModeMacroCall.Hold);

@@ -647,6 +647,7 @@ $"Map={LastMapRouteDebug}";
             _targetScorer = new AITargetScorer(_brawler, _profile);
             _objectiveMemory = new AIObjectiveMemory();
             _teamCoordinator = new AITeamCoordinator(_brawler);
+            _targetScorer.SetTeamCoordinator(_teamCoordinator);
             _reactiveMemory = new AIReactiveMemory();
             _dangerMemory = new AIDangerMemory();
             _failureRecovery = new AIFailureRecoveryMemory();
