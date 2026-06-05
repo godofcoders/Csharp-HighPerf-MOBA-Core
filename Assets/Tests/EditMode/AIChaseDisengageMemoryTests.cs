@@ -84,6 +84,57 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual("start_valuable", decision.Reason);
         }
 
+        [Test]
+        public void Evaluate_StartsSecureFinisher_WhenTargetIsCriticalAndClose()
+        {
+            AIChaseDisengageMemory memory = new AIChaseDisengageMemory();
+            AIChaseDisengageContext context = BaseContext();
+            context.TargetHealthRatio = 0.10f;
+            context.Distance = 6f;
+            context.PreserveLaneShape = true;
+
+            AIChaseDisengageDecision decision = memory.Evaluate(context);
+
+            Assert.IsTrue(decision.ShouldChase);
+            Assert.AreEqual("start_secure_finisher", decision.Reason);
+            Assert.Greater(decision.ScoreDelta, context.CommitScoreBonus);
+        }
+
+        [Test]
+        public void Evaluate_DoesNotSecureFinisher_WhenSelfCarriesGems()
+        {
+            AIChaseDisengageMemory memory = new AIChaseDisengageMemory();
+            AIChaseDisengageContext context = BaseContext();
+            context.TargetHealthRatio = 0.10f;
+            context.SelfCarriedGems = 3;
+            context.PreserveLaneShape = true;
+
+            AIChaseDisengageDecision decision = memory.Evaluate(context);
+
+            Assert.IsTrue(decision.ShouldDisengage);
+            Assert.IsFalse(decision.ShouldChase);
+            Assert.AreEqual("deny_lane_break", decision.Reason);
+        }
+
+        [Test]
+        public void Evaluate_Disengages_WhenTargetPullsChasePastLaneShape()
+        {
+            AIChaseDisengageMemory memory = new AIChaseDisengageMemory();
+            AIChaseDisengageContext context = BaseContext();
+            context.PreserveLaneShape = true;
+
+            memory.Evaluate(context);
+            context.Tick += 20u;
+            context.Distance = 8.2f;
+
+            AIChaseDisengageDecision decision = memory.Evaluate(context);
+
+            Assert.IsTrue(decision.ShouldDisengage);
+            Assert.IsFalse(decision.ShouldChase);
+            Assert.AreEqual("kite_pull", decision.Reason);
+            Assert.Less(decision.ScoreDelta, 0f);
+        }
+
         private static AIChaseDisengageContext BaseContext()
         {
             return new AIChaseDisengageContext

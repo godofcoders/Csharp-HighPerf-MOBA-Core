@@ -1724,11 +1724,21 @@ namespace MOBA.Core.Simulation.AI
             float laneWeight = Mathf.Max(0f, _profile.LaneDisciplineWeight);
             bool targetIsLow = targetHealthRatio <= threshold;
             int targetCarriedGems = targetBrawler.State.CarriedGemCount;
+            int selfCarriedGems = _self.State != null
+                ? _self.State.CarriedGemCount
+                : 0;
             bool preserveLaneShape = ShouldPreserveLaneShape(
                 macroState,
                 targetCarriedGems,
                 currentTick);
             bool badChaseMapPosition = IsBadChaseMapPosition(targetBrawler.Position);
+            bool secureFinisher = AIChaseDisengageMemory.IsSecureFinisher(
+                targetHealthRatio,
+                threshold,
+                distance,
+                maxChaseDistance,
+                selfCarriedGems,
+                badChaseMapPosition);
             AIChaseDisengageDecision chaseDecision =
                 _chaseDisengageMemory.Evaluate(
                     new AIChaseDisengageContext
@@ -1739,9 +1749,7 @@ namespace MOBA.Core.Simulation.AI
                         TargetHealthRatio = targetHealthRatio,
                         ChaseHealthThreshold = threshold,
                         MaxChaseDistance = maxChaseDistance,
-                        SelfCarriedGems = _self.State != null
-                            ? _self.State.CarriedGemCount
-                            : 0,
+                        SelfCarriedGems = selfCarriedGems,
                         TargetCarriedGems = targetCarriedGems,
                         PreserveLaneShape = preserveLaneShape,
                         TargetInBadMapPosition = badChaseMapPosition,
@@ -1762,24 +1770,33 @@ namespace MOBA.Core.Simulation.AI
                 float securePressure = Mathf.Clamp01((threshold - targetHealthRatio) / threshold);
                 float delta = _profile.LowHealthChaseApproachBonus * (0.55f + securePressure);
 
+                if (secureFinisher)
+                    delta += _profile.ChaseCommitScoreBonus * 0.75f;
+
                 if (targetCarriedGems > 0)
                     delta += targetCarriedGems * 4f;
 
-                if (distance > maxChaseDistance)
+                if (distance > maxChaseDistance && !secureFinisher)
                 {
                     float overDistance = distance - maxChaseDistance;
                     delta -= overDistance * Mathf.Max(0f, _profile.UnsafeChasePenalty) * 0.35f;
                 }
 
                 if (preserveLaneShape &&
-                    distance > maxChaseDistance * 0.70f)
+                    distance > maxChaseDistance * 0.70f &&
+                    !secureFinisher)
                 {
                     float valuableTargetDiscount = targetCarriedGems > 0 ? 0.55f : 1f;
                     delta -= _profile.UnsafeChasePenalty * valuableTargetDiscount * laneWeight;
                 }
 
-                if (badChaseMapPosition && preserveLaneShape && targetCarriedGems <= 0)
+                if (badChaseMapPosition &&
+                    preserveLaneShape &&
+                    targetCarriedGems <= 0 &&
+                    !secureFinisher)
+                {
                     delta -= _profile.BadMapChasePenalty;
+                }
 
                 delta += chaseDecision.ScoreDelta;
                 if (chaseDecision.ShouldDisengage)

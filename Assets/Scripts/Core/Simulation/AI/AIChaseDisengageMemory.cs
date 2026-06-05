@@ -80,9 +80,16 @@ namespace MOBA.Core.Simulation.AI
 
     public sealed class AIChaseDisengageMemory
     {
+        private const float SecureFinisherHealthScale = 0.55f;
+        private const float SecureFinisherDistanceMultiplier = 0.85f;
+        private const float PullAwayDistanceIncrease = 0.65f;
+        private const float PullAwaySoftDistanceMultiplier = 0.90f;
+
         private int _activeTargetEntityId;
         private uint _startedTick;
         private uint _cooldownUntilTick;
+        private float _lastDistance;
+        private uint _lastDistanceTick;
 
         public bool HasActiveChase => _activeTargetEntityId != 0;
         public int ActiveTargetEntityId => _activeTargetEntityId;
@@ -92,6 +99,26 @@ namespace MOBA.Core.Simulation.AI
             _activeTargetEntityId = 0;
             _startedTick = 0u;
             _cooldownUntilTick = 0u;
+            _lastDistance = 0f;
+            _lastDistanceTick = 0u;
+        }
+
+        public static bool IsSecureFinisher(
+            float targetHealthRatio,
+            float chaseHealthThreshold,
+            float distance,
+            float maxChaseDistance,
+            int selfCarriedGems,
+            bool targetInBadMapPosition)
+        {
+            if (selfCarriedGems > 0 || targetInBadMapPosition)
+                return false;
+
+            float threshold = Mathf.Clamp(chaseHealthThreshold, 0.05f, 0.85f);
+            float maxDistance = Mathf.Max(1f, maxChaseDistance);
+
+            return targetHealthRatio <= threshold * SecureFinisherHealthScale &&
+                   distance <= maxDistance * SecureFinisherDistanceMultiplier;
         }
 
         public AIChaseDisengageDecision Evaluate(
@@ -113,6 +140,13 @@ namespace MOBA.Core.Simulation.AI
             bool targetValuable = context.TargetCarriedGems > 0;
             bool selfCarrier = context.SelfCarriedGems > 0;
             bool activeSameTarget = _activeTargetEntityId == context.TargetEntityId;
+            bool secureFinisher = IsSecureFinisher(
+                context.TargetHealthRatio,
+                threshold,
+                context.Distance,
+                maxDistance,
+                context.SelfCarriedGems,
+                context.TargetInBadMapPosition);
 
             if (HasActiveChase && !activeSameTarget)
             {
@@ -147,6 +181,11 @@ namespace MOBA.Core.Simulation.AI
             if (activeSameTarget)
             {
                 uint elapsed = context.Tick - _startedTick;
+                bool targetPulledAway = HasTargetPulledAway(
+                    context,
+                    effectiveMaxDistance,
+                    targetValuable,
+                    secureFinisher);
 
                 if (unsafeMap)
                     return EndChase(context, elapsed, "bad_map", 1f);
@@ -154,32 +193,42 @@ namespace MOBA.Core.Simulation.AI
                 if (overHardDistance)
                     return EndChase(context, elapsed, "break_distance", 1f);
 
-                if (elapsed >= maxTicks && !targetValuable)
+                if (targetPulledAway)
+                    return EndChase(context, elapsed, "kite_pull", 0.90f);
+
+                if (elapsed >= maxTicks && !targetValuable && !secureFinisher)
                     return EndChase(context, elapsed, "timebox", 0.85f);
 
                 if (!targetLow && !targetValuable && elapsed >= commitTicks)
                     return EndChase(context, elapsed, "target_recovered", 0.65f);
 
-                float commitFactor = elapsed <= commitTicks ? 1f : 0.55f;
+                float commitFactor = secureFinisher
+                    ? 1.15f
+                    : elapsed <= commitTicks ? 1f : 0.55f;
                 float valueBonus = targetValuable ? context.TargetCarriedGems * 2f : 0f;
                 float badMapTax = context.TargetInBadMapPosition
                     ? context.BadMapPenalty * (targetValuable ? 0.35f : 0.75f)
                     : 0f;
 
-                return new AIChaseDisengageDecision(
+                AIChaseDisengageDecision decision = new AIChaseDisengageDecision(
                     context.TargetEntityId,
                     true,
                     true,
                     false,
                     context.CommitScoreBonus * commitFactor + valueBonus - badMapTax,
                     elapsed,
-                    targetValuable ? "continue_valuable" : "continue");
+                    targetValuable
+                        ? "continue_valuable"
+                        : secureFinisher ? "continue_secure_finisher" : "continue");
+
+                TrackActiveDistance(context);
+                return decision;
             }
 
             if (!targetLow && !targetValuable)
                 return AIChaseDisengageDecision.None("not_worth_chase");
 
-            if (unsafeMap || unsafeLaneBreak)
+            if (unsafeMap || (unsafeLaneBreak && !secureFinisher))
             {
                 return new AIChaseDisengageDecision(
                     context.TargetEntityId,
@@ -191,7 +240,7 @@ namespace MOBA.Core.Simulation.AI
                     unsafeMap ? "deny_bad_map" : "deny_lane_break");
             }
 
-            if (context.Distance > effectiveMaxDistance)
+            if (context.Distance > effectiveMaxDistance && !secureFinisher)
             {
                 float valuableDiscount = targetValuable ? 0.45f : 0.75f;
                 return new AIChaseDisengageDecision(
@@ -206,15 +255,45 @@ namespace MOBA.Core.Simulation.AI
 
             _activeTargetEntityId = context.TargetEntityId;
             _startedTick = context.Tick;
+            TrackActiveDistance(context);
 
             return new AIChaseDisengageDecision(
                 context.TargetEntityId,
                 true,
                 true,
                 false,
-                context.CommitScoreBonus + (targetValuable ? context.TargetCarriedGems * 2f : 0f),
+                context.CommitScoreBonus * (secureFinisher ? 1.30f : 1f) +
+                (targetValuable ? context.TargetCarriedGems * 2f : 0f),
                 0u,
-                targetValuable ? "start_valuable" : "start_low");
+                targetValuable
+                    ? "start_valuable"
+                    : secureFinisher ? "start_secure_finisher" : "start_low");
+        }
+
+        private bool HasTargetPulledAway(
+            in AIChaseDisengageContext context,
+            float effectiveMaxDistance,
+            bool targetValuable,
+            bool secureFinisher)
+        {
+            if (targetValuable || secureFinisher)
+                return false;
+
+            if (_lastDistanceTick == 0u || context.Tick <= _lastDistanceTick)
+                return false;
+
+            if (!context.PreserveLaneShape && context.Distance <= effectiveMaxDistance)
+                return false;
+
+            float distanceIncrease = context.Distance - _lastDistance;
+            return distanceIncrease >= PullAwayDistanceIncrease &&
+                   context.Distance >= effectiveMaxDistance * PullAwaySoftDistanceMultiplier;
+        }
+
+        private void TrackActiveDistance(in AIChaseDisengageContext context)
+        {
+            _lastDistance = context.Distance;
+            _lastDistanceTick = context.Tick;
         }
 
         private AIChaseDisengageDecision EndChase(
@@ -239,6 +318,8 @@ namespace MOBA.Core.Simulation.AI
         {
             _activeTargetEntityId = 0;
             _startedTick = 0u;
+            _lastDistance = 0f;
+            _lastDistanceTick = 0u;
             _cooldownUntilTick = currentTick + cooldownTicks;
         }
     }
