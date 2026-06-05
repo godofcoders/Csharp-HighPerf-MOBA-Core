@@ -38,6 +38,7 @@ namespace MOBA.Core.Infrastructure
         private AIDangerMemory _dangerMemory;
         private AIFailureRecoveryMemory _failureRecovery;
         private AIFailureRecoveryListener _failureRecoveryListener;
+        private AIIdleHesitationMemory _idleHesitation;
         private AIHumanizationController _humanization;
         private AICommandSource _commandSource;
 
@@ -54,6 +55,7 @@ namespace MOBA.Core.Infrastructure
         private string _lastReactiveDebug = "Reactive=None";
         private string _lastDangerDebug = "Danger=None";
         private string _lastFailureRecoveryDebug = "Recovery=None";
+        private string _lastIdleHesitationDebug = "Idle=None";
         private string _lastTuningDebug = "Tuning=None";
         private string _lastOpponentModelDebug = "Opponent=None";
         private string _lastBudgetDebug = "Budget=OK map=0/0 paths=0/0 nodes=0/0 maxNodes=0";
@@ -175,7 +177,7 @@ _actionExecutor != null
         public AIPersonalityType Personality => _profile != null ? _profile.Personality : _personality;
         public string ReactiveDebug => _lastReactiveDebug;
         public string DangerDebug => _lastDangerDebug;
-        public string FailureRecoveryDebug => _lastFailureRecoveryDebug;
+        public string FailureRecoveryDebug => $"{_lastFailureRecoveryDebug} {_lastIdleHesitationDebug}";
         public string TeamRoleDebug =>
             _utilityScorer != null ? _utilityScorer.LastTeamRoleDebug : "RoleCoord=None";
         public string MacroDebug =>
@@ -274,6 +276,7 @@ _actionExecutor != null
             {
                 _actionCommitment?.Reset();
                 _humanization?.Reset();
+                _idleHesitation?.Reset();
                 _teamCoordinator?.ClearTargetFocusCount();
                 _teamCoordinator?.ClearActionIntent();
                 _teamCoordinator?.ClearLaneOwnership();
@@ -295,6 +298,7 @@ _actionExecutor != null
             {
                 _actionCommitment?.Reset();
                 _humanization?.Reset();
+                _idleHesitation?.Reset();
                 _teamCoordinator?.ClearTargetFocusCount();
                 _teamCoordinator?.ClearActionIntent();
                 _teamCoordinator?.ClearLaneOwnership();
@@ -360,6 +364,7 @@ _actionExecutor != null
 
             _navAgent.Tick();
 
+            UpdateIdleHesitation(currentTick);
             UpdateFailureRecovery(currentTick);
 
             UpdateProductionBudget(currentTick);
@@ -653,6 +658,7 @@ $"Map={LastMapRouteDebug}";
             _reactiveMemory = new AIReactiveMemory();
             _dangerMemory = new AIDangerMemory();
             _failureRecovery = new AIFailureRecoveryMemory();
+            _idleHesitation = new AIIdleHesitationMemory();
             _humanization = new AIHumanizationController(
                 _profile,
                 unchecked((uint)_brawler.EntityID));
@@ -918,8 +924,61 @@ $"Map={LastMapRouteDebug}";
 
             _actionCommitment?.Reset();
             _humanization?.Reset();
+            _idleHesitation?.Reset();
             _nextSenseTick = currentTick;
             _nextDangerRefreshTick = currentTick;
+        }
+
+        private void UpdateIdleHesitation(uint currentTick)
+        {
+            if (_idleHesitation == null ||
+                _actionExecutor == null ||
+                _navAgent == null ||
+                _profile == null ||
+                !_profile.EnableFailureRecovery)
+            {
+                _lastIdleHesitationDebug = "Idle=None";
+                return;
+            }
+
+            bool hasRecentTargetMemory =
+                _targetInfo != null &&
+                _targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks);
+
+            AIIdleHesitationDecision decision = _idleHesitation.Evaluate(
+                new AIIdleHesitationContext(
+                    currentTick,
+                    _lastChosenAction,
+                    _targetInfo != null && _targetInfo.HasLiveTarget,
+                    hasRecentTargetMemory,
+                    _navAgent.HasDestination,
+                    _dangerMemory != null && _dangerMemory.HasDanger,
+                    _profile.IdleHesitationRecoveryTicks,
+                    _profile.IdleHesitationCooldownTicks,
+                    _profile.IdleHesitationLowScoreThreshold));
+
+            _lastIdleHesitationDebug = decision.GetDebugSummary(
+                _idleHesitation.NextRecoveryTick);
+
+            if (!decision.ShouldRecover)
+                return;
+
+            _actionExecutor.HandleIdleHesitation(_targetInfo, currentTick);
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.FailureRecovery,
+                currentTick);
+            AIReportCardTracker.RecordFailureRecovery(
+                _brawler.EntityID,
+                AIFailureRecoveryReason.IdleHesitation,
+                currentTick);
+
+            if (_profile.LogFailureRecovery)
+            {
+                Debug.Log(
+                    $"[AIIdle-{_brawler.name}] " +
+                    $"reason={decision.Reason} " +
+                    $"elapsed={decision.ElapsedTicks}");
+            }
         }
 
         private void UpdateFailureRecovery(uint currentTick)

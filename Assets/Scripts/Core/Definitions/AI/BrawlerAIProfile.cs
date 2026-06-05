@@ -349,6 +349,12 @@ namespace MOBA.Core.Simulation.AI
         public uint FailureRecoveryCooldownTicks = 18;
         [Tooltip("Distance of the local side-step / detour requested after a navigation recovery trigger.")]
         public float FailureRecoveryDetourDistance = 1.8f;
+        [Tooltip("Ticks a targetless bot may have no destination before idle hesitation recovery opens.")]
+        public uint IdleHesitationRecoveryTicks = 14;
+        [Tooltip("Minimum ticks between idle hesitation recovery nudges.")]
+        public uint IdleHesitationCooldownTicks = 24;
+        [Tooltip("Chosen action score at or below this value counts as low-confidence idle intent.")]
+        public float IdleHesitationLowScoreThreshold = 8f;
         [Tooltip("Failed casts remembered for this many ticks while detecting repeated invalid ability usage.")]
         public uint FailedCastMemoryTicks = 60;
         [Tooltip("Failed casts within memory before the slot is briefly suppressed.")]
@@ -1321,6 +1327,9 @@ namespace MOBA.Core.Simulation.AI
             StaleDestinationProgressThreshold = 0.6f;
             FailureRecoveryCooldownTicks = 18;
             FailureRecoveryDetourDistance = 1.8f;
+            IdleHesitationRecoveryTicks = 14;
+            IdleHesitationCooldownTicks = 24;
+            IdleHesitationLowScoreThreshold = 8f;
             FailedCastMemoryTicks = 60;
             FailedCastRecoveryLimit = 2;
             FailedCastSuppressionTicks = 30;

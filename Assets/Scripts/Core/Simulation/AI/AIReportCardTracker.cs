@@ -49,6 +49,7 @@ namespace MOBA.Core.Simulation.AI
             public int BlockedRouteRecoveryCount;
             public int StaleDestinationRecoveryCount;
             public int FailedCastRecoveryCount;
+            public int IdleHesitationRecoveryCount;
 
             public int Kills;
             public int Deaths;
@@ -100,6 +101,7 @@ namespace MOBA.Core.Simulation.AI
                     BlockedRouteRecoveryCount = BlockedRouteRecoveryCount,
                     StaleDestinationRecoveryCount = StaleDestinationRecoveryCount,
                     FailedCastRecoveryCount = FailedCastRecoveryCount,
+                    IdleHesitationRecoveryCount = IdleHesitationRecoveryCount,
                     Kills = Kills,
                     Deaths = Deaths,
                     DamageDealt = DamageDealt,
@@ -649,6 +651,10 @@ namespace MOBA.Core.Simulation.AI
 
                 case AIFailureRecoveryReason.FailedCast:
                     record.FailedCastRecoveryCount++;
+                    break;
+
+                case AIFailureRecoveryReason.IdleHesitation:
+                    record.IdleHesitationRecoveryCount++;
                     break;
             }
         }

@@ -144,17 +144,23 @@ namespace MOBA.Tests.EditMode
                 101,
                 AIFailureRecoveryReason.FailedCast,
                 22u);
+            AIReportCardTracker.RecordFailureRecovery(
+                101,
+                AIFailureRecoveryReason.IdleHesitation,
+                23u);
 
             AIReportCardSnapshot bot =
-                AIReportCardTracker.GetBotSnapshot(101, 22u);
+                AIReportCardTracker.GetBotSnapshot(101, 23u);
 
             Assert.AreEqual(1, bot.ObjectivePickupCount);
             Assert.AreEqual(3, bot.ObjectiveValue);
-            Assert.AreEqual(2, bot.FailureRecoveryCount);
+            Assert.AreEqual(3, bot.FailureRecoveryCount);
             Assert.AreEqual(1, bot.NavigationStallRecoveryCount);
             Assert.AreEqual(1, bot.FailedCastRecoveryCount);
+            Assert.AreEqual(1, bot.IdleHesitationRecoveryCount);
             StringAssert.Contains("obj=0+3", bot.GetDebugSummary());
-            StringAssert.Contains("rec=2", bot.GetDebugSummary());
+            StringAssert.Contains("rec=3", bot.GetDebugSummary());
+            StringAssert.Contains("idle=1", bot.GetDebugSummary());
         }
 
         private static List<AIActionScore> MakeScores(params AIActionScore[] scores)

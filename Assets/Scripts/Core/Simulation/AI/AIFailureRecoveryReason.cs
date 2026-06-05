@@ -6,6 +6,7 @@ namespace MOBA.Core.Simulation.AI
         NavigationStall = 1,
         BlockedRoute = 2,
         StaleDestination = 3,
-        FailedCast = 4
+        FailedCast = 4,
+        IdleHesitation = 5
     }
 }

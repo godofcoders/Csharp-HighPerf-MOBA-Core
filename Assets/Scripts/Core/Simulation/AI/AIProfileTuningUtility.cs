@@ -507,6 +507,9 @@ namespace MOBA.Core.Simulation.AI
             profile.StaleDestinationProgressThreshold = Mathf.Clamp(profile.StaleDestinationProgressThreshold, 0.1f, 3f);
             profile.FailureRecoveryCooldownTicks = ClampTicks(profile.FailureRecoveryCooldownTicks, 4, 90);
             profile.FailureRecoveryDetourDistance = Mathf.Clamp(profile.FailureRecoveryDetourDistance, 0.75f, 4f);
+            profile.IdleHesitationRecoveryTicks = ClampTicks(profile.IdleHesitationRecoveryTicks, 6, 90);
+            profile.IdleHesitationCooldownTicks = ClampTicks(profile.IdleHesitationCooldownTicks, 6, 120);
+            profile.IdleHesitationLowScoreThreshold = Mathf.Clamp(profile.IdleHesitationLowScoreThreshold, 0f, 30f);
             profile.FailedCastMemoryTicks = ClampTicks(profile.FailedCastMemoryTicks, 5, 240);
             profile.FailedCastRecoveryLimit = Mathf.Clamp(profile.FailedCastRecoveryLimit, 1, 5);
             profile.FailedCastSuppressionTicks = ClampTicks(profile.FailedCastSuppressionTicks, 5, 180);

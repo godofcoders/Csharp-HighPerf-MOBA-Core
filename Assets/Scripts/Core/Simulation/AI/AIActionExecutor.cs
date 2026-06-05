@@ -192,6 +192,28 @@ namespace MOBA.Core.Simulation.AI
                 : $"{_lastTacticalMoveReason}|{reason}";
         }
 
+        public void HandleIdleHesitation(
+            AITargetInfo targetInfo,
+            uint currentTick)
+        {
+            _hasMapRouteCache = false;
+            _nextFallbackWanderTick = currentTick;
+            _nextTacticalMoveRetargetTick = currentTick;
+            _hasTacticalMoveDirection = false;
+
+            _lastTacticalMoveReason = string.IsNullOrEmpty(_lastTacticalMoveReason)
+                ? "idle_hesitation"
+                : $"{_lastTacticalMoveReason}|idle_hesitation";
+
+            if (targetInfo != null)
+            {
+                RunSearch(targetInfo, currentTick);
+                return;
+            }
+
+            RunFallbackWander(currentTick);
+        }
+
         private void RequestMapAwareDestination(
             Vector3 destination,
             float arrivalDistance,

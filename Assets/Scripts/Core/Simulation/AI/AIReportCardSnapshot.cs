@@ -38,6 +38,7 @@ namespace MOBA.Core.Simulation.AI
         public int BlockedRouteRecoveryCount;
         public int StaleDestinationRecoveryCount;
         public int FailedCastRecoveryCount;
+        public int IdleHesitationRecoveryCount;
 
         public int Kills;
         public int Deaths;
@@ -81,7 +82,8 @@ namespace MOBA.Core.Simulation.AI
                 $"dmg={DamageDealt:0}/{DamageTaken:0} " +
                 $"heal={HealingDone:0} " +
                 $"K/D={Kills}/{Deaths} " +
-                $"rec={FailureRecoveryCount}";
+                $"rec={FailureRecoveryCount} " +
+                $"idle={IdleHesitationRecoveryCount}";
         }
     }
 }
