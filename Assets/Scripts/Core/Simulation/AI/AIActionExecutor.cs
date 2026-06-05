@@ -214,6 +214,30 @@ namespace MOBA.Core.Simulation.AI
             RunFallbackWander(currentTick);
         }
 
+        public void HandleNavigationRecoveryFallback(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIFailureRecoveryReason reason)
+        {
+            _hasMapRouteCache = false;
+            _nextFallbackWanderTick = currentTick;
+            _nextTacticalMoveRetargetTick = currentTick;
+            _hasTacticalMoveDirection = false;
+
+            string debugReason = $"recovery_fallback_{reason}";
+            _lastTacticalMoveReason = string.IsNullOrEmpty(_lastTacticalMoveReason)
+                ? debugReason
+                : $"{_lastTacticalMoveReason}|{debugReason}";
+
+            if (targetInfo != null)
+            {
+                RunSearch(targetInfo, currentTick);
+                return;
+            }
+
+            RunFallbackWander(currentTick);
+        }
+
         private void RequestMapAwareDestination(
             Vector3 destination,
             float arrivalDistance,

@@ -32,6 +32,9 @@ namespace MOBA.Core.Simulation.AI
         private uint _lastSampleTick;
         private int _consecutiveStuckSamples;
         private int _consecutiveRouteFailures;
+        private Vector3 _lastQueuedMoveDirection;
+        private uint _lastQueuedMoveTick;
+        private int _consecutiveActiveZeroMoveTicks;
 
         public Vector3 Position => _brawler.Position;
         public bool HasDestination => _hasDestination;
@@ -39,6 +42,10 @@ namespace MOBA.Core.Simulation.AI
         public bool IsRouteBlocked => _routeBlocked;
         public int ConsecutiveStuckSamples => _consecutiveStuckSamples;
         public int ConsecutiveRouteFailures => _consecutiveRouteFailures;
+        public Vector3 LastQueuedMoveDirection => _lastQueuedMoveDirection;
+        public int ConsecutiveActiveZeroMoveTicks => _consecutiveActiveZeroMoveTicks;
+        public bool IsActiveDestinationMovementSuppressed =>
+            _hasDestination && _consecutiveActiveZeroMoveTicks > 0;
 
         public NavigationAgent(
             BrawlerController brawler,
@@ -194,7 +201,21 @@ namespace MOBA.Core.Simulation.AI
             _routeBlocked = false;
             _consecutiveStuckSamples = 0;
             _consecutiveRouteFailures = 0;
+            _consecutiveActiveZeroMoveTicks = 0;
             QueueMove(Vector3.zero);
+        }
+
+        public void ClearDestinationForFallback()
+        {
+            _hasDestination = false;
+            _path = null;
+            _pathIndex = 0;
+            _routeBlocked = false;
+            _currentDestinationHighPriority = false;
+            _consecutiveStuckSamples = 0;
+            _consecutiveRouteFailures = 0;
+            _consecutiveActiveZeroMoveTicks = 0;
+            _lastQueuedMoveDirection = Vector3.zero;
         }
 
         public void Tick()
@@ -529,7 +550,30 @@ namespace MOBA.Core.Simulation.AI
 
         private void QueueMove(Vector3 direction)
         {
+            TrackMoveCommand(direction);
             _commandSource?.QueueMove(direction, _currentDestinationHighPriority);
+        }
+
+        private void TrackMoveCommand(Vector3 direction)
+        {
+            bool activeZeroMove =
+                _hasDestination &&
+                direction.sqrMagnitude <= 0.0001f;
+            uint currentTick = _clock.CurrentTick;
+
+            if (_lastQueuedMoveTick != currentTick)
+            {
+                _consecutiveActiveZeroMoveTicks = activeZeroMove
+                    ? _consecutiveActiveZeroMoveTicks + 1
+                    : 0;
+                _lastQueuedMoveTick = currentTick;
+            }
+            else if (!activeZeroMove)
+            {
+                _consecutiveActiveZeroMoveTicks = 0;
+            }
+
+            _lastQueuedMoveDirection = direction;
         }
 
         private uint GetStuckSampleIntervalTicks()

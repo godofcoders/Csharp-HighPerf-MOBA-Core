@@ -973,7 +973,8 @@ $"Map={LastMapRouteDebug}";
                     _lastChosenAction,
                     _targetInfo != null && _targetInfo.HasLiveTarget,
                     hasRecentTargetMemory,
-                    _navAgent.HasDestination,
+                    _navAgent.HasDestination &&
+                    !_navAgent.IsActiveDestinationMovementSuppressed,
                     _dangerMemory != null && _dangerMemory.HasDanger,
                     _profile.IdleHesitationRecoveryTicks,
                     _profile.IdleHesitationCooldownTicks,
@@ -1024,6 +1025,15 @@ $"Map={LastMapRouteDebug}";
                     request,
                     _profile,
                     out Vector3 recoveryDestination);
+                if (!recovered)
+                {
+                    _navAgent.ClearDestinationForFallback();
+                    _actionExecutor?.HandleNavigationRecoveryFallback(
+                        _targetInfo,
+                        currentTick,
+                        request.Reason);
+                }
+
                 AIValidationGauntlet.RecordSignal(
                     AIValidationGauntletSignal.FailureRecovery,
                     currentTick);
