@@ -611,17 +611,28 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.ReportCardDebug = AIReportCardTracker.GetBotDebugSummary(
                 _brawler.EntityID,
                 currentTick);
-            _debugSnapshot.MatchTelemetryReviewDebug = _profile.EnableValidationTelemetry
-                ? AIMatchTelemetryReview.Build(
-                    currentTick,
-                    new AIMatchTelemetryReviewLimits(
-                        _profile.MaxMapResolvesPerTick,
-                        _profile.MaxPathQueriesPerTick,
-                        _profile.MaxPathTouchedNodesPerTick)).GetDebugSummary()
-                : "MatchReview=disabled";
-            _debugSnapshot.BotTelemetryOutlierDebug = _profile.EnableValidationTelemetry
-                ? AIBotTelemetryOutlierReview.Build(currentTick).GetDebugSummary()
-                : "BotOutlier=disabled";
+            if (_profile.EnableValidationTelemetry)
+            {
+                AIMatchTelemetryReviewSnapshot matchReview =
+                    AIMatchTelemetryReview.Build(
+                        currentTick,
+                        new AIMatchTelemetryReviewLimits(
+                            _profile.MaxMapResolvesPerTick,
+                            _profile.MaxPathQueriesPerTick,
+                            _profile.MaxPathTouchedNodesPerTick));
+                _debugSnapshot.MatchTelemetryReviewDebug =
+                    matchReview.GetDebugSummary();
+                _debugSnapshot.MatchTelemetryTrendDebug =
+                    AIMatchTelemetryTrendTracker.Record(matchReview).GetDebugSummary();
+                _debugSnapshot.BotTelemetryOutlierDebug =
+                    AIBotTelemetryOutlierReview.Build(currentTick).GetDebugSummary();
+            }
+            else
+            {
+                _debugSnapshot.MatchTelemetryReviewDebug = "MatchReview=disabled";
+                _debugSnapshot.MatchTelemetryTrendDebug = "MatchTrend=disabled";
+                _debugSnapshot.BotTelemetryOutlierDebug = "BotOutlier=disabled";
+            }
             _debugSnapshot.MacroDebug = MacroDebug;
             _debugSnapshot.PlaybookDebug = PlaybookDebug;
 

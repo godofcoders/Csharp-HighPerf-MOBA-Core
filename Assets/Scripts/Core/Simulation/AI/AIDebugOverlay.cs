@@ -73,6 +73,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"AI Gauntlet: {snapshot.ValidationGauntletDebug}");
             GUILayout.Label($"AI Report: {snapshot.ReportCardDebug}");
             GUILayout.Label($"AI Match Review: {snapshot.MatchTelemetryReviewDebug}");
+            GUILayout.Label($"AI Match Trend: {snapshot.MatchTelemetryTrendDebug}");
             GUILayout.Label($"AI Bot Outlier: {snapshot.BotTelemetryOutlierDebug}");
 
             GUILayout.Space(8);
@@ -154,6 +155,7 @@ namespace MOBA.Core.Simulation.AI
                     $"AIGauntlet={snapshot.ValidationGauntletDebug} | " +
                     $"AIReport={snapshot.ReportCardDebug} | " +
                     $"AIMatchReview={snapshot.MatchTelemetryReviewDebug} | " +
+                    $"AIMatchTrend={snapshot.MatchTelemetryTrendDebug} | " +
                     $"AIBotOutlier={snapshot.BotTelemetryOutlierDebug} | " +
                     $"Statuses={string.Join(", ", snapshot.ActiveStatuses)}");
             }
