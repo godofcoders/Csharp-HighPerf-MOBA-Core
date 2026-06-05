@@ -43,10 +43,15 @@ namespace MOBA.Core.Simulation.AI
         private string _lastPlaybookDebug = "Playbook=None";
         private string _lastChaseDebug = "Chase=None";
         private string _lastGemPickupDebug = "GemPickup=None";
+        private string _lastObjectiveIntentDebug = "ObjIntent=None";
         private uint _lastLaneEvaluationTick;
         private bool _hasLaneEvaluation;
         private bool _lastCanHoldLane;
         private string _lastLaneHoldReason = "lane_not_evaluated";
+        private bool _hasGemPickupDecisionCache;
+        private uint _lastGemPickupDecisionTick;
+        private AIGemPickupDecision _lastGemPickupDecision;
+        private bool _lastGemPickupShouldPickup;
 
         public float LastObjectiveAllyPressure => _lastObjectiveAllyPressure;
         public float LastObjectiveCrowdingPenalty => _lastObjectiveCrowdingPenalty;
@@ -58,6 +63,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastPlaybookDebug => _lastPlaybookDebug;
         public string LastChaseDebug => _lastChaseDebug;
         public string LastGemPickupDebug => _lastGemPickupDebug;
+        public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -110,6 +116,12 @@ namespace MOBA.Core.Simulation.AI
             results.Add(ScoreWander());
             results.Add(ScoreObjective(targetInfo, currentTick, macroState));
 
+            ApplyObjectiveIntentArbitration(
+                targetInfo,
+                currentTick,
+                macroState,
+                playbookState,
+                results);
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
             ApplyPlaybookCoordination(targetInfo, playbookState, results);
         }
@@ -265,6 +277,88 @@ namespace MOBA.Core.Simulation.AI
 
             if (!string.IsNullOrEmpty(deltaDebug))
                 _lastPlaybookDebug += $" Delta={deltaDebug}";
+        }
+
+        private void ApplyObjectiveIntentArbitration(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState,
+            AITeamPlaybookState playbookState,
+            List<AIActionScore> results)
+        {
+            _lastObjectiveIntentDebug = "ObjIntent=None";
+
+            if (results == null || results.Count == 0)
+                return;
+
+            bool hasLiveTarget = targetInfo != null && targetInfo.HasLiveTarget;
+            bool hasGemPickup = false;
+            bool shouldPickupGem = false;
+            float gemPickupScore = 0f;
+
+            if (!hasLiveTarget &&
+                TryResolveGemPickupDecision(
+                    macroState,
+                    currentTick,
+                    out AIGemPickupDecision gemDecision))
+            {
+                hasGemPickup = gemDecision.HasPickup;
+                shouldPickupGem = gemDecision.ShouldPickup;
+                gemPickupScore = gemDecision.Score;
+            }
+
+            bool hasLaneHold = CanHoldAssignedLane(
+                currentTick,
+                out _);
+            bool isCarrierPlaybook =
+                playbookState.IsActive &&
+                playbookState.Call == AITeamPlaybookCall.EscortCarrier;
+            bool selfIsCarrierAnchor =
+                _self != null &&
+                playbookState.CarrierEntityId == _self.EntityID &&
+                playbookState.EscortRole == AITeamEscortFormationRole.CarrierAnchor;
+
+            var context = new AIObjectiveIntentContext(
+                macroState,
+                _self != null && _self.State != null
+                    ? _self.State.CarriedGemCount
+                    : 0,
+                hasLiveTarget,
+                hasLaneHold,
+                hasGemPickup,
+                shouldPickupGem,
+                gemPickupScore,
+                isCarrierPlaybook,
+                selfIsCarrierAnchor);
+
+            string deltaDebug = string.Empty;
+
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                AIObjectiveIntentArbitrationResult intent =
+                    AIObjectiveIntentArbitrationUtility.Evaluate(
+                        actionScore.ActionType,
+                        context);
+
+                if (!intent.HasDelta)
+                    continue;
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + intent.Delta);
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{adjustedScore - actionScore.Score:+0.0;-0.0}_{intent.Reason}");
+            }
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastObjectiveIntentDebug = $"ObjIntent={deltaDebug}";
         }
 
         private float CalculatePlaybookDelta(
@@ -1205,6 +1299,14 @@ namespace MOBA.Core.Simulation.AI
             uint currentTick,
             out AIGemPickupDecision decision)
         {
+            if (_hasGemPickupDecisionCache &&
+                _lastGemPickupDecisionTick == currentTick)
+            {
+                decision = _lastGemPickupDecision;
+                return decision.HasPickup &&
+                       (_lastGemPickupShouldPickup || decision.Score > 0f);
+            }
+
             bool hasThreatCenter = false;
             Vector3 threatCenter = Vector3.zero;
             float threatPressure = 0f;
@@ -1237,6 +1339,11 @@ namespace MOBA.Core.Simulation.AI
                 out decision);
 
             _lastGemPickupDebug = decision.GetDebugSummary();
+            _hasGemPickupDecisionCache = true;
+            _lastGemPickupDecisionTick = currentTick;
+            _lastGemPickupDecision = decision;
+            _lastGemPickupShouldPickup = shouldPickup;
+
             return decision.HasPickup && (shouldPickup || decision.Score > 0f);
         }
 
