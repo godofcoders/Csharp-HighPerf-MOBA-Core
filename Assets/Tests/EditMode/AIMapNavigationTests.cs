@@ -133,6 +133,20 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void AStarSolver_PrefersBoundaryClearEndpoint_WhenEdgeCellIsWalkable()
+        {
+            MapData map = MakeMap(5, 5, true);
+            AStarSolver solver = new AStarSolver(map);
+
+            Assert.IsFalse(solver.IsWalkableWithBoundaryClearance(new Vector2Int(4, 4)));
+            Assert.IsTrue(solver.TryGetNearestWalkableCoordsWithBoundaryClearance(
+                new Vector2Int(4, 4),
+                3,
+                out Vector2Int coords));
+            Assert.AreEqual(new Vector2Int(3, 3), coords);
+        }
+
+        [Test]
         public void AIMapNavigationUtility_DetectsCoverBetweenPositions()
         {
             MapData map = MakeMap(5, 3, true);

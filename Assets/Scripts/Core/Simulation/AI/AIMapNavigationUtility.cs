@@ -128,7 +128,7 @@ namespace MOBA.Core.Simulation.AI
                         continue;
 
                     Vector2Int coords = desiredCoords + new Vector2Int(x, y);
-                    if (!pathfinder.IsWalkable(coords))
+                    if (!pathfinder.IsWalkableWithBoundaryClearance(coords))
                         continue;
 
                     candidateCount++;
@@ -186,9 +186,16 @@ namespace MOBA.Core.Simulation.AI
                 return bestCandidate.Destination;
             }
 
-            Vector3 bestDestination = pathfinder.GetNearestWalkableWorldPos(
-                request.DesiredDestination,
-                Mathf.Max(1, maxOffsetMagnitude));
+            Vector2Int fallbackCoords;
+            Vector3 bestDestination =
+                pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(
+                    desiredCoords,
+                    Mathf.Max(1, maxOffsetMagnitude),
+                    out fallbackCoords)
+                    ? pathfinder.GetWorldPos(fallbackCoords)
+                    : pathfinder.GetNearestWalkableWorldPos(
+                        request.DesiredDestination,
+                        Mathf.Max(1, maxOffsetMagnitude));
 
             decision.ResolvedDestination = bestDestination;
             decision.Reason = "nearest_walkable_fallback";

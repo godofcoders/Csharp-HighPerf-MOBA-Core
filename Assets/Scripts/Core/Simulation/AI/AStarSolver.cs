@@ -77,6 +77,23 @@ namespace MOBA.Core.Simulation.AI
             return node != null && node.IsWalkable;
         }
 
+        public bool IsWalkableWithBoundaryClearance(
+            UnityEngine.Vector2Int coords,
+            int clearanceCells = 1)
+        {
+            if (!IsWalkable(coords))
+                return false;
+
+            int clearance = UnityEngine.Mathf.Max(0, clearanceCells);
+            if (clearance == 0)
+                return true;
+
+            return coords.x >= clearance &&
+                   coords.y >= clearance &&
+                   coords.x < _width - clearance &&
+                   coords.y < _height - clearance;
+        }
+
         public bool IsBush(UnityEngine.Vector2Int coords)
         {
             return _mapData != null && _mapData.IsBush(coords);
@@ -173,7 +190,44 @@ namespace MOBA.Core.Simulation.AI
             int searchRadius,
             out UnityEngine.Vector2Int result)
         {
-            if (IsWalkable(center))
+            return TryGetNearestWalkableCoords(
+                center,
+                searchRadius,
+                requireBoundaryClearance: false,
+                out result);
+        }
+
+        public bool TryGetNearestWalkableCoordsWithBoundaryClearance(
+            UnityEngine.Vector2Int center,
+            int searchRadius,
+            out UnityEngine.Vector2Int result,
+            int clearanceCells = 1)
+        {
+            if (TryGetNearestWalkableCoords(
+                    center,
+                    searchRadius,
+                    requireBoundaryClearance: true,
+                    out result,
+                    clearanceCells))
+            {
+                return true;
+            }
+
+            return TryGetNearestWalkableCoords(
+                center,
+                searchRadius,
+                requireBoundaryClearance: false,
+                out result);
+        }
+
+        private bool TryGetNearestWalkableCoords(
+            UnityEngine.Vector2Int center,
+            int searchRadius,
+            bool requireBoundaryClearance,
+            out UnityEngine.Vector2Int result,
+            int clearanceCells = 1)
+        {
+            if (IsCandidateWalkable(center, requireBoundaryClearance, clearanceCells))
             {
                 result = center;
                 return true;
@@ -194,7 +248,7 @@ namespace MOBA.Core.Simulation.AI
                             continue;
 
                         UnityEngine.Vector2Int coords = new UnityEngine.Vector2Int(center.x + x, center.y + y);
-                        if (!IsWalkable(coords))
+                        if (!IsCandidateWalkable(coords, requireBoundaryClearance, clearanceCells))
                             continue;
 
                         int dx = coords.x - center.x;
@@ -215,6 +269,16 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return found;
+        }
+
+        private bool IsCandidateWalkable(
+            UnityEngine.Vector2Int coords,
+            bool requireBoundaryClearance,
+            int clearanceCells)
+        {
+            return requireBoundaryClearance
+                ? IsWalkableWithBoundaryClearance(coords, clearanceCells)
+                : IsWalkable(coords);
         }
 
         public List<PathNode> FindPath(int startX, int startY, int endX, int endY)

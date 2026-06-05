@@ -128,8 +128,8 @@ namespace MOBA.Core.Simulation.AI
                     endpointRepairRadius,
                     out start);
 
-            if (!SimulationClock.Pathfinder.IsWalkable(end))
-                foundEnd = SimulationClock.Pathfinder.TryGetNearestWalkableCoords(
+            if (!SimulationClock.Pathfinder.IsWalkableWithBoundaryClearance(end))
+                foundEnd = SimulationClock.Pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(
                     end,
                     endpointRepairRadius,
                     out end);
@@ -392,8 +392,8 @@ namespace MOBA.Core.Simulation.AI
                 Vector3 candidateWorld = _brawler.Position + direction * detourDistance;
                 Vector2Int candidateCoords = pathfinder.GetGridCoords(candidateWorld);
 
-                if (!pathfinder.IsWalkable(candidateCoords) &&
-                    !pathfinder.TryGetNearestWalkableCoords(candidateCoords, 2, out candidateCoords))
+                if (!pathfinder.IsWalkableWithBoundaryClearance(candidateCoords) &&
+                    !pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(candidateCoords, 2, out candidateCoords))
                 {
                     continue;
                 }
