@@ -1,5 +1,90 @@
 namespace MOBA.Core.Simulation.AI
 {
+    public readonly struct AIPerformanceSnapshot
+    {
+        public readonly int MapResolveCount;
+        public readonly int MapResolveCacheHits;
+        public readonly int MapCandidateCount;
+        public readonly int MapPathValidationCount;
+        public readonly int PathQueryCount;
+        public readonly int PathQuerySuccessCount;
+        public readonly int PathQueryFailureCount;
+        public readonly int PathTouchedNodeCount;
+        public readonly int PathMaxTouchedNodes;
+
+        public AIPerformanceSnapshot(
+            int mapResolveCount,
+            int mapResolveCacheHits,
+            int mapCandidateCount,
+            int mapPathValidationCount,
+            int pathQueryCount,
+            int pathQuerySuccessCount,
+            int pathQueryFailureCount,
+            int pathTouchedNodeCount,
+            int pathMaxTouchedNodes)
+        {
+            MapResolveCount = mapResolveCount;
+            MapResolveCacheHits = mapResolveCacheHits;
+            MapCandidateCount = mapCandidateCount;
+            MapPathValidationCount = mapPathValidationCount;
+            PathQueryCount = pathQueryCount;
+            PathQuerySuccessCount = pathQuerySuccessCount;
+            PathQueryFailureCount = pathQueryFailureCount;
+            PathTouchedNodeCount = pathTouchedNodeCount;
+            PathMaxTouchedNodes = pathMaxTouchedNodes;
+        }
+
+        public float PathFailureRatio =>
+            PathQueryCount > 0 ? (float)PathQueryFailureCount / PathQueryCount : 0f;
+
+        public bool IsOverBudget(
+            int maxMapResolves,
+            int maxPathQueries,
+            int maxTouchedNodes)
+        {
+            return MapResolveCount > ClampBudget(maxMapResolves) ||
+                   PathQueryCount > ClampBudget(maxPathQueries) ||
+                   PathTouchedNodeCount > ClampBudget(maxTouchedNodes);
+        }
+
+        public string GetDebugSummary()
+        {
+            return
+                $"Perf=Map resolves={MapResolveCount} " +
+                $"cache={MapResolveCacheHits} " +
+                $"candidates={MapCandidateCount} " +
+                $"validations={MapPathValidationCount} " +
+                $"paths={PathQueryCount} " +
+                $"ok={PathQuerySuccessCount} " +
+                $"fail={PathQueryFailureCount} " +
+                $"nodes={PathTouchedNodeCount} " +
+                $"maxNodes={PathMaxTouchedNodes}";
+        }
+
+        public string GetBudgetSummary(
+            int maxMapResolves,
+            int maxPathQueries,
+            int maxTouchedNodes)
+        {
+            bool overBudget = IsOverBudget(
+                maxMapResolves,
+                maxPathQueries,
+                maxTouchedNodes);
+
+            return
+                $"Budget={(overBudget ? "OVER" : "OK")} " +
+                $"map={MapResolveCount}/{ClampBudget(maxMapResolves)} " +
+                $"paths={PathQueryCount}/{ClampBudget(maxPathQueries)} " +
+                $"nodes={PathTouchedNodeCount}/{ClampBudget(maxTouchedNodes)} " +
+                $"maxNodes={PathMaxTouchedNodes}";
+        }
+
+        private static int ClampBudget(int value)
+        {
+            return value <= 0 ? 1 : value;
+        }
+    }
+
     public static class AIPerformanceTracker
     {
         private static uint _tick;
@@ -25,6 +110,23 @@ namespace MOBA.Core.Simulation.AI
         public static int PathQueryFailureCount => _pathQueryFailureCount;
         public static int PathTouchedNodeCount => _pathTouchedNodeCount;
         public static int PathMaxTouchedNodes => _pathMaxTouchedNodes;
+
+        public static AIPerformanceSnapshot GetSnapshot(uint currentTick)
+        {
+            EnsureTick(currentTick);
+
+            return new AIPerformanceSnapshot(
+                _mapResolveCount,
+                _mapResolveCacheHits,
+                _mapCandidateCount,
+                _mapPathValidationCount,
+                _pathQueryCount,
+                _pathQuerySuccessCount,
+                _pathQueryFailureCount,
+                _pathTouchedNodeCount,
+                _pathMaxTouchedNodes);
+        }
+
         public static bool IsOverBudget(
             int maxMapResolves,
             int maxPathQueries,
@@ -73,18 +175,7 @@ namespace MOBA.Core.Simulation.AI
 
         public static string GetDebugSummary(uint currentTick)
         {
-            EnsureTick(currentTick);
-
-            return
-                $"Perf=Map resolves={_mapResolveCount} " +
-                $"cache={_mapResolveCacheHits} " +
-                $"candidates={_mapCandidateCount} " +
-                $"validations={_mapPathValidationCount} " +
-                $"paths={_pathQueryCount} " +
-                $"ok={_pathQuerySuccessCount} " +
-                $"fail={_pathQueryFailureCount} " +
-                $"nodes={_pathTouchedNodeCount} " +
-                $"maxNodes={_pathMaxTouchedNodes}";
+            return GetSnapshot(currentTick).GetDebugSummary();
         }
 
         public static string GetBudgetSummary(
@@ -93,19 +184,10 @@ namespace MOBA.Core.Simulation.AI
             int maxPathQueries,
             int maxTouchedNodes)
         {
-            EnsureTick(currentTick);
-
-            bool overBudget = IsOverBudget(
+            return GetSnapshot(currentTick).GetBudgetSummary(
                 maxMapResolves,
                 maxPathQueries,
                 maxTouchedNodes);
-
-            return
-                $"Budget={(overBudget ? "OVER" : "OK")} " +
-                $"map={_mapResolveCount}/{ClampBudget(maxMapResolves)} " +
-                $"paths={_pathQueryCount}/{ClampBudget(maxPathQueries)} " +
-                $"nodes={_pathTouchedNodeCount}/{ClampBudget(maxTouchedNodes)} " +
-                $"maxNodes={_pathMaxTouchedNodes}";
         }
 
         public static void ResetForTests()

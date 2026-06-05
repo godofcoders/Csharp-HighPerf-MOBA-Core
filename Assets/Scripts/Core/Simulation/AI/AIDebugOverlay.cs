@@ -72,6 +72,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"AI Scenario: {snapshot.ValidationScenarioDebug}");
             GUILayout.Label($"AI Gauntlet: {snapshot.ValidationGauntletDebug}");
             GUILayout.Label($"AI Report: {snapshot.ReportCardDebug}");
+            GUILayout.Label($"AI Match Review: {snapshot.MatchTelemetryReviewDebug}");
 
             GUILayout.Space(8);
             GUILayout.Label("Flags:");
@@ -151,6 +152,7 @@ namespace MOBA.Core.Simulation.AI
                     $"AIScenario={snapshot.ValidationScenarioDebug} | " +
                     $"AIGauntlet={snapshot.ValidationGauntletDebug} | " +
                     $"AIReport={snapshot.ReportCardDebug} | " +
+                    $"AIMatchReview={snapshot.MatchTelemetryReviewDebug} | " +
                     $"Statuses={string.Join(", ", snapshot.ActiveStatuses)}");
             }
         }

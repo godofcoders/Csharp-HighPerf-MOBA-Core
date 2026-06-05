@@ -535,7 +535,7 @@ _actionExecutor != null
                 ? _dangerMemory.GetDebugSummary()
                 : "Danger=None";
             _debugSnapshot.DangerDebug = _lastDangerDebug;
-            _debugSnapshot.FailureRecoveryDebug = _lastFailureRecoveryDebug;
+            _debugSnapshot.FailureRecoveryDebug = FailureRecoveryDebug;
             _debugSnapshot.HumanizationDebug = HumanizationDebug;
             _debugSnapshot.TuningDebug = TuningDebug;
             _debugSnapshot.OpponentModelDebug = OpponentModelDebug;
@@ -611,6 +611,14 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.ReportCardDebug = AIReportCardTracker.GetBotDebugSummary(
                 _brawler.EntityID,
                 currentTick);
+            _debugSnapshot.MatchTelemetryReviewDebug = _profile.EnableValidationTelemetry
+                ? AIMatchTelemetryReview.Build(
+                    currentTick,
+                    new AIMatchTelemetryReviewLimits(
+                        _profile.MaxMapResolvesPerTick,
+                        _profile.MaxPathQueriesPerTick,
+                        _profile.MaxPathTouchedNodesPerTick)).GetDebugSummary()
+                : "MatchReview=disabled";
             _debugSnapshot.MacroDebug = MacroDebug;
             _debugSnapshot.PlaybookDebug = PlaybookDebug;
 
@@ -1033,7 +1041,9 @@ $"Map={LastMapRouteDebug}";
                 return;
             }
 
-            bool overBudget = AIPerformanceTracker.IsOverBudget(
+            AIPerformanceSnapshot performanceSnapshot =
+                AIPerformanceTracker.GetSnapshot(currentTick);
+            bool overBudget = performanceSnapshot.IsOverBudget(
                 _profile.MaxMapResolvesPerTick,
                 _profile.MaxPathQueriesPerTick,
                 _profile.MaxPathTouchedNodesPerTick);
