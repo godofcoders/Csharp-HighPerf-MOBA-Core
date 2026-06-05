@@ -619,6 +619,9 @@ $"Map={LastMapRouteDebug}";
                         _profile.MaxPathQueriesPerTick,
                         _profile.MaxPathTouchedNodesPerTick)).GetDebugSummary()
                 : "MatchReview=disabled";
+            _debugSnapshot.BotTelemetryOutlierDebug = _profile.EnableValidationTelemetry
+                ? AIBotTelemetryOutlierReview.Build(currentTick).GetDebugSummary()
+                : "BotOutlier=disabled";
             _debugSnapshot.MacroDebug = MacroDebug;
             _debugSnapshot.PlaybookDebug = PlaybookDebug;
 

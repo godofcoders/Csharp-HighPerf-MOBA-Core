@@ -409,6 +409,22 @@ namespace MOBA.Core.Simulation.AI
             return GetTeamRecord(team).ToSnapshot();
         }
 
+        public static void GetBotSnapshots(
+            List<AIReportCardSnapshot> results,
+            uint currentTick = 0u)
+        {
+            if (results == null)
+                return;
+
+            results.Clear();
+
+            foreach (var pair in _botRecords)
+            {
+                AgePendingSuper(pair.Value, currentTick);
+                results.Add(pair.Value.ToSnapshot());
+            }
+        }
+
         public static string GetBotDebugSummary(
             int botEntityId,
             uint currentTick)
