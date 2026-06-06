@@ -35,6 +35,7 @@ namespace MOBA.Core.Simulation.AI
         private Vector3 _lastQueuedMoveDirection;
         private uint _lastQueuedMoveTick;
         private int _consecutiveActiveZeroMoveTicks;
+        private int _consecutivePathBudgetDeferrals;
 
         public Vector3 Position => _brawler.Position;
         public bool HasDestination => _hasDestination;
@@ -44,6 +45,7 @@ namespace MOBA.Core.Simulation.AI
         public int ConsecutiveRouteFailures => _consecutiveRouteFailures;
         public Vector3 LastQueuedMoveDirection => _lastQueuedMoveDirection;
         public int ConsecutiveActiveZeroMoveTicks => _consecutiveActiveZeroMoveTicks;
+        public int ConsecutivePathBudgetDeferrals => _consecutivePathBudgetDeferrals;
         public bool IsActiveDestinationMovementSuppressed =>
             _hasDestination && _consecutiveActiveZeroMoveTicks > 0;
 
@@ -111,6 +113,7 @@ namespace MOBA.Core.Simulation.AI
                 _pathIndex = 0;
                 _routeBlocked = false;
                 _consecutiveRouteFailures = 0;
+                _consecutivePathBudgetDeferrals = 0;
                 _nextRepathTick = _clock.CurrentTick + _repathCooldownTicks;
                 return;
             }
@@ -145,6 +148,7 @@ namespace MOBA.Core.Simulation.AI
                 _pathIndex = 0;
                 _routeBlocked = true;
                 _consecutiveRouteFailures++;
+                _consecutivePathBudgetDeferrals = 0;
                 _nextRepathTick = _clock.CurrentTick + _repathCooldownTicks;
                 return;
             }
@@ -160,10 +164,16 @@ namespace MOBA.Core.Simulation.AI
             if (destinationChanged)
                 ResetDestinationProgress(target);
 
+            bool escalateBudgetPriority =
+                !highPriority &&
+                _consecutivePathBudgetDeferrals >= GetPathBudgetStarvationLimit();
+            bool queryHighPriority = highPriority || escalateBudgetPriority;
+            _currentDestinationHighPriority = queryHighPriority;
+
             if (!AIBudgetCoordinator.TryAcquirePathQuery(
                     _clock.CurrentTick,
                     _profile,
-                    highPriority))
+                    queryHighPriority))
             {
                 bool canKeepExistingPath = _path != null &&
                                            _pathIndex < _path.Count &&
@@ -174,6 +184,11 @@ namespace MOBA.Core.Simulation.AI
                 {
                     _path = null;
                     _pathIndex = 0;
+                    _consecutivePathBudgetDeferrals++;
+                }
+                else
+                {
+                    _consecutivePathBudgetDeferrals = 0;
                 }
 
                 _routeBlocked = false;
@@ -181,6 +196,7 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
+            _consecutivePathBudgetDeferrals = 0;
             _path = SimulationClock.Pathfinder.FindPath(start.x, start.y, end.x, end.y);
             _pathIndex = 0;
             _hasDestination = true;
@@ -202,6 +218,7 @@ namespace MOBA.Core.Simulation.AI
             _consecutiveStuckSamples = 0;
             _consecutiveRouteFailures = 0;
             _consecutiveActiveZeroMoveTicks = 0;
+            _consecutivePathBudgetDeferrals = 0;
             QueueMove(Vector3.zero);
         }
 
@@ -215,6 +232,7 @@ namespace MOBA.Core.Simulation.AI
             _consecutiveStuckSamples = 0;
             _consecutiveRouteFailures = 0;
             _consecutiveActiveZeroMoveTicks = 0;
+            _consecutivePathBudgetDeferrals = 0;
             _lastQueuedMoveDirection = Vector3.zero;
         }
 
@@ -546,6 +564,13 @@ namespace MOBA.Core.Simulation.AI
             return _profile != null && _profile.BudgetDeferredPathTicks > 0u
                 ? _profile.BudgetDeferredPathTicks
                 : 1u;
+        }
+
+        private int GetPathBudgetStarvationLimit()
+        {
+            return _profile != null && _profile.PathBudgetStarvationLimit > 0
+                ? _profile.PathBudgetStarvationLimit
+                : 3;
         }
 
         private void QueueMove(Vector3 direction)

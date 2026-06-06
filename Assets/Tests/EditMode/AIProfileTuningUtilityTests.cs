@@ -126,6 +126,7 @@ namespace MOBA.Tests.EditMode
             profile.MaxMapResolvesPerTick = -5;
             profile.MaxPathQueriesPerTick = -5;
             profile.MaxPathTouchedNodesPerTick = -5;
+            profile.PathBudgetStarvationLimit = 999;
             profile.MapWallHugPenalty = 99f;
             profile.MapEscapeSpacePreference = 99f;
             profile.MapCoverDancePreference = 99f;
@@ -156,6 +157,7 @@ namespace MOBA.Tests.EditMode
             Assert.GreaterOrEqual(profile.MaxMapResolvesPerTick, 1);
             Assert.GreaterOrEqual(profile.MaxPathQueriesPerTick, 1);
             Assert.GreaterOrEqual(profile.MaxPathTouchedNodesPerTick, 64);
+            Assert.LessOrEqual(profile.PathBudgetStarvationLimit, 12);
             Assert.LessOrEqual(profile.MapWallHugPenalty, 35f);
             Assert.LessOrEqual(profile.MapEscapeSpacePreference, 30f);
             Assert.LessOrEqual(profile.MapCoverDancePreference, 30f);

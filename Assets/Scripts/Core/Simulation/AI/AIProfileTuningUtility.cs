@@ -518,6 +518,7 @@ namespace MOBA.Core.Simulation.AI
             profile.MaxMapResolvesPerTick = Mathf.Clamp(profile.MaxMapResolvesPerTick, 1, 256);
             profile.MaxPathQueriesPerTick = Mathf.Clamp(profile.MaxPathQueriesPerTick, 1, 128);
             profile.MaxPathTouchedNodesPerTick = Mathf.Clamp(profile.MaxPathTouchedNodesPerTick, 64, 50000);
+            profile.PathBudgetStarvationLimit = Mathf.Clamp(profile.PathBudgetStarvationLimit, 1, 12);
 
             profile.HumanizationReactionJitterTicks =
                 ClampTicks(profile.HumanizationReactionJitterTicks, 0, 8);

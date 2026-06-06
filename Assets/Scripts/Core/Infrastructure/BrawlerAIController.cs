@@ -591,6 +591,8 @@ $"Preferred={LastTacticalPreferredRange:0.0} " +
 $"TooClose={LastTacticalTooCloseDistance:0.0} " +
 $"Retarget={LastTacticalRetargetTick}->{NextTacticalMoveRetargetTick} " +
 $"Reason={LastTacticalMoveReason} " +
+$"NavZero={(_navAgent != null ? _navAgent.ConsecutiveActiveZeroMoveTicks : 0)} " +
+$"PathDefers={(_navAgent != null ? _navAgent.ConsecutivePathBudgetDeferrals : 0)} " +
 $"Map={LastMapRouteDebug}";
 
             _debugSnapshot.PerformanceDebug = AIPerformanceTracker.GetDebugSummary(currentTick);

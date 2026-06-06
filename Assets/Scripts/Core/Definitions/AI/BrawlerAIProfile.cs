@@ -395,6 +395,8 @@ namespace MOBA.Core.Simulation.AI
         public uint BudgetDeferredDangerTicks = 2;
         [Tooltip("Ticks to delay an optional path repath when the AI budget is saturated.")]
         public uint BudgetDeferredPathTicks = 2;
+        [Tooltip("Consecutive path-budget deferrals without a usable route before this bot escalates its next path query.")]
+        public int PathBudgetStarvationLimit = 3;
         [Tooltip("If true, emergency retreat/evade/recovery work may exceed the soft budget instead of being dropped.")]
         public bool AllowCriticalBudgetOverspend = true;
         [Tooltip("If true, over-budget AI frames emit rate-limited warnings.")]
@@ -1373,6 +1375,7 @@ namespace MOBA.Core.Simulation.AI
             BudgetDeferredSenseTicks = 2;
             BudgetDeferredDangerTicks = 2;
             BudgetDeferredPathTicks = 2;
+            PathBudgetStarvationLimit = 3;
             AllowCriticalBudgetOverspend = true;
             LogBudgetWarnings = false;
 
