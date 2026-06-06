@@ -171,6 +171,20 @@ namespace MOBA.Tests.EditMode
                 map.GetWorldPos(3, 1)));
         }
 
+        [Test]
+        public void AIMapNavigationUtility_BudgetSafeDestination_PrefersBoundaryClearCell()
+        {
+            MapData map = MakeMap(5, 5, true);
+            AStarSolver solver = new AStarSolver(map);
+
+            Vector3 resolved = AIMapNavigationUtility.ResolveBudgetSafeDestination(
+                solver,
+                null,
+                map.GetWorldPos(4, 4));
+
+            Assert.AreEqual(map.GetWorldPos(3, 3), resolved);
+        }
+
         private static MapData MakeMap(int width, int height, bool walkable)
         {
             MapData map = new MapData(width, height, 1f, Vector3.zero);

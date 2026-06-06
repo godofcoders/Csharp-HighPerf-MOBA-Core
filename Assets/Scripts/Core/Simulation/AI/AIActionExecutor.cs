@@ -295,8 +295,13 @@ namespace MOBA.Core.Simulation.AI
                     _profile,
                     IsCriticalRoute(routeIntent)))
             {
+                Vector3 budgetSafeDestination =
+                    AIMapNavigationUtility.ResolveBudgetSafeDestination(
+                        _profile,
+                        destination);
+
                 _lastRawMapDestination = destination;
-                _lastResolvedMapDestination = destination;
+                _lastResolvedMapDestination = budgetSafeDestination;
                 _lastMapRequestIntent = routeIntent;
                 _lastMapRequestThreatPosition = threatPosition;
                 _lastMapRequestPreferredThreatDistance = preferredThreatDistance;
@@ -305,11 +310,11 @@ namespace MOBA.Core.Simulation.AI
                 _lastMapRouteDebug =
                     $"Route={routeIntent} " +
                     $"Raw={FormatVector(destination)} " +
-                    $"Resolved={FormatVector(destination)} " +
+                    $"Resolved={FormatVector(budgetSafeDestination)} " +
                     $"Score=0.0 " +
-                    $"Reason=budget_deferred";
+                    $"Reason=budget_deferred_safe";
 
-                return destination;
+                return budgetSafeDestination;
             }
 
             AIMapNavigationRequest request = BuildMapNavigationRequest(

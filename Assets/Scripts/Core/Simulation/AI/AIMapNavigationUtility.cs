@@ -207,6 +207,46 @@ namespace MOBA.Core.Simulation.AI
             return bestDestination;
         }
 
+        public static Vector3 ResolveBudgetSafeDestination(
+            BrawlerAIProfile profile,
+            Vector3 desiredDestination)
+        {
+            return ResolveBudgetSafeDestination(
+                SimulationClock.Pathfinder,
+                profile,
+                desiredDestination);
+        }
+
+        public static Vector3 ResolveBudgetSafeDestination(
+            AStarSolver pathfinder,
+            BrawlerAIProfile profile,
+            Vector3 desiredDestination)
+        {
+            if (pathfinder == null)
+                return desiredDestination;
+
+            int maxOffsetMagnitude = GetBudgetSafeSearchRadius(pathfinder, profile);
+            Vector2Int desiredCoords = pathfinder.GetGridCoords(desiredDestination);
+
+            if (pathfinder.IsWalkableWithBoundaryClearance(desiredCoords))
+                return pathfinder.GetWorldPos(desiredCoords);
+
+            if (pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(
+                    desiredCoords,
+                    maxOffsetMagnitude,
+                    out Vector2Int boundarySafeCoords))
+            {
+                return pathfinder.GetWorldPos(boundarySafeCoords);
+            }
+
+            return pathfinder.TryGetNearestWalkableCoords(
+                    desiredCoords,
+                    maxOffsetMagnitude,
+                    out Vector2Int walkableCoords)
+                ? pathfinder.GetWorldPos(walkableCoords)
+                : desiredDestination;
+        }
+
         private static void InsertCandidate(
             ref CandidateScore first,
             ref CandidateScore second,
@@ -262,6 +302,20 @@ namespace MOBA.Core.Simulation.AI
                    TrySelectReachableCandidate(self, pathfinder, selfCoords, profile, request, second, ref pathValidationCount, out selected) ||
                    TrySelectReachableCandidate(self, pathfinder, selfCoords, profile, request, third, ref pathValidationCount, out selected) ||
                    TrySelectReachableCandidate(self, pathfinder, selfCoords, profile, request, fourth, ref pathValidationCount, out selected);
+        }
+
+        private static int GetBudgetSafeSearchRadius(
+            AStarSolver pathfinder,
+            BrawlerAIProfile profile)
+        {
+            float searchRadius = profile != null && profile.MapDestinationSearchRadius > 0f
+                ? profile.MapDestinationSearchRadius
+                : pathfinder.CellSize * 3f;
+
+            return Mathf.Max(
+                1,
+                Mathf.CeilToInt(Mathf.Max(pathfinder.CellSize, searchRadius) /
+                                Mathf.Max(0.1f, pathfinder.CellSize)));
         }
 
         private static bool TrySelectReachableCandidate(
