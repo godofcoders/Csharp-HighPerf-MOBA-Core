@@ -73,6 +73,26 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual("cooldown", cooldown.Reason);
         }
 
+        [Test]
+        public void Evaluate_RecoversWhenConfidentActionProducedNoDestination()
+        {
+            var memory = new AIIdleHesitationMemory();
+
+            memory.Evaluate(
+                Context(
+                    100u,
+                    actionType: AIActionType.Objective,
+                    actionScore: 90f));
+            AIIdleHesitationDecision recover = memory.Evaluate(
+                Context(
+                    112u,
+                    actionType: AIActionType.Objective,
+                    actionScore: 90f));
+
+            Assert.IsTrue(recover.ShouldRecover);
+            Assert.AreEqual("no_target_no_destination", recover.Reason);
+        }
+
         private static AIIdleHesitationContext Context(
             uint tick,
             bool hasLiveTarget = false,

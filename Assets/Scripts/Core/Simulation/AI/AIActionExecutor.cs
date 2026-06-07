@@ -164,11 +164,11 @@ namespace MOBA.Core.Simulation.AI
                     break;
 
                 case AIActionType.Objective:
-                    RunObjective(targetInfo);
+                    RunObjective(targetInfo, currentTick, attackRange, idealRange, superRange);
                     break;
 
                 default:
-                    _navAgent.Stop();
+                    RunFallbackWander(currentTick);
                     break;
             }
         }
@@ -538,14 +538,19 @@ namespace MOBA.Core.Simulation.AI
             return $"({value.x:0.0},{value.y:0.0},{value.z:0.0})";
         }
 
-        private void RunObjective(AITargetInfo targetInfo)
+        private void RunObjective(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            float attackRange,
+            float idealRange,
+            float superRange)
         {
             // Combat always overrides objective movement.
-            if (targetInfo.HasLiveTarget)
+            if (targetInfo != null && targetInfo.HasLiveTarget)
             {
                 _hasObjectiveDebug = false;
                 _objectiveSlotCommitment.Reset();
-                _navAgent.Stop();
+                RunHoldRange(targetInfo, currentTick, attackRange, idealRange, superRange);
                 return;
             }
 
@@ -553,7 +558,7 @@ namespace MOBA.Core.Simulation.AI
             {
                 _hasObjectiveDebug = false;
                 _objectiveSlotCommitment.Reset();
-                _navAgent.Stop();
+                RunSearch(targetInfo, currentTick);
                 return;
             }
 
@@ -565,7 +570,7 @@ namespace MOBA.Core.Simulation.AI
             {
                 _hasObjectiveDebug = false;
                 _objectiveSlotCommitment.Reset();
-                _navAgent.Stop();
+                RunSearch(targetInfo, currentTick);
                 return;
             }
 
@@ -628,10 +633,10 @@ namespace MOBA.Core.Simulation.AI
        float idealRange,
        float superRange)
         {
-            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
+            if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
             {
                 _lastTacticalMovementIntent = AITacticalMovementIntent.None;
-                _navAgent.Stop();
+                RunSearch(targetInfo, currentTick);
                 return;
             }
 
@@ -670,10 +675,10 @@ namespace MOBA.Core.Simulation.AI
      float idealRange,
      float superRange)
         {
-            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
+            if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
             {
                 _lastTacticalMovementIntent = AITacticalMovementIntent.None;
-                _navAgent.Stop();
+                RunSearch(targetInfo, currentTick);
                 return;
             }
 
@@ -758,10 +763,10 @@ namespace MOBA.Core.Simulation.AI
             float idealRange,
             float superRange)
         {
-            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
+            if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
             {
                 _lastTacticalMovementIntent = AITacticalMovementIntent.None;
-                _navAgent.Stop();
+                RunSearch(targetInfo, currentTick);
                 return;
             }
 
@@ -796,7 +801,7 @@ namespace MOBA.Core.Simulation.AI
 
         private void RunRetreat(AITargetInfo targetInfo, uint currentTick)
         {
-            if (!targetInfo.HasLiveTarget)
+            if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
             {
                 if (!TryRunRetreatWithoutTarget(currentTick))
                     RunFallbackWander(currentTick);
@@ -908,11 +913,19 @@ namespace MOBA.Core.Simulation.AI
         {
             if (_dangerMemory == null || !_dangerMemory.HasDanger)
             {
-                _navAgent.Stop();
+                if (targetInfo != null && targetInfo.HasLiveTarget)
+                {
+                    RunRetreat(targetInfo, currentTick);
+                    return;
+                }
+
+                if (!TryRunRetreatWithoutTarget(currentTick))
+                    RunSearch(targetInfo, currentTick);
+
                 return;
             }
 
-            if (targetInfo.HasLiveTarget && targetInfo.Target != null)
+            if (targetInfo != null && targetInfo.HasLiveTarget && targetInfo.Target != null)
             {
                 _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
                 _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
@@ -1024,7 +1037,8 @@ namespace MOBA.Core.Simulation.AI
             if (TryRunGemPickupSearch(currentTick))
                 return;
 
-            if (targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
+            if (targetInfo != null &&
+                targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
             {
                 RequestMapAwareDestination(
                     targetInfo.LastKnownPosition,
@@ -1277,7 +1291,7 @@ namespace MOBA.Core.Simulation.AI
 
         private void RunUseSuper(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)
         {
-            if (!targetInfo.HasLiveTarget)
+            if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
             {
                 RunFallbackWander(currentTick);
                 return;
@@ -1419,7 +1433,7 @@ namespace MOBA.Core.Simulation.AI
                 return true;
             }
 
-            if (targetInfo.HasLiveTarget && targetInfo.Target != null)
+            if (targetInfo != null && targetInfo.HasLiveTarget && targetInfo.Target != null)
             {
                 float staleDistance = Mathf.Max(0.25f, _profile.TacticalDestinationStaleDistance);
                 float targetMoveSq = (targetInfo.Target.Position - _lastTacticalTargetPosition).sqrMagnitude;
@@ -1754,7 +1768,7 @@ namespace MOBA.Core.Simulation.AI
     uint currentTick,
     float idealRange)
         {
-            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
+            if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
                 return _brawler.Position;
 
             Vector3 selfPos = _brawler.Position;
@@ -1920,7 +1934,7 @@ namespace MOBA.Core.Simulation.AI
       uint currentTick,
       float idealRange)
         {
-            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
+            if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
                 return _brawler.Position;
 
             Vector3 selfPos = _brawler.Position;
@@ -2010,7 +2024,7 @@ namespace MOBA.Core.Simulation.AI
       uint currentTick,
       float idealRange)
         {
-            if (!targetInfo.HasLiveTarget || targetInfo.Target == null)
+            if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
                 return _brawler.Position;
 
             Vector3 selfPos = _brawler.Position;

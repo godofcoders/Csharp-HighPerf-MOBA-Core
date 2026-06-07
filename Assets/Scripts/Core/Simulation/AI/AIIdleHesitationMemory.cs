@@ -179,14 +179,6 @@ namespace MOBA.Core.Simulation.AI
                 return false;
             }
 
-            if (context.ChosenAction.Score > context.LowScoreThreshold &&
-                context.ChosenAction.ActionType != AIActionType.Wander &&
-                context.ChosenAction.ActionType != AIActionType.None)
-            {
-                reason = "confident_action";
-                return false;
-            }
-
             reason = "no_target_no_destination";
             return true;
         }
