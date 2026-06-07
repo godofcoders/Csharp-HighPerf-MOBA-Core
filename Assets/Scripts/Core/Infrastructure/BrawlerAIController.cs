@@ -172,6 +172,10 @@ _actionExecutor != null
             _actionExecutor != null
                 ? _actionExecutor.LastMapRouteDebug
                 : string.Empty;
+        public string LastTacticalStopDebug =>
+            _actionExecutor != null
+                ? _actionExecutor.LastTacticalStopDebug
+                : "Stop=None";
 
         public AIDifficultyLevel Difficulty => _profile != null ? _profile.Difficulty : _difficulty;
         public AIPersonalityType Personality => _profile != null ? _profile.Personality : _personality;
@@ -593,9 +597,11 @@ $"Retarget={LastTacticalRetargetTick}->{NextTacticalMoveRetargetTick} " +
 $"Reason={LastTacticalMoveReason} " +
 $"NavZero={(_navAgent != null ? _navAgent.ConsecutiveActiveZeroMoveTicks : 0)} " +
 $"PathDefers={(_navAgent != null ? _navAgent.ConsecutivePathBudgetDeferrals : 0)} " +
+$"{LastTacticalStopDebug} " +
 $"Map={LastMapRouteDebug}";
 
             _debugSnapshot.PerformanceDebug = AIPerformanceTracker.GetDebugSummary(currentTick);
+            _debugSnapshot.IncidentDebug = AIIncidentLogger.GetDebugSummary(_brawler.EntityID);
             _lastBudgetDebug = BuildBudgetSummary(currentTick);
             _debugSnapshot.ProductionBudgetDebug = _lastBudgetDebug;
             _debugSnapshot.ValidationDebug = _profile.EnableValidationTelemetry
@@ -988,9 +994,17 @@ $"Map={LastMapRouteDebug}";
             if (!decision.ShouldRecover)
                 return;
 
+            AIIncidentLogger.Record(
+                _brawler.EntityID,
+                AIIncidentType.MovementStall,
+                currentTick,
+                decision.Reason);
             _actionExecutor.HandleIdleHesitation(_targetInfo, currentTick);
             AIValidationGauntlet.RecordSignal(
                 AIValidationGauntletSignal.FailureRecovery,
+                currentTick);
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.MovementStall,
                 currentTick);
             AIReportCardTracker.RecordFailureRecovery(
                 _brawler.EntityID,
@@ -1021,6 +1035,12 @@ $"Map={LastMapRouteDebug}";
                     currentTick,
                     out AIFailureRecoveryRequest request))
             {
+                AIIncidentLogger.Record(
+                    _brawler.EntityID,
+                    ToIncidentType(signal.Reason),
+                    currentTick,
+                    $"dist={signal.DistanceToDestination:0.0} age={signal.DestinationAgeTicks}");
+                RecordGauntletSignal(signal.Reason, currentTick);
                 _actionExecutor?.HandleFailureRecovery(request, currentTick);
 
                 bool recovered = _navAgent.TryRequestRecoveryDestination(
@@ -1057,6 +1077,46 @@ $"Map={LastMapRouteDebug}";
             }
 
             _lastFailureRecoveryDebug = _failureRecovery.GetDebugSummary(currentTick);
+        }
+
+        private static AIIncidentType ToIncidentType(AIFailureRecoveryReason reason)
+        {
+            switch (reason)
+            {
+                case AIFailureRecoveryReason.NavigationStall:
+                case AIFailureRecoveryReason.IdleHesitation:
+                    return AIIncidentType.MovementStall;
+
+                case AIFailureRecoveryReason.BlockedRoute:
+                    return AIIncidentType.RouteBlocked;
+
+                case AIFailureRecoveryReason.StaleDestination:
+                    return AIIncidentType.StaleDestination;
+
+                default:
+                    return AIIncidentType.None;
+            }
+        }
+
+        private static void RecordGauntletSignal(
+            AIFailureRecoveryReason reason,
+            uint currentTick)
+        {
+            switch (reason)
+            {
+                case AIFailureRecoveryReason.NavigationStall:
+                case AIFailureRecoveryReason.IdleHesitation:
+                    AIValidationGauntlet.RecordSignal(
+                        AIValidationGauntletSignal.MovementStall,
+                        currentTick);
+                    break;
+
+                case AIFailureRecoveryReason.BlockedRoute:
+                    AIValidationGauntlet.RecordSignal(
+                        AIValidationGauntletSignal.RouteBlocked,
+                        currentTick);
+                    break;
+            }
         }
 
         private void UpdateProductionBudget(uint currentTick)

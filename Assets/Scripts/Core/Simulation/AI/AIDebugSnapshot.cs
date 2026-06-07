@@ -47,6 +47,7 @@ namespace MOBA.Core.Simulation.AI
         public readonly List<string> ActiveStatuses = new List<string>(8);
         public string ObjectiveDebug;
         public string TacticalMovementDebug;
+        public string IncidentDebug;
         public string PerformanceDebug;
         public string ProductionBudgetDebug;
         public string ValidationDebug;

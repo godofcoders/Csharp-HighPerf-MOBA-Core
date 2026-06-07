@@ -244,6 +244,9 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Minimum distance a tactical move should ask the bot to travel. Prevents tiny stale destinations from turning into stationary aim.")]
         public float TacticalMinimumStepDistance = 0.75f;
 
+        [Tooltip("Maximum ticks a tactical no-move hold may persist before fallback movement is forced.")]
+        public uint TacticalStopMaxHoldTicks = 10;
+
         [Tooltip("Extra distance fragile brawlers try to keep from enemies.")]
         public float FragileRangePadding = 0.75f;
 

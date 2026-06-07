@@ -21,6 +21,8 @@ namespace MOBA.Core.Simulation.AI
 
         private uint _nextFallbackWanderTick;
         private Vector3 _fallbackWanderPoint;
+        private uint _tacticalStopStartedTick;
+        private string _lastTacticalStopDebug = "Stop=None";
 
         private Vector3 _lastObjectiveCenter;
         private Vector3 _lastObjectiveSlot;
@@ -85,6 +87,7 @@ namespace MOBA.Core.Simulation.AI
         public uint NextTacticalMoveRetargetTick => _nextTacticalMoveRetargetTick;
         public string LastTacticalMoveReason => _lastTacticalMoveReason;
         public string LastMapRouteDebug => _lastMapRouteDebug;
+        public string LastTacticalStopDebug => _lastTacticalStopDebug;
         public Vector3 LastRawMapDestination => _lastRawMapDestination;
         public Vector3 LastResolvedMapDestination => _lastResolvedMapDestination;
 
@@ -167,8 +170,12 @@ namespace MOBA.Core.Simulation.AI
                     RunObjective(targetInfo, currentTick, attackRange, idealRange, superRange);
                     break;
 
+                case AIActionType.None:
+                    RunTacticalStopOrFallback(currentTick, "none_action", isStopLegal: false);
+                    break;
+
                 default:
-                    RunFallbackWander(currentTick);
+                    RunTacticalStopOrFallback(currentTick, $"unknown_{actionType}", isStopLegal: false);
                     break;
             }
         }
@@ -246,6 +253,8 @@ namespace MOBA.Core.Simulation.AI
             Vector3 threatPosition = default,
             float preferredThreatDistance = 0f)
         {
+            ResetTacticalStop("destination_requested");
+
             Vector3 resolvedDestination = ResolveMapAwareDestination(
                 destination,
                 routeIntent,
@@ -556,6 +565,7 @@ namespace MOBA.Core.Simulation.AI
 
             if (_objectiveMemory == null)
             {
+                RecordObjectiveNeglect(currentTick, "objective_memory_missing");
                 _hasObjectiveDebug = false;
                 _objectiveSlotCommitment.Reset();
                 RunSearch(targetInfo, currentTick);
@@ -568,13 +578,38 @@ namespace MOBA.Core.Simulation.AI
                     _brawler.Team,
                     out AIObjectiveCandidate objective))
             {
+                RecordObjectiveNeglect(currentTick, "objective_candidate_missing");
                 _hasObjectiveDebug = false;
                 _objectiveSlotCommitment.Reset();
                 RunSearch(targetInfo, currentTick);
                 return;
             }
 
-            Vector3 objectivePosition = objective.Position;
+            AIIntentValidationResult validation =
+                AIIntentValidationUtility.ValidateObjectiveIntent(
+                    objective,
+                    _profile,
+                    SimulationClock.Pathfinder);
+
+            if (!validation.IsValid)
+            {
+                AIIncidentLogger.Record(
+                    _brawler.EntityID,
+                    AIIncidentType.ObjectiveIntentInvalid,
+                    currentTick,
+                    validation.Reason);
+                RecordObjectiveNeglect(currentTick, validation.Reason);
+                _hasObjectiveDebug = false;
+                _objectiveSlotCommitment.Reset();
+                RunSearch(targetInfo, currentTick);
+                return;
+            }
+
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.ObjectiveIntent,
+                currentTick);
+
+            Vector3 objectivePosition = validation.ResolvedDestination;
             BrawlerArchetype archetype = _profile != null
                 ? _profile.Archetype
                 : BrawlerArchetype.Fighter;
@@ -588,14 +623,14 @@ namespace MOBA.Core.Simulation.AI
                 _brawler.Team,
                 archetype,
                 _brawler.EntityID,
-                objective.Position,
+                objectivePosition,
                 objective.Radius,
                 slotRole,
                 objective.FriendlyPresence,
                 objective.EnemyPresence);
 
             if (TryResolveLaneHoldPoint(
-                    objective.Position,
+                    objectivePosition,
                     _currentExecuteTick,
                     out Vector3 lanePosition,
                     out _))
@@ -624,6 +659,18 @@ namespace MOBA.Core.Simulation.AI
             _hasObjectiveDebug = true;
 
             _navAgent.RequestDestination(destination, 1f);
+        }
+
+        private void RecordObjectiveNeglect(uint currentTick, string reason)
+        {
+            AIIncidentLogger.Record(
+                _brawler.EntityID,
+                AIIncidentType.ObjectiveNeglect,
+                currentTick,
+                reason);
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.ObjectiveNeglect,
+                currentTick);
         }
 
         private void RunApproach(
@@ -1154,8 +1201,29 @@ namespace MOBA.Core.Simulation.AI
                 return false;
             }
 
+            AIIntentValidationResult validation =
+                AIIntentValidationUtility.ValidateGemPickupIntent(
+                    decision,
+                    _brawler.Position,
+                    _profile,
+                    SimulationClock.Pathfinder);
+
+            if (!validation.IsValid)
+            {
+                AIIncidentLogger.Record(
+                    _brawler.EntityID,
+                    AIIncidentType.GemIntentInvalid,
+                    currentTick,
+                    validation.Reason);
+                return false;
+            }
+
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.GemPickupIntent,
+                currentTick);
+
             RequestMapAwareDestination(
-                decision.Position,
+                validation.ResolvedDestination,
                 0.65f,
                 AIMapRouteIntent.Objective);
 
@@ -1287,6 +1355,47 @@ namespace MOBA.Core.Simulation.AI
                     AIMapRouteIntent.Wander);
                 _nextFallbackWanderTick = currentTick + _profile.FallbackWanderRetargetTicks;
             }
+        }
+
+        private void RunTacticalStopOrFallback(
+            uint currentTick,
+            string reason,
+            bool isStopLegal)
+        {
+            if (_tacticalStopStartedTick == 0u)
+                _tacticalStopStartedTick = currentTick;
+
+            AITacticalStopDecision decision = AITacticalStopPolicy.Evaluate(
+                isStopLegal,
+                currentTick,
+                _tacticalStopStartedTick,
+                _profile != null ? _profile.TacticalStopMaxHoldTicks : 1u,
+                reason);
+
+            _lastTacticalStopDebug = decision.GetDebugSummary();
+
+            if (decision.CanHoldStop)
+            {
+                AIIncidentLogger.Record(
+                    _brawler.EntityID,
+                    AIIncidentType.TacticalStop,
+                    currentTick,
+                    decision.Reason);
+                AIValidationGauntlet.RecordSignal(
+                    AIValidationGauntletSignal.TacticalStop,
+                    currentTick);
+                _navAgent.Stop();
+                return;
+            }
+
+            ResetTacticalStop(decision.Reason);
+            RunFallbackWander(currentTick);
+        }
+
+        private void ResetTacticalStop(string reason)
+        {
+            _tacticalStopStartedTick = 0u;
+            _lastTacticalStopDebug = $"Stop=None Reason={reason}";
         }
 
         private void RunUseSuper(AITargetInfo targetInfo, uint currentTick, float attackRange, float idealRange, float superRange)

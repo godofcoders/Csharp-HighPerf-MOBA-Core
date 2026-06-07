@@ -165,6 +165,7 @@ namespace MOBA.Core.Simulation.AI
             AIValidationGauntlet.ResetForTests();
             AIReportCardTracker.ResetForTests();
             AIMatchTelemetryTrendTracker.ResetForTests();
+            AIIncidentLogger.ResetForTests();
             _botRecords.Clear();
             _staleBotBuffer.Clear();
             _hasPurgeTick = false;
@@ -194,6 +195,7 @@ namespace MOBA.Core.Simulation.AI
             AIValidationScenarioTracker.Clear();
             AIValidationGauntlet.ResetForTests();
             AIMatchTelemetryTrendTracker.Clear();
+            AIIncidentLogger.ResetForTests();
             _botRecords.Clear();
             _staleBotBuffer.Clear();
             _hasPurgeTick = false;

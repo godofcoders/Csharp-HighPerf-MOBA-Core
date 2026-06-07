@@ -447,6 +447,7 @@ namespace MOBA.Core.Simulation.AI
             profile.AIMoveInputTurnRateDegreesPerTick = Mathf.Clamp(profile.AIMoveInputTurnRateDegreesPerTick, 8f, 120f);
             profile.AIHighPriorityMoveInputTurnRateDegreesPerTick = Mathf.Clamp(profile.AIHighPriorityMoveInputTurnRateDegreesPerTick, 20f, 180f);
             profile.TacticalMinimumStepDistance = Mathf.Clamp(profile.TacticalMinimumStepDistance, 0.25f, 2f);
+            profile.TacticalStopMaxHoldTicks = ClampTicks(profile.TacticalStopMaxHoldTicks, 1, 90);
             profile.TacticalStrafeDistance = Mathf.Clamp(profile.TacticalStrafeDistance, 0.4f, 4f);
             profile.TacticalKiteDistance = Mathf.Clamp(profile.TacticalKiteDistance, 0.5f, 5f);
 

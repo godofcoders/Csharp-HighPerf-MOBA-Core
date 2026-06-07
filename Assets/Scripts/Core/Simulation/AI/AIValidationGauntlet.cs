@@ -10,7 +10,12 @@ namespace MOBA.Core.Simulation.AI
         ObjectivePlay,
         AbilityUsage,
         StuckRecovery,
-        TeamCoordination
+        TeamCoordination,
+        MovementLiveness,
+        LaneDiscipline,
+        GemPickup,
+        CombatDiscipline,
+        PlaytestRegression
     }
 
     public enum AIValidationGauntletStatus
@@ -28,7 +33,13 @@ namespace MOBA.Core.Simulation.AI
         MainAttackCast,
         GadgetCast,
         SuperCast,
-        FailureRecovery
+        FailureRecovery,
+        MovementStall,
+        RouteBlocked,
+        GemPickupIntent,
+        ObjectiveIntent,
+        ObjectiveNeglect,
+        TacticalStop
     }
 
     [Flags]
@@ -65,6 +76,11 @@ namespace MOBA.Core.Simulation.AI
         public float MinimumTeamRoleAdjustedRatio;
         public int MinimumAbilitySignalCount;
         public int MinimumFailureRecoverySignalCount;
+        public int MinimumMovementSignalCount;
+        public int MinimumGemIntentSignalCount;
+        public int MinimumObjectiveIntentSignalCount;
+        public int MaximumTacticalStopSignalCount;
+        public int MaximumObjectiveNeglectSignalCount;
         public int MinimumUniqueActionCount;
     }
 
@@ -78,6 +94,11 @@ namespace MOBA.Core.Simulation.AI
         public int ExpectedActionCount;
         public int AbilitySignalCount;
         public int FailureRecoverySignalCount;
+        public int MovementSignalCount;
+        public int GemIntentSignalCount;
+        public int ObjectiveIntentSignalCount;
+        public int TacticalStopSignalCount;
+        public int ObjectiveNeglectSignalCount;
         public int UniqueActionCount;
         public float TargetedRatio;
         public float ExpectedActionRatio;
@@ -92,7 +113,7 @@ namespace MOBA.Core.Simulation.AI
     public static class AIValidationGauntlet
     {
         private const int ActionSlotCount = (int)AIActionType.Objective + 1;
-        private const int SignalSlotCount = (int)AIValidationGauntletSignal.FailureRecovery + 1;
+        private const int SignalSlotCount = (int)AIValidationGauntletSignal.TacticalStop + 1;
 
         private static readonly int[] _actionTotals = new int[ActionSlotCount];
         private static readonly int[] _signalTotals = new int[SignalSlotCount];
@@ -236,6 +257,9 @@ namespace MOBA.Core.Simulation.AI
                 $"expected={result.ExpectedActionRatio:0%} " +
                 $"ability={result.AbilitySignalCount} " +
                 $"recovery={result.FailureRecoverySignalCount} " +
+                $"gem={result.GemIntentSignalCount} " +
+                $"obj={result.ObjectiveIntentSignalCount} " +
+                $"stop={result.TacticalStopSignalCount} " +
                 $"reason={result.Reason}";
         }
 
@@ -270,6 +294,11 @@ namespace MOBA.Core.Simulation.AI
                 MinimumTeamRoleAdjustedRatio = 0f,
                 MinimumAbilitySignalCount = 0,
                 MinimumFailureRecoverySignalCount = 0,
+                MinimumMovementSignalCount = 0,
+                MinimumGemIntentSignalCount = 0,
+                MinimumObjectiveIntentSignalCount = 0,
+                MaximumTacticalStopSignalCount = int.MaxValue,
+                MaximumObjectiveNeglectSignalCount = int.MaxValue,
                 MinimumUniqueActionCount = 1
             };
 
@@ -322,6 +351,70 @@ namespace MOBA.Core.Simulation.AI
                     spec.MinimumTeamRoleAdjustedRatio = 0.05f;
                     spec.MinimumUniqueActionCount = 3;
                     break;
+
+                case AIValidationGauntletScenarioType.MovementLiveness:
+                    spec.ExpectedActions =
+                        AIValidationGauntletActionSet.Wander |
+                        AIValidationGauntletActionSet.Search |
+                        AIValidationGauntletActionSet.Regroup |
+                        AIValidationGauntletActionSet.Objective;
+                    spec.MinimumExpectedActionRatio = 0.30f;
+                    spec.MaximumTacticalStopSignalCount = 0;
+                    spec.MinimumUniqueActionCount = 2;
+                    break;
+
+                case AIValidationGauntletScenarioType.LaneDiscipline:
+                    spec.ExpectedActions =
+                        AIValidationGauntletActionSet.Search |
+                        AIValidationGauntletActionSet.Regroup |
+                        AIValidationGauntletActionSet.Objective;
+                    spec.MinimumExpectedActionRatio = 0.35f;
+                    spec.MinimumObjectiveIntentSignalCount = 1;
+                    spec.MinimumTeamRoleAdjustedRatio = 0.03f;
+                    spec.MinimumUniqueActionCount = 2;
+                    break;
+
+                case AIValidationGauntletScenarioType.GemPickup:
+                    spec.ExpectedActions =
+                        AIValidationGauntletActionSet.Search |
+                        AIValidationGauntletActionSet.Objective;
+                    spec.MinimumExpectedActionRatio = 0.35f;
+                    spec.MinimumGemIntentSignalCount = 1;
+                    spec.MaximumTargetedRatio = 0.75f;
+                    break;
+
+                case AIValidationGauntletScenarioType.CombatDiscipline:
+                    spec.ExpectedActions =
+                        AIValidationGauntletActionSet.Approach |
+                        AIValidationGauntletActionSet.HoldRange |
+                        AIValidationGauntletActionSet.Reposition |
+                        AIValidationGauntletActionSet.Retreat |
+                        AIValidationGauntletActionSet.Evade;
+                    spec.MinimumExpectedActionRatio = 0.55f;
+                    spec.MinimumTargetedRatio = 0.50f;
+                    spec.MaximumTacticalStopSignalCount = 0;
+                    spec.MinimumUniqueActionCount = 2;
+                    break;
+
+                case AIValidationGauntletScenarioType.PlaytestRegression:
+                    spec.ExpectedActions =
+                        AIValidationGauntletActionSet.Wander |
+                        AIValidationGauntletActionSet.Search |
+                        AIValidationGauntletActionSet.Approach |
+                        AIValidationGauntletActionSet.HoldRange |
+                        AIValidationGauntletActionSet.Reposition |
+                        AIValidationGauntletActionSet.Retreat |
+                        AIValidationGauntletActionSet.Evade |
+                        AIValidationGauntletActionSet.Regroup |
+                        AIValidationGauntletActionSet.Peel |
+                        AIValidationGauntletActionSet.Objective;
+                    spec.MinimumExpectedActionRatio = 0.70f;
+                    spec.MinimumGemIntentSignalCount = 1;
+                    spec.MinimumObjectiveIntentSignalCount = 1;
+                    spec.MaximumTacticalStopSignalCount = 0;
+                    spec.MaximumObjectiveNeglectSignalCount = 0;
+                    spec.MinimumUniqueActionCount = 5;
+                    break;
             }
 
             return spec;
@@ -367,6 +460,21 @@ namespace MOBA.Core.Simulation.AI
             if (result.FailureRecoverySignalCount < _activeSpec.MinimumFailureRecoverySignalCount)
                 return WithStatus(result, AIValidationGauntletStatus.Failed, "recovery_signal_missing");
 
+            if (result.MovementSignalCount < _activeSpec.MinimumMovementSignalCount)
+                return WithStatus(result, AIValidationGauntletStatus.Failed, "movement_signal_missing");
+
+            if (result.GemIntentSignalCount < _activeSpec.MinimumGemIntentSignalCount)
+                return WithStatus(result, AIValidationGauntletStatus.Failed, "gem_intent_missing");
+
+            if (result.ObjectiveIntentSignalCount < _activeSpec.MinimumObjectiveIntentSignalCount)
+                return WithStatus(result, AIValidationGauntletStatus.Failed, "objective_intent_missing");
+
+            if (result.TacticalStopSignalCount > _activeSpec.MaximumTacticalStopSignalCount)
+                return WithStatus(result, AIValidationGauntletStatus.Failed, "tactical_stop_high");
+
+            if (result.ObjectiveNeglectSignalCount > _activeSpec.MaximumObjectiveNeglectSignalCount)
+                return WithStatus(result, AIValidationGauntletStatus.Failed, "objective_neglect_high");
+
             if (result.UniqueActionCount < _activeSpec.MinimumUniqueActionCount)
                 return WithStatus(result, AIValidationGauntletStatus.Failed, "action_diversity_low");
 
@@ -390,6 +498,10 @@ namespace MOBA.Core.Simulation.AI
             int expectedActionCount = CountExpectedActions(spec.ExpectedActions);
             int abilitySignals = GetSignalCount(AIValidationGauntletSignal.AbilityCast);
             int recoverySignals = GetSignalCount(AIValidationGauntletSignal.FailureRecovery);
+            int movementSignals =
+                recoverySignals +
+                GetSignalCount(AIValidationGauntletSignal.MovementStall) +
+                GetSignalCount(AIValidationGauntletSignal.RouteBlocked);
 
             return new AIValidationGauntletResult
             {
@@ -401,6 +513,11 @@ namespace MOBA.Core.Simulation.AI
                 ExpectedActionCount = expectedActionCount,
                 AbilitySignalCount = abilitySignals,
                 FailureRecoverySignalCount = recoverySignals,
+                MovementSignalCount = movementSignals,
+                GemIntentSignalCount = GetSignalCount(AIValidationGauntletSignal.GemPickupIntent),
+                ObjectiveIntentSignalCount = GetSignalCount(AIValidationGauntletSignal.ObjectiveIntent),
+                TacticalStopSignalCount = GetSignalCount(AIValidationGauntletSignal.TacticalStop),
+                ObjectiveNeglectSignalCount = GetSignalCount(AIValidationGauntletSignal.ObjectiveNeglect),
                 UniqueActionCount = CountUniqueActions(),
                 TargetedRatio = GetRatio(_targetedBotCount),
                 ExpectedActionRatio = GetRatio(expectedActionCount),
@@ -449,6 +566,21 @@ namespace MOBA.Core.Simulation.AI
 
             if (spec.MinimumFailureRecoverySignalCount < 0)
                 spec.MinimumFailureRecoverySignalCount = 0;
+
+            if (spec.MinimumMovementSignalCount < 0)
+                spec.MinimumMovementSignalCount = 0;
+
+            if (spec.MinimumGemIntentSignalCount < 0)
+                spec.MinimumGemIntentSignalCount = 0;
+
+            if (spec.MinimumObjectiveIntentSignalCount < 0)
+                spec.MinimumObjectiveIntentSignalCount = 0;
+
+            if (spec.MaximumTacticalStopSignalCount < 0)
+                spec.MaximumTacticalStopSignalCount = 0;
+
+            if (spec.MaximumObjectiveNeglectSignalCount < 0)
+                spec.MaximumObjectiveNeglectSignalCount = 0;
 
             if (spec.MinimumUniqueActionCount < 0)
                 spec.MinimumUniqueActionCount = 0;

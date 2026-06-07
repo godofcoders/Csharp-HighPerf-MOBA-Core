@@ -66,7 +66,10 @@ namespace MOBA.Core.Infrastructure
                     $"bots={result.BotDecisionCount} " +
                     $"expected={result.ExpectedActionRatio:0%} " +
                     $"ability={result.AbilitySignalCount} " +
-                    $"recovery={result.FailureRecoverySignalCount}");
+                    $"recovery={result.FailureRecoverySignalCount} " +
+                    $"gem={result.GemIntentSignalCount} " +
+                    $"objective={result.ObjectiveIntentSignalCount} " +
+                    $"stop={result.TacticalStopSignalCount}");
             }
 
             return result;

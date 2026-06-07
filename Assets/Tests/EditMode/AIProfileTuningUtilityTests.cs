@@ -136,6 +136,7 @@ namespace MOBA.Tests.EditMode
             profile.HumanizationActionScoreJitter = 99f;
             profile.HumanizationFakeOutScoreBonus = 99f;
             profile.HumanizationPressureMistakePenalty = 99f;
+            profile.TacticalStopMaxHoldTicks = 999;
 
             AIProfileTuningUtility.ApplyRuntimeTuning(
                 profile,
@@ -167,6 +168,7 @@ namespace MOBA.Tests.EditMode
             Assert.LessOrEqual(profile.HumanizationActionScoreJitter, 6f);
             Assert.LessOrEqual(profile.HumanizationFakeOutScoreBonus, 16f);
             Assert.LessOrEqual(profile.HumanizationPressureMistakePenalty, 24f);
+            Assert.LessOrEqual((int)profile.TacticalStopMaxHoldTicks, 90);
         }
 
         private BrawlerAIProfile CreateProfile()

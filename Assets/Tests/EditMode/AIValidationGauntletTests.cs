@@ -208,6 +208,94 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(1, result.ExpectedActionCount);
         }
 
+        [Test]
+        public void GemPickup_RequiresValidatedGemIntentSignal()
+        {
+            AIValidationGauntlet.BeginScenario(
+                AIValidationGauntletScenarioType.GemPickup,
+                10u);
+
+            for (int i = 0; i < 12; i++)
+            {
+                AIValidationGauntlet.RecordFrame(
+                    MakeFrame(activeBots: 3, targetedBots: 1, targetlessBots: 2),
+                    MakeActionCounts(
+                        AIActionType.Objective,
+                        2,
+                        AIActionType.Search,
+                        1));
+            }
+
+            AIValidationGauntletResult missing =
+                AIValidationGauntlet.EndScenario(30u);
+
+            Assert.AreEqual(AIValidationGauntletStatus.Failed, missing.Status);
+            Assert.AreEqual("gem_intent_missing", missing.Reason);
+
+            AIValidationGauntlet.BeginScenario(
+                AIValidationGauntletScenarioType.GemPickup,
+                40u);
+
+            for (int i = 0; i < 12; i++)
+            {
+                AIValidationGauntlet.RecordFrame(
+                    MakeFrame(activeBots: 3, targetedBots: 1, targetlessBots: 2),
+                    MakeActionCounts(
+                        AIActionType.Objective,
+                        2,
+                        AIActionType.Search,
+                        1));
+            }
+
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.GemPickupIntent,
+                42u);
+
+            AIValidationGauntletResult passed =
+                AIValidationGauntlet.EndScenario(60u);
+
+            Assert.AreEqual(AIValidationGauntletStatus.Passed, passed.Status);
+            Assert.AreEqual(1, passed.GemIntentSignalCount);
+        }
+
+        [Test]
+        public void PlaytestRegression_FailsOnTacticalStopIncident()
+        {
+            AIValidationGauntletSpec spec =
+                AIValidationGauntlet.CreateDefaultSpec(
+                    AIValidationGauntletScenarioType.PlaytestRegression);
+            spec.MinimumFrameCount = 1;
+            spec.MinimumBotDecisionCount = 5;
+            spec.MinimumUniqueActionCount = 3;
+
+            AIValidationGauntlet.BeginScenario(spec, 10u);
+
+            AIValidationGauntlet.RecordFrame(
+                MakeFrame(activeBots: 5, targetedBots: 2, targetlessBots: 3),
+                MakeActionCounts(
+                    AIActionType.Search,
+                    2,
+                    AIActionType.Objective,
+                    2,
+                    AIActionType.HoldRange,
+                    1));
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.GemPickupIntent,
+                10u);
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.ObjectiveIntent,
+                10u);
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.TacticalStop,
+                10u);
+
+            AIValidationGauntletResult result =
+                AIValidationGauntlet.EndScenario(11u);
+
+            Assert.AreEqual(AIValidationGauntletStatus.Failed, result.Status);
+            Assert.AreEqual("tactical_stop_high", result.Reason);
+        }
+
         private static void RecordAbilityUsageFrames()
         {
             for (int i = 0; i < 12; i++)

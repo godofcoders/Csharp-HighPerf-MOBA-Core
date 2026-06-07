@@ -185,6 +185,14 @@ namespace MOBA.Core.Simulation.AI
                     _path = null;
                     _pathIndex = 0;
                     _consecutivePathBudgetDeferrals++;
+                    if (_consecutivePathBudgetDeferrals >= GetPathBudgetStarvationLimit())
+                    {
+                        AIIncidentLogger.Record(
+                            _brawler.EntityID,
+                            AIIncidentType.PathBudgetStarvation,
+                            _clock.CurrentTick,
+                            $"defers={_consecutivePathBudgetDeferrals}");
+                    }
                 }
                 else
                 {
