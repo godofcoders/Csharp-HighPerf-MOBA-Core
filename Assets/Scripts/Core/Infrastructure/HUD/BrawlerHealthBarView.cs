@@ -81,11 +81,26 @@ namespace MOBA.Core.Infrastructure
         private Camera _camera;
         private float _displayedHealthRatio = 1f;
         private bool _hasDisplayedHealthRatio;
+        private BrawlerState _subscribedState;
 
         private void Awake()
         {
             AutoBindReferences();
+            ConfigureFillImage();
             ApplyStaticColors();
+        }
+
+        private void OnEnable()
+        {
+            AutoBindReferences();
+            ConfigureFillImage();
+            SubscribeToHealthEvents();
+            RefreshImmediate();
+        }
+
+        private void OnDisable()
+        {
+            UnsubscribeFromHealthEvents();
         }
 
         public void Bind(
@@ -95,6 +110,8 @@ namespace MOBA.Core.Infrastructure
             Image frameImage,
             Canvas canvas)
         {
+            UnsubscribeFromHealthEvents();
+
             _brawlerController = brawlerController;
             _fillImage = fillImage;
             _backgroundImage = backgroundImage;
@@ -102,8 +119,11 @@ namespace MOBA.Core.Infrastructure
             _canvas = canvas;
 
             AutoBindReferences();
+            ConfigureFillImage();
             ApplyStaticColors();
             _hasDisplayedHealthRatio = false;
+            SubscribeToHealthEvents();
+            RefreshImmediate();
         }
 
         private void AutoBindReferences()
@@ -113,6 +133,38 @@ namespace MOBA.Core.Infrastructure
 
             if (_canvas == null)
                 _canvas = GetComponent<Canvas>() ?? GetComponentInChildren<Canvas>();
+
+            if (_fillImage == null)
+                _fillImage = FindChildImage("Fill");
+
+            if (_backgroundImage == null)
+                _backgroundImage = FindChildImage("Background");
+
+            if (_frameImage == null)
+                _frameImage = FindChildImage("Frame");
+        }
+
+        private Image FindChildImage(string childName)
+        {
+            Image[] images = GetComponentsInChildren<Image>(true);
+            for (int i = 0; i < images.Length; i++)
+            {
+                Image image = images[i];
+                if (image != null && image.gameObject.name == childName)
+                    return image;
+            }
+
+            return null;
+        }
+
+        private void ConfigureFillImage()
+        {
+            if (_fillImage == null)
+                return;
+
+            _fillImage.type = Image.Type.Filled;
+            _fillImage.fillMethod = Image.FillMethod.Horizontal;
+            _fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
         }
 
         private void LateUpdate()
@@ -124,6 +176,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             BrawlerState state = _brawlerController.State;
+            SubscribeToHealthEvents();
 
             // Visibility rules first — short-circuit before reading health
             // numbers if we're going to hide.
@@ -146,14 +199,80 @@ namespace MOBA.Core.Infrastructure
             SetVisible(true);
 
             float displayedRatio = ResolveDisplayedRatio(ratio);
-
-            if (_fillImage != null)
-            {
-                _fillImage.fillAmount = displayedRatio;
-                _fillImage.color = ResolveColor(_brawlerController, state, ratio);
-            }
+            ApplyHealthVisuals(state, ratio, displayedRatio);
 
             BillboardToCamera();
+        }
+
+        private void SubscribeToHealthEvents()
+        {
+            BrawlerState state = _brawlerController != null
+                ? _brawlerController.State
+                : null;
+
+            if (_subscribedState == state)
+                return;
+
+            UnsubscribeFromHealthEvents();
+
+            if (state == null)
+                return;
+
+            _subscribedState = state;
+            _subscribedState.OnHealthChanged += HandleHealthChanged;
+        }
+
+        private void UnsubscribeFromHealthEvents()
+        {
+            if (_subscribedState == null)
+                return;
+
+            _subscribedState.OnHealthChanged -= HandleHealthChanged;
+            _subscribedState = null;
+        }
+
+        private void HandleHealthChanged(float currentHealth)
+        {
+            RefreshImmediate();
+        }
+
+        private void RefreshImmediate()
+        {
+            if (_brawlerController == null || _brawlerController.State == null)
+                return;
+
+            BrawlerState state = _brawlerController.State;
+            if (_hideWhileDead && state.IsDead)
+            {
+                SetVisible(false);
+                return;
+            }
+
+            float maxHealth = Mathf.Max(1f, state.MaxHealth.Value);
+            float ratio = Mathf.Clamp01(state.CurrentHealth / maxHealth);
+
+            if (_hideAtFullHealth && ratio >= 0.999f)
+            {
+                SetVisible(false);
+                return;
+            }
+
+            _displayedHealthRatio = ratio;
+            _hasDisplayedHealthRatio = true;
+            SetVisible(true);
+            ApplyHealthVisuals(state, ratio, ratio);
+        }
+
+        private void ApplyHealthVisuals(
+            BrawlerState state,
+            float actualRatio,
+            float displayedRatio)
+        {
+            if (_fillImage == null)
+                return;
+
+            _fillImage.fillAmount = displayedRatio;
+            _fillImage.color = ResolveColor(_brawlerController, state, actualRatio);
         }
 
         private float ResolveDisplayedRatio(float targetRatio)
