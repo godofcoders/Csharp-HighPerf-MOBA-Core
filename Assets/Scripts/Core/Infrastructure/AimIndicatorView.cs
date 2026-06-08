@@ -11,6 +11,13 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Optional right edge line for spread-fan abilities. Active only when AimPreviewData.SpreadHalfAngleDegrees > 0.")]
         [SerializeField] private LineRenderer _spreadRightLine;
 
+        [Header("Style")]
+        [SerializeField] private Color _mainAttackColor = new Color(0.24f, 0.78f, 1f, 0.88f);
+        [SerializeField] private Color _superColor = new Color(1f, 0.38f, 0.14f, 0.94f);
+        [SerializeField] private Color _blockedColor = new Color(1f, 0.18f, 0.12f, 0.92f);
+        [SerializeField] private float _fallbackDirectionalWidth = 0.8f;
+        [SerializeField] private float _spreadEdgeWidth = 0.08f;
+
         [Header("Throwable / Placement")]
         [SerializeField] private LineRenderer _arcRenderer;
         [SerializeField] private Transform _endMarker;
@@ -61,11 +68,15 @@ namespace MOBA.Core.Infrastructure
 
             Vector3 dir = data.Direction.normalized;
             Vector3 endPoint = data.Origin + (dir * data.Range);
+            Color color = ResolveColor(data);
+            float width = Mathf.Max(0.05f, data.Width > 0f ? data.Width : _fallbackDirectionalWidth);
 
             if (_lineRenderer != null)
             {
                 _lineRenderer.enabled = true;
                 _lineRenderer.positionCount = 2;
+                _lineRenderer.widthMultiplier = width;
+                ApplyColor(_lineRenderer, color);
                 _lineRenderer.SetPosition(0, data.Origin);
                 _lineRenderer.SetPosition(1, endPoint);
             }
@@ -83,8 +94,8 @@ namespace MOBA.Core.Infrastructure
                 Vector3 leftEnd  = data.Origin + (leftRot  * dir) * data.Range;
                 Vector3 rightEnd = data.Origin + (rightRot * dir) * data.Range;
 
-                SetEdgeLine(_spreadLeftLine,  data.Origin, leftEnd);
-                SetEdgeLine(_spreadRightLine, data.Origin, rightEnd);
+                SetEdgeLine(_spreadLeftLine, data.Origin, leftEnd, color);
+                SetEdgeLine(_spreadRightLine, data.Origin, rightEnd, color);
             }
 
             if (_endMarker != null)
@@ -94,11 +105,13 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
-        private void SetEdgeLine(LineRenderer lr, Vector3 a, Vector3 b)
+        private void SetEdgeLine(LineRenderer lr, Vector3 a, Vector3 b, Color color)
         {
             if (lr == null) return;
             lr.enabled = true;
             lr.positionCount = 2;
+            lr.widthMultiplier = Mathf.Max(0.02f, _spreadEdgeWidth);
+            ApplyColor(lr, color);
             lr.SetPosition(0, a);
             lr.SetPosition(1, b);
         }
@@ -106,11 +119,13 @@ namespace MOBA.Core.Infrastructure
         private void ShowThrowable(AimPreviewData data)
         {
             HideAll();
+            Color color = ResolveColor(data);
 
             if (_arcRenderer != null)
             {
                 _arcRenderer.enabled = true;
                 _arcRenderer.positionCount = _arcSegments + 1;
+                ApplyColor(_arcRenderer, color);
 
                 for (int i = 0; i <= _arcSegments; i++)
                 {
@@ -128,18 +143,21 @@ namespace MOBA.Core.Infrastructure
 
             if (_radiusRingRenderer != null && data.Radius > 0.01f)
             {
-                DrawRadiusRing(data.TargetPoint, data.Radius);
+                DrawRadiusRing(data.TargetPoint, data.Radius, color);
             }
         }
 
         private void ShowPlacement(AimPreviewData data)
         {
             HideAll();
+            Color color = ResolveColor(data);
 
             if (_lineRenderer != null)
             {
                 _lineRenderer.enabled = true;
                 _lineRenderer.positionCount = 2;
+                _lineRenderer.widthMultiplier = Mathf.Max(0.05f, data.Width > 0f ? data.Width : _fallbackDirectionalWidth);
+                ApplyColor(_lineRenderer, color);
                 _lineRenderer.SetPosition(0, data.Origin);
                 _lineRenderer.SetPosition(1, data.TargetPoint);
             }
@@ -152,7 +170,7 @@ namespace MOBA.Core.Infrastructure
 
             if (_radiusRingRenderer != null && data.Radius > 0.01f)
             {
-                DrawRadiusRing(data.TargetPoint, data.Radius);
+                DrawRadiusRing(data.TargetPoint, data.Radius, color);
             }
         }
 
@@ -163,13 +181,14 @@ namespace MOBA.Core.Infrastructure
             return basePos + Vector3.up * arcOffset;
         }
 
-        private void DrawRadiusRing(Vector3 center, float radius)
+        private void DrawRadiusRing(Vector3 center, float radius, Color color)
         {
             if (_radiusRingRenderer == null)
                 return;
 
             _radiusRingRenderer.enabled = true;
             _radiusRingRenderer.positionCount = _ringSegments + 1;
+            ApplyColor(_radiusRingRenderer, color);
 
             for (int i = 0; i <= _ringSegments; i++)
             {
@@ -184,6 +203,25 @@ namespace MOBA.Core.Infrastructure
 
                 _radiusRingRenderer.SetPosition(i, point);
             }
+        }
+
+        private Color ResolveColor(AimPreviewData data)
+        {
+            if (data.IsObstructed)
+                return _blockedColor;
+
+            return data.Kind == AimPreviewKind.Super
+                ? _superColor
+                : _mainAttackColor;
+        }
+
+        private void ApplyColor(LineRenderer renderer, Color color)
+        {
+            if (renderer == null)
+                return;
+
+            renderer.startColor = color;
+            renderer.endColor = color;
         }
 
         public void Hide()

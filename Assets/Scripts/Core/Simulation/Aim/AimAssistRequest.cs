@@ -14,8 +14,10 @@ namespace MOBA.Core.Simulation
         public Vector3 Origin;
         public Vector3 Forward;
         public float Range;
+        public float ProjectileRadius;
 
         public bool IncludeSelf;
         public bool RequireAlive;
+        public bool RequireLineOfSight;
     }
 }

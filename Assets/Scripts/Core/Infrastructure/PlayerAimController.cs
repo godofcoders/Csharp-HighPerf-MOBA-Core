@@ -13,6 +13,7 @@ namespace MOBA.Core.Infrastructure
         [Header("Fallback")]
         [SerializeField] private float _defaultRange = 8f;
         [SerializeField] private float _originHeightOffset = 0.25f;
+        [SerializeField] private float _defaultDirectionalWidth = 1f;
 
         [Header("Throwable Preview")]
         [SerializeField] private float _defaultThrowableArcHeight = 1.75f;
@@ -138,7 +139,18 @@ namespace MOBA.Core.Infrastructure
                 default:
                     {
                         float directionalRange = ResolveDirectionalRange(ability);
+                        float previewWidth = ResolveDirectionalWidth(ability);
                         float spreadHalfAngle = ResolveSpreadHalfAngle(ability);
+                        AimLineTraceResult trace = AimLineOfSightUtility.Trace(
+                            SimulationClock.Pathfinder,
+                            _brawler.transform.position,
+                            aimDirection,
+                            directionalRange,
+                            previewWidth * 0.5f);
+
+                        float effectiveRange = trace.IsBlocked
+                            ? trace.ClearDistance
+                            : directionalRange;
 
                         return new AimPreviewData
                         {
@@ -147,8 +159,10 @@ namespace MOBA.Core.Infrastructure
                             Mode = AimPreviewMode.Directional,
                             Origin = playerCenter,
                             Direction = aimDirection,
-                            Range = directionalRange,
-                            TargetPoint = playerCenter + (aimDirection * directionalRange),
+                            Range = effectiveRange,
+                            Width = previewWidth,
+                            IsObstructed = trace.IsBlocked,
+                            TargetPoint = playerCenter + (aimDirection * effectiveRange),
                             ArcHeight = 0f,
                             Radius = 0f,
                             SpreadHalfAngleDegrees = spreadHalfAngle
@@ -170,13 +184,33 @@ namespace MOBA.Core.Infrastructure
             return 0f;
         }
 
+        private float ResolveDirectionalWidth(AbilityDefinition ability)
+        {
+            float defaultWidth = Mathf.Max(0.05f, _defaultDirectionalWidth);
+            if (ability == null)
+                return defaultWidth;
+
+            return ability.AimPreviewWidth > 0.01f
+                ? ability.AimPreviewWidth
+                : defaultWidth;
+        }
+
         private float ResolveDirectionalRange(AbilityDefinition ability)
         {
             if (ability == null)
                 return _defaultRange;
 
+            if (ability is BasicProjectileAttackDefinition basicAttack)
+                return basicAttack.Range;
+
+            if (ability is BasicSuperDefinition basicSuper)
+                return basicSuper.Range;
+
             if (ability is ProjectileAbilityDefinition projectile)
                 return projectile.Range;
+
+            if (ability is VolleyProjectileAbilityDefinition volley)
+                return volley.Range;
 
             if (ability is BurstSequenceProjectileAbilityDefinition burst)
                 return burst.Range;

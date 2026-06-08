@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation.AI;
 
 namespace MOBA.Core.Simulation
 {
@@ -86,7 +87,14 @@ namespace MOBA.Core.Simulation
                 return result;
             }
 
-            return BuildTargetResult(request, _buffer[0]);
+            for (int i = 0; i < _buffer.Count; i++)
+            {
+                if (CanUseAimAssistTarget(request, _buffer[i]))
+                    return BuildTargetResult(request, _buffer[i]);
+            }
+
+            result.AimPoint = request.Origin + result.AimDirection * Mathf.Max(1f, request.Range);
+            return result;
         }
 
         private static AimAssistResult ResolveSmartOffense(in AimAssistRequest request)
@@ -121,6 +129,9 @@ namespace MOBA.Core.Simulation
             {
                 BrawlerController target = _buffer[i];
                 if (target == null)
+                    continue;
+
+                if (!CanUseAimAssistTarget(request, target))
                     continue;
 
                 Vector3 toTarget = target.Position - request.Origin;
@@ -178,6 +189,9 @@ namespace MOBA.Core.Simulation
             {
                 BrawlerController target = _buffer[i];
                 if (target == null || target.State == null)
+                    continue;
+
+                if (!CanUseAimAssistTarget(request, target))
                     continue;
 
                 float maxHealth = Mathf.Max(1f, target.State.MaxHealth.Value);
@@ -244,6 +258,27 @@ namespace MOBA.Core.Simulation
                 AimDirection = forward,
                 AimPoint = request.Origin
             };
+        }
+
+        private static bool CanUseAimAssistTarget(
+            in AimAssistRequest request,
+            BrawlerController target)
+        {
+            if (target == null)
+                return false;
+
+            if (!request.RequireLineOfSight)
+                return true;
+
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return true;
+
+            return AimLineOfSightUtility.HasLineOfSight(
+                pathfinder,
+                request.Origin,
+                target.Position,
+                request.ProjectileRadius);
         }
 
         private static AimAssistResult BuildTargetResult(in AimAssistRequest request, BrawlerController target)

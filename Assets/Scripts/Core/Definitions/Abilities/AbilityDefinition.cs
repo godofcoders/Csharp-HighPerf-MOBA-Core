@@ -48,8 +48,12 @@ namespace MOBA.Core.Definitions
         public float AimAssistDistanceBias = 1f;
         public float AimAssistIdealRange = -1f;
         public float AimAssistPlacementDistance = 3f;
+
         [Header("Aim Preview")]
         public AimPreviewMode PreviewMode = AimPreviewMode.Directional;
+        [Tooltip("World-space width shown for directional aim preview and used by wall-aware auto aim. 1 roughly matches the default projectile collision diameter.")]
+        [Min(0.05f)]
+        public float AimPreviewWidth = 1f;
 
         public abstract MOBA.Core.Simulation.IAbilityLogic CreateLogic();
 

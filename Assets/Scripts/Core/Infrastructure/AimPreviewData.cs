@@ -18,6 +18,8 @@ namespace MOBA.Core.Infrastructure
         public Vector3 Origin;
         public Vector3 Direction;
         public float Range;
+        public float Width;
+        public bool IsObstructed;
 
         // Throwable / landing preview
         public Vector3 TargetPoint;

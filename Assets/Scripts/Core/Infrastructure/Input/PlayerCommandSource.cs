@@ -352,8 +352,10 @@ namespace MOBA.Core.Infrastructure
                 Origin = _controlledBrawler.Position,
                 Forward = GetFireAimDirection(),
                 Range = ResolveAimRange(abilityDefinition),
+                ProjectileRadius = ResolveAimProjectileRadius(abilityDefinition),
                 IncludeSelf = ShouldIncludeSelf(actionType, abilityDefinition),
-                RequireAlive = true
+                RequireAlive = true,
+                RequireLineOfSight = ShouldRequireLineOfSight(abilityDefinition)
             };
         }
 
@@ -407,8 +409,17 @@ namespace MOBA.Core.Infrastructure
             if (abilityDefinition == null)
                 return 8f;
 
+            if (abilityDefinition is BasicProjectileAttackDefinition basicAttack)
+                return basicAttack.Range;
+
+            if (abilityDefinition is BasicSuperDefinition basicSuper)
+                return basicSuper.Range;
+
             if (abilityDefinition is ProjectileAbilityDefinition projectile)
                 return projectile.Range;
+
+            if (abilityDefinition is VolleyProjectileAbilityDefinition volley)
+                return volley.Range;
 
             if (abilityDefinition is AoEAbilityDefinition aoe)
                 return aoe.Radius;
@@ -426,6 +437,36 @@ namespace MOBA.Core.Infrastructure
                 return effectAbility.PreviewRange;
 
             return 8f;
+        }
+
+        private float ResolveAimProjectileRadius(AbilityDefinition abilityDefinition)
+        {
+            if (abilityDefinition == null)
+                return 0.5f;
+
+            return abilityDefinition.AimPreviewWidth > 0.01f
+                ? Mathf.Max(0.05f, abilityDefinition.AimPreviewWidth * 0.5f)
+                : 0.5f;
+        }
+
+        private bool ShouldRequireLineOfSight(AbilityDefinition abilityDefinition)
+        {
+            if (abilityDefinition == null)
+                return true;
+
+            if (abilityDefinition.PreviewMode == AimPreviewMode.Throwable ||
+                abilityDefinition.PreviewMode == AimPreviewMode.Placement)
+            {
+                return false;
+            }
+
+            return abilityDefinition.DeliveryType == AbilityDeliveryType.Projectile ||
+                   abilityDefinition is BasicProjectileAttackDefinition ||
+                   abilityDefinition is BasicSuperDefinition ||
+                   abilityDefinition is ProjectileAbilityDefinition ||
+                   abilityDefinition is VolleyProjectileAbilityDefinition ||
+                   abilityDefinition is BurstSequenceProjectileAbilityDefinition ||
+                   abilityDefinition is ChainProjectileAbilityDefinition;
         }
 
         private bool ShouldIncludeSelf(BrawlerActionRequestType actionType, AbilityDefinition abilityDefinition)
