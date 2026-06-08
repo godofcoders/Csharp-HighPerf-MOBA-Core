@@ -41,6 +41,16 @@ namespace MOBA.Core.Infrastructure
         private float _activeStartTime = -1f;
         private MatchState _previousState = MatchState.Waiting;
 
+        public void BindOverlay(GameObject overlayRoot, TMP_Text bigTextTmp, Text bigTextLegacy)
+        {
+            _overlayRoot = overlayRoot;
+            _bigTextTmp = bigTextTmp;
+            _bigTextLegacy = bigTextLegacy;
+
+            SetText(string.Empty);
+            Show(false);
+        }
+
         private void Update()
         {
             MatchManager mm = MatchManager.Instance;

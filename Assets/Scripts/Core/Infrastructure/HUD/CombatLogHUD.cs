@@ -62,6 +62,24 @@ namespace MOBA.Core.Infrastructure
         private void Awake()
         {
             _entityLabelResolver = ResolveEntityLabel;
+            AutoBindTextTargets();
+        }
+
+        public void BindTextTargets(TMP_Text tmpText, Text legacyText, GameObject feedRoot)
+        {
+            _tmpText = tmpText;
+            _legacyText = legacyText;
+            _feedRoot = feedRoot;
+            AutoBindTextTargets();
+        }
+
+        private void AutoBindTextTargets()
+        {
+            if (_tmpText == null)
+                _tmpText = GetComponent<TMP_Text>();
+
+            if (_legacyText == null)
+                _legacyText = GetComponent<Text>();
         }
 
         private void OnEnable()

@@ -51,6 +51,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private string _countdownFormat = "Respawning in {0}";
 
         private float _deathTime = -1f;
+        private float _nextAutoDiscoverTime;
         private bool _wasDead;
 
         private void Awake()
@@ -81,6 +82,28 @@ namespace MOBA.Core.Infrastructure
 
         public void SetLocalBrawler(BrawlerController brawler) => _localBrawler = brawler;
 
+        public void BindOverlay(
+            GameObject overlayRoot,
+            TMP_Text titleTextTmp,
+            Text titleTextLegacy,
+            TMP_Text countdownTextTmp,
+            Text countdownTextLegacy,
+            TMP_Text killerTextTmp,
+            Text killerTextLegacy)
+        {
+            _overlayRoot = overlayRoot;
+            _titleTextTmp = titleTextTmp;
+            _titleTextLegacy = titleTextLegacy;
+            _countdownTextTmp = countdownTextTmp;
+            _countdownTextLegacy = countdownTextLegacy;
+            _killerTextTmp = killerTextTmp;
+            _killerTextLegacy = killerTextLegacy;
+
+            SetTitle(_titleLabel);
+            SetKiller(string.Empty);
+            Show(false);
+        }
+
         /// <summary>Optional: set "killed by X" string (e.g. "Killed by Colt").
         /// Pass empty / null to hide the line.</summary>
         public void SetKilledBy(string killerName)
@@ -90,6 +113,8 @@ namespace MOBA.Core.Infrastructure
 
         private void Update()
         {
+            TryAutoDiscoverBrawler();
+
             if (_localBrawler == null || _localBrawler.State == null)
             {
                 Show(false);
@@ -137,6 +162,15 @@ namespace MOBA.Core.Infrastructure
             SetCountdown(countdownStr);
 
             Show(true);
+        }
+
+        private void TryAutoDiscoverBrawler()
+        {
+            if (_localBrawler != null || Time.unscaledTime < _nextAutoDiscoverTime)
+                return;
+
+            _nextAutoDiscoverTime = Time.unscaledTime + 0.5f;
+            AutoDiscoverBrawler();
         }
 
         private void Show(bool visible)

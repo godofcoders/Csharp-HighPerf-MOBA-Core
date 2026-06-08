@@ -34,6 +34,27 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Hide the HUD before the match goes Active (lobby/countdown phases).")]
         [SerializeField] private bool _hideBeforeActive = false;
 
+        private void Awake()
+        {
+            AutoBindTextTargets();
+        }
+
+        public void BindTextTargets(TMP_Text tmpText, Text legacyText)
+        {
+            _tmpText = tmpText;
+            _legacyText = legacyText;
+            AutoBindTextTargets();
+        }
+
+        private void AutoBindTextTargets()
+        {
+            if (_tmpText == null)
+                _tmpText = GetComponent<TMP_Text>();
+
+            if (_legacyText == null)
+                _legacyText = GetComponent<Text>();
+        }
+
         private void Update()
         {
             string status = ComposeStatus();
