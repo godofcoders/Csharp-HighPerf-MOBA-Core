@@ -57,7 +57,7 @@ namespace MOBA.Core.Simulation
                     if (outgoingLifesteal > 0f && workingDamage > 0f)
                     {
                         float beforeHeal = ctx.Attacker.State.CurrentHealth;
-                        ctx.Attacker.State.Heal(workingDamage * outgoingLifesteal);
+                        ctx.Attacker.State.Heal(workingDamage * outgoingLifesteal, ctx.Attacker, true);
                         float healingDone = ctx.Attacker.State.CurrentHealth - beforeHeal;
                         if (healingDone > 0f)
                         {

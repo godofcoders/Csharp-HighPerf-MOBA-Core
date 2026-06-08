@@ -9,7 +9,8 @@ namespace MOBA.Core.Infrastructure
             CombatLogEntry entry,
             bool showAssists,
             bool showFatalDamage,
-            bool showStatusEvents)
+            bool showStatusEvents,
+            bool showHeals = true)
         {
             switch (entry.EventType)
             {
@@ -24,6 +25,8 @@ namespace MOBA.Core.Infrastructure
                     return showFatalDamage && entry.IsFatal;
 
                 case CombatLogEventType.Heal:
+                    return showHeals;
+
                 case CombatLogEventType.StatusApplied:
                 case CombatLogEventType.StatusRemoved:
                     return showStatusEvents;

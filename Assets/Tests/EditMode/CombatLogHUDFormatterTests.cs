@@ -61,6 +61,29 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void ShouldDisplay_CanIncludeHealsWhenConfigured()
+        {
+            CombatLogEntry heal = new CombatLogEntry
+            {
+                EventType = CombatLogEventType.Heal
+            };
+
+            Assert.IsTrue(CombatLogHUDFormatter.ShouldDisplay(
+                heal,
+                showAssists: true,
+                showFatalDamage: false,
+                showStatusEvents: false,
+                showHeals: true));
+
+            Assert.IsFalse(CombatLogHUDFormatter.ShouldDisplay(
+                heal,
+                showAssists: true,
+                showFatalDamage: false,
+                showStatusEvents: false,
+                showHeals: false));
+        }
+
+        [Test]
         public void FormatLine_UsesResolvedLabelsForKillFeed()
         {
             CombatLogEntry entry = new CombatLogEntry
@@ -94,6 +117,25 @@ namespace MOBA.Tests.EditMode
                 includeTick: true);
 
             Assert.AreEqual("[0] Blue Colt assisted on Entity 99", line);
+        }
+
+        [Test]
+        public void FormatLine_FormatsHealEvents()
+        {
+            CombatLogEntry entry = new CombatLogEntry
+            {
+                EventType = CombatLogEventType.Heal,
+                SourceEntityId = 10,
+                TargetEntityId = 20,
+                Value = 120.4f
+            };
+
+            string line = CombatLogHUDFormatter.FormatLine(
+                entry,
+                ResolveTestLabel,
+                includeTick: false);
+
+            Assert.AreEqual("Blue Colt healed Red Jessie for 120", line);
         }
 
         private static string ResolveTestLabel(int entityId)

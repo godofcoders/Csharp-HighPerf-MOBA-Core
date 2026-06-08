@@ -14,7 +14,7 @@ namespace MOBA.Core.Definitions
             if (target == null || target.State == null)
                 return false;
 
-            target.State.Heal(HealAmount);
+            target.State.Heal(HealAmount, source as BrawlerController, true);
             return true;
         }
     }

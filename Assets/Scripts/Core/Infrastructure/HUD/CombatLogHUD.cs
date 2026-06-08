@@ -33,6 +33,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private int _maxEntriesToScan = 128;
 
         [SerializeField] private bool _showAssists = true;
+        [SerializeField] private bool _showHeals = true;
         [SerializeField] private bool _showFatalDamage = false;
         [SerializeField] private bool _showStatusEvents = false;
         [SerializeField] private bool _includeTick = false;
@@ -152,7 +153,8 @@ namespace MOBA.Core.Infrastructure
                         entry,
                         _showAssists,
                         _showFatalDamage,
-                        _showStatusEvents))
+                        _showStatusEvents,
+                        _showHeals))
                 {
                     continue;
                 }

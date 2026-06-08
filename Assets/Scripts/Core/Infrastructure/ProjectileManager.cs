@@ -209,7 +209,7 @@ namespace MOBA.Core.Infrastructure
                         {
                             Debug.Log($"[HYBRID PROJECTILE] {p.Owner.name} healed ally {targetBrawler.name} for {p.AllyHealAmount}");
                             float beforeHealth = targetBrawler.State.CurrentHealth;
-                            targetBrawler.State.Heal(p.AllyHealAmount);
+                            targetBrawler.State.Heal(p.AllyHealAmount, p.Owner, true);
                             float healingDone = targetBrawler.State.CurrentHealth - beforeHealth;
                             if (healingDone > 0f)
                             {
@@ -540,7 +540,7 @@ namespace MOBA.Core.Infrastructure
                     if (p.ImpactAllyHeal != 0f)
                     {
                         float beforeHealth = targetBrawler.State.CurrentHealth;
-                        targetBrawler.State.Heal(p.ImpactAllyHeal);
+                        targetBrawler.State.Heal(p.ImpactAllyHeal, p.Owner, true);
                         float healingDone = targetBrawler.State.CurrentHealth - beforeHealth;
                         if (healingDone > 0f)
                         {

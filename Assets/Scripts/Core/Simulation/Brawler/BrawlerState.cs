@@ -78,6 +78,9 @@ namespace MOBA.Core.Simulation
         // Reset (respawn). May be null if death was self-inflicted (e.g.
         // environmental hazard with no Attacker).
         public BrawlerController LastAttacker;
+        public uint LastDamageTakenTick { get; private set; }
+        public bool IsHealthRegenerating { get; private set; }
+        public float LastHealthRegenAmount { get; private set; }
         public MovementModifierCollection IncomingMovementModifiers => Stats.IncomingMovementModifiers;
 
         // Session 3 refactor: the active status-effect list and its pure
@@ -362,8 +365,8 @@ namespace MOBA.Core.Simulation
 
         /// <summary>
         /// Fan a finalised heal-applied event to every installed super-charge
-        /// source runtime. Not wired into the heal pipeline yet — safe to
-        /// call when that integration lands.
+        /// source runtime. Called by the Heal pipeline once clamping has
+        /// produced the actual healing amount.
         /// </summary>
         public void NotifyHealApplied(float healAmount, BrawlerState recipient)
         {
@@ -376,6 +379,12 @@ namespace MOBA.Core.Simulation
                 return;
 
             float beforeHealth = CurrentHealth;
+            uint currentTick = ServiceProvider.TryGet<ISimulationClock>(out var clock)
+                ? clock.CurrentTick
+                : 0u;
+            LastDamageTakenTick = currentTick;
+            IsHealthRegenerating = false;
+            LastHealthRegenAmount = 0f;
 
             // Stats.ApplyDamage does the math + clamp and returns true if THIS
             // call caused the transition alive -> dead. We keep the side
@@ -397,13 +406,12 @@ namespace MOBA.Core.Simulation
                     Position = Owner.transform.position,
                     Direction = Owner.transform.forward,
                     Value = amount,
-                    Tick = ServiceProvider.Get<ISimulationClock>().CurrentTick
+                    Tick = currentTick
                 });
             }
 
             if (justDied)
             {
-                uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
                 EnterActionState(
                     BrawlerActionStateType.Dead,
                     currentTick,
@@ -432,19 +440,45 @@ namespace MOBA.Core.Simulation
 
         public void Heal(float amount)
         {
-            if (IsDead)
+            Heal(amount, Owner, true);
+        }
+
+        public void Heal(float amount, BrawlerController source, bool writeCombatLog)
+        {
+            if (IsDead || amount <= 0f)
                 return;
 
             float beforeHealth = CurrentHealth;
+            uint currentTick = ServiceProvider.TryGet<ISimulationClock>(out var clock)
+                ? clock.CurrentTick
+                : 0u;
 
             // Clamped heal is done inside Stats; we still own the logging and
             // event bus side effects so presentation hooks stay in the
             // coordinator layer.
             Stats.ApplyHeal(amount);
+            float healingDone = CurrentHealth - beforeHealth;
 
-            Debug.Log($"[HEAL] Target={Owner?.name ?? "Unknown"} Team={Team} Heal={amount} Health: {beforeHealth} -> {CurrentHealth}");
+            if (healingDone <= 0f)
+                return;
+
+            Debug.Log($"[HEAL] Target={Owner?.name ?? "Unknown"} Team={Team} Heal={healingDone} Health: {beforeHealth} -> {CurrentHealth}");
 
             OnHealthChanged?.Invoke(CurrentHealth);
+
+            if (writeCombatLog &&
+                ServiceProvider.TryGet<ICombatLogService>(out var combatLog))
+            {
+                int sourceEntityId = source != null ? source.EntityID : EntityID;
+                combatLog.AddEntry(CombatLogEntry.CreateHeal(
+                    currentTick,
+                    sourceEntityId,
+                    EntityID,
+                    healingDone));
+            }
+
+            if (source != null && source.State != null)
+                source.State.NotifyHealApplied(healingDone, this);
 
             if (Owner != null)
             {
@@ -455,10 +489,56 @@ namespace MOBA.Core.Simulation
                     AbilityDefinition = null,
                     Position = Owner.transform.position,
                     Direction = Owner.transform.forward,
-                    Value = amount,
-                    Tick = ServiceProvider.Get<ISimulationClock>().CurrentTick
+                    Value = healingDone,
+                    Tick = currentTick
                 });
             }
+        }
+
+        public void TickHealthRegeneration(uint currentTick, float deltaTime)
+        {
+            LastHealthRegenAmount = 0f;
+
+            uint delayTicks = SimulationClock.SecondsToTicks(
+                BrawlerHealthRegenUtility.DefaultDelaySeconds);
+
+            if (!BrawlerHealthRegenUtility.CanRegenerate(
+                    currentTick,
+                    LastDamageTakenTick,
+                    LastAttackTick,
+                    delayTicks,
+                    CurrentHealth,
+                    MaxHealth.Value,
+                    IsDead))
+            {
+                IsHealthRegenerating = false;
+                return;
+            }
+
+            float healAmount = BrawlerHealthRegenUtility.CalculateHealAmount(
+                MaxHealth.Value,
+                deltaTime,
+                BrawlerHealthRegenUtility.DefaultMaxHealthPerSecond);
+
+            if (healAmount <= 0f)
+            {
+                IsHealthRegenerating = false;
+                return;
+            }
+
+            float beforeHealth = CurrentHealth;
+            Stats.ApplyHeal(healAmount);
+            float healingDone = CurrentHealth - beforeHealth;
+
+            if (healingDone <= 0f)
+            {
+                IsHealthRegenerating = false;
+                return;
+            }
+
+            IsHealthRegenerating = true;
+            LastHealthRegenAmount = healingDone;
+            OnHealthChanged?.Invoke(CurrentHealth);
         }
 
         public void UpdateResources(float deltaTime)
@@ -520,6 +600,9 @@ namespace MOBA.Core.Simulation
             CarriedGems.Clear();
             ThreatTracker.Clear();
             AssistTracker.Clear();
+            LastDamageTakenTick = 0u;
+            IsHealthRegenerating = false;
+            LastHealthRegenAmount = 0f;
             Stats.ClearAllModifiers();        // incoming/outgoing damage mods, movement mods, shield
             StatusEffects.Clear();
             ClearActionState();

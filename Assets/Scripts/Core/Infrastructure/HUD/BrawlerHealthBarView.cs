@@ -67,6 +67,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Color _redTeamFallbackColor = new Color(1.00f, 0.30f, 0.30f);
         [Tooltip("Tint applied when health drops below LowHealthThreshold (lerped over the team color).")]
         [SerializeField] private Color _lowHealthTint = new Color(1.00f, 0.08f, 0.06f);
+        [SerializeField] private Color _regenerationTint = new Color(0.60f, 1.00f, 0.55f);
         [SerializeField] private Color _backgroundColor = new Color(0.05f, 0.05f, 0.06f, 0.88f);
         [SerializeField] private Color _frameColor = new Color(0f, 0f, 0f, 0.78f);
         [Tooltip("Health ratio at or below which the low-health tint kicks in.")]
@@ -180,11 +181,19 @@ namespace MOBA.Core.Infrastructure
         {
             Color baseColor = ResolveBaseColor(brawlerController, state.Team);
 
-            if (healthRatio > _lowHealthThreshold)
-                return baseColor;
+            if (healthRatio <= _lowHealthThreshold)
+            {
+                float t = 1f - (healthRatio / Mathf.Max(0.0001f, _lowHealthThreshold));
+                baseColor = Color.Lerp(baseColor, _lowHealthTint, t);
+            }
 
-            float t = 1f - (healthRatio / Mathf.Max(0.0001f, _lowHealthThreshold));
-            return Color.Lerp(baseColor, _lowHealthTint, t);
+            if (state.IsHealthRegenerating)
+            {
+                float pulse = 0.35f + Mathf.PingPong(Time.time * 3.5f, 0.25f);
+                baseColor = Color.Lerp(baseColor, _regenerationTint, pulse);
+            }
+
+            return baseColor;
         }
 
         private Color ResolveBaseColor(BrawlerController brawlerController, TeamType team)

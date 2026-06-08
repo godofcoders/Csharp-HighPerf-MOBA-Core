@@ -448,6 +448,7 @@ namespace MOBA.Core.Infrastructure
             _mainAttack?.Tick(currentTick);
             _superAbility?.Tick(currentTick);
             _gadgetLogic?.Tick(currentTick);
+            State.TickHealthRegeneration(currentTick, SimulationClock.TickDeltaTime);
 
             UpdateVisualStealth();
             UpdateDebugSnapshot(currentTick);

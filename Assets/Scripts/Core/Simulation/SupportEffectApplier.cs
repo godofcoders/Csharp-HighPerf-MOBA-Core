@@ -13,7 +13,7 @@ namespace MOBA.Core.Simulation
             {
                 case SupportEffectType.Heal:
                     float beforeHealth = request.Target.State.CurrentHealth;
-                    request.Target.State.Heal(request.Magnitude);
+                    request.Target.State.Heal(request.Magnitude, request.Source, true);
                     float healingDone = request.Target.State.CurrentHealth - beforeHealth;
                     if (healingDone > 0f)
                     {

@@ -19,7 +19,7 @@ namespace MOBA.Core.Simulation.Abilities
                 return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
 
             float beforeHealth = owner.State.CurrentHealth;
-            owner.State.Heal(_healAmount);
+            owner.State.Heal(_healAmount, owner, true);
             float healingDone = owner.State.CurrentHealth - beforeHealth;
             if (healingDone > 0f)
             {

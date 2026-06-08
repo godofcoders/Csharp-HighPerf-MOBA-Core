@@ -90,20 +90,14 @@ namespace MOBA.Core.Infrastructure
             if (gg == null)
                 return "Match active (no Gem Grab in scene)";
 
-            // Gem totals + win-timer (only show timer when a team is
-            // actually counting down).
-            string scoreLine = $"Blue {gg.BlueTeamGems} / Red {gg.RedTeamGems}";
-            string timerLine = gg.HasLeader
-                ? $" — Hold {gg.WinTimerRemainingSeconds:0.0}s ({gg.LeadingTeam})"
-                : string.Empty;
-
-            // Match clock formatted as M:SS.
-            float t = Mathf.Max(0f, gg.MatchTimeRemainingSeconds);
-            int minutes = Mathf.FloorToInt(t / 60f);
-            int seconds = Mathf.FloorToInt(t - minutes * 60f);
-            string clock = $" — Match {minutes}:{seconds:00}";
-
-            return scoreLine + timerLine + clock;
+            return MatchHUDFormatter.FormatActiveGemGrabStatus(
+                gg.BlueTeamGems,
+                gg.RedTeamGems,
+                gg.GemsToWin,
+                gg.HasLeader,
+                gg.LeadingTeam,
+                gg.WinTimerRemainingSeconds,
+                gg.MatchTimeRemainingSeconds);
         }
 
         private void WriteStatus(string s)

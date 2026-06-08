@@ -60,7 +60,7 @@ namespace MOBA.Core.Simulation.Abilities
                 if (isAlly)
                 {
                     float beforeHealth = targetBrawler.State.CurrentHealth;
-                    targetBrawler.State.Heal(_definition.AllyHeal);
+                    targetBrawler.State.Heal(_definition.AllyHeal, context.Source, true);
                     float healingDone = targetBrawler.State.CurrentHealth - beforeHealth;
                     if (healingDone > 0f)
                     {

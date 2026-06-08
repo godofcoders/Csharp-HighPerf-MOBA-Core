@@ -103,7 +103,7 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
                 new Vector2(0f, -18f),
-                new Vector2(980f, 42f),
+                new Vector2(1180f, 42f),
                 24,
                 TextAnchor.UpperCenter,
                 Color.white,

@@ -74,6 +74,22 @@ namespace MOBA.Core.Simulation
             };
         }
 
+        public static CombatLogEntry CreateHeal(uint tick, int healerId, int targetId, float value)
+        {
+            return new CombatLogEntry
+            {
+                EventType = CombatLogEventType.Heal,
+                Tick = tick,
+                SourceEntityId = healerId,
+                TargetEntityId = targetId,
+                Value = value,
+                DamageType = default,
+                StatusEffectType = default,
+                IsFatal = false,
+                IsSuper = false
+            };
+        }
+
         public static CombatLogEntry CreateKill(uint tick, int killerId, int victimId)
         {
             return new CombatLogEntry
