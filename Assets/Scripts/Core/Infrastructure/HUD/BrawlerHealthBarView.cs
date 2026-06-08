@@ -6,7 +6,7 @@ namespace MOBA.Core.Infrastructure
 {
     /// <summary>
     /// World-space health bar that floats above a brawler. Drives a UI Image
-    /// fill from <see cref="BrawlerState.CurrentHealth"/> / MaxHealth.Value,
+    /// foreground width from <see cref="BrawlerState.CurrentHealth"/> / MaxHealth.Value,
     /// billboards toward the main camera each frame, color-codes by team,
     /// and hides while the brawler is dead. Runtime-authored bars can bind
     /// references via <see cref="Bind"/>; designer-authored bars can keep
@@ -16,7 +16,7 @@ namespace MOBA.Core.Infrastructure
     ///   1. Create an empty child GameObject on the brawler at head height.
     ///   2. Add a Canvas (Render Mode = World Space). Scale ~0.01.
     ///   3. Add a background Image (dark, slightly larger).
-    ///   4. Add a foreground Image set to Filled / Horizontal.
+    ///   4. Add a foreground Image. The view left-pivots and resizes it.
     ///   5. Add this component to the Canvas GameObject; assign:
     ///        _brawlerController (auto-discovered via GetComponentInParent
     ///        if you leave it null),
@@ -36,7 +36,7 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("The brawler this bar tracks. If null, GetComponentInParent finds it on Awake.")]
         [SerializeField] private BrawlerController _brawlerController;
 
-        [Tooltip("Foreground Image with Image Type = Filled, Horizontal. fillAmount is driven from health ratio.")]
+        [Tooltip("Foreground Image resized from the left by health ratio. Image Type is forced to Simple at runtime.")]
         [SerializeField] private Image _fillImage;
 
         [Tooltip("Optional background Image. Stays static; included so we can hide the whole bar together.")]
@@ -79,6 +79,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _fillLerpSpeed = 8f;
 
         private Camera _camera;
+        private RectTransform _fillRect;
+        private float _fillFullWidth;
         private float _displayedHealthRatio = 1f;
         private bool _hasDisplayedHealthRatio;
         private BrawlerState _subscribedState;
@@ -117,6 +119,8 @@ namespace MOBA.Core.Infrastructure
             _backgroundImage = backgroundImage;
             _frameImage = frameImage;
             _canvas = canvas;
+            _fillRect = null;
+            _fillFullWidth = 0f;
 
             AutoBindReferences();
             ConfigureFillImage();
@@ -162,9 +166,20 @@ namespace MOBA.Core.Infrastructure
             if (_fillImage == null)
                 return;
 
-            _fillImage.type = Image.Type.Filled;
-            _fillImage.fillMethod = Image.FillMethod.Horizontal;
-            _fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+            _fillRect = _fillImage.rectTransform;
+            _fillImage.type = Image.Type.Simple;
+            _fillImage.fillAmount = 1f;
+
+            if (_fillRect == null)
+                return;
+
+            _fillFullWidth = ResolveFillFullWidth();
+            _fillRect.anchorMin = new Vector2(0f, 0f);
+            _fillRect.anchorMax = new Vector2(0f, 1f);
+            _fillRect.pivot = new Vector2(0f, 0.5f);
+            _fillRect.anchoredPosition = Vector2.zero;
+            _fillRect.offsetMin = Vector2.zero;
+            _fillRect.offsetMax = new Vector2(_fillFullWidth, 0f);
         }
 
         private void LateUpdate()
@@ -271,8 +286,39 @@ namespace MOBA.Core.Infrastructure
             if (_fillImage == null)
                 return;
 
-            _fillImage.fillAmount = displayedRatio;
+            float clampedRatio = Mathf.Clamp01(displayedRatio);
+            _fillImage.fillAmount = clampedRatio;
             _fillImage.color = ResolveColor(_brawlerController, state, actualRatio);
+
+            if (_fillRect != null)
+            {
+                if (_fillFullWidth <= 0f)
+                    _fillFullWidth = ResolveFillFullWidth();
+
+                _fillRect.SetSizeWithCurrentAnchors(
+                    RectTransform.Axis.Horizontal,
+                    Mathf.Max(0f, _fillFullWidth * clampedRatio));
+            }
+        }
+
+        private float ResolveFillFullWidth()
+        {
+            if (_fillRect == null)
+                return 1f;
+
+            RectTransform parentRect = _fillRect.parent as RectTransform;
+            float width = parentRect != null ? parentRect.rect.width : 0f;
+
+            if (width <= 0f && parentRect != null)
+                width = parentRect.sizeDelta.x;
+
+            if (width <= 0f)
+                width = _fillRect.rect.width;
+
+            if (width <= 0f)
+                width = _fillRect.sizeDelta.x;
+
+            return Mathf.Max(1f, width);
         }
 
         private float ResolveDisplayedRatio(float targetRatio)

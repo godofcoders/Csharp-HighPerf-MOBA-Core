@@ -127,9 +127,7 @@ namespace MOBA.Core.Infrastructure
             fillRect.offsetMin = Vector2.zero;
             fillRect.offsetMax = Vector2.zero;
 
-            fillImage.type = Image.Type.Filled;
-            fillImage.fillMethod = Image.FillMethod.Horizontal;
-            fillImage.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fillImage.type = Image.Type.Simple;
             fillImage.fillAmount = 1f;
 
             BrawlerHealthBarView view = root.GetComponent<BrawlerHealthBarView>();
