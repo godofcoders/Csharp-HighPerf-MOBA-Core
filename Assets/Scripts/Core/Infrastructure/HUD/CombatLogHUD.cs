@@ -37,6 +37,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private bool _showFatalDamage = false;
         [SerializeField] private bool _showStatusEvents = false;
         [SerializeField] private bool _includeTick = false;
+        [SerializeField] private bool _useRichText = true;
+        [SerializeField] private bool _useLocalPerspectiveLabels = true;
 
         [Tooltip("0 keeps entries until the combat log service drops them. Non-zero hides older feed lines by simulation tick age.")]
         [Min(0)]
@@ -52,10 +54,15 @@ namespace MOBA.Core.Infrastructure
         private readonly Dictionary<int, string> _entityLabels =
             new Dictionary<int, string>(16);
 
+        private readonly Dictionary<int, TeamType> _entityTeams =
+            new Dictionary<int, TeamType>(16);
+
         private readonly StringBuilder _builder = new StringBuilder(256);
         private Func<int, string> _entityLabelResolver;
         private ICombatLogService _combatLogService;
         private ISimulationClock _clock;
+        private TeamType _localTeam = TeamType.Neutral;
+        private int _localEntityId;
         private string _lastRenderedText = string.Empty;
         private float _nextRefreshTime;
         private float _nextLabelRefreshTime;
@@ -72,6 +79,7 @@ namespace MOBA.Core.Infrastructure
             _legacyText = legacyText;
             _feedRoot = feedRoot;
             AutoBindTextTargets();
+            ConfigureTextTargets();
         }
 
         private void AutoBindTextTargets()
@@ -81,6 +89,17 @@ namespace MOBA.Core.Infrastructure
 
             if (_legacyText == null)
                 _legacyText = GetComponent<Text>();
+
+            ConfigureTextTargets();
+        }
+
+        private void ConfigureTextTargets()
+        {
+            if (_tmpText != null)
+                _tmpText.richText = _useRichText;
+
+            if (_legacyText != null)
+                _legacyText.supportRichText = _useRichText;
         }
 
         private void OnEnable()
@@ -169,10 +188,15 @@ namespace MOBA.Core.Infrastructure
                 if (written > 0)
                     _builder.AppendLine();
 
-                _builder.Append(CombatLogHUDFormatter.FormatLine(
+                _builder.Append(CombatLogHUDFormatter.FormatFeedLine(
                     entry,
                     _entityLabelResolver,
-                    _includeTick));
+                    ResolveEntityTeam,
+                    _localTeam,
+                    _localEntityId,
+                    _includeTick,
+                    _useLocalPerspectiveLabels,
+                    _useRichText));
 
                 written++;
             }
@@ -184,6 +208,8 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             _nextLabelRefreshTime = now + Mathf.Max(0.25f, _labelRefreshIntervalSeconds);
+
+            bool foundLocalPlayer = false;
 
             BrawlerController[] brawlers = FindObjectsOfType<BrawlerController>();
             for (int i = 0; i < brawlers.Length; i++)
@@ -197,7 +223,18 @@ namespace MOBA.Core.Infrastructure
                     continue;
 
                 _entityLabels[entityId] = BuildBrawlerLabel(brawler);
+                _entityTeams[entityId] = brawler.Team;
+
+                if (!foundLocalPlayer && brawler.GetComponent<PlayerCommandSource>() != null)
+                {
+                    foundLocalPlayer = true;
+                    _localTeam = brawler.Team;
+                    _localEntityId = entityId;
+                }
             }
+
+            if (!foundLocalPlayer && _localEntityId == 0)
+                _localTeam = TeamType.Neutral;
         }
 
         private static string BuildBrawlerLabel(BrawlerController brawler)
@@ -210,13 +247,9 @@ namespace MOBA.Core.Infrastructure
                 brawlerName = brawler.Definition.BrawlerName;
             }
 
-            if (string.IsNullOrWhiteSpace(brawlerName))
-                brawlerName = brawler.gameObject.name;
-
-            if (brawler.Team == TeamType.Neutral)
-                return brawlerName;
-
-            return $"{brawler.Team} {brawlerName}";
+            return string.IsNullOrWhiteSpace(brawlerName)
+                ? brawler.gameObject.name
+                : brawlerName;
         }
 
         private string ResolveEntityLabel(int entityId)
@@ -224,6 +257,13 @@ namespace MOBA.Core.Infrastructure
             return _entityLabels.TryGetValue(entityId, out string label)
                 ? label
                 : null;
+        }
+
+        private TeamType ResolveEntityTeam(int entityId)
+        {
+            return _entityTeams.TryGetValue(entityId, out TeamType team)
+                ? team
+                : TeamType.Neutral;
         }
 
         private void RenderText(string text)

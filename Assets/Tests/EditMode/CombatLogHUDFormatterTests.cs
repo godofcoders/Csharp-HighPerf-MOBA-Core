@@ -138,6 +138,52 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual("Blue Colt healed Red Jessie for 120", line);
         }
 
+        [Test]
+        public void FormatFeedLine_UsesPerspectiveLabelsAndEventTags()
+        {
+            CombatLogEntry entry = new CombatLogEntry
+            {
+                EventType = CombatLogEventType.Kill,
+                SourceEntityId = 10,
+                TargetEntityId = 20
+            };
+
+            string line = CombatLogHUDFormatter.FormatFeedLine(
+                entry,
+                ResolveTestLabel,
+                ResolveTestTeam,
+                TeamType.Blue,
+                localEntityId: 10,
+                includeTick: false,
+                useLocalPerspectiveLabels: true,
+                useRichText: false);
+
+            Assert.AreEqual("[KO] You eliminated Enemy Jessie", line);
+        }
+
+        [Test]
+        public void FormatFeedLine_CanEmitRichTextEventTags()
+        {
+            CombatLogEntry entry = new CombatLogEntry
+            {
+                EventType = CombatLogEventType.Kill,
+                SourceEntityId = 20,
+                TargetEntityId = 10
+            };
+
+            string line = CombatLogHUDFormatter.FormatFeedLine(
+                entry,
+                ResolveTestLabel,
+                ResolveTestTeam,
+                TeamType.Blue,
+                localEntityId: 10,
+                includeTick: false,
+                useLocalPerspectiveLabels: true,
+                useRichText: true);
+
+            Assert.AreEqual("<color=#FF6B6B><b>[KO]</b></color> Enemy Jessie eliminated You", line);
+        }
+
         private static string ResolveTestLabel(int entityId)
         {
             switch (entityId)
@@ -148,6 +194,19 @@ namespace MOBA.Tests.EditMode
                     return "Red Jessie";
                 default:
                     return null;
+            }
+        }
+
+        private static TeamType ResolveTestTeam(int entityId)
+        {
+            switch (entityId)
+            {
+                case 10:
+                    return TeamType.Blue;
+                case 20:
+                    return TeamType.Red;
+                default:
+                    return TeamType.Neutral;
             }
         }
     }

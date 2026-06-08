@@ -115,25 +115,36 @@ namespace MOBA.Core.Infrastructure
 
         private static void CreateCombatFeed(Transform parent)
         {
-            Text feedText = CreateText(
+            GameObject controller = CreateController(parent, "CombatFeedController");
+            GameObject panel = CreateRectPanel(
                 parent,
+                "CombatFeedPanel",
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(20f, -84f),
+                new Vector2(570f, 198f),
+                new Color(0f, 0f, 0f, 0.28f));
+
+            Text feedText = CreateText(
+                panel.transform,
                 "CombatFeedText",
                 string.Empty,
                 new Vector2(0f, 1f),
                 new Vector2(0f, 1f),
                 new Vector2(0f, 1f),
-                new Vector2(28f, -92f),
-                new Vector2(540f, 180f),
-                20,
+                new Vector2(14f, -10f),
+                new Vector2(542f, 176f),
+                19,
                 TextAnchor.UpperLeft,
-                new Color(1f, 1f, 1f, 0.92f),
+                new Color(1f, 1f, 1f, 0.95f),
                 FontStyle.Bold);
 
             feedText.horizontalOverflow = HorizontalWrapMode.Wrap;
             feedText.verticalOverflow = VerticalWrapMode.Truncate;
 
-            CombatLogHUD combatLog = feedText.gameObject.AddComponent<CombatLogHUD>();
-            combatLog.BindTextTargets(null, feedText, feedText.gameObject);
+            CombatLogHUD combatLog = controller.AddComponent<CombatLogHUD>();
+            combatLog.BindTextTargets(null, feedText, panel);
         }
 
         private static void CreateCountdownOverlay(Transform parent)
@@ -243,6 +254,39 @@ namespace MOBA.Core.Infrastructure
             panel.transform.SetParent(parent, false);
             RectTransform rect = panel.GetComponent<RectTransform>();
             Stretch(rect);
+
+            Image image = panel.GetComponent<Image>();
+            image.color = color;
+            image.sprite = ResolveUISprite();
+            image.raycastTarget = false;
+
+            return panel;
+        }
+
+        private static GameObject CreateRectPanel(
+            Transform parent,
+            string name,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivot,
+            Vector2 anchoredPosition,
+            Vector2 size,
+            Color color)
+        {
+            GameObject panel = new GameObject(
+                name,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+
+            panel.transform.SetParent(parent, false);
+
+            RectTransform rect = panel.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.pivot = pivot;
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
 
             Image image = panel.GetComponent<Image>();
             image.color = color;
