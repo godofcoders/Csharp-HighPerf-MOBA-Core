@@ -36,24 +36,37 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("The brawler this HUD reflects. If null, the first BrawlerController in the scene that has a PlayerCommandSource component is used.")]
         [SerializeField] private BrawlerController _controlledBrawler;
 
+        [Min(0.1f)]
+        [SerializeField] private float _autoDiscoverIntervalSeconds = 0.5f;
+
         [Header("Ammo")]
         [Tooltip("One Image per ammo slot. Sized to max ammo on the equipped weapon. Use Image Type = Filled, Vertical or Horizontal — fillAmount is driven for the slot currently reloading.")]
         [SerializeField] private Image[] _ammoSlots;
+        [Tooltip("Optional root per ammo slot, hidden when a brawler has fewer max-ammo slots than the fallback HUD can display.")]
+        [SerializeField] private GameObject[] _ammoSlotRoots;
+        [SerializeField] private TMP_Text _ammoCountTmp;
+        [SerializeField] private Text _ammoCountLegacy;
         [SerializeField] private Color _ammoReadyColor = new Color(1f, 0.85f, 0.20f);
         [SerializeField] private Color _ammoEmptyColor = new Color(0.35f, 0.35f, 0.35f, 0.55f);
 
         [Header("Super")]
         [Tooltip("Filled Image (Radial360 reads as a ring; Horizontal reads as a bar).")]
         [SerializeField] private Image _superFill;
+        [SerializeField] private TMP_Text _superChargeTmp;
+        [SerializeField] private Text _superChargeLegacy;
         [Tooltip("Optional GameObject shown when super is ready (full meter).")]
         [SerializeField] private GameObject _superReadyVisual;
 
         [Header("Hypercharge")]
+        [SerializeField] private GameObject _hyperchargeRoot;
         [SerializeField] private Image _hyperchargeFill;
+        [SerializeField] private TMP_Text _hyperchargeChargeTmp;
+        [SerializeField] private Text _hyperchargeChargeLegacy;
         [Tooltip("Optional GameObject shown while hypercharge is currently active.")]
         [SerializeField] private GameObject _hyperchargeActiveVisual;
 
         [Header("Gadget")]
+        [SerializeField] private GameObject _gadgetRoot;
         [Tooltip("Image overlay used as a cooldown sweep. Image Type = Filled, Radial360. fillAmount=0 → ready, 1 → just used.")]
         [SerializeField] private Image _gadgetCooldownOverlay;
         [Tooltip("Optional text showing remaining gadget charges. Either TMP or legacy.")]
@@ -69,6 +82,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private TMP_Text _carriedGemCountTmp;
         [SerializeField] private Text _carriedGemCountLegacy;
 
+        private float _nextAutoDiscoverTime;
+
         private void Awake()
         {
             if (_controlledBrawler == null)
@@ -77,7 +92,69 @@ namespace MOBA.Core.Infrastructure
 
         public void SetControlledBrawler(BrawlerController brawler) => _controlledBrawler = brawler;
 
-        private void AutoDiscoverBrawler()
+        public void BindAmmoWidgets(
+            Image[] ammoSlots,
+            GameObject[] ammoSlotRoots,
+            TMP_Text ammoCountTmp,
+            Text ammoCountLegacy)
+        {
+            _ammoSlots = ammoSlots;
+            _ammoSlotRoots = ammoSlotRoots;
+            _ammoCountTmp = ammoCountTmp;
+            _ammoCountLegacy = ammoCountLegacy;
+        }
+
+        public void BindSuperWidgets(
+            Image superFill,
+            GameObject superReadyVisual,
+            TMP_Text superChargeTmp,
+            Text superChargeLegacy)
+        {
+            _superFill = superFill;
+            _superReadyVisual = superReadyVisual;
+            _superChargeTmp = superChargeTmp;
+            _superChargeLegacy = superChargeLegacy;
+        }
+
+        public void BindHyperchargeWidgets(
+            GameObject hyperchargeRoot,
+            Image hyperchargeFill,
+            GameObject hyperchargeActiveVisual,
+            TMP_Text hyperchargeChargeTmp,
+            Text hyperchargeChargeLegacy)
+        {
+            _hyperchargeRoot = hyperchargeRoot;
+            _hyperchargeFill = hyperchargeFill;
+            _hyperchargeActiveVisual = hyperchargeActiveVisual;
+            _hyperchargeChargeTmp = hyperchargeChargeTmp;
+            _hyperchargeChargeLegacy = hyperchargeChargeLegacy;
+        }
+
+        public void BindGadgetWidgets(
+            GameObject gadgetRoot,
+            Image cooldownOverlay,
+            TMP_Text chargesTmp,
+            Text chargesLegacy,
+            GameObject readyVisual)
+        {
+            _gadgetRoot = gadgetRoot;
+            _gadgetCooldownOverlay = cooldownOverlay;
+            _gadgetChargesTmp = chargesTmp;
+            _gadgetChargesLegacy = chargesLegacy;
+            _gadgetReadyVisual = readyVisual;
+        }
+
+        public void BindCarrierWidgets(
+            GameObject carrierBadgeRoot,
+            TMP_Text carriedGemCountTmp,
+            Text carriedGemCountLegacy)
+        {
+            _carrierBadgeRoot = carrierBadgeRoot;
+            _carriedGemCountTmp = carriedGemCountTmp;
+            _carriedGemCountLegacy = carriedGemCountLegacy;
+        }
+
+        private bool AutoDiscoverBrawler()
         {
             // Prefer a brawler that has a PlayerCommandSource attached —
             // that's the locally controlled one. Fall back to first brawler
@@ -86,17 +163,30 @@ namespace MOBA.Core.Infrastructure
             if (sources.Length > 0)
             {
                 BrawlerController b = sources[0].GetComponent<BrawlerController>();
-                if (b != null) { _controlledBrawler = b; return; }
+                if (b != null)
+                {
+                    _controlledBrawler = b;
+                    return true;
+                }
             }
 
             BrawlerController[] all = FindObjectsOfType<BrawlerController>();
-            if (all.Length > 0) _controlledBrawler = all[0];
+            if (all.Length > 0)
+            {
+                _controlledBrawler = all[0];
+                return true;
+            }
+
+            return false;
         }
 
         private void Update()
         {
             if (_controlledBrawler == null || _controlledBrawler.State == null)
+            {
+                TryAutoDiscoverBrawlerIfDue();
                 return;
+            }
 
             BrawlerState state = _controlledBrawler.State;
 
@@ -107,12 +197,21 @@ namespace MOBA.Core.Infrastructure
             UpdateCarrierBadge(state);
         }
 
+        private void TryAutoDiscoverBrawlerIfDue()
+        {
+            float now = Time.unscaledTime;
+            if (now < _nextAutoDiscoverTime)
+                return;
+
+            _nextAutoDiscoverTime = now + Mathf.Max(0.1f, _autoDiscoverIntervalSeconds);
+            AutoDiscoverBrawler();
+        }
+
         private void UpdateAmmo(BrawlerState state)
         {
-            if (_ammoSlots == null || _ammoSlots.Length == 0) return;
-
             ResourceStorage ammo = state.Ammo;
-            if (ammo == null) return;
+            if (ammo == null)
+                return;
 
             // CurrentAmmo is a float (e.g. 1.7 = "one full bar + 70% into the
             // next reload"). AvailableBars is the integer floor.
@@ -120,18 +219,29 @@ namespace MOBA.Core.Infrastructure
             int available = ammo.AvailableBars;
             int maxBars = Mathf.Max(1, ammo.MaxAmmo);
 
+            SetText(_ammoCountTmp, _ammoCountLegacy, $"{Mathf.Clamp(available, 0, maxBars)}/{maxBars}");
+
+            if (_ammoSlots == null || _ammoSlots.Length == 0)
+                return;
+
             for (int i = 0; i < _ammoSlots.Length; i++)
             {
                 Image slot = _ammoSlots[i];
-                if (slot == null) continue;
+                GameObject slotRoot = GetAmmoSlotRoot(i);
 
                 if (i >= maxBars)
                 {
                     // Slot is beyond the brawler's max ammo (e.g. equipped a
                     // 3-bar weapon, HUD has 4 dots). Hide the surplus.
-                    slot.enabled = false;
+                    SetActive(slotRoot, false);
+                    if (slot != null)
+                        slot.enabled = false;
                     continue;
                 }
+
+                SetActive(slotRoot, true);
+                if (slot == null)
+                    continue;
 
                 slot.enabled = true;
 
@@ -162,8 +272,14 @@ namespace MOBA.Core.Infrastructure
             SuperChargeTracker sc = state.SuperCharge;
             if (sc == null) return;
 
+            float chargePercent = Mathf.Clamp01(sc.ChargePercent);
             if (_superFill != null)
-                _superFill.fillAmount = Mathf.Clamp01(sc.ChargePercent);
+                _superFill.fillAmount = chargePercent;
+
+            SetText(
+                _superChargeTmp,
+                _superChargeLegacy,
+                sc.IsReady ? "READY" : $"{Mathf.RoundToInt(chargePercent * 100f)}%");
 
             if (_superReadyVisual != null && _superReadyVisual.activeSelf != sc.IsReady)
                 _superReadyVisual.SetActive(sc.IsReady);
@@ -171,11 +287,22 @@ namespace MOBA.Core.Infrastructure
 
         private void UpdateHypercharge(BrawlerState state)
         {
+            bool hasHypercharge = state.GetCurrentHyperchargeDefinition() != null;
+            SetActive(_hyperchargeRoot, hasHypercharge);
+            if (!hasHypercharge)
+                return;
+
             HyperchargeTracker hc = state.Hypercharge;
             if (hc == null) return;
 
+            float chargePercent = Mathf.Clamp01(hc.ChargePercent);
             if (_hyperchargeFill != null)
-                _hyperchargeFill.fillAmount = Mathf.Clamp01(hc.ChargePercent);
+                _hyperchargeFill.fillAmount = chargePercent;
+
+            SetText(
+                _hyperchargeChargeTmp,
+                _hyperchargeChargeLegacy,
+                hc.IsActive ? "ACTIVE" : $"{Mathf.RoundToInt(chargePercent * 100f)}%");
 
             if (_hyperchargeActiveVisual != null && _hyperchargeActiveVisual.activeSelf != hc.IsActive)
                 _hyperchargeActiveVisual.SetActive(hc.IsActive);
@@ -183,13 +310,18 @@ namespace MOBA.Core.Infrastructure
 
         private void UpdateGadget(BrawlerState state)
         {
+            bool hasGadget = state.GetCurrentGadgetDefinition() != null;
+            SetActive(_gadgetRoot, hasGadget);
+            if (!hasGadget)
+                return;
+
             int charges = state.RemainingGadgets;
 
             // True radial sweep: GetProgress returns 1 at cooldown start,
             // decaying linearly to 0 when the ability is ready.
             uint currentTick = 0;
-            ISimulationClock clock = ServiceProvider.Get<ISimulationClock>();
-            if (clock != null) currentTick = clock.CurrentTick;
+            if (ServiceProvider.TryGet<ISimulationClock>(out ISimulationClock clock) && clock != null)
+                currentTick = clock.CurrentTick;
 
             float cdRatio = state.GadgetCooldown.GetProgress(currentTick);
             bool onCooldown = cdRatio > 0.001f;
@@ -198,8 +330,7 @@ namespace MOBA.Core.Infrastructure
                 _gadgetCooldownOverlay.fillAmount = cdRatio;
 
             string countStr = charges.ToString();
-            if (_gadgetChargesTmp != null) _gadgetChargesTmp.text = countStr;
-            else if (_gadgetChargesLegacy != null) _gadgetChargesLegacy.text = countStr;
+            SetText(_gadgetChargesTmp, _gadgetChargesLegacy, countStr);
 
             if (_gadgetReadyVisual != null)
             {
@@ -220,8 +351,30 @@ namespace MOBA.Core.Infrastructure
             if (!show) return;
 
             string text = count.ToString();
-            if (_carriedGemCountTmp != null) _carriedGemCountTmp.text = text;
-            else if (_carriedGemCountLegacy != null) _carriedGemCountLegacy.text = text;
+            SetText(_carriedGemCountTmp, _carriedGemCountLegacy, text);
+        }
+
+        private GameObject GetAmmoSlotRoot(int index)
+        {
+            return _ammoSlotRoots != null &&
+                   index >= 0 &&
+                   index < _ammoSlotRoots.Length
+                ? _ammoSlotRoots[index]
+                : null;
+        }
+
+        private static void SetActive(GameObject root, bool active)
+        {
+            if (root != null && root.activeSelf != active)
+                root.SetActive(active);
+        }
+
+        private static void SetText(TMP_Text tmp, Text legacy, string text)
+        {
+            if (tmp != null)
+                tmp.text = text;
+            else if (legacy != null)
+                legacy.text = text;
         }
     }
 }

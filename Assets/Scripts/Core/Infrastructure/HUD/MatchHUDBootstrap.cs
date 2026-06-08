@@ -13,6 +13,7 @@ namespace MOBA.Core.Infrastructure
     {
         private const string MatchSceneName = "Match";
         private const int CanvasSortingOrder = 80;
+        private const int RuntimeAmmoSlotCount = 5;
 
         private static Font _runtimeFont;
         private static Sprite _runtimeUISprite;
@@ -86,6 +87,7 @@ namespace MOBA.Core.Infrastructure
 
             Transform canvasTransform = canvasGo.transform;
             CreateMatchStatus(canvasTransform);
+            CreatePlayerResourceHUD(canvasTransform);
             CreateCombatFeed(canvasTransform);
             CreateCountdownOverlay(canvasTransform);
             CreateDeathOverlay(canvasTransform);
@@ -111,6 +113,237 @@ namespace MOBA.Core.Infrastructure
 
             MatchHUD hud = statusText.gameObject.AddComponent<MatchHUD>();
             hud.BindTextTargets(null, statusText);
+        }
+
+        private static void CreatePlayerResourceHUD(Transform parent)
+        {
+            GameObject controller = CreateController(parent, "PlayerHUDController");
+            GameObject panel = CreateRectPanel(
+                parent,
+                "PlayerResourcePanel",
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0f, 24f),
+                new Vector2(590f, 124f),
+                new Color(0f, 0f, 0f, 0.34f));
+
+            CreateText(
+                panel.transform,
+                "AmmoLabel",
+                "AMMO",
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(24f, 92f),
+                new Vector2(146f, 22f),
+                16,
+                TextAnchor.MiddleLeft,
+                new Color(1f, 1f, 1f, 0.72f),
+                FontStyle.Bold);
+
+            Text ammoCount = CreateText(
+                panel.transform,
+                "AmmoCountText",
+                "0/0",
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(154f, 92f),
+                new Vector2(74f, 22f),
+                17,
+                TextAnchor.MiddleRight,
+                new Color(1f, 0.88f, 0.34f, 0.95f),
+                FontStyle.Bold);
+
+            Image[] ammoSlots = new Image[RuntimeAmmoSlotCount];
+            GameObject[] ammoSlotRoots = new GameObject[RuntimeAmmoSlotCount];
+            for (int i = 0; i < RuntimeAmmoSlotCount; i++)
+            {
+                GameObject slotRoot = CreateRectPanel(
+                    panel.transform,
+                    $"AmmoSlot{i + 1}",
+                    Vector2.zero,
+                    Vector2.zero,
+                    Vector2.zero,
+                    new Vector2(24f + (i * 45f), 68f),
+                    new Vector2(35f, 16f),
+                    new Color(1f, 1f, 1f, 0.14f));
+
+                Image fill = CreateFilledImage(
+                    slotRoot.transform,
+                    $"AmmoSlot{i + 1}Fill",
+                    Vector2.zero,
+                    Vector2.one,
+                    new Vector2(0.5f, 0.5f),
+                    Vector2.zero,
+                    Vector2.zero,
+                    new Color(1f, 0.84f, 0.22f, 0.96f),
+                    Image.FillMethod.Horizontal,
+                    (int)Image.OriginHorizontal.Left);
+
+                fill.fillAmount = 1f;
+                ammoSlotRoots[i] = slotRoot;
+                ammoSlots[i] = fill;
+            }
+
+            GameObject carrierBadge = CreateRectPanel(
+                panel.transform,
+                "CarrierGemBadge",
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(24f, 18f),
+                new Vector2(92f, 38f),
+                new Color(0.85f, 0.16f, 0.74f, 0.28f));
+
+            CreateRectPanel(
+                carrierBadge.transform,
+                "CarrierGemIcon",
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(20f, 19f),
+                new Vector2(20f, 20f),
+                new Color(1f, 0.26f, 0.92f, 0.92f));
+
+            Text carriedGemCount = CreateText(
+                carrierBadge.transform,
+                "CarriedGemCountText",
+                "0",
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(14f, 0f),
+                new Vector2(-28f, 0f),
+                21,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                FontStyle.Bold);
+
+            carrierBadge.SetActive(false);
+
+            GameObject superRoot = CreateAbilityMeter(
+                panel.transform,
+                "SuperMeter",
+                new Vector2(326f, 24f),
+                new Color(0.18f, 0.36f, 0.92f, 0.42f),
+                out Image superFill,
+                out GameObject superReadyVisual);
+
+            Text superText = CreateText(
+                superRoot.transform,
+                "SuperChargeText",
+                "0%",
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                15,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                FontStyle.Bold);
+
+            CreateText(
+                superRoot.transform,
+                "SuperLabel",
+                "SUPER",
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0f, -4f),
+                new Vector2(82f, 18f),
+                12,
+                TextAnchor.UpperCenter,
+                new Color(1f, 1f, 1f, 0.7f),
+                FontStyle.Bold);
+
+            GameObject hyperRoot = CreateAbilityMeter(
+                panel.transform,
+                "HyperchargeMeter",
+                new Vector2(416f, 24f),
+                new Color(0.64f, 0.20f, 1f, 0.36f),
+                out Image hyperchargeFill,
+                out GameObject hyperchargeActiveVisual);
+
+            Text hyperchargeText = CreateText(
+                hyperRoot.transform,
+                "HyperchargeText",
+                "0%",
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                14,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                FontStyle.Bold);
+
+            CreateText(
+                hyperRoot.transform,
+                "HyperchargeLabel",
+                "HYPER",
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0f, -4f),
+                new Vector2(82f, 18f),
+                12,
+                TextAnchor.UpperCenter,
+                new Color(1f, 1f, 1f, 0.7f),
+                FontStyle.Bold);
+
+            hyperRoot.SetActive(false);
+
+            GameObject gadgetRoot = CreateAbilityMeter(
+                panel.transform,
+                "GadgetMeter",
+                new Vector2(506f, 24f),
+                new Color(0.10f, 0.72f, 0.42f, 0.35f),
+                out Image gadgetCooldownOverlay,
+                out GameObject gadgetReadyVisual);
+
+            gadgetCooldownOverlay.color = new Color(0f, 0f, 0f, 0.58f);
+            gadgetCooldownOverlay.fillAmount = 0f;
+
+            Text gadgetCharges = CreateText(
+                gadgetRoot.transform,
+                "GadgetChargesText",
+                "0",
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                22,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                FontStyle.Bold);
+
+            CreateText(
+                gadgetRoot.transform,
+                "GadgetLabel",
+                "GADGET",
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0f, -4f),
+                new Vector2(88f, 18f),
+                12,
+                TextAnchor.UpperCenter,
+                new Color(1f, 1f, 1f, 0.7f),
+                FontStyle.Bold);
+
+            gadgetRoot.SetActive(false);
+
+            PlayerHUD playerHUD = controller.AddComponent<PlayerHUD>();
+            playerHUD.BindAmmoWidgets(ammoSlots, ammoSlotRoots, null, ammoCount);
+            playerHUD.BindSuperWidgets(superFill, superReadyVisual, null, superText);
+            playerHUD.BindHyperchargeWidgets(hyperRoot, hyperchargeFill, hyperchargeActiveVisual, null, hyperchargeText);
+            playerHUD.BindGadgetWidgets(gadgetRoot, gadgetCooldownOverlay, null, gadgetCharges, gadgetReadyVisual);
+            playerHUD.BindCarrierWidgets(carrierBadge, null, carriedGemCount);
         }
 
         private static void CreateCombatFeed(Transform parent)
@@ -294,6 +527,114 @@ namespace MOBA.Core.Infrastructure
             image.raycastTarget = false;
 
             return panel;
+        }
+
+        private static GameObject CreateAbilityMeter(
+            Transform parent,
+            string name,
+            Vector2 anchoredPosition,
+            Color baseColor,
+            out Image fill,
+            out GameObject readyVisual)
+        {
+            GameObject root = CreateRectPanel(
+                parent,
+                name,
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                anchoredPosition,
+                new Vector2(64f, 64f),
+                baseColor);
+
+            fill = CreateFilledImage(
+                root.transform,
+                name + "Fill",
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                new Color(1f, 1f, 1f, 0.32f),
+                Image.FillMethod.Radial360,
+                (int)Image.Origin360.Bottom);
+
+            fill.fillClockwise = true;
+            fill.fillAmount = 0f;
+
+            readyVisual = CreateRectPanel(
+                root.transform,
+                name + "ReadyVisual",
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                new Color(1f, 0.96f, 0.44f, 0.22f));
+
+            readyVisual.SetActive(false);
+            return root;
+        }
+
+        private static Image CreateFilledImage(
+            Transform parent,
+            string name,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivot,
+            Vector2 anchoredPosition,
+            Vector2 size,
+            Color color,
+            Image.FillMethod fillMethod,
+            int fillOrigin)
+        {
+            Image image = CreateImage(
+                parent,
+                name,
+                anchorMin,
+                anchorMax,
+                pivot,
+                anchoredPosition,
+                size,
+                color);
+
+            image.type = Image.Type.Filled;
+            image.fillMethod = fillMethod;
+            image.fillOrigin = fillOrigin;
+            image.fillAmount = 0f;
+            return image;
+        }
+
+        private static Image CreateImage(
+            Transform parent,
+            string name,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivot,
+            Vector2 anchoredPosition,
+            Vector2 size,
+            Color color)
+        {
+            GameObject go = new GameObject(
+                name,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+
+            go.transform.SetParent(parent, false);
+
+            RectTransform rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.pivot = pivot;
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+
+            Image image = go.GetComponent<Image>();
+            image.color = color;
+            image.sprite = ResolveUISprite();
+            image.raycastTarget = false;
+            return image;
         }
 
         private static Text CreateText(
