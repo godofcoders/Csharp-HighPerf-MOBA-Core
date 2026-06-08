@@ -11,7 +11,6 @@ namespace MOBA.Core.Infrastructure
     {
         private const float DirectProjectileThreatRadius = 1.15f;
         private const float DirectProjectileThreatLookaheadSeconds = 1.25f;
-        private const float DirectProjectileCollisionRadius = 0.5f;
 
         private SimpleObjectPool _pool;
         private readonly List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>(64);
@@ -143,21 +142,8 @@ namespace MOBA.Core.Infrastructure
                 }
                 else
                 {
-                    Vector3 previousPosition = p.GameObject.transform.position;
                     Vector3 movement = p.Direction * (p.Speed * SimulationClock.TickDeltaTime);
-                    Vector3 nextPosition = previousPosition + movement;
-
-                    if (AimLineOfSightUtility.IsSegmentBlocked(
-                            SimulationClock.Pathfinder,
-                            previousPosition,
-                            nextPosition,
-                            DirectProjectileCollisionRadius))
-                    {
-                        Despawn(i);
-                        continue;
-                    }
-
-                    p.GameObject.transform.position = nextPosition;
+                    p.GameObject.transform.position += movement;
 
                     ProjectileVisualController visualController = p.GameObject.GetComponent<ProjectileVisualController>();
                     if (visualController != null)

@@ -141,16 +141,6 @@ namespace MOBA.Core.Infrastructure
                         float directionalRange = ResolveDirectionalRange(ability);
                         float previewWidth = ResolveDirectionalWidth(ability);
                         float spreadHalfAngle = ResolveSpreadHalfAngle(ability);
-                        AimLineTraceResult trace = AimLineOfSightUtility.Trace(
-                            SimulationClock.Pathfinder,
-                            _brawler.transform.position,
-                            aimDirection,
-                            directionalRange,
-                            previewWidth * 0.5f);
-
-                        float effectiveRange = trace.IsBlocked
-                            ? trace.ClearDistance
-                            : directionalRange;
 
                         return new AimPreviewData
                         {
@@ -159,10 +149,10 @@ namespace MOBA.Core.Infrastructure
                             Mode = AimPreviewMode.Directional,
                             Origin = playerCenter,
                             Direction = aimDirection,
-                            Range = effectiveRange,
+                            Range = directionalRange,
                             Width = previewWidth,
-                            IsObstructed = trace.IsBlocked,
-                            TargetPoint = playerCenter + (aimDirection * effectiveRange),
+                            IsObstructed = false,
+                            TargetPoint = playerCenter + (aimDirection * directionalRange),
                             ArcHeight = 0f,
                             Radius = 0f,
                             SpreadHalfAngleDegrees = spreadHalfAngle

@@ -355,7 +355,7 @@ namespace MOBA.Core.Infrastructure
                 ProjectileRadius = ResolveAimProjectileRadius(abilityDefinition),
                 IncludeSelf = ShouldIncludeSelf(actionType, abilityDefinition),
                 RequireAlive = true,
-                RequireLineOfSight = ShouldRequireLineOfSight(abilityDefinition)
+                RequireLineOfSight = false
             };
         }
 
