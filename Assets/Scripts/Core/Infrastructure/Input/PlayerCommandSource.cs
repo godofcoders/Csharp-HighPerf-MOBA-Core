@@ -24,6 +24,7 @@ namespace MOBA.Core.Infrastructure
         private const float ManualAimThreshold = 0.20f;
         private const float MoveFallbackThreshold = 0.20f;
         private const float ReleaseFireDistanceThreshold = 1.25f;
+        private const float AimPreviewHoldDelaySeconds = 0.14f;
 
         private bool _hasManualAim;
         private Vector3 _manualAimDirection = Vector3.zero;
@@ -33,14 +34,22 @@ namespace MOBA.Core.Infrastructure
         private bool _wasRightMouseHeldLastFrame;
         private bool _mainAttackAimWasValidDuringHold;
         private Vector3 _heldMainAttackAimDirection = Vector3.zero;
+        private float _mainAttackAimHoldStartTime;
+        private Vector3 _queuedMainAttackDirection = Vector3.zero;
+        private Vector3 _queuedMainAttackTargetPoint = Vector3.zero;
+        private bool _queuedMainAttackHasTargetPoint;
 
         // Super hold-release (E key via InputAction started/canceled)
         private bool _isHoldingSuperAim;
         private bool _superAimWasValidDuringHold;
         private Vector3 _heldSuperAimDirection = Vector3.zero;
         private bool _wasSuperKeyHeldLastFrame;
+        private float _superAimHoldStartTime;
         private Vector3 _heldMainAttackTargetPoint = Vector3.zero;
         private Vector3 _heldSuperTargetPoint = Vector3.zero;
+        private Vector3 _queuedSuperDirection = Vector3.zero;
+        private Vector3 _queuedSuperTargetPoint = Vector3.zero;
+        private bool _queuedSuperHasTargetPoint;
 
         private void Awake()
         {
@@ -80,7 +89,14 @@ namespace MOBA.Core.Infrastructure
             if (_controlledBrawler == null)
                 return Vector3.zero;
 
-            Vector3 rawPoint = GetCurrentAimWorldPoint();
+            return GetClampedTargetPointForAbility(abilityDefinition, GetCurrentAimWorldPoint());
+        }
+
+        private Vector3 GetClampedTargetPointForAbility(AbilityDefinition abilityDefinition, Vector3 rawPoint)
+        {
+            if (_controlledBrawler == null)
+                return Vector3.zero;
+
             Vector3 offset = rawPoint - _controlledBrawler.Position;
             offset.y = 0f;
 
@@ -106,28 +122,39 @@ namespace MOBA.Core.Infrastructure
                 _superAimWasValidDuringHold = false;
                 _heldSuperAimDirection = Vector3.zero;
                 _heldSuperTargetPoint = Vector3.zero;
+                _superAimHoldStartTime = Time.time;
             }
 
             if (!superKeyHeld && _wasSuperKeyHeldLastFrame)
             {
                 float releaseAimDistance = GetCurrentReleaseAimDistance();
                 bool isOutsideFireThresholdAtRelease = releaseAimDistance >= ReleaseFireDistanceThreshold;
+                bool hasManualRelease = HasSuperPreviewDelayElapsed() &&
+                                        _superAimWasValidDuringHold &&
+                                        isOutsideFireThresholdAtRelease &&
+                                        _heldSuperAimDirection.sqrMagnitude > 0.001f;
 
-                bool shouldFire = _isHoldingSuperAim &&
-                                  _superAimWasValidDuringHold &&
-                                  isOutsideFireThresholdAtRelease &&
-                                  _heldSuperAimDirection.sqrMagnitude > 0.001f;
-
-                if (shouldFire)
+                if (_isHoldingSuperAim)
                 {
-                    _superQueued = true;
-                    _lastAimDirection = _heldSuperAimDirection;
+                    if (hasManualRelease)
+                    {
+                        AbilityDefinition superAbility = GetAbilityDefinition(BrawlerActionRequestType.Super);
+                        bool hasTargetPoint = AbilityUsesPointTarget(superAbility);
+                        QueueSuperCommand(
+                            _heldSuperAimDirection,
+                            hasTargetPoint ? _heldSuperTargetPoint : Vector3.zero,
+                            hasTargetPoint);
+                    }
+                    else
+                    {
+                        QueueAutoAimCommand(BrawlerActionRequestType.Super);
+                    }
                 }
 
                 _isHoldingSuperAim = false;
                 _superAimWasValidDuringHold = false;
                 _heldSuperAimDirection = Vector3.zero;
-                // DO NOT clear _heldSuperTargetPoint here
+                _heldSuperTargetPoint = Vector3.zero;
             }
 
             _wasSuperKeyHeldLastFrame = superKeyHeld;
@@ -178,20 +205,19 @@ namespace MOBA.Core.Infrastructure
 
             if (_mainAttackQueued)
             {
-                AbilityDefinition mainAttackAbility = GetAbilityDefinition(BrawlerActionRequestType.MainAttack);
-                bool hasTargetPoint = AbilityUsesPointTarget(mainAttackAbility);
-
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.MainAttack,
-                    Direction = ResolveActionDirection(BrawlerActionRequestType.MainAttack),
-                    TargetPoint = hasTargetPoint ? _heldMainAttackTargetPoint : Vector3.zero,
-                    HasTargetPoint = hasTargetPoint,
+                    Direction = _queuedMainAttackDirection,
+                    TargetPoint = _queuedMainAttackHasTargetPoint ? _queuedMainAttackTargetPoint : Vector3.zero,
+                    HasTargetPoint = _queuedMainAttackHasTargetPoint,
                     Tick = currentTick
                 });
 
                 _mainAttackQueued = false;
-                _heldMainAttackTargetPoint = Vector3.zero;
+                _queuedMainAttackDirection = Vector3.zero;
+                _queuedMainAttackTargetPoint = Vector3.zero;
+                _queuedMainAttackHasTargetPoint = false;
             }
 
             if (_gadgetQueued)
@@ -213,14 +239,16 @@ namespace MOBA.Core.Infrastructure
                 output.Add(new BrawlerCommand
                 {
                     Type = BrawlerCommandType.Super,
-                    Direction = ResolveActionDirection(BrawlerActionRequestType.Super),
-                    TargetPoint = _heldSuperTargetPoint,
-                    HasTargetPoint = true,
+                    Direction = _queuedSuperDirection,
+                    TargetPoint = _queuedSuperHasTargetPoint ? _queuedSuperTargetPoint : Vector3.zero,
+                    HasTargetPoint = _queuedSuperHasTargetPoint,
                     Tick = currentTick
                 });
 
                 _superQueued = false;
-                _heldSuperTargetPoint = Vector3.zero;
+                _queuedSuperDirection = Vector3.zero;
+                _queuedSuperTargetPoint = Vector3.zero;
+                _queuedSuperHasTargetPoint = false;
             }
 
             if (_hyperchargeQueued)
@@ -240,7 +268,10 @@ namespace MOBA.Core.Infrastructure
 
         public bool HasPreviewAim()
         {
-            return GetPreviewKind() != AimPreviewKind.None && _hasManualAim;
+            AimPreviewKind kind = GetPreviewKind();
+            return kind != AimPreviewKind.None &&
+                   _hasManualAim &&
+                   HasPreviewDelayElapsed(kind);
         }
 
         public Vector3 GetPreviewTargetPoint()
@@ -323,7 +354,7 @@ namespace MOBA.Core.Infrastructure
                 }
             }
 
-            AimAssistRequest request = BuildAimAssistRequest(actionType, abilityDefinition);
+            AimAssistRequest request = BuildAimAssistRequest(actionType, abilityDefinition, GetFireAimDirection());
             AimAssistResult result = AimAssistResolver.Resolve(request);
 
             if (result.HasResult && result.AimDirection.sqrMagnitude > 0.001f)
@@ -342,7 +373,10 @@ namespace MOBA.Core.Infrastructure
             return _controlledBrawler.transform.forward;
         }
 
-        private AimAssistRequest BuildAimAssistRequest(BrawlerActionRequestType actionType, AbilityDefinition abilityDefinition)
+        private AimAssistRequest BuildAimAssistRequest(
+            BrawlerActionRequestType actionType,
+            AbilityDefinition abilityDefinition,
+            Vector3 forward)
         {
             return new AimAssistRequest
             {
@@ -350,7 +384,7 @@ namespace MOBA.Core.Infrastructure
                 AbilityDefinition = abilityDefinition,
                 Mode = ResolveAimAssistMode(actionType, abilityDefinition),
                 Origin = _controlledBrawler.Position,
-                Forward = GetFireAimDirection(),
+                Forward = forward.sqrMagnitude > 0.001f ? forward.normalized : ResolveStableFacingDirection(),
                 Range = ResolveAimRange(abilityDefinition),
                 ProjectileRadius = ResolveAimProjectileRadius(abilityDefinition),
                 IncludeSelf = ShouldIncludeSelf(actionType, abilityDefinition),
@@ -566,26 +600,38 @@ namespace MOBA.Core.Infrastructure
                 _mainAttackAimWasValidDuringHold = false;
                 _heldMainAttackAimDirection = Vector3.zero;
                 _heldMainAttackTargetPoint = Vector3.zero;
+                _mainAttackAimHoldStartTime = Time.time;
             }
             if (!rightMouseHeld && _wasRightMouseHeldLastFrame)
             {
                 float releaseAimDistance = GetCurrentReleaseAimDistance();
                 bool isOutsideFireThresholdAtRelease = releaseAimDistance >= ReleaseFireDistanceThreshold;
+                bool hasManualRelease = HasMainAttackPreviewDelayElapsed() &&
+                                        _mainAttackAimWasValidDuringHold &&
+                                        isOutsideFireThresholdAtRelease &&
+                                        _heldMainAttackAimDirection.sqrMagnitude > 0.001f;
 
-                bool shouldFire = _isHoldingMainAttackAim &&
-                                  _mainAttackAimWasValidDuringHold &&
-                                  isOutsideFireThresholdAtRelease &&
-                                  _heldMainAttackAimDirection.sqrMagnitude > 0.001f;
-
-                if (shouldFire)
+                if (_isHoldingMainAttackAim)
                 {
-                    _mainAttackQueued = true;
-                    _lastAimDirection = _heldMainAttackAimDirection;
+                    if (hasManualRelease)
+                    {
+                        AbilityDefinition mainAttackAbility = GetAbilityDefinition(BrawlerActionRequestType.MainAttack);
+                        bool hasTargetPoint = AbilityUsesPointTarget(mainAttackAbility);
+                        QueueMainAttackCommand(
+                            _heldMainAttackAimDirection,
+                            hasTargetPoint ? _heldMainAttackTargetPoint : Vector3.zero,
+                            hasTargetPoint);
+                    }
+                    else
+                    {
+                        QueueAutoAimCommand(BrawlerActionRequestType.MainAttack);
+                    }
                 }
 
                 _isHoldingMainAttackAim = false;
                 _mainAttackAimWasValidDuringHold = false;
                 _heldMainAttackAimDirection = Vector3.zero;
+                _heldMainAttackTargetPoint = Vector3.zero;
             }
 
             _wasRightMouseHeldLastFrame = rightMouseHeld;
@@ -625,6 +671,128 @@ namespace MOBA.Core.Infrastructure
 
             if (_lastAimDirection.sqrMagnitude > 0.001f)
                 return _lastAimDirection;
+
+            if (_controlledBrawler != null)
+                return _controlledBrawler.transform.forward;
+
+            return transform.forward;
+        }
+
+        private bool HasPreviewDelayElapsed(AimPreviewKind kind)
+        {
+            switch (kind)
+            {
+                case AimPreviewKind.MainAttack:
+                    return HasMainAttackPreviewDelayElapsed();
+
+                case AimPreviewKind.Super:
+                    return HasSuperPreviewDelayElapsed();
+
+                default:
+                    return false;
+            }
+        }
+
+        private bool HasMainAttackPreviewDelayElapsed()
+        {
+            return _isHoldingMainAttackAim &&
+                   Time.time - _mainAttackAimHoldStartTime >= AimPreviewHoldDelaySeconds;
+        }
+
+        private bool HasSuperPreviewDelayElapsed()
+        {
+            return _isHoldingSuperAim &&
+                   Time.time - _superAimHoldStartTime >= AimPreviewHoldDelaySeconds;
+        }
+
+        private void QueueAutoAimCommand(BrawlerActionRequestType actionType)
+        {
+            AbilityDefinition abilityDefinition = GetAbilityDefinition(actionType);
+            AimAssistResult result = ResolveAutoAim(actionType, abilityDefinition);
+
+            Vector3 direction = result.AimDirection.sqrMagnitude > 0.001f
+                ? result.AimDirection.normalized
+                : ResolveStableFacingDirection();
+
+            bool hasTargetPoint = AbilityUsesPointTarget(abilityDefinition);
+            Vector3 targetPoint = Vector3.zero;
+
+            if (hasTargetPoint)
+            {
+                Vector3 aimPoint = result.HasResult
+                    ? result.AimPoint
+                    : _controlledBrawler.Position + direction * ResolveAimRange(abilityDefinition);
+                targetPoint = GetClampedTargetPointForAbility(abilityDefinition, aimPoint);
+            }
+
+            switch (actionType)
+            {
+                case BrawlerActionRequestType.MainAttack:
+                    QueueMainAttackCommand(direction, targetPoint, hasTargetPoint);
+                    break;
+
+                case BrawlerActionRequestType.Super:
+                    QueueSuperCommand(direction, targetPoint, hasTargetPoint);
+                    break;
+            }
+        }
+
+        private AimAssistResult ResolveAutoAim(
+            BrawlerActionRequestType actionType,
+            AbilityDefinition abilityDefinition)
+        {
+            Vector3 fallbackForward = ResolveStableFacingDirection();
+            AimAssistRequest request = BuildAimAssistRequest(actionType, abilityDefinition, fallbackForward);
+            AimAssistResult result = AimAssistResolver.Resolve(request);
+
+            if (result.AimDirection.sqrMagnitude <= 0.001f)
+                result.AimDirection = fallbackForward;
+
+            return result;
+        }
+
+        private void QueueMainAttackCommand(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
+        {
+            direction = NormalizeFireDirection(direction);
+            if (direction.sqrMagnitude <= 0.001f)
+                return;
+
+            _queuedMainAttackDirection = direction;
+            _queuedMainAttackTargetPoint = targetPoint;
+            _queuedMainAttackHasTargetPoint = hasTargetPoint;
+            _mainAttackQueued = true;
+            _lastAimDirection = direction;
+        }
+
+        private void QueueSuperCommand(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
+        {
+            direction = NormalizeFireDirection(direction);
+            if (direction.sqrMagnitude <= 0.001f)
+                return;
+
+            _queuedSuperDirection = direction;
+            _queuedSuperTargetPoint = targetPoint;
+            _queuedSuperHasTargetPoint = hasTargetPoint;
+            _superQueued = true;
+            _lastAimDirection = direction;
+        }
+
+        private Vector3 NormalizeFireDirection(Vector3 direction)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.001f)
+                direction = ResolveStableFacingDirection();
+
+            direction.y = 0f;
+            return direction.sqrMagnitude > 0.001f
+                ? direction.normalized
+                : Vector3.zero;
+        }
+
+        private Vector3 ResolveStableFacingDirection()
+        {
+            if (_lastAimDirection.sqrMagnitude > 0.001f)
+                return _lastAimDirection.normalized;
 
             if (_controlledBrawler != null)
                 return _controlledBrawler.transform.forward;
