@@ -98,11 +98,8 @@ namespace MOBA.Core.Infrastructure
                 SetEdgeLine(_spreadRightLine, data.Origin, rightEnd, color);
             }
 
-            if (_endMarker != null)
-            {
-                _endMarker.gameObject.SetActive(true);
-                _endMarker.position = endPoint;
-            }
+            // Directional previews should read like a lane/beam, not a point target.
+            // Throwable and placement previews still own the endpoint marker below.
         }
 
         private void SetEdgeLine(LineRenderer lr, Vector3 a, Vector3 b, Color color)
