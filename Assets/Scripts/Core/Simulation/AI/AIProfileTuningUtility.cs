@@ -29,6 +29,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureGemGrabObjectiveDefaults(profile);
             EnsureLaneDisciplineDefaults(profile);
             EnsureMapGeometryDefaults(profile);
+            EnsureDangerAvoidanceDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -101,6 +102,8 @@ namespace MOBA.Core.Simulation.AI
                     profile.TacticalDestinationBlend *= 0.90f;
                     profile.AIMoveInputTurnRateDegreesPerTick *= 0.85f;
                     profile.AIHighPriorityMoveInputTurnRateDegreesPerTick *= 0.90f;
+                    profile.AIMoveSpeedScale *= 0.90f;
+                    profile.AIHighPriorityMoveSpeedScale *= 0.92f;
                     profile.NavigationStuckSampleIntervalTicks =
                         ScaleTicks(profile.NavigationStuckSampleIntervalTicks, 1.15f, 1);
                     profile.DangerScanRadius *= 0.85f;
@@ -180,6 +183,8 @@ namespace MOBA.Core.Simulation.AI
                     profile.TacticalDestinationBlend *= 1.10f;
                     profile.AIMoveInputTurnRateDegreesPerTick *= 1.10f;
                     profile.AIHighPriorityMoveInputTurnRateDegreesPerTick *= 1.10f;
+                    profile.AIMoveSpeedScale *= 1.04f;
+                    profile.AIHighPriorityMoveSpeedScale *= 1.04f;
                     profile.NavigationStuckSampleIntervalTicks =
                         ScaleTicks(profile.NavigationStuckSampleIntervalTicks, 0.85f, 1);
                     profile.TacticalMinimumStepDistance *= 1.10f;
@@ -393,6 +398,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureGemGrabObjectiveDefaults(profile);
             EnsureLaneDisciplineDefaults(profile);
             EnsureMapGeometryDefaults(profile);
+            EnsureDangerAvoidanceDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
@@ -446,6 +452,8 @@ namespace MOBA.Core.Simulation.AI
             profile.TacticalDestinationBlend = Mathf.Clamp(profile.TacticalDestinationBlend, 0.05f, 1f);
             profile.AIMoveInputTurnRateDegreesPerTick = Mathf.Clamp(profile.AIMoveInputTurnRateDegreesPerTick, 8f, 120f);
             profile.AIHighPriorityMoveInputTurnRateDegreesPerTick = Mathf.Clamp(profile.AIHighPriorityMoveInputTurnRateDegreesPerTick, 20f, 180f);
+            profile.AIMoveSpeedScale = Mathf.Clamp(profile.AIMoveSpeedScale, 0.35f, 1f);
+            profile.AIHighPriorityMoveSpeedScale = Mathf.Clamp(profile.AIHighPriorityMoveSpeedScale, 0.35f, 1f);
             profile.TacticalMinimumStepDistance = Mathf.Clamp(profile.TacticalMinimumStepDistance, 0.25f, 2f);
             profile.TacticalStopMaxHoldTicks = ClampTicks(profile.TacticalStopMaxHoldTicks, 1, 90);
             profile.TacticalStrafeDistance = Mathf.Clamp(profile.TacticalStrafeDistance, 0.4f, 4f);
@@ -559,16 +567,55 @@ namespace MOBA.Core.Simulation.AI
                 profile.TacticalDestinationBlend = 0.55f;
 
             if (profile.AIMoveInputTurnRateDegreesPerTick <= 0f)
-                profile.AIMoveInputTurnRateDegreesPerTick = 28f;
+                profile.AIMoveInputTurnRateDegreesPerTick = 22f;
 
             if (profile.AIHighPriorityMoveInputTurnRateDegreesPerTick <= 0f)
-                profile.AIHighPriorityMoveInputTurnRateDegreesPerTick = 80f;
+                profile.AIHighPriorityMoveInputTurnRateDegreesPerTick = 54f;
+
+            if (profile.AIMoveSpeedScale <= 0f)
+                profile.AIMoveSpeedScale = 0.86f;
+
+            if (profile.AIHighPriorityMoveSpeedScale <= 0f)
+                profile.AIHighPriorityMoveSpeedScale = 0.90f;
 
             if (profile.NavigationStuckSampleIntervalTicks == 0u)
                 profile.NavigationStuckSampleIntervalTicks = 8u;
 
             if (profile.NavigationStuckMoveThreshold <= 0f)
                 profile.NavigationStuckMoveThreshold = 0.08f;
+        }
+
+        private static void EnsureDangerAvoidanceDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.DangerScanRadius <= 0f)
+                profile.DangerScanRadius = 7f;
+
+            if (profile.DangerRefreshIntervalTicks == 0u)
+                profile.DangerRefreshIntervalTicks = 4u;
+
+            if (profile.DangerPersonalSpace <= 0f)
+                profile.DangerPersonalSpace = 0.45f;
+
+            if (profile.DangerReactionTimeSeconds <= 0f)
+                profile.DangerReactionTimeSeconds = 0.55f;
+
+            if (profile.DangerEvadePressureThreshold <= 0f)
+                profile.DangerEvadePressureThreshold = 0.36f;
+
+            if (profile.DangerEvadeScoreBonus <= 0f)
+                profile.DangerEvadeScoreBonus = 50f;
+
+            if (profile.DangerEvadeDistance <= 0f)
+                profile.DangerEvadeDistance = 1.8f;
+
+            if (profile.DangerEvadeRetargetTicks == 0u)
+                profile.DangerEvadeRetargetTicks = 10u;
+
+            if (profile.DangerThreatStaleDistance <= 0f)
+                profile.DangerThreatStaleDistance = 1.25f;
+
+            if (profile.DangerMapSearchRadius <= 0f)
+                profile.DangerMapSearchRadius = 1.2f;
         }
 
         private static void EnsureMapGeometryDefaults(BrawlerAIProfile profile)
@@ -738,15 +785,21 @@ namespace MOBA.Core.Simulation.AI
                 profile.AimErrorDegrees = Mathf.Max(profile.AimErrorDegrees, 1f);
                 profile.CombatSenseIntervalTicks = ClampTicks(profile.CombatSenseIntervalTicks, 2, 30);
                 profile.DangerRefreshIntervalTicks = ClampTicks(profile.DangerRefreshIntervalTicks, 2, 12);
+                profile.AIMoveSpeedScale = Mathf.Min(profile.AIMoveSpeedScale, 0.96f);
+                profile.AIHighPriorityMoveSpeedScale = Mathf.Min(profile.AIHighPriorityMoveSpeedScale, 0.98f);
             }
             else if (profile.Difficulty == AIDifficultyLevel.Normal)
             {
                 profile.AimErrorDegrees = Mathf.Max(profile.AimErrorDegrees, 2f);
+                profile.AIMoveSpeedScale = Mathf.Min(profile.AIMoveSpeedScale, 0.92f);
+                profile.AIHighPriorityMoveSpeedScale = Mathf.Min(profile.AIHighPriorityMoveSpeedScale, 0.94f);
             }
             else
             {
                 profile.AimErrorDegrees = Mathf.Max(profile.AimErrorDegrees, 6f);
                 profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 6, 24);
+                profile.AIMoveSpeedScale = Mathf.Min(profile.AIMoveSpeedScale, 0.82f);
+                profile.AIHighPriorityMoveSpeedScale = Mathf.Min(profile.AIHighPriorityMoveSpeedScale, 0.86f);
             }
 
             if (profile.UseTeamRoleCoordination)

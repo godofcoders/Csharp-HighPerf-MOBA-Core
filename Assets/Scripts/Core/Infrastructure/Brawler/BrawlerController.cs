@@ -363,7 +363,8 @@ namespace MOBA.Core.Infrastructure
 
         private void SetMoveInput(Vector3 direction)
         {
-            _currentMoveInput = direction;
+            direction.y = 0f;
+            _currentMoveInput = Vector3.ClampMagnitude(direction, 1f);
         }
 
         private void BufferAttack(InputCommandType type, Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
@@ -491,7 +492,12 @@ namespace MOBA.Core.Infrastructure
             float speed = State.IncomingMovementModifiers.Apply(State.MoveSpeed.Value);
             float tickDelta = SimulationTickInterval;
 
-            Vector3 movement = _currentMoveInput.normalized * (speed * tickDelta);
+            float inputMagnitude = Mathf.Clamp01(_currentMoveInput.magnitude);
+            Vector3 moveDirection = inputMagnitude > 0.001f
+                ? _currentMoveInput / inputMagnitude
+                : Vector3.zero;
+
+            Vector3 movement = moveDirection * (speed * tickDelta * inputMagnitude);
             transform.position += movement;
 
             if (movement != Vector3.zero)

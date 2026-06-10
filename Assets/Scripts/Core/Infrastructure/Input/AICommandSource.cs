@@ -46,7 +46,9 @@ namespace MOBA.Core.Simulation
                 return;
             }
 
-            _moveDirection = ResolveSmoothedMoveDirection(direction, highPriority);
+            Vector3 smoothedDirection = ResolveSmoothedMoveDirection(direction, highPriority);
+            float speedScale = GetMoveSpeedScale(highPriority);
+            _moveDirection = smoothedDirection * speedScale;
             _moveQueued = true;
         }
 
@@ -155,14 +157,27 @@ namespace MOBA.Core.Simulation
         {
             return _profile != null && _profile.AIMoveInputTurnRateDegreesPerTick > 0f
                 ? _profile.AIMoveInputTurnRateDegreesPerTick
-                : 28f;
+                : 22f;
         }
 
         private float GetHighPriorityTurnRateDegrees()
         {
             return _profile != null && _profile.AIHighPriorityMoveInputTurnRateDegreesPerTick > 0f
                 ? _profile.AIHighPriorityMoveInputTurnRateDegreesPerTick
-                : 80f;
+                : 54f;
+        }
+
+        private float GetMoveSpeedScale(bool highPriority)
+        {
+            float scale = highPriority
+                ? _profile != null && _profile.AIHighPriorityMoveSpeedScale > 0f
+                    ? _profile.AIHighPriorityMoveSpeedScale
+                    : 0.90f
+                : _profile != null && _profile.AIMoveSpeedScale > 0f
+                    ? _profile.AIMoveSpeedScale
+                    : 0.86f;
+
+            return Mathf.Clamp(scale, 0.35f, 1f);
         }
 
         public void CollectCommands(List<BrawlerCommand> output, uint currentTick)

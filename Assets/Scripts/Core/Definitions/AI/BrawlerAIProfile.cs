@@ -236,10 +236,16 @@ namespace MOBA.Core.Simulation.AI
         [Range(0.05f, 1f)] public float TacticalDestinationBlend = 0.55f;
 
         [Tooltip("Maximum AI movement input turn per simulation tick. Prevents instant left/right movement and rotation snaps.")]
-        public float AIMoveInputTurnRateDegreesPerTick = 28f;
+        public float AIMoveInputTurnRateDegreesPerTick = 22f;
 
         [Tooltip("Maximum AI movement input turn per tick for high-priority routes such as evade/recovery.")]
-        public float AIHighPriorityMoveInputTurnRateDegreesPerTick = 80f;
+        public float AIHighPriorityMoveInputTurnRateDegreesPerTick = 54f;
+
+        [Tooltip("Movement input magnitude used by AI during normal routes. 1 is full brawler move speed.")]
+        [Range(0.35f, 1f)] public float AIMoveSpeedScale = 0.86f;
+
+        [Tooltip("Movement input magnitude used by AI for urgent evade/recovery routes. Keep below 1 for fair, readable dodges.")]
+        [Range(0.35f, 1f)] public float AIHighPriorityMoveSpeedScale = 0.90f;
 
         [Tooltip("Minimum distance a tactical move should ask the bot to travel. Prevents tiny stale destinations from turning into stationary aim.")]
         public float TacticalMinimumStepDistance = 0.75f;
@@ -314,23 +320,23 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("How far the bot scans for active projectiles and hostile area hazards.")]
         public float DangerScanRadius = 7f;
         [Tooltip("Ticks between danger scans. Keep low for responsiveness, but never every frame for every bot unless profiling proves it safe.")]
-        public uint DangerRefreshIntervalTicks = 2;
+        public uint DangerRefreshIntervalTicks = 4;
         [Tooltip("Extra padding added around the bot and threat radius while evaluating danger.")]
-        public float DangerPersonalSpace = 0.55f;
+        public float DangerPersonalSpace = 0.45f;
         [Tooltip("Threat impact window used for early evasion. Higher values make bots dodge sooner.")]
-        public float DangerReactionTimeSeconds = 0.75f;
+        public float DangerReactionTimeSeconds = 0.55f;
         [Tooltip("Minimum danger pressure needed before Evade can score.")]
-        public float DangerEvadePressureThreshold = 0.25f;
+        public float DangerEvadePressureThreshold = 0.36f;
         [Tooltip("Evade score added at full danger pressure.")]
-        public float DangerEvadeScoreBonus = 70f;
+        public float DangerEvadeScoreBonus = 50f;
         [Tooltip("Step distance requested when dodging a projectile or leaving a hazard.")]
-        public float DangerEvadeDistance = 2.6f;
+        public float DangerEvadeDistance = 1.8f;
         [Tooltip("Ticks before recalculating an evade route while danger remains active.")]
-        public uint DangerEvadeRetargetTicks = 6;
+        public uint DangerEvadeRetargetTicks = 10;
         [Tooltip("Recalculate evade movement when the primary threat moves this far from the last planned threat position.")]
-        public float DangerThreatStaleDistance = 0.9f;
+        public float DangerThreatStaleDistance = 1.25f;
         [Tooltip("Local map search radius for evade. Smaller than normal map routing to avoid expensive per-tick candidate scans.")]
-        public float DangerMapSearchRadius = 1.5f;
+        public float DangerMapSearchRadius = 1.2f;
         [Tooltip("If true, logs danger avoidance memory updates.")]
         public bool LogDangerAvoidance = false;
 
@@ -994,48 +1000,60 @@ namespace MOBA.Core.Simulation.AI
                     TacticalDirectionFlipCooldownTicks = 28;
                     TacticalDestinationSwitchDistance = 1.35f;
                     TacticalDestinationBlend = 0.45f;
-                    AIMoveInputTurnRateDegreesPerTick = 24f;
-                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 72f;
+                    AIMoveInputTurnRateDegreesPerTick = 18f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 44f;
+                    AIMoveSpeedScale = 0.82f;
+                    AIHighPriorityMoveSpeedScale = 0.88f;
                     break;
 
                 case BrawlerArchetype.Tank:
                     TacticalDirectionFlipCooldownTicks = 18;
                     TacticalDestinationSwitchDistance = 1.0f;
                     TacticalDestinationBlend = 0.65f;
-                    AIMoveInputTurnRateDegreesPerTick = 32f;
-                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 90f;
+                    AIMoveInputTurnRateDegreesPerTick = 18f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 46f;
+                    AIMoveSpeedScale = 0.82f;
+                    AIHighPriorityMoveSpeedScale = 0.88f;
                     break;
 
                 case BrawlerArchetype.Assassin:
                     TacticalDirectionFlipCooldownTicks = 16;
                     TacticalDestinationSwitchDistance = 0.95f;
                     TacticalDestinationBlend = 0.7f;
-                    AIMoveInputTurnRateDegreesPerTick = 38f;
-                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 110f;
+                    AIMoveInputTurnRateDegreesPerTick = 26f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 68f;
+                    AIMoveSpeedScale = 0.94f;
+                    AIHighPriorityMoveSpeedScale = 0.98f;
                     break;
 
                 case BrawlerArchetype.Support:
                     TacticalDirectionFlipCooldownTicks = 26;
                     TacticalDestinationSwitchDistance = 1.3f;
                     TacticalDestinationBlend = 0.5f;
-                    AIMoveInputTurnRateDegreesPerTick = 26f;
-                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 76f;
+                    AIMoveInputTurnRateDegreesPerTick = 18f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 46f;
+                    AIMoveSpeedScale = 0.84f;
+                    AIHighPriorityMoveSpeedScale = 0.90f;
                     break;
 
                 case BrawlerArchetype.Controller:
                     TacticalDirectionFlipCooldownTicks = 24;
                     TacticalDestinationSwitchDistance = 1.2f;
                     TacticalDestinationBlend = 0.55f;
-                    AIMoveInputTurnRateDegreesPerTick = 28f;
-                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 82f;
+                    AIMoveInputTurnRateDegreesPerTick = 20f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 52f;
+                    AIMoveSpeedScale = 0.86f;
+                    AIHighPriorityMoveSpeedScale = 0.91f;
                     break;
 
                 case BrawlerArchetype.Artillery:
                     TacticalDirectionFlipCooldownTicks = 30;
                     TacticalDestinationSwitchDistance = 1.4f;
                     TacticalDestinationBlend = 0.45f;
-                    AIMoveInputTurnRateDegreesPerTick = 24f;
-                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 72f;
+                    AIMoveInputTurnRateDegreesPerTick = 16f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 40f;
+                    AIMoveSpeedScale = 0.80f;
+                    AIHighPriorityMoveSpeedScale = 0.86f;
                     break;
 
                 case BrawlerArchetype.Fighter:
@@ -1043,8 +1061,10 @@ namespace MOBA.Core.Simulation.AI
                     TacticalDirectionFlipCooldownTicks = 22;
                     TacticalDestinationSwitchDistance = 1.15f;
                     TacticalDestinationBlend = 0.6f;
-                    AIMoveInputTurnRateDegreesPerTick = 30f;
-                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 86f;
+                    AIMoveInputTurnRateDegreesPerTick = 22f;
+                    AIHighPriorityMoveInputTurnRateDegreesPerTick = 54f;
+                    AIMoveSpeedScale = 0.88f;
+                    AIHighPriorityMoveSpeedScale = 0.92f;
                     break;
             }
         }
@@ -1251,72 +1271,72 @@ namespace MOBA.Core.Simulation.AI
         private void ApplyDangerAvoidanceDefaults(BrawlerArchetype archetype)
         {
             DangerScanRadius = 7f;
-            DangerRefreshIntervalTicks = 2;
-            DangerPersonalSpace = 0.55f;
-            DangerReactionTimeSeconds = 0.75f;
-            DangerEvadePressureThreshold = 0.25f;
-            DangerEvadeScoreBonus = 70f;
-            DangerEvadeDistance = 2.6f;
-            DangerEvadeRetargetTicks = 6;
-            DangerThreatStaleDistance = 0.9f;
-            DangerMapSearchRadius = 1.5f;
+            DangerRefreshIntervalTicks = 4;
+            DangerPersonalSpace = 0.45f;
+            DangerReactionTimeSeconds = 0.55f;
+            DangerEvadePressureThreshold = 0.36f;
+            DangerEvadeScoreBonus = 50f;
+            DangerEvadeDistance = 1.8f;
+            DangerEvadeRetargetTicks = 10;
+            DangerThreatStaleDistance = 1.25f;
+            DangerMapSearchRadius = 1.2f;
             LogDangerAvoidance = false;
 
             switch (archetype)
             {
                 case BrawlerArchetype.Sniper:
-                    DangerScanRadius = 8.5f;
-                    DangerReactionTimeSeconds = 0.95f;
-                    DangerEvadePressureThreshold = 0.20f;
-                    DangerEvadeScoreBonus = 82f;
-                    DangerEvadeDistance = 3.1f;
-                    DangerEvadeRetargetTicks = 5;
+                    DangerScanRadius = 7.5f;
+                    DangerReactionTimeSeconds = 0.65f;
+                    DangerEvadePressureThreshold = 0.32f;
+                    DangerEvadeScoreBonus = 58f;
+                    DangerEvadeDistance = 2.1f;
+                    DangerEvadeRetargetTicks = 9;
                     break;
 
                 case BrawlerArchetype.Tank:
-                    DangerScanRadius = 6f;
-                    DangerReactionTimeSeconds = 0.60f;
-                    DangerEvadePressureThreshold = 0.34f;
-                    DangerEvadeScoreBonus = 48f;
-                    DangerEvadeDistance = 1.9f;
-                    DangerEvadeRetargetTicks = 7;
-                    DangerMapSearchRadius = 1.25f;
+                    DangerScanRadius = 5.5f;
+                    DangerReactionTimeSeconds = 0.45f;
+                    DangerEvadePressureThreshold = 0.44f;
+                    DangerEvadeScoreBonus = 34f;
+                    DangerEvadeDistance = 1.4f;
+                    DangerEvadeRetargetTicks = 12;
+                    DangerMapSearchRadius = 1.0f;
                     break;
 
                 case BrawlerArchetype.Assassin:
-                    DangerScanRadius = 7.5f;
-                    DangerReactionTimeSeconds = 0.80f;
-                    DangerEvadePressureThreshold = 0.23f;
-                    DangerEvadeScoreBonus = 66f;
-                    DangerEvadeDistance = 2.4f;
-                    DangerEvadeRetargetTicks = 5;
+                    DangerScanRadius = 6.5f;
+                    DangerReactionTimeSeconds = 0.55f;
+                    DangerEvadePressureThreshold = 0.34f;
+                    DangerEvadeScoreBonus = 48f;
+                    DangerEvadeDistance = 1.8f;
+                    DangerEvadeRetargetTicks = 9;
                     break;
 
                 case BrawlerArchetype.Support:
-                    DangerScanRadius = 8f;
-                    DangerReactionTimeSeconds = 0.90f;
-                    DangerEvadePressureThreshold = 0.22f;
-                    DangerEvadeScoreBonus = 78f;
-                    DangerEvadeDistance = 2.9f;
-                    DangerEvadeRetargetTicks = 5;
+                    DangerScanRadius = 7f;
+                    DangerReactionTimeSeconds = 0.60f;
+                    DangerEvadePressureThreshold = 0.34f;
+                    DangerEvadeScoreBonus = 56f;
+                    DangerEvadeDistance = 2.0f;
+                    DangerEvadeRetargetTicks = 10;
                     break;
 
                 case BrawlerArchetype.Controller:
-                    DangerScanRadius = 7.25f;
-                    DangerReactionTimeSeconds = 0.80f;
-                    DangerEvadePressureThreshold = 0.24f;
-                    DangerEvadeScoreBonus = 72f;
-                    DangerEvadeDistance = 2.6f;
-                    DangerEvadeRetargetTicks = 6;
+                    DangerScanRadius = 6.5f;
+                    DangerReactionTimeSeconds = 0.55f;
+                    DangerEvadePressureThreshold = 0.36f;
+                    DangerEvadeScoreBonus = 50f;
+                    DangerEvadeDistance = 1.8f;
+                    DangerEvadeRetargetTicks = 10;
                     break;
 
                 case BrawlerArchetype.Artillery:
-                    DangerScanRadius = 8.75f;
-                    DangerReactionTimeSeconds = 1.00f;
-                    DangerEvadePressureThreshold = 0.20f;
-                    DangerEvadeScoreBonus = 86f;
-                    DangerEvadeDistance = 3.2f;
-                    DangerEvadeRetargetTicks = 5;
+                    DangerScanRadius = 7.75f;
+                    DangerReactionTimeSeconds = 0.70f;
+                    DangerEvadePressureThreshold = 0.32f;
+                    DangerEvadeScoreBonus = 60f;
+                    DangerEvadeDistance = 2.2f;
+                    DangerEvadeRetargetTicks = 10;
                     break;
             }
         }
