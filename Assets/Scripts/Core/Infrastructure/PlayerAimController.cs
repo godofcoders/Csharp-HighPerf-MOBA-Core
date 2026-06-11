@@ -22,6 +22,13 @@ namespace MOBA.Core.Infrastructure
         [Header("Placement Preview")]
         [SerializeField] private float _defaultPlacementRadius = 0.75f;
 
+        [Header("Smoothing")]
+        [SerializeField] private float _directionSmoothingSpeed = 28f;
+
+        private bool _hasSmoothedAimDirection;
+        private AimPreviewKind _smoothedAimKind = AimPreviewKind.None;
+        private Vector3 _smoothedAimDirection = Vector3.forward;
+
         private void Awake()
         {
             if (_brawler == null)
@@ -38,20 +45,20 @@ namespace MOBA.Core.Infrastructure
 
             if (_commandSource == null)
             {
-                _aimIndicatorView.Hide();
+                HidePreview();
                 return;
             }
 
             if (!_commandSource.HasPreviewAim())
             {
-                _aimIndicatorView.Hide();
+                HidePreview();
                 return;
             }
 
             Vector3 aimDirection = _commandSource.GetPreviewAimDirection();
             if (aimDirection.sqrMagnitude <= 0.001f)
             {
-                _aimIndicatorView.Hide();
+                HidePreview();
                 return;
             }
 
@@ -60,11 +67,12 @@ namespace MOBA.Core.Infrastructure
 
             if (ability == null)
             {
-                _aimIndicatorView.Hide();
+                HidePreview();
                 return;
             }
 
-            AimPreviewData data = BuildPreviewData(kind, ability, aimDirection.normalized);
+            Vector3 smoothedAimDirection = SmoothAimDirection(kind, aimDirection.normalized);
+            AimPreviewData data = BuildPreviewData(kind, ability, smoothedAimDirection);
             _aimIndicatorView.Show(data);
         }
 
@@ -141,6 +149,10 @@ namespace MOBA.Core.Infrastructure
                         float directionalRange = ResolveDirectionalRange(ability);
                         float previewWidth = ResolveDirectionalWidth(ability);
                         float spreadHalfAngle = ResolveSpreadHalfAngle(ability);
+                        AimLineTraceResult lineTrace = TraceDirectionalPreview(playerCenter, aimDirection, directionalRange, previewWidth);
+                        float visibleRange = lineTrace.IsBlocked
+                            ? Mathf.Max(0.15f, lineTrace.ClearDistance)
+                            : directionalRange;
 
                         return new AimPreviewData
                         {
@@ -149,10 +161,10 @@ namespace MOBA.Core.Infrastructure
                             Mode = AimPreviewMode.Directional,
                             Origin = playerCenter,
                             Direction = aimDirection,
-                            Range = directionalRange,
+                            Range = visibleRange,
                             Width = previewWidth,
-                            IsObstructed = false,
-                            TargetPoint = playerCenter + (aimDirection * directionalRange),
+                            IsObstructed = lineTrace.IsBlocked,
+                            TargetPoint = playerCenter + (aimDirection * visibleRange),
                             ArcHeight = 0f,
                             Radius = 0f,
                             SpreadHalfAngleDegrees = spreadHalfAngle
@@ -212,6 +224,59 @@ namespace MOBA.Core.Infrastructure
                 return aoe.Radius;
 
             return _defaultRange;
+        }
+
+        private Vector3 SmoothAimDirection(AimPreviewKind kind, Vector3 rawDirection)
+        {
+            rawDirection.y = 0f;
+            if (rawDirection.sqrMagnitude <= 0.001f)
+                return _smoothedAimDirection;
+
+            rawDirection.Normalize();
+
+            if (!_hasSmoothedAimDirection || _smoothedAimKind != kind)
+            {
+                _hasSmoothedAimDirection = true;
+                _smoothedAimKind = kind;
+                _smoothedAimDirection = rawDirection;
+                return _smoothedAimDirection;
+            }
+
+            float speed = Mathf.Max(0f, _directionSmoothingSpeed);
+            float t = speed <= 0f
+                ? 1f
+                : 1f - Mathf.Exp(-speed * Time.deltaTime);
+
+            _smoothedAimDirection = Vector3.Slerp(_smoothedAimDirection, rawDirection, t);
+            _smoothedAimDirection.y = 0f;
+
+            if (_smoothedAimDirection.sqrMagnitude <= 0.001f)
+                _smoothedAimDirection = rawDirection;
+            else
+                _smoothedAimDirection.Normalize();
+
+            return _smoothedAimDirection;
+        }
+
+        private AimLineTraceResult TraceDirectionalPreview(
+            Vector3 origin,
+            Vector3 aimDirection,
+            float range,
+            float previewWidth)
+        {
+            return AimLineOfSightUtility.Trace(
+                SimulationClock.Pathfinder,
+                origin,
+                aimDirection,
+                range,
+                Mathf.Max(0.05f, previewWidth * 0.5f));
+        }
+
+        private void HidePreview()
+        {
+            _aimIndicatorView.Hide();
+            _hasSmoothedAimDirection = false;
+            _smoothedAimKind = AimPreviewKind.None;
         }
     }
 }

@@ -15,6 +15,9 @@ namespace MOBA.Core.Definitions
         [Tooltip("Total spread angle in degrees across all projectiles. 0 = single line. Used by aim preview to render a fan boundary; gameplay logic decides actual per-projectile spread.")]
         [Min(0f)]
         public float SpreadAngle = 0f;
+        [Tooltip("Side-to-side spacing for multi-projectile straight attacks. This keeps Colt-style shots readable as lanes instead of stacked duplicates.")]
+        [Min(0f)]
+        public float ParallelLaneSpacing = 0.38f;
         [Header("Presentation")]
         public ProjectilePresentationProfile PresentationProfile;
 
@@ -40,6 +43,8 @@ namespace MOBA.Core.Definitions
                 Range,
                 Speed,
                 ProjectileCount,
+                SpreadAngle,
+                ParallelLaneSpacing,
                 PresentationProfile
             );
         }
