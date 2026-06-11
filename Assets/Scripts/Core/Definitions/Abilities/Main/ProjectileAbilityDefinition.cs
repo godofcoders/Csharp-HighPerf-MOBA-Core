@@ -17,7 +17,10 @@ namespace MOBA.Core.Definitions
         public float SpreadAngle = 0f;
         [Tooltip("Side-to-side spacing for multi-projectile straight attacks. This keeps Colt-style shots readable as lanes instead of stacked duplicates.")]
         [Min(0f)]
-        public float ParallelLaneSpacing = 0.38f;
+        public float ParallelLaneSpacing = 0.86f;
+        [Tooltip("Forward spawn offset along the aim direction. Keeps projectiles from appearing inside the brawler model while preserving aim-based travel.")]
+        [Min(0f)]
+        public float ForwardSpawnOffset = 0.65f;
         [Header("Presentation")]
         public ProjectilePresentationProfile PresentationProfile;
 
@@ -45,6 +48,7 @@ namespace MOBA.Core.Definitions
                 ProjectileCount,
                 SpreadAngle,
                 ParallelLaneSpacing,
+                ForwardSpawnOffset,
                 PresentationProfile
             );
         }

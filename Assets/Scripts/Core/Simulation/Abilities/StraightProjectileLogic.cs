@@ -11,6 +11,7 @@ namespace MOBA.Core.Simulation.Abilities
         private readonly int _projectileCount;
         private readonly float _spreadAngle;
         private readonly float _parallelLaneSpacing;
+        private readonly float _forwardSpawnOffset;
         private readonly ProjectilePresentationProfile _presentationProfile;
 
         public StraightProjectileLogic(
@@ -20,6 +21,7 @@ namespace MOBA.Core.Simulation.Abilities
             int projectileCount,
             float spreadAngle,
             float parallelLaneSpacing,
+            float forwardSpawnOffset,
             ProjectilePresentationProfile presentationProfile)
         {
             _damage = damage;
@@ -28,6 +30,7 @@ namespace MOBA.Core.Simulation.Abilities
             _projectileCount = Mathf.Max(1, projectileCount);
             _spreadAngle = Mathf.Max(0f, spreadAngle);
             _parallelLaneSpacing = Mathf.Max(0f, parallelLaneSpacing);
+            _forwardSpawnOffset = Mathf.Max(0f, forwardSpawnOffset);
             _presentationProfile = presentationProfile;
         }
 
@@ -93,17 +96,19 @@ namespace MOBA.Core.Simulation.Abilities
 
         private Vector3 ResolveShotOrigin(Vector3 origin, Vector3 baseDirection, int shotIndex)
         {
+            Vector3 spawnOrigin = origin + baseDirection * _forwardSpawnOffset;
+
             if (_projectileCount <= 1 || _parallelLaneSpacing <= 0.001f)
-                return origin;
+                return spawnOrigin;
 
             Vector3 right = new Vector3(baseDirection.z, 0f, -baseDirection.x);
             if (right.sqrMagnitude <= 0.001f)
-                return origin;
+                return spawnOrigin;
 
             right.Normalize();
 
             float laneOffset = (shotIndex % 2 == 0 ? -0.5f : 0.5f) * _parallelLaneSpacing;
-            return origin + right * laneOffset;
+            return spawnOrigin + right * laneOffset;
         }
 
         public void Tick(uint currentTick) { }

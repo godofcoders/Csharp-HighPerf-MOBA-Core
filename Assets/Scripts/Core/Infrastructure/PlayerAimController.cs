@@ -14,6 +14,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _defaultRange = 8f;
         [SerializeField] private float _originHeightOffset = 0.25f;
         [SerializeField] private float _defaultDirectionalWidth = 1f;
+        [SerializeField] private float _minimumVisibleDirectionalRange = 1.15f;
 
         [Header("Throwable Preview")]
         [SerializeField] private float _defaultThrowableArcHeight = 1.75f;
@@ -23,7 +24,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _defaultPlacementRadius = 0.75f;
 
         [Header("Smoothing")]
-        [SerializeField] private float _directionSmoothingSpeed = 28f;
+        [SerializeField] private float _directionSmoothingSpeed = 16f;
 
         private bool _hasSmoothedAimDirection;
         private AimPreviewKind _smoothedAimKind = AimPreviewKind.None;
@@ -151,7 +152,10 @@ namespace MOBA.Core.Infrastructure
                         float spreadHalfAngle = ResolveSpreadHalfAngle(ability);
                         AimLineTraceResult lineTrace = TraceDirectionalPreview(playerCenter, aimDirection, directionalRange, previewWidth);
                         float visibleRange = lineTrace.IsBlocked
-                            ? Mathf.Max(0.15f, lineTrace.ClearDistance)
+                            ? Mathf.Clamp(
+                                lineTrace.ClearDistance,
+                                Mathf.Min(_minimumVisibleDirectionalRange, directionalRange),
+                                directionalRange)
                             : directionalRange;
 
                         return new AimPreviewData

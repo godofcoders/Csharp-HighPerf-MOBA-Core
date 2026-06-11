@@ -19,3 +19,7 @@ MonoBehaviour:
   Range: 12
   Speed: 18
   ProjectileCount: 6
+  SpreadAngle: 0
+  ParallelLaneSpacing: 0.86
+  ForwardSpawnOffset: 0.72
+  PresentationProfile: {fileID: 0}
