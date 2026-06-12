@@ -668,12 +668,12 @@ namespace MOBA.Core.Infrastructure
         private static float ResolveImpactFeedbackRadius(ActiveProjectile projectile)
         {
             if (projectile == null)
-                return 0.45f;
+                return 0.26f;
 
             if (projectile.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE && projectile.ImpactRadius > 0f)
-                return Mathf.Clamp(projectile.ImpactRadius * 0.28f, 0.55f, 1.35f);
+                return Mathf.Clamp(projectile.ImpactRadius * 0.18f, 0.34f, 0.82f);
 
-            return projectile.IsSuper ? 0.72f : 0.48f;
+            return projectile.IsSuper ? 0.42f : 0.26f;
         }
 
         private void ClearActiveProjectilesForShutdown()

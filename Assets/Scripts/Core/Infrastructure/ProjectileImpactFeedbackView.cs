@@ -25,14 +25,14 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _expiredDurationSeconds = 0.14f;
 
         [Header("Scale")]
-        [SerializeField] private float _verticalScale = 0.06f;
-        [SerializeField] private float _startScaleMultiplier = 0.35f;
-        [SerializeField] private float _endScaleMultiplier = 1.18f;
+        [SerializeField] private float _verticalScale = 0.035f;
+        [SerializeField] private float _startScaleMultiplier = 0.22f;
+        [SerializeField] private float _endScaleMultiplier = 0.72f;
 
         [Header("Colors")]
-        [SerializeField] private Color _impactColor = new Color(1f, 0.82f, 0.20f, 0.72f);
-        [SerializeField] private Color _superImpactColor = new Color(0.78f, 0.28f, 1f, 0.82f);
-        [SerializeField] private Color _expiredColor = new Color(0.80f, 0.86f, 0.95f, 0.36f);
+        [SerializeField] private Color _impactColor = new Color(1f, 0.42f, 0.06f, 0.86f);
+        [SerializeField] private Color _superImpactColor = new Color(1f, 0.30f, 0.95f, 0.88f);
+        [SerializeField] private Color _expiredColor = new Color(0.42f, 0.46f, 0.50f, 0.24f);
 
         private readonly List<PulseInstance> _pool = new List<PulseInstance>(48);
         private readonly MaterialPropertyBlock _propertyBlock = new MaterialPropertyBlock();
@@ -85,22 +85,7 @@ namespace MOBA.Core.Infrastructure
                     continue;
                 }
 
-                float scale = Mathf.Lerp(
-                    pulse.Radius * _startScaleMultiplier,
-                    pulse.Radius * _endScaleMultiplier,
-                    EaseOutCubic(t));
-
-                pulse.Transform.localScale = new Vector3(scale, _verticalScale, scale);
-
-                Color color = pulse.Color;
-                color.a *= 1f - t;
-                if (pulse.Renderer != null)
-                {
-                    pulse.Renderer.GetPropertyBlock(_propertyBlock);
-                    _propertyBlock.SetColor(ColorId, color);
-                    _propertyBlock.SetColor(BaseColorId, color);
-                    pulse.Renderer.SetPropertyBlock(_propertyBlock);
-                }
+                ApplyPulseVisual(pulse, t);
             }
         }
 
@@ -142,6 +127,7 @@ namespace MOBA.Core.Infrastructure
             pulse.DurationSeconds = Mathf.Max(0.05f, durationSeconds);
             pulse.ElapsedSeconds = 0f;
             pulse.SetActive(true);
+            ApplyPulseVisual(pulse, 0f);
         }
 
         private PulseInstance GetPulseInstance()
@@ -216,7 +202,7 @@ namespace MOBA.Core.Infrastructure
                 return null;
 
             Material material = new Material(shader);
-            material.color = Color.white;
+            material.color = new Color(1f, 0.42f, 0.06f, 0.86f);
             material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
             material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
             material.SetInt("_ZWrite", 0);
@@ -225,6 +211,30 @@ namespace MOBA.Core.Infrastructure
             material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
             material.renderQueue = (int)RenderQueue.Transparent;
             return material;
+        }
+
+        private void ApplyPulseVisual(PulseInstance pulse, float normalizedTime)
+        {
+            if (pulse == null)
+                return;
+
+            float t = Mathf.Clamp01(normalizedTime);
+            float scale = Mathf.Lerp(
+                pulse.Radius * _startScaleMultiplier,
+                pulse.Radius * _endScaleMultiplier,
+                EaseOutCubic(t));
+
+            pulse.Transform.localScale = new Vector3(scale, _verticalScale, scale);
+
+            if (pulse.Renderer == null)
+                return;
+
+            Color color = pulse.Color;
+            color.a *= 1f - t;
+            pulse.Renderer.GetPropertyBlock(_propertyBlock);
+            _propertyBlock.SetColor(ColorId, color);
+            _propertyBlock.SetColor(BaseColorId, color);
+            pulse.Renderer.SetPropertyBlock(_propertyBlock);
         }
 
         private sealed class PulseInstance

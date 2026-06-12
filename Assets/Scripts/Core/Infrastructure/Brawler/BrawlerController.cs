@@ -376,10 +376,80 @@ namespace MOBA.Core.Infrastructure
             _currentMoveInput = Vector3.ClampMagnitude(direction, 1f);
         }
 
-        private void BufferAttack(InputCommandType type, Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
+        private void BufferAttack(
+            InputCommandType type,
+            Vector3 direction,
+            Vector3 targetPoint,
+            bool hasTargetPoint,
+            uint currentTick)
         {
-            _inputBuffer.Enqueue(type, direction, targetPoint, hasTargetPoint);
+            _inputBuffer.Enqueue(type, direction, targetPoint, hasTargetPoint, currentTick);
         }
+
+        private void TryExecuteBufferedCommand(uint currentTick)
+        {
+            if (!_inputBuffer.TryPeek(currentTick, out BufferedCommand cmd))
+                return;
+
+            BrawlerActionRequestType actionType = ToActionRequestType(cmd.Type);
+            if (actionType == BrawlerActionRequestType.None)
+            {
+                _inputBuffer.Clear();
+                return;
+            }
+
+            BrawlerActionBlockReason blockReason = State.GetBlockReasonForAction(actionType, currentTick);
+            if (blockReason != BrawlerActionBlockReason.None)
+            {
+                if (!ShouldKeepBufferedAction(actionType, blockReason))
+                    _inputBuffer.Clear();
+
+                return;
+            }
+
+            if (_inputBuffer.TryConsume(currentTick, out cmd))
+                ExecuteCommand(cmd, currentTick);
+        }
+
+        private static BrawlerActionRequestType ToActionRequestType(InputCommandType type)
+        {
+            switch (type)
+            {
+                case InputCommandType.MainAttack:
+                    return BrawlerActionRequestType.MainAttack;
+
+                case InputCommandType.Gadget:
+                    return BrawlerActionRequestType.Gadget;
+
+                case InputCommandType.Super:
+                    return BrawlerActionRequestType.Super;
+
+                case InputCommandType.Hypercharge:
+                    return BrawlerActionRequestType.Hypercharge;
+
+                default:
+                    return BrawlerActionRequestType.None;
+            }
+        }
+
+        private static bool ShouldKeepBufferedAction(
+            BrawlerActionRequestType actionType,
+            BrawlerActionBlockReason blockReason)
+        {
+            switch (blockReason)
+            {
+                case BrawlerActionBlockReason.ActionLocked:
+                case BrawlerActionBlockReason.AbilityCooldown:
+                    return true;
+
+                case BrawlerActionBlockReason.NoAmmo:
+                    return actionType == BrawlerActionRequestType.MainAttack;
+
+                default:
+                    return false;
+            }
+        }
+
         public override void Tick(uint currentTick)
         {
             if (!_isInitialized || State == null || State.IsDead)
@@ -413,20 +483,6 @@ namespace MOBA.Core.Infrastructure
             State.UpdateActionState(currentTick);
             State.UpdateResources(SimulationClock.TickDeltaTime);
 
-            if (State.CanMove(currentTick))
-                ProcessMovement(currentTick);
-            else
-                SetMoveInput(Vector3.zero);
-
-            if (_currentMoveInput.sqrMagnitude <= 0.01f)
-            {
-                _previousSimPosition = _currentSimPosition;
-                _previousSimRotation = _currentSimRotation;
-                _currentSimPosition = transform.position;
-                _currentSimRotation = transform.rotation;
-                _lastSimulationUpdateTime = Time.time;
-            }
-
             State.Hypercharge.Tick(currentTick, () =>
             {
                 State.ClearHyperchargeRuntimeModifiers();
@@ -445,10 +501,20 @@ namespace MOBA.Core.Infrastructure
                 Debug.Log("[SIM] Hypercharge Ended");
             });
 
-            if (_inputBuffer.HasPending && State.CanUseActionInput(currentTick))
+            TryExecuteBufferedCommand(currentTick);
+
+            if (State.CanMove(currentTick))
+                ProcessMovement(currentTick);
+            else
+                SetMoveInput(Vector3.zero);
+
+            if (_currentMoveInput.sqrMagnitude <= 0.01f)
             {
-                var cmd = _inputBuffer.Consume();
-                ExecuteCommand(cmd);
+                _previousSimPosition = _currentSimPosition;
+                _previousSimRotation = _currentSimRotation;
+                _currentSimPosition = transform.position;
+                _currentSimRotation = transform.rotation;
+                _lastSimulationUpdateTime = Time.time;
             }
 
             SimulationClock.Grid?.UpdateEntity(this, _lastTickPosition, transform.position);
@@ -671,10 +737,8 @@ namespace MOBA.Core.Infrastructure
             projectileService.FireProjectile(spawnContext);
         }
 
-        private void ExecuteCommand(BufferedCommand cmd)
+        private void ExecuteCommand(BufferedCommand cmd, uint currentTick)
         {
-            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
-
             switch (cmd.Type)
             {
                 case InputCommandType.MainAttack:
@@ -1093,6 +1157,14 @@ namespace MOBA.Core.Infrastructure
 
                         break;
                     }
+
+                case InputCommandType.Hypercharge:
+                    {
+                        if (State.CanUseAction(BrawlerActionRequestType.Hypercharge, currentTick))
+                            ActivateHypercharge();
+
+                        break;
+                    }
             }
         }
 
@@ -1292,15 +1364,19 @@ namespace MOBA.Core.Infrastructure
                 return false;
             }
 
-            blockReason = State.GetBlockReasonForAction(
-                BrawlerActionRequestType.MainAttack,
-                ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            BrawlerActionRequestType actionType = BrawlerActionRequestType.MainAttack;
+            blockReason = State.GetBlockReasonForAction(actionType, currentTick);
 
-            if (blockReason != BrawlerActionBlockReason.None)
+            if (blockReason != BrawlerActionBlockReason.None &&
+                !ShouldKeepBufferedAction(actionType, blockReason))
+            {
+                _inputBuffer.Clear();
                 return false;
+            }
 
-            BufferAttack(InputCommandType.MainAttack, direction, targetPoint, hasTargetPoint);
-            return true;
+            BufferAttack(InputCommandType.MainAttack, direction, targetPoint, hasTargetPoint, currentTick);
+            return blockReason == BrawlerActionBlockReason.None;
         }
 
         public bool TryUseGadget(Vector3 direction, out BrawlerActionBlockReason blockReason)
@@ -1318,15 +1394,19 @@ namespace MOBA.Core.Infrastructure
                 return false;
             }
 
-            blockReason = State.GetBlockReasonForAction(
-                BrawlerActionRequestType.Gadget,
-                ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            BrawlerActionRequestType actionType = BrawlerActionRequestType.Gadget;
+            blockReason = State.GetBlockReasonForAction(actionType, currentTick);
 
-            if (blockReason != BrawlerActionBlockReason.None)
+            if (blockReason != BrawlerActionBlockReason.None &&
+                !ShouldKeepBufferedAction(actionType, blockReason))
+            {
+                _inputBuffer.Clear();
                 return false;
+            }
 
-            BufferAttack(InputCommandType.Gadget, direction, Vector3.zero, false);
-            return true;
+            BufferAttack(InputCommandType.Gadget, direction, Vector3.zero, false, currentTick);
+            return blockReason == BrawlerActionBlockReason.None;
         }
 
         public bool TryUseSuper(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint, out BrawlerActionBlockReason blockReason)
@@ -1344,15 +1424,19 @@ namespace MOBA.Core.Infrastructure
                 return false;
             }
 
-            blockReason = State.GetBlockReasonForAction(
-                BrawlerActionRequestType.Super,
-                ServiceProvider.Get<ISimulationClock>().CurrentTick);
+            uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
+            BrawlerActionRequestType actionType = BrawlerActionRequestType.Super;
+            blockReason = State.GetBlockReasonForAction(actionType, currentTick);
 
-            if (blockReason != BrawlerActionBlockReason.None)
+            if (blockReason != BrawlerActionBlockReason.None &&
+                !ShouldKeepBufferedAction(actionType, blockReason))
+            {
+                _inputBuffer.Clear();
                 return false;
+            }
 
-            BufferAttack(InputCommandType.Super, direction, targetPoint, hasTargetPoint);
-            return true;
+            BufferAttack(InputCommandType.Super, direction, targetPoint, hasTargetPoint, currentTick);
+            return blockReason == BrawlerActionBlockReason.None;
         }
 
         public bool TryActivateHypercharge(out BrawlerActionBlockReason blockReason)
@@ -1367,7 +1451,14 @@ namespace MOBA.Core.Infrastructure
             blockReason = State.GetBlockReasonForAction(BrawlerActionRequestType.Hypercharge, currentTick);
 
             if (blockReason != BrawlerActionBlockReason.None)
+            {
+                if (ShouldKeepBufferedAction(BrawlerActionRequestType.Hypercharge, blockReason))
+                    BufferAttack(InputCommandType.Hypercharge, transform.forward, Vector3.zero, false, currentTick);
+                else
+                    _inputBuffer.Clear();
+
                 return false;
+            }
 
             ActivateHypercharge();
             return true;

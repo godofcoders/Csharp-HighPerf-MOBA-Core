@@ -67,7 +67,7 @@ Goal: make player combat feel reliable and readable.
 - `[~]` Aim preview should be smoothed enough to avoid camera/mouse jitter without feeling delayed.
 - `[~]` Remove end marker/sphere from directional preview; keep endpoint markers only for throwable/placement abilities.
 - `[~]` Improve projectile hit feedback and lifetime cleanup. Projectile impact/expiry events now drive pooled visual pulses, and pooled projectile visuals reset on despawn.
-- `[ ]` Tune action buffering and attack lock feel while moving.
+- `[~]` Tune action buffering and attack lock feel while moving. Action buffering is now tick-based, preserves near-ready commands through short locks/cooldowns, and executes before movement so lock flags apply on the cast-start tick.
 - `[ ]` Manual QA: shoot while moving, shoot around walls, tap auto-aim, hold aim, super aim, projectile visibility.
 
 ## Milestone G-03: Grass / Stealth System

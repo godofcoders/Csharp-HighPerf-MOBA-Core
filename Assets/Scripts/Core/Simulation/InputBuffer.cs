@@ -15,42 +15,66 @@ namespace MOBA.Core.Simulation
     {
         public InputCommandType Type;
         public Vector3 Direction;
-        public float Timestamp;
+        public uint EnqueuedTick;
         public Vector3 TargetPoint;
         public bool HasTargetPoint;
     }
 
     public class InputBuffer
     {
-        private float _bufferWindow = 0.2f; // Command stays valid for 200ms
+        private readonly uint _bufferWindowTicks;
         private BufferedCommand _pendingCommand;
 
-        public void Enqueue(InputCommandType type, Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
+        public InputBuffer(float bufferWindowSeconds = 0.22f)
+        {
+            _bufferWindowTicks = SimulationClock.SecondsToTicks(Mathf.Max(0f, bufferWindowSeconds));
+        }
+
+        public void Enqueue(
+            InputCommandType type,
+            Vector3 direction,
+            Vector3 targetPoint,
+            bool hasTargetPoint,
+            uint currentTick)
         {
             _pendingCommand = new BufferedCommand
             {
                 Type = type,
                 Direction = direction,
-                Timestamp = Time.time,
+                EnqueuedTick = currentTick,
                 TargetPoint = targetPoint,
                 HasTargetPoint = hasTargetPoint
             };
         }
 
-        public BufferedCommand Consume()
+        public bool TryPeek(uint currentTick, out BufferedCommand command)
         {
-            // If the command is too old, it's "stale" and ignored
-            if (Time.time - _pendingCommand.Timestamp > _bufferWindow)
+            if (!HasPending || IsExpired(currentTick))
             {
                 Clear();
+                command = default;
+                return false;
             }
 
-            var cmd = _pendingCommand;
-            Clear(); // Once consumed, the buffer is empty
-            return cmd;
+            command = _pendingCommand;
+            return true;
+        }
+
+        public bool TryConsume(uint currentTick, out BufferedCommand command)
+        {
+            if (!TryPeek(currentTick, out command))
+                return false;
+
+            Clear();
+            return true;
         }
 
         public void Clear() => _pendingCommand = new BufferedCommand { Type = InputCommandType.None };
         public bool HasPending => _pendingCommand.Type != InputCommandType.None;
+
+        private bool IsExpired(uint currentTick)
+        {
+            return HasPending && currentTick - _pendingCommand.EnqueuedTick > _bufferWindowTicks;
+        }
     }
 }
