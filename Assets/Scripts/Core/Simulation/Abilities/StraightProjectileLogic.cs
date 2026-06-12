@@ -1,4 +1,6 @@
+using System.Collections;
 using MOBA.Core.Definitions;
+using MOBA.Core.Infrastructure;
 using UnityEngine;
 
 namespace MOBA.Core.Simulation.Abilities
@@ -9,6 +11,7 @@ namespace MOBA.Core.Simulation.Abilities
         private readonly float _range;
         private readonly float _speed;
         private readonly int _projectileCount;
+        private readonly float _delayBetweenProjectiles;
         private readonly float _spreadAngle;
         private readonly float _parallelLaneSpacing;
         private readonly float _forwardSpawnOffset;
@@ -19,6 +22,7 @@ namespace MOBA.Core.Simulation.Abilities
             float range,
             float speed,
             int projectileCount,
+            float delayBetweenProjectiles,
             float spreadAngle,
             float parallelLaneSpacing,
             float forwardSpawnOffset,
@@ -28,6 +32,7 @@ namespace MOBA.Core.Simulation.Abilities
             _range = range;
             _speed = speed;
             _projectileCount = Mathf.Max(1, projectileCount);
+            _delayBetweenProjectiles = Mathf.Max(0f, delayBetweenProjectiles);
             _spreadAngle = Mathf.Max(0f, spreadAngle);
             _parallelLaneSpacing = Mathf.Max(0f, parallelLaneSpacing);
             _forwardSpawnOffset = Mathf.Max(0f, forwardSpawnOffset);
@@ -43,22 +48,18 @@ namespace MOBA.Core.Simulation.Abilities
 
             Vector3 baseDirection = ResolveBaseDirection(context.Direction);
 
-            for (int i = 0; i < _projectileCount; i++)
+            if (_projectileCount > 1 &&
+                _delayBetweenProjectiles > 0f &&
+                user is BrawlerController brawler)
             {
-                Vector3 shotDirection = ResolveShotDirection(baseDirection, i);
-                Vector3 shotOrigin = ResolveShotOrigin(context.Origin, baseDirection, i);
-
-                user.FireProjectile(
-                    shotOrigin,
-                    shotDirection,
-                    _speed,
-                    _range,
-                    _damage,
-                    context.AbilityDefinition,
-                    context.SlotType,
-                    context.IsSuper,
-                    context.IsGadget,
-                    _presentationProfile);
+                brawler.RunTimedBurst(FireSequenceRoutine(user, context, baseDirection));
+            }
+            else
+            {
+                for (int i = 0; i < _projectileCount; i++)
+                {
+                    FireSingleProjectile(user, context, baseDirection, i);
+                }
             }
 
             var result = AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);
@@ -67,6 +68,52 @@ namespace MOBA.Core.Simulation.Abilities
             result.ConsumedResource = true;
 
             return result;
+        }
+
+        private IEnumerator FireSequenceRoutine(
+            IAbilityUser user,
+            AbilityExecutionContext context,
+            Vector3 baseDirection)
+        {
+            for (int i = 0; i < _projectileCount; i++)
+            {
+                FireSingleProjectile(user, context, baseDirection, i);
+
+                if (i < _projectileCount - 1)
+                    yield return new WaitForSeconds(_delayBetweenProjectiles);
+            }
+        }
+
+        private void FireSingleProjectile(
+            IAbilityUser user,
+            AbilityExecutionContext context,
+            Vector3 baseDirection,
+            int shotIndex)
+        {
+            Vector3 shotDirection = ResolveShotDirection(baseDirection, shotIndex);
+            Vector3 shotOrigin = ResolveShotOrigin(
+                ResolveSourceOrigin(user, context.Origin),
+                baseDirection,
+                shotIndex);
+
+            user.FireProjectile(
+                shotOrigin,
+                shotDirection,
+                _speed,
+                _range,
+                _damage,
+                context.AbilityDefinition,
+                context.SlotType,
+                context.IsSuper,
+                context.IsGadget,
+                _presentationProfile);
+        }
+
+        private Vector3 ResolveSourceOrigin(IAbilityUser user, Vector3 fallbackOrigin)
+        {
+            return user is BrawlerController brawler
+                ? brawler.Position
+                : fallbackOrigin;
         }
 
         private Vector3 ResolveBaseDirection(Vector3 direction)

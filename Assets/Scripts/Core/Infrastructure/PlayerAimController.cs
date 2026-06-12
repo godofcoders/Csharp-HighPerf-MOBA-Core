@@ -16,6 +16,12 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _defaultDirectionalWidth = 1f;
         [SerializeField] private float _minimumVisibleDirectionalRange = 1.15f;
 
+        [Header("Obstacle Clipping")]
+        [SerializeField] private LayerMask _aimObstacleMask;
+        [SerializeField] private float _traceStartOffset = 0.75f;
+        [SerializeField] private float _traceRadiusScale = 0.35f;
+        [SerializeField] private float _obstacleSkin = 0.05f;
+
         [Header("Throwable Preview")]
         [SerializeField] private float _defaultThrowableArcHeight = 1.75f;
         [SerializeField] private float _defaultThrowableRadius = 1.5f;
@@ -25,10 +31,19 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Smoothing")]
         [SerializeField] private float _directionSmoothingSpeed = 16f;
+        [SerializeField] private float _originSmoothingSpeed = 28f;
+        [SerializeField] private float _rangeSmoothingSpeed = 24f;
 
         private bool _hasSmoothedAimDirection;
         private AimPreviewKind _smoothedAimKind = AimPreviewKind.None;
         private Vector3 _smoothedAimDirection = Vector3.forward;
+        private bool _hasSmoothedOrigin;
+        private Vector3 _smoothedOrigin;
+        private bool _hasSmoothedDirectionalRange;
+        private AimPreviewKind _smoothedRangeKind = AimPreviewKind.None;
+        private float _smoothedDirectionalRange;
+        private bool _hasResolvedObstacleMask;
+        private int _resolvedObstacleMask;
 
         private void Awake()
         {
@@ -97,7 +112,7 @@ namespace MOBA.Core.Infrastructure
 
         private AimPreviewData BuildPreviewData(AimPreviewKind kind, AbilityDefinition ability, Vector3 aimDirection)
         {
-            Vector3 playerCenter = _brawler.transform.position + Vector3.up * _originHeightOffset;
+            Vector3 playerCenter = SmoothPreviewOrigin(_brawler.transform.position + Vector3.up * _originHeightOffset);
             Vector3 previewTargetPoint = _commandSource != null
                 ? _commandSource.GetPreviewTargetPoint()
                 : _brawler.transform.position + (aimDirection * _defaultRange);
@@ -150,13 +165,13 @@ namespace MOBA.Core.Infrastructure
                         float directionalRange = ResolveDirectionalRange(ability);
                         float previewWidth = ResolveDirectionalWidth(ability);
                         float spreadHalfAngle = ResolveSpreadHalfAngle(ability);
-                        AimLineTraceResult lineTrace = TraceDirectionalPreview(playerCenter, aimDirection, directionalRange, previewWidth);
-                        float visibleRange = lineTrace.IsBlocked
-                            ? Mathf.Clamp(
-                                lineTrace.ClearDistance,
-                                Mathf.Min(_minimumVisibleDirectionalRange, directionalRange),
-                                directionalRange)
-                            : directionalRange;
+                        float visibleRange = ResolveVisibleDirectionalRange(
+                            playerCenter,
+                            aimDirection,
+                            directionalRange,
+                            previewWidth,
+                            out bool isObstructed);
+                        visibleRange = SmoothDirectionalRange(kind, visibleRange);
 
                         return new AimPreviewData
                         {
@@ -167,7 +182,7 @@ namespace MOBA.Core.Infrastructure
                             Direction = aimDirection,
                             Range = visibleRange,
                             Width = previewWidth,
-                            IsObstructed = lineTrace.IsBlocked,
+                            IsObstructed = isObstructed,
                             TargetPoint = playerCenter + (aimDirection * visibleRange),
                             ArcHeight = 0f,
                             Radius = 0f,
@@ -262,18 +277,170 @@ namespace MOBA.Core.Infrastructure
             return _smoothedAimDirection;
         }
 
-        private AimLineTraceResult TraceDirectionalPreview(
+        private Vector3 SmoothPreviewOrigin(Vector3 rawOrigin)
+        {
+            if (!_hasSmoothedOrigin)
+            {
+                _hasSmoothedOrigin = true;
+                _smoothedOrigin = rawOrigin;
+                return _smoothedOrigin;
+            }
+
+            float speed = Mathf.Max(0f, _originSmoothingSpeed);
+            float t = speed <= 0f
+                ? 1f
+                : 1f - Mathf.Exp(-speed * Time.deltaTime);
+
+            _smoothedOrigin = Vector3.Lerp(_smoothedOrigin, rawOrigin, t);
+            return _smoothedOrigin;
+        }
+
+        private float SmoothDirectionalRange(AimPreviewKind kind, float targetRange)
+        {
+            if (!_hasSmoothedDirectionalRange || _smoothedRangeKind != kind)
+            {
+                _hasSmoothedDirectionalRange = true;
+                _smoothedRangeKind = kind;
+                _smoothedDirectionalRange = targetRange;
+                return _smoothedDirectionalRange;
+            }
+
+            float speed = Mathf.Max(0f, _rangeSmoothingSpeed);
+            float t = speed <= 0f
+                ? 1f
+                : 1f - Mathf.Exp(-speed * Time.deltaTime);
+
+            _smoothedDirectionalRange = Mathf.Lerp(_smoothedDirectionalRange, targetRange, t);
+            return _smoothedDirectionalRange;
+        }
+
+        private float ResolveVisibleDirectionalRange(
             Vector3 origin,
             Vector3 aimDirection,
             float range,
+            float previewWidth,
+            out bool isObstructed)
+        {
+            isObstructed = false;
+
+            float safeRange = Mathf.Max(0f, range);
+            Vector3 direction = aimDirection;
+            direction.y = 0f;
+
+            if (safeRange <= 0.001f || direction.sqrMagnitude <= 0.001f)
+                return 0f;
+
+            direction.Normalize();
+
+            if (TryResolvePhysicsPreviewRange(
+                    origin,
+                    direction,
+                    safeRange,
+                    previewWidth,
+                    out float physicsRange))
+            {
+                isObstructed = true;
+                return ClampVisibleRange(physicsRange, safeRange);
+            }
+
+            int obstacleMask = ResolveObstacleMask();
+            if (obstacleMask != 0)
+                return safeRange;
+
+            AimLineTraceResult gridTrace = TraceDirectionalPreviewGrid(
+                origin,
+                direction,
+                safeRange,
+                previewWidth);
+
+            if (!gridTrace.IsBlocked)
+                return safeRange;
+
+            isObstructed = true;
+            return ClampVisibleRange(gridTrace.ClearDistance, safeRange);
+        }
+
+        private bool TryResolvePhysicsPreviewRange(
+            Vector3 origin,
+            Vector3 direction,
+            float range,
+            float previewWidth,
+            out float visibleRange)
+        {
+            visibleRange = range;
+
+            int obstacleMask = ResolveObstacleMask();
+            if (obstacleMask == 0)
+                return false;
+
+            float startOffset = Mathf.Clamp(_traceStartOffset, 0f, Mathf.Max(0f, range - 0.05f));
+            float castDistance = Mathf.Max(0f, range - startOffset);
+            if (castDistance <= 0.001f)
+                return false;
+
+            float radius = Mathf.Max(0.03f, previewWidth * 0.5f * Mathf.Max(0.05f, _traceRadiusScale));
+            Vector3 castOrigin = origin + direction * startOffset;
+
+            if (!Physics.SphereCast(
+                    castOrigin,
+                    radius,
+                    direction,
+                    out RaycastHit hit,
+                    castDistance,
+                    obstacleMask,
+                    QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            visibleRange = startOffset + Mathf.Max(0f, hit.distance - Mathf.Max(0f, _obstacleSkin));
+            return true;
+        }
+
+        private AimLineTraceResult TraceDirectionalPreviewGrid(
+            Vector3 origin,
+            Vector3 direction,
+            float range,
             float previewWidth)
         {
-            return AimLineOfSightUtility.Trace(
+            float startOffset = Mathf.Clamp(_traceStartOffset, 0f, Mathf.Max(0f, range - 0.05f));
+            Vector3 traceOrigin = origin + direction * startOffset;
+            float traceRange = Mathf.Max(0f, range - startOffset);
+            AimLineTraceResult trace = AimLineOfSightUtility.Trace(
                 SimulationClock.Pathfinder,
-                origin,
-                aimDirection,
-                range,
-                Mathf.Max(0.05f, previewWidth * 0.5f));
+                traceOrigin,
+                direction,
+                traceRange,
+                Mathf.Max(0.03f, previewWidth * 0.5f * Mathf.Max(0.05f, _traceRadiusScale)));
+
+            if (!trace.IsBlocked)
+                return trace;
+
+            return new AimLineTraceResult(
+                true,
+                startOffset + trace.ClearDistance,
+                origin + direction * (startOffset + trace.ClearDistance),
+                trace.BlockPoint);
+        }
+
+        private float ClampVisibleRange(float visibleRange, float maxRange)
+        {
+            float minimumRange = Mathf.Min(Mathf.Max(0.05f, _minimumVisibleDirectionalRange), maxRange);
+            return Mathf.Clamp(visibleRange, minimumRange, maxRange);
+        }
+
+        private int ResolveObstacleMask()
+        {
+            if (_aimObstacleMask.value != 0)
+                return _aimObstacleMask.value;
+
+            if (_hasResolvedObstacleMask)
+                return _resolvedObstacleMask;
+
+            _hasResolvedObstacleMask = true;
+            MapGenerator generator = FindObjectOfType<MapGenerator>();
+            _resolvedObstacleMask = generator != null ? generator.ObstacleLayer.value : 0;
+            return _resolvedObstacleMask;
         }
 
         private void HidePreview()
@@ -281,6 +448,9 @@ namespace MOBA.Core.Infrastructure
             _aimIndicatorView.Hide();
             _hasSmoothedAimDirection = false;
             _smoothedAimKind = AimPreviewKind.None;
+            _hasSmoothedOrigin = false;
+            _hasSmoothedDirectionalRange = false;
+            _smoothedRangeKind = AimPreviewKind.None;
         }
     }
 }

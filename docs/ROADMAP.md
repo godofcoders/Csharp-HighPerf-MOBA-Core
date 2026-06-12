@@ -21,7 +21,7 @@ These items are active now. We validate and fix the most disruptive gameplay-fee
   - Hold should show aim preview after a short delay.
   - Releasing held aim while moving should fire in the held aim direction, not movement direction.
   - Super aim preview should use a distinct color.
-  - `[~]` Aim preview should be stable while holding aim, with no visible jitter. Held preview now falls back to stable aim direction, uses stronger smoothing, and keeps blocked previews visible; needs Unity feel check.
+  - `[~]` Aim preview should be stable while holding aim, with no visible jitter. Held preview now falls back to stable aim direction, smooths direction/origin/range, and uses physics obstacle clipping before grid fallback; needs Unity feel check.
   - `[~]` Aim preview should not show a sphere/end marker unless the ability is actually point-targeted. Directional marker removed in code; needs Unity visual confirmation.
 
 - `[~]` AI movement realism
@@ -32,7 +32,7 @@ These items are active now. We validate and fix the most disruptive gameplay-fee
 - `[~]` Projectile/shooting readability
   - Projectile prefabs should be realistically sized for their attack width.
   - Projectile visuals should have trails/impact effects where appropriate.
-  - `[~]` Colt-style multi-shot attacks should keep separate bullet lanes instead of collapsing into one local-looking shot. Straight multi-projectile logic now offsets forward and parallel lanes from aim direction; Colt asset has explicit lane tuning; needs Unity playtest.
+  - `[~]` Colt-style multi-shot attacks should keep separate bullet lanes instead of collapsing into one local-looking shot. Straight multi-projectile logic now supports aim-aligned forward offset, parallel lanes, and per-shot cadence; Colt asset has explicit lane/burst tuning; needs Unity playtest.
   - Player movement should not bend or offset bullet direction after firing.
 
 - `[~]` Gem readability
@@ -59,7 +59,7 @@ Goal: make player combat feel reliable and readable.
 
 - `[~]` Thick Brawl Stars-style directional aim preview.
 - `[~]` Held aim vs tap auto-aim behavior.
-- `[~]` Wall-aware aim preview clipping when blockers are in front. Directional preview now traces the map, shortens/colors blocked lanes, and enforces a readable minimum length; needs Unity playtest.
+- `[~]` Wall-aware aim preview clipping when blockers are in front. Directional preview now uses obstacle physics first, then grid fallback only when no obstacle mask exists; needs Unity playtest.
 - `[~]` Auto-aim should prefer valid targets and avoid bad wall angles. Direct projectile auto-aim now requires line-of-sight; needs Unity playtest around walls.
 - `[~]` Projectile visuals should always spawn and travel consistently.
 - `[~]` Projectile spawn direction should be independent of player movement after cast. Straight projectile spawn origin now derives from aim direction instead of brawler facing.

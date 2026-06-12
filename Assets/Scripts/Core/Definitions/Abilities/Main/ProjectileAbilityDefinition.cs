@@ -12,6 +12,9 @@ namespace MOBA.Core.Definitions
         public float Range = 10f;
         public float Speed = 15f;
         public int ProjectileCount = 1;
+        [Tooltip("Optional delay between projectiles for straight multi-shot attacks. Use this for Colt-style bursts instead of same-frame stacks.")]
+        [Min(0f)]
+        public float DelayBetweenProjectiles = 0f;
         [Tooltip("Total spread angle in degrees across all projectiles. 0 = single line. Used by aim preview to render a fan boundary; gameplay logic decides actual per-projectile spread.")]
         [Min(0f)]
         public float SpreadAngle = 0f;
@@ -20,7 +23,7 @@ namespace MOBA.Core.Definitions
         public float ParallelLaneSpacing = 0.86f;
         [Tooltip("Forward spawn offset along the aim direction. Keeps projectiles from appearing inside the brawler model while preserving aim-based travel.")]
         [Min(0f)]
-        public float ForwardSpawnOffset = 0.65f;
+        public float ForwardSpawnOffset = 0.95f;
         [Header("Presentation")]
         public ProjectilePresentationProfile PresentationProfile;
 
@@ -46,6 +49,7 @@ namespace MOBA.Core.Definitions
                 Range,
                 Speed,
                 ProjectileCount,
+                DelayBetweenProjectiles,
                 SpreadAngle,
                 ParallelLaneSpacing,
                 ForwardSpawnOffset,
