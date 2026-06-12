@@ -30,12 +30,16 @@ namespace MOBA.Core.Infrastructure
         private Vector3 _lastTickPosition;
         private readonly InputBuffer _inputBuffer = new InputBuffer();
         private Vector3 _currentMoveInput;
+        private Vector3 _actionFacingDirection;
+        private uint _actionFacingUntilTick;
 
         private IAbilityLogic _mainAttack;
         private IAbilityLogic _superAbility;
         private IAbilityLogic _gadgetLogic;
 
         private bool _isInitialized;
+
+        private const uint ActionFacingGraceTicks = 2u;
 
         private readonly List<GadgetDefinition> _equippedGadgets = new List<GadgetDefinition>(2);
         private HyperchargeDefinition _equippedHypercharge;
@@ -405,7 +409,7 @@ namespace MOBA.Core.Infrastructure
             State.UpdateResources(SimulationClock.TickDeltaTime);
 
             if (State.CanMove(currentTick))
-                ProcessMovement();
+                ProcessMovement(currentTick);
             else
                 SetMoveInput(Vector3.zero);
 
@@ -481,7 +485,7 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
-        private void ProcessMovement()
+        private void ProcessMovement(uint currentTick)
         {
             if (_currentMoveInput.sqrMagnitude <= 0.01f)
                 return;
@@ -501,11 +505,98 @@ namespace MOBA.Core.Infrastructure
             transform.position += movement;
 
             if (movement != Vector3.zero)
-                transform.rotation = Quaternion.LookRotation(movement);
+            {
+                Vector3 facingDirection = IsActionFacingActive(currentTick)
+                    ? _actionFacingDirection
+                    : movement;
+
+                if (facingDirection.sqrMagnitude > 0.001f)
+                    transform.rotation = Quaternion.LookRotation(facingDirection.normalized);
+            }
 
             _currentSimPosition = transform.position;
             _currentSimRotation = transform.rotation;
             _lastSimulationUpdateTime = Time.time;
+        }
+
+        private void ApplyActionFacing(
+            Vector3 direction,
+            AbilityDefinition abilityDefinition,
+            uint currentTick)
+        {
+            Vector3 flatDirection = direction;
+            flatDirection.y = 0f;
+
+            if (flatDirection.sqrMagnitude <= 0.001f)
+                return;
+
+            flatDirection.Normalize();
+            Quaternion facingRotation = Quaternion.LookRotation(flatDirection);
+
+            transform.rotation = facingRotation;
+            _actionFacingDirection = flatDirection;
+            _actionFacingUntilTick = currentTick + ResolveActionFacingHoldTicks(abilityDefinition);
+
+            _previousSimPosition = _currentSimPosition;
+            _previousSimRotation = _currentSimRotation;
+            _currentSimPosition = transform.position;
+            _currentSimRotation = facingRotation;
+            _lastSimulationUpdateTime = Time.time;
+
+            if (_presentationAnchor != null)
+            {
+                _presentationAnchor.position = transform.position;
+                _presentationAnchor.rotation = facingRotation;
+            }
+        }
+
+        private bool IsActionFacingActive(uint currentTick)
+        {
+            return currentTick <= _actionFacingUntilTick &&
+                   _actionFacingDirection.sqrMagnitude > 0.001f;
+        }
+
+        private uint ResolveActionFacingHoldTicks(AbilityDefinition abilityDefinition)
+        {
+            uint holdTicks = ActionFacingGraceTicks;
+
+            if (abilityDefinition != null)
+            {
+                holdTicks = Max(holdTicks, abilityDefinition.GetCastDurationTicks());
+                holdTicks = Max(holdTicks, ResolveProjectileCadenceTicks(abilityDefinition));
+            }
+
+            return holdTicks + ActionFacingGraceTicks;
+        }
+
+        private uint ResolveProjectileCadenceTicks(AbilityDefinition abilityDefinition)
+        {
+            float durationSeconds = 0f;
+
+            if (abilityDefinition is ProjectileAbilityDefinition projectile)
+            {
+                int count = Mathf.Max(1, projectile.ProjectileCount);
+                durationSeconds = Mathf.Max(0f, projectile.DelayBetweenProjectiles) * Mathf.Max(0, count - 1);
+            }
+            else if (abilityDefinition is BurstSequenceProjectileAbilityDefinition burst)
+            {
+                int count = Mathf.Max(1, burst.ProjectileCount);
+                durationSeconds = Mathf.Max(0f, burst.DelayBetweenShots) * Mathf.Max(0, count - 1);
+            }
+            else if (abilityDefinition is VolleyProjectileAbilityDefinition volley)
+            {
+                int count = Mathf.Max(1, volley.ProjectileCount);
+                durationSeconds = Mathf.Max(0f, volley.DelayBetweenShots) * Mathf.Max(0, count - 1);
+            }
+
+            return durationSeconds > 0f
+                ? SimulationClock.SecondsToTicks(durationSeconds)
+                : 0u;
+        }
+
+        private static uint Max(uint a, uint b)
+        {
+            return a > b ? a : b;
         }
 
         public void TakeDamage(float amount)
@@ -600,6 +691,8 @@ namespace MOBA.Core.Infrastructure
                             currentMainAttackDef.AllowMovementDuringCast,
                             currentMainAttackDef.AllowActionInputDuringCast,
                             currentMainAttackDef.IsInterruptible);
+
+                        ApplyActionFacing(cmd.Direction, currentMainAttackDef, currentTick);
 
                         var executionContext = new AbilityExecutionContext
                         {
@@ -736,6 +829,8 @@ namespace MOBA.Core.Infrastructure
                             currentGadgetDef.AllowActionInputDuringCast,
                             currentGadgetDef.IsInterruptible);
 
+                        ApplyActionFacing(cmd.Direction, currentGadgetDef, currentTick);
+
                         var executionContext = new AbilityExecutionContext
                         {
                             Source = this,
@@ -868,6 +963,8 @@ namespace MOBA.Core.Infrastructure
                             currentSuperDef.AllowMovementDuringCast,
                             currentSuperDef.AllowActionInputDuringCast,
                             currentSuperDef.IsInterruptible);
+
+                        ApplyActionFacing(cmd.Direction, currentSuperDef, currentTick);
 
                         var executionContext = new AbilityExecutionContext
                         {
