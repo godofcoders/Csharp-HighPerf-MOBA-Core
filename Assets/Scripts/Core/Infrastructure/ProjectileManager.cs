@@ -18,6 +18,7 @@ namespace MOBA.Core.Infrastructure
         private void Awake()
         {
             _pool = GetComponent<SimpleObjectPool>();
+            EnsureImpactFeedbackView();
             ServiceProvider.Register<IProjectileService>(this);
             ServiceProvider.Register<IProjectileThreatProvider>(this);
         }
@@ -43,6 +44,7 @@ namespace MOBA.Core.Infrastructure
         private void OnDestroy()
         {
             SimulationClock.Registry?.Unregister(this, TickPhase.Collision);
+            ClearActiveProjectilesForShutdown();
         }
 
         public void FireProjectile(in ProjectileSpawnContext context)
@@ -163,7 +165,7 @@ namespace MOBA.Core.Infrastructure
                 {
                     if ((p.GameObject.transform.position - p.Origin).sqrMagnitude >= p.MaxRangeSq)
                     {
-                        Despawn(i);
+                        Despawn(i, ProjectileEndReason.Expired, p.GameObject.transform.position, null);
                         continue;
                     }
                 }
@@ -178,7 +180,7 @@ namespace MOBA.Core.Infrastructure
                     if (reachedImpact)
                     {
                         ResolveHybridAoEImpact(p, p.TargetPoint);
-                        Despawn(i);
+                        Despawn(i, ProjectileEndReason.Impact, p.TargetPoint, null);
                     }
 
                     continue;
@@ -299,6 +301,7 @@ namespace MOBA.Core.Infrastructure
                     if (p.IsChainProjectile && targetBrawler != null)
                     {
                         p.HitEntityIds.Add(targetBrawler.EntityID);
+                        RaiseProjectileEndEvent(p, ProjectileEndReason.Impact, projectilePosition, targetBrawler);
 
                         if (p.RemainingBounces > 0)
                         {
@@ -317,8 +320,12 @@ namespace MOBA.Core.Infrastructure
                             }
                         }
                     }
+                    else
+                    {
+                        RaiseProjectileEndEvent(p, ProjectileEndReason.Impact, projectilePosition, targetBrawler);
+                    }
 
-                    Despawn(i);
+                    Despawn(i, ProjectileEndReason.Impact, projectilePosition, targetBrawler, false);
                 }
             }
         }
@@ -610,11 +617,89 @@ namespace MOBA.Core.Infrastructure
             });
         }
 
-        private void Despawn(int index)
+        private void Despawn(
+            int index,
+            ProjectileEndReason reason,
+            Vector3 position,
+            BrawlerController target,
+            bool raiseEvent = true)
         {
             var p = _activeProjectiles[index];
+
+            if (raiseEvent)
+                RaiseProjectileEndEvent(p, reason, position, target);
+
+            ProjectileVisualController visualController = p.GameObject != null
+                ? p.GameObject.GetComponent<ProjectileVisualController>()
+                : null;
+
+            if (visualController != null)
+                visualController.ResetForPool();
+
             _pool.ReturnToPool(p.GameObject);
             _activeProjectiles.RemoveAt(index);
+        }
+
+        private void RaiseProjectileEndEvent(
+            ActiveProjectile projectile,
+            ProjectileEndReason reason,
+            Vector3 position,
+            BrawlerController target)
+        {
+            if (projectile == null)
+                return;
+
+            CombatPresentationEventBus.Raise(new CombatPresentationEvent
+            {
+                EventType = reason == ProjectileEndReason.Expired
+                    ? CombatPresentationEventType.ProjectileExpired
+                    : CombatPresentationEventType.ProjectileImpacted,
+                Source = projectile.Owner,
+                Target = target,
+                AbilityDefinition = projectile.SourceAbility,
+                SlotType = projectile.SlotType,
+                Position = position,
+                Direction = projectile.Direction,
+                Value = ResolveImpactFeedbackRadius(projectile),
+                IsSuper = projectile.IsSuper
+            });
+        }
+
+        private static float ResolveImpactFeedbackRadius(ActiveProjectile projectile)
+        {
+            if (projectile == null)
+                return 0.45f;
+
+            if (projectile.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE && projectile.ImpactRadius > 0f)
+                return Mathf.Clamp(projectile.ImpactRadius * 0.28f, 0.55f, 1.35f);
+
+            return projectile.IsSuper ? 0.72f : 0.48f;
+        }
+
+        private void ClearActiveProjectilesForShutdown()
+        {
+            for (int i = _activeProjectiles.Count - 1; i >= 0; i--)
+            {
+                ActiveProjectile projectile = _activeProjectiles[i];
+                if (projectile?.GameObject == null)
+                    continue;
+
+                ProjectileVisualController visualController =
+                    projectile.GameObject.GetComponent<ProjectileVisualController>();
+
+                if (visualController != null)
+                    visualController.ResetForPool();
+
+                projectile.GameObject.SetActive(false);
+            }
+
+            _activeProjectiles.Clear();
+        }
+
+        private void EnsureImpactFeedbackView()
+        {
+            if (GetComponent<ProjectileImpactFeedbackView>() == null)
+                gameObject.AddComponent<ProjectileImpactFeedbackView>();
         }
 
         private BrawlerController ResolveNextChainTarget(ActiveProjectile p, BrawlerController currentTarget)
@@ -698,6 +783,12 @@ namespace MOBA.Core.Infrastructure
 
             public bool CanAffectEnemiesOnImpact;
             public bool CanAffectAlliesOnImpact;
+        }
+
+        private enum ProjectileEndReason
+        {
+            Impact,
+            Expired
         }
     }
 }

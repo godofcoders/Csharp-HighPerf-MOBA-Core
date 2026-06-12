@@ -56,10 +56,20 @@ namespace MOBA.Core.Infrastructure
         {
             for (int i = _visualRoot.childCount - 1; i >= 0; i--)
             {
-                Destroy(_visualRoot.GetChild(i).gameObject);
+                GameObject child = _visualRoot.GetChild(i).gameObject;
+                child.SetActive(false);
+                Destroy(child);
             }
 
             _currentVisualInstance = null;
+        }
+
+        public void ResetForPool()
+        {
+            ClearVisual();
+            _currentProfile = null;
+            _spinEulerPerSecond = Vector3.zero;
+            _useSpin = false;
         }
     }
 }
