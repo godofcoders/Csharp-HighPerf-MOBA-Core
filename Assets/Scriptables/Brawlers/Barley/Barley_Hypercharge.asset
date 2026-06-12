@@ -17,7 +17,8 @@ MonoBehaviour:
   AllowedBuildSlotTypes: 03000000
   Name: Fizz
   DurationSeconds: 5
+  ChargeFromSuperCharge: 0.4
   SpeedBuff: 0.15
   DamageBuff: 0.2
   ShieldBuff: 0.15
-  EnhancedSuper: {fileID: 0}
+  EnhancedSuper: {fileID: 11400000, guid: 6a71c6ed0b6040509cbcc5f1119b0002, type: 2}

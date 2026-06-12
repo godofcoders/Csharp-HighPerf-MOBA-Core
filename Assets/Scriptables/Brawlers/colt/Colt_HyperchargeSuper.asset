@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 220a6073541ca4246b3d7c5ee0a2ba54, type: 3}
+  m_Name: Colt_HyperchargeSuper
+  m_EditorClassIdentifier:
+  OptionName:
+  Description:
+  AllowedBuildSlotTypes:
+  AbilityName: Bullet Rain Barrage
+  Icon: {fileID: 0}
+  SlotType: 1
+  TargetingType: 1
+  DeliveryType: 1
+  Cooldown: 1
+  Tags:
+  CastDurationSeconds: 0.15
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 3
+  AllowAimAssist: 1
+  AimAssistMode: 6
+  AimAssistIncludeSelf: 0
+  PreferManualAim: 1
+  AimAssistRangeOverride: 11
+  AimAssistForwardBias: 2
+  AimAssistDistanceBias: 1
+  AimAssistIdealRange: -1
+  AimAssistPlacementDistance: 3
+  Damage: 160
+  Range: 13
+  Speed: 42
+  ProjectileCount: 12
+  DelayBetweenShots: 0.035
+  RandomSpreadAngle: 0.035
+  AlternateMuzzles: 1
+  PresentationProfile: {fileID: 11400000, guid: e4e891569f5d24495a0fc1a241774fda, type: 2}

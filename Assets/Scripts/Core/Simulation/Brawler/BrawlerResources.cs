@@ -70,6 +70,11 @@ namespace MOBA.Core.Simulation
             SuperCharge.AddCharge(amount);
         }
 
+        public void AddHypercharge(float amount)
+        {
+            Hypercharge.AddCharge(amount);
+        }
+
         public bool TryConsumeSuper()
         {
             return SuperCharge.TryConsume();

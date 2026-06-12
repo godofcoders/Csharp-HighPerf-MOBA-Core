@@ -43,13 +43,13 @@ These items are active now. We validate and fix the most disruptive gameplay-fee
 
 Goal: make hypercharge feel like a complete, readable combat system rather than only a stat/runtime hook.
 
-- `[ ]` Verify charge gain from all intended sources.
-- `[ ]` Verify activation rules: available, blocked, consumed, interrupted, death/reset behavior.
-- `[ ]` Finish per-brawler hypercharge tuning.
-- `[ ]` Verify enhanced-super swap behavior for each brawler.
-- `[ ]` Add HUD state: charge meter, ready state, activation state, duration countdown.
-- `[ ]` Add activation feedback: VFX, SFX hook, camera impulse, character highlight.
-- `[ ]` Add end feedback: cleanup VFX, state return, no lingering modifiers.
+- `[~]` Verify charge gain from all intended sources. Hypercharge now gains from the same brawler-level super-charge grant path using per-hypercharge charge multipliers; needs Unity balance QA.
+- `[~]` Verify activation rules: available, blocked, consumed, interrupted, death/reset behavior. Missing-definition blocks now report correctly; reset/expiry cleanup remains on existing runtime path.
+- `[~]` Finish per-brawler hypercharge tuning. Colt, Barley, Jessie, and Byron have first-pass hypercharge assets plus enhanced-super links.
+- `[~]` Verify enhanced-super swap behavior for each brawler. Enhanced super assets are data-wired for the current four brawlers; needs Unity activation/super QA.
+- `[~]` Add HUD state: charge meter, ready state, activation state, duration countdown. Active hypercharge now displays remaining seconds and fill-down progress.
+- `[~]` Add activation feedback: VFX, SFX hook, camera impulse, character highlight. Runtime character highlight/aura is wired; SFX/camera impulse still future polish.
+- `[~]` Add end feedback: cleanup VFX, state return, no lingering modifiers. Runtime highlight cleans up on end/death/disable; manual expiry/death QA still open.
 - `[ ]` Add debug/validation hooks for charge, activation, expiry, enhanced-super usage.
 - `[ ]` Manual QA: activate, die during activation, respawn, use enhanced super, verify no duplicate modifiers.
 

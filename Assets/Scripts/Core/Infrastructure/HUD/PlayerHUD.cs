@@ -295,14 +295,27 @@ namespace MOBA.Core.Infrastructure
             HyperchargeTracker hc = state.Hypercharge;
             if (hc == null) return;
 
-            float chargePercent = Mathf.Clamp01(hc.ChargePercent);
+            uint currentTick = 0;
+            if (ServiceProvider.TryGet<ISimulationClock>(out ISimulationClock clock) && clock != null)
+                currentTick = clock.CurrentTick;
+
+            float chargePercent = hc.IsActive
+                ? Mathf.Clamp01(hc.GetRemainingPercent(currentTick))
+                : Mathf.Clamp01(hc.ChargePercent);
+
             if (_hyperchargeFill != null)
                 _hyperchargeFill.fillAmount = chargePercent;
+
+            string displayText = hc.IsActive
+                ? $"{hc.GetRemainingSeconds(currentTick):0.0}s"
+                : hc.ChargePercent >= 0.999f
+                    ? "READY"
+                    : $"{Mathf.RoundToInt(chargePercent * 100f)}%";
 
             SetText(
                 _hyperchargeChargeTmp,
                 _hyperchargeChargeLegacy,
-                hc.IsActive ? "ACTIVE" : $"{Mathf.RoundToInt(chargePercent * 100f)}%");
+                displayText);
 
             if (_hyperchargeActiveVisual != null && _hyperchargeActiveVisual.activeSelf != hc.IsActive)
                 _hyperchargeActiveVisual.SetActive(hc.IsActive);

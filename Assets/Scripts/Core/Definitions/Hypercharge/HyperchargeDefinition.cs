@@ -11,6 +11,10 @@ namespace MOBA.Core.Definitions
         [Header("Duration")]
         public float DurationSeconds = 5.0f;
 
+        [Header("Charge")]
+        [Tooltip("Fraction of earned super charge that also feeds hypercharge. 0.4 means roughly 2.5 full super meters fill one hypercharge.")]
+        [Range(0, 1)] public float ChargeFromSuperCharge = 0.40f;
+
         [Header("Stat Multipliers")]
         [Range(0, 1)] public float SpeedBuff = 0.25f;
         [Range(0, 1)] public float DamageBuff = 0.15f;

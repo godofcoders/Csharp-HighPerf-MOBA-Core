@@ -338,7 +338,18 @@ namespace MOBA.Core.Simulation
 
         public void AddSuperCharge(float amount)
         {
+            if (amount <= 0f)
+                return;
+
             Resources.AddSuperCharge(amount);
+
+            HyperchargeDefinition hypercharge = GetCurrentHyperchargeDefinition();
+            if (hypercharge == null)
+                return;
+
+            float hyperchargeAmount = amount * hypercharge.ChargeFromSuperCharge;
+            if (hyperchargeAmount > 0f)
+                Resources.AddHypercharge(hyperchargeAmount);
         }
 
         public bool TryConsumeSuper()
@@ -993,6 +1004,9 @@ namespace MOBA.Core.Simulation
         {
             if (IsDead)
                 return BrawlerActionBlockReason.Dead;
+
+            if (GetCurrentHyperchargeDefinition() == null)
+                return BrawlerActionBlockReason.MissingDefinition;
 
             if (HasSilence())
                 return BrawlerActionBlockReason.Silenced;

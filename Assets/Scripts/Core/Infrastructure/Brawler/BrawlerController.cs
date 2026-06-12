@@ -11,6 +11,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerDefinition _definition;
         [SerializeField] private TeamType _team;
         [SerializeField] private GameObject _visualModel;
+        [Tooltip("Prototype match power level. Defaulting to 11 exposes full build-kit systems such as gadgets, star powers, gears, and hypercharge while the progression UI is still lightweight.")]
+        [Range(1, 11)]
+        [SerializeField] private int _startingPowerLevel = 11;
 
         [SerializeField] private Transform _visualRoot;
 
@@ -139,9 +142,11 @@ namespace MOBA.Core.Infrastructure
             _team = team;
 
             BuildVisualFromDefinition();
+            EnsureHyperchargePresentation();
 
             State = new BrawlerState(_definition, _team);
             State.Owner = this;
+            State.SetPowerLevel(Mathf.Clamp(_startingPowerLevel, 1, 11), false);
 
             _mainAttack = _definition.MainAttack?.CreateLogic();
             _superAbility = _definition.SuperAbility?.CreateLogic();
@@ -1479,6 +1484,15 @@ namespace MOBA.Core.Infrastructure
 
             _presentationAnchors = _spawnedVisualInstance.GetComponentInChildren<BrawlerPresentationAnchors>();
             _visualModel = _spawnedVisualInstance;
+        }
+
+        private void EnsureHyperchargePresentation()
+        {
+            BrawlerHyperchargePresentation presentation = GetComponent<BrawlerHyperchargePresentation>();
+            if (presentation == null)
+                presentation = gameObject.AddComponent<BrawlerHyperchargePresentation>();
+
+            presentation.Bind(this);
         }
     }
 }

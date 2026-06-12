@@ -17,7 +17,8 @@ MonoBehaviour:
   AllowedBuildSlotTypes: 03000000
   Name: Homeopathic Shock
   DurationSeconds: 5
+  ChargeFromSuperCharge: 0.4
   SpeedBuff: 0.15
   DamageBuff: 0.15
   ShieldBuff: 0.25
-  EnhancedSuper: {fileID: 0}
+  EnhancedSuper: {fileID: 11400000, guid: 6a71c6ed0b6040509cbcc5f1119b0007, type: 2}

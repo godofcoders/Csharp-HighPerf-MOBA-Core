@@ -192,6 +192,20 @@ namespace MOBA.Tests.EditMode
             Assert.IsFalse(tracker.IsActive, "At tick 60 (exactly end), hypercharge should deactivate.");
         }
 
+        [Test]
+        public void ActiveCountdown_ReturnsRemainingSecondsAndPercent()
+        {
+            var tracker = new HyperchargeTracker();
+            tracker.AddCharge(1f);
+            tracker.Activate(startTick: 10, durationSeconds: 4f);
+
+            Assert.AreEqual(1f, tracker.GetRemainingPercent(10), 0.0001f);
+            Assert.AreEqual(2f, tracker.GetRemainingSeconds(70), 0.0001f);
+            Assert.AreEqual(0.5f, tracker.GetRemainingPercent(70), 0.0001f);
+            Assert.AreEqual(0f, tracker.GetRemainingSeconds(130), 0.0001f);
+            Assert.AreEqual(0f, tracker.GetRemainingPercent(130), 0.0001f);
+        }
+
         // ---------- Tick ----------
 
         [Test]

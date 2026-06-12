@@ -24,7 +24,7 @@ namespace MOBA.Core.Simulation.Abilities
             if (user is not BrawlerController owner || owner.State == null)
                 return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
 
-            owner.State.Resources.AddSuperCharge(_chargeFraction);
+            owner.State.AddSuperCharge(_chargeFraction);
 
             var result = AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);
             result.ConsumedResource = true;
