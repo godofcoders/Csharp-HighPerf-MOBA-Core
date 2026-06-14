@@ -5,11 +5,33 @@ using MOBA.Core.Simulation.AI;
 
 namespace MOBA.Core.Simulation
 {
+    public struct VisibilityRuleConfig
+    {
+        public readonly bool EnableProximityReveal;
+        public readonly float ProximityRevealDistance;
+
+        public VisibilityRuleConfig(bool enableProximityReveal, float proximityRevealDistance)
+        {
+            EnableProximityReveal = enableProximityReveal;
+            ProximityRevealDistance = Mathf.Max(0f, proximityRevealDistance);
+        }
+
+        public static VisibilityRuleConfig Default => new VisibilityRuleConfig(false, 2f);
+
+        public float ProximityRevealDistanceSq => ProximityRevealDistance * ProximityRevealDistance;
+    }
+
     public static class VisibilitySystem
     {
-        private const float RevealDistanceSq = 4f; // Enemies within 2m reveal you in bush
-
         public static void UpdateVisibility(List<BrawlerController> allBrawlers, MapData map)
+        {
+            UpdateVisibility(allBrawlers, map, VisibilityRuleConfig.Default);
+        }
+
+        public static void UpdateVisibility(
+            List<BrawlerController> allBrawlers,
+            MapData map,
+            VisibilityRuleConfig rules)
         {
             if (allBrawlers == null)
                 return;
@@ -30,7 +52,7 @@ namespace MOBA.Core.Simulation
                 brawler.State.IsInBush = isInBush;
 
                 bool proximityReveal = false;
-                if (isInBush)
+                if (isInBush && rules.EnableProximityReveal)
                 {
                     for (int j = 0; j < allBrawlers.Count; j++)
                     {
@@ -43,7 +65,7 @@ namespace MOBA.Core.Simulation
                             continue;
                         }
 
-                        if ((other.Position - brawler.Position).sqrMagnitude <= RevealDistanceSq)
+                        if ((other.Position - brawler.Position).sqrMagnitude <= rules.ProximityRevealDistanceSq)
                         {
                             proximityReveal = true;
                             break;

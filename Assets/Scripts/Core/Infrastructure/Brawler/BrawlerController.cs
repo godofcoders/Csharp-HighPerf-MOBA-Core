@@ -148,6 +148,7 @@ namespace MOBA.Core.Infrastructure
 
             BuildVisualFromDefinition();
             EnsureHyperchargePresentation();
+            EnsureStealthPresentation();
 
             State = new BrawlerState(_definition, _team);
             State.Owner = this;
@@ -1350,7 +1351,7 @@ namespace MOBA.Core.Infrastructure
             _visualModel.SetActive(!hidden);
         }
 
-        private static bool TryGetLocalObserverTeam(out TeamType team)
+        public static bool TryGetLocalObserverTeam(out TeamType team)
         {
             if (_hasCachedLocalObserver && Time.unscaledTime < _nextLocalObserverRefreshTime)
             {
@@ -1633,6 +1634,15 @@ namespace MOBA.Core.Infrastructure
             BrawlerHyperchargePresentation presentation = GetComponent<BrawlerHyperchargePresentation>();
             if (presentation == null)
                 presentation = gameObject.AddComponent<BrawlerHyperchargePresentation>();
+
+            presentation.Bind(this);
+        }
+
+        private void EnsureStealthPresentation()
+        {
+            BrawlerStealthPresentation presentation = GetComponent<BrawlerStealthPresentation>();
+            if (presentation == null)
+                presentation = gameObject.AddComponent<BrawlerStealthPresentation>();
 
             presentation.Bind(this);
         }

@@ -170,7 +170,7 @@ namespace MOBA.Core.Infrastructure
 
             Collider collider = _auraObject.GetComponent<Collider>();
             if (collider != null)
-                Destroy(collider);
+                DestroyGeneratedObject(collider);
 
             _auraRenderer = _auraObject.GetComponent<Renderer>();
             _auraMaterial = CreateAuraMaterial();
@@ -213,6 +213,17 @@ namespace MOBA.Core.Infrastructure
             material.renderQueue = (int)RenderQueue.Transparent;
 
             return material;
+        }
+
+        private static void DestroyGeneratedObject(Object target)
+        {
+            if (target == null)
+                return;
+
+            if (Application.isPlaying)
+                Destroy(target);
+            else
+                DestroyImmediate(target);
         }
     }
 }

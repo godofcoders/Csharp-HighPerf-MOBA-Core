@@ -53,7 +53,7 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
-        public void UpdateVisibility_UsesNearbyEnemiesForProximityRevealInBush()
+        public void UpdateVisibility_DoesNotUseProximityRevealByDefault()
         {
             MapData map = MakeMap(5, 5);
             map.BushGrid[1, 1] = true;
@@ -66,12 +66,31 @@ namespace MOBA.Tests.EditMode
             VisibilitySystem.UpdateVisibility(brawlers, map);
 
             Assert.IsTrue(hidden.State.IsInBush);
+            Assert.IsFalse(hidden.State.IsProximityRevealed);
+            Assert.IsFalse(hidden.State.IsRevealed);
+        }
+
+        [Test]
+        public void UpdateVisibility_UsesNearbyEnemiesWhenProximityRevealIsEnabled()
+        {
+            MapData map = MakeMap(5, 5);
+            map.BushGrid[1, 1] = true;
+
+            BrawlerController hidden = CreateBrawler("Hidden", TeamType.Blue, new Vector3(1.5f, 0f, 1.5f));
+            BrawlerController enemy = CreateBrawler("Enemy", TeamType.Red, new Vector3(2.5f, 0f, 1.5f));
+
+            var brawlers = new List<BrawlerController> { hidden, enemy };
+            var rules = new VisibilityRuleConfig(true, 2f);
+
+            VisibilitySystem.UpdateVisibility(brawlers, map, rules);
+
+            Assert.IsTrue(hidden.State.IsInBush);
             Assert.IsTrue(hidden.State.IsProximityRevealed);
             Assert.IsTrue(hidden.State.IsRevealed);
 
             enemy.transform.position = new Vector3(4.5f, 0f, 4.5f);
 
-            VisibilitySystem.UpdateVisibility(brawlers, map);
+            VisibilitySystem.UpdateVisibility(brawlers, map, rules);
 
             Assert.IsFalse(hidden.State.IsProximityRevealed);
             Assert.IsFalse(hidden.State.IsRevealed);
