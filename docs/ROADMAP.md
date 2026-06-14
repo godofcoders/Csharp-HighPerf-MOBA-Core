@@ -74,12 +74,12 @@ Goal: make player combat feel reliable and readable.
 
 Goal: make hiding in grass a real gameplay mechanic with simulation, AI, and presentation support.
 
-- `[ ]` Verify or rebuild bush/grass volume detection.
-- `[ ]` Define stealth rules: hidden while inside grass, revealed by attack, revealed by damage, reveal duration, close-range reveal if desired.
-- `[ ]` Add team visibility rules: self/allies visible, enemies hidden unless revealed.
-- `[ ]` Integrate stealth with AI perception and target memory.
-- `[ ]` Add visual feedback: fade, outline, icon, or silhouette for own hidden state.
-- `[ ]` Add debug visibility for hidden/revealed state.
+- `[~]` Verify or rebuild bush/grass volume detection. Visibility now ticks from baked `MapData.BushGrid` each simulation tick; needs Unity validation against authored grass volumes.
+- `[x]` Define stealth rules: hidden while inside grass, revealed by attack, revealed by damage, status reveal, and close-range enemy proximity reveal.
+- `[x]` Add team visibility rules: self/allies visible, enemies hidden unless revealed.
+- `[x]` Integrate stealth with AI perception and target memory.
+- `[~]` Add visual feedback: enemies now hide from the local player's team perspective; richer own-hidden feedback such as fade/outline/icon remains future polish.
+- `[x]` Add debug visibility for hidden/revealed state.
 - `[ ]` Manual QA: enter grass, shoot from grass, take damage in grass, enemy bot loses/reacquires target correctly.
 
 ## Milestone G-04: Breakable Objects / Destructible Cover

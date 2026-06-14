@@ -70,6 +70,18 @@ namespace MOBA.Core.Simulation
             set => Stealth.IsRevealed = value;
         }
 
+        public bool IsProximityRevealed
+        {
+            get => Stealth.IsProximityRevealed;
+            set => Stealth.IsProximityRevealed = value;
+        }
+
+        public bool IsStatusRevealed
+        {
+            get => Stealth.IsStatusRevealed;
+            set => Stealth.IsStatusRevealed = value;
+        }
+
         public BrawlerController Owner { get; set; }
 
         // Most recent attacker that landed damage on this brawler. Set by
@@ -394,6 +406,7 @@ namespace MOBA.Core.Simulation
                 ? clock.CurrentTick
                 : 0u;
             LastDamageTakenTick = currentTick;
+            Stealth.MarkDamageTaken(currentTick);
             IsHealthRegenerating = false;
             LastHealthRegenAmount = 0f;
 

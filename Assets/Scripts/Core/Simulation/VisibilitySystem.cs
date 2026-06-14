@@ -11,33 +11,48 @@ namespace MOBA.Core.Simulation
 
         public static void UpdateVisibility(List<BrawlerController> allBrawlers, MapData map)
         {
-            foreach (var brawler in allBrawlers)
+            if (allBrawlers == null)
+                return;
+
+            for (int i = 0; i < allBrawlers.Count; i++)
             {
-                // 1. Check Grid for Bush
-                var coords = GetGridCoords(brawler.Position, map);
-                brawler.State.IsInBush = map.BushGrid[coords.x, coords.y];
+                BrawlerController brawler = allBrawlers[i];
+                if (!SpatialEntityUtility.IsAlive(brawler) || brawler.State == null)
+                    continue;
 
-                // 2. Proximity Reveal
-                bool proximityReveal = false;
-                foreach (var other in allBrawlers)
+                bool isInBush = false;
+                if (map != null && map.BushGrid != null)
                 {
-                    if (other == brawler || other.Team == brawler.Team) continue;
+                    Vector2Int coords = map.GetGridCoords(brawler.Position);
+                    isInBush = map.IsBush(coords);
+                }
 
-                    if ((other.Position - brawler.Position).sqrMagnitude < RevealDistanceSq)
+                brawler.State.IsInBush = isInBush;
+
+                bool proximityReveal = false;
+                if (isInBush)
+                {
+                    for (int j = 0; j < allBrawlers.Count; j++)
                     {
-                        proximityReveal = true;
-                        break;
+                        BrawlerController other = allBrawlers[j];
+                        if (other == brawler ||
+                            !SpatialEntityUtility.IsAlive(other) ||
+                            other.State == null ||
+                            other.Team == brawler.Team)
+                        {
+                            continue;
+                        }
+
+                        if ((other.Position - brawler.Position).sqrMagnitude <= RevealDistanceSq)
+                        {
+                            proximityReveal = true;
+                            break;
+                        }
                     }
                 }
-                brawler.State.IsRevealed = proximityReveal;
-            }
-        }
 
-        private static Vector2Int GetGridCoords(Vector3 pos, MapData map)
-        {
-            int x = Mathf.Clamp(Mathf.FloorToInt((pos.x - map.Origin.x) / map.CellSize), 0, map.WalkabilityGrid.GetLength(0) - 1);
-            int y = Mathf.Clamp(Mathf.FloorToInt((pos.z - map.Origin.z) / map.CellSize), 0, map.WalkabilityGrid.GetLength(1) - 1);
-            return new Vector2Int(x, y);
+                brawler.State.IsProximityRevealed = proximityReveal;
+            }
         }
     }
 }

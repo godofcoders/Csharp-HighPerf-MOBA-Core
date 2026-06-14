@@ -15,7 +15,7 @@ namespace MOBA.Core.Simulation
         public void Apply(IStatusTarget target, uint currentTick)
         {
             if (target is BrawlerState brawlerState)
-                brawlerState.IsRevealed = true;
+                brawlerState.IsStatusRevealed = true;
         }
 
         public void Tick(IStatusTarget target, uint currentTick)
@@ -25,7 +25,7 @@ namespace MOBA.Core.Simulation
         public void Remove(IStatusTarget target, uint currentTick)
         {
             if (target is BrawlerState brawlerState)
-                brawlerState.IsRevealed = false;
+                brawlerState.IsStatusRevealed = false;
         }
 
         public bool CanMerge(StatusEffectContext context)

@@ -460,7 +460,7 @@ _actionExecutor != null
             _debugSnapshot.IsStunned = _brawler.State.HasStatus(StatusEffectType.Stun);
             _debugSnapshot.IsBurning = _brawler.State.HasStatus(StatusEffectType.Burn);
             _debugSnapshot.IsSlowed = _brawler.State.HasStatus(StatusEffectType.Slow);
-            _debugSnapshot.IsRevealed = _brawler.State.HasStatus(StatusEffectType.Reveal);
+            _debugSnapshot.IsRevealed = _brawler.State.IsRevealed;
 
             if (_targetInfo.HasLiveTarget && _targetInfo.Target is BrawlerController targetBrawler)
             {

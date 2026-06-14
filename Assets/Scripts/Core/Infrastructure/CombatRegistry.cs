@@ -6,6 +6,7 @@ namespace MOBA.Core.Infrastructure
     public static class CombatRegistry
     {
         private static readonly Dictionary<int, ISpatialEntity> _entities = new Dictionary<int, ISpatialEntity>(128);
+        private static readonly List<int> _staleEntityIds = new List<int>(16);
 
         public static void Register(ISpatialEntity entity)
         {
@@ -50,6 +51,31 @@ namespace MOBA.Core.Infrastructure
             _entities.Remove(entityId);
             entity = null;
             return false;
+        }
+
+        public static void GetBrawlersNonAlloc(List<BrawlerController> results)
+        {
+            if (results == null)
+                return;
+
+            results.Clear();
+            _staleEntityIds.Clear();
+
+            foreach (var pair in _entities)
+            {
+                ISpatialEntity entity = pair.Value;
+                if (!SpatialEntityUtility.IsAlive(entity))
+                {
+                    _staleEntityIds.Add(pair.Key);
+                    continue;
+                }
+
+                if (entity is BrawlerController brawler)
+                    results.Add(brawler);
+            }
+
+            for (int i = 0; i < _staleEntityIds.Count; i++)
+                _entities.Remove(_staleEntityIds[i]);
         }
     }
 }

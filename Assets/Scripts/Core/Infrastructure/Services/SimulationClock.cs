@@ -10,6 +10,7 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
     private TickProcessor _processor;
     private CombatEventRouter _combatEventRouter;
     private SimulationRegistry _registry;
+    private VisibilityTickSystem _visibilityTickSystem;
     public const float TickDeltaTime = 1f / 30f;
 
     /// <summary>
@@ -84,7 +85,18 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
         {
             var data = generator.BakeMap();
             Pathfinder = new AStarSolver(data);
+            _visibilityTickSystem = new VisibilityTickSystem(data);
+            _registry.Register(_visibilityTickSystem, TickPhase.PreTick);
         }
+    }
+
+    private void OnDestroy()
+    {
+        if (_registry != null && _visibilityTickSystem != null)
+            _registry.Unregister(_visibilityTickSystem, TickPhase.PreTick);
+
+        if (_instance == this)
+            _instance = null;
     }
 
     private void Update()

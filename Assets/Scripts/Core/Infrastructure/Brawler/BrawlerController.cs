@@ -27,6 +27,11 @@ namespace MOBA.Core.Infrastructure
         private float _lastSimulationUpdateTime;
 
         private const float SimulationTickInterval = 1f / 30f;
+        private const float LocalObserverRefreshIntervalSeconds = 0.5f;
+
+        private static TeamType _cachedLocalObserverTeam = TeamType.Neutral;
+        private static float _nextLocalObserverRefreshTime;
+        private static bool _hasCachedLocalObserver;
 
         private GameObject _spawnedVisualInstance;
 
@@ -1335,8 +1340,47 @@ namespace MOBA.Core.Infrastructure
             if (_visualModel == null || State == null)
                 return;
 
-            bool hidden = State.IsHiddenTo(TeamType.Red);
+            if (!TryGetLocalObserverTeam(out TeamType observerTeam))
+            {
+                _visualModel.SetActive(true);
+                return;
+            }
+
+            bool hidden = State.IsHiddenTo(observerTeam);
             _visualModel.SetActive(!hidden);
+        }
+
+        private static bool TryGetLocalObserverTeam(out TeamType team)
+        {
+            if (_hasCachedLocalObserver && Time.unscaledTime < _nextLocalObserverRefreshTime)
+            {
+                team = _cachedLocalObserverTeam;
+                return true;
+            }
+
+            _nextLocalObserverRefreshTime = Time.unscaledTime + LocalObserverRefreshIntervalSeconds;
+            _hasCachedLocalObserver = false;
+            _cachedLocalObserverTeam = TeamType.Neutral;
+
+            PlayerCommandSource[] sources = FindObjectsOfType<PlayerCommandSource>();
+            for (int i = 0; i < sources.Length; i++)
+            {
+                PlayerCommandSource source = sources[i];
+                if (source == null)
+                    continue;
+
+                BrawlerController brawler = source.GetComponent<BrawlerController>();
+                if (brawler == null || brawler.State == null)
+                    continue;
+
+                _cachedLocalObserverTeam = brawler.Team;
+                _hasCachedLocalObserver = true;
+                team = _cachedLocalObserverTeam;
+                return true;
+            }
+
+            team = TeamType.Neutral;
+            return false;
         }
 
         public void GrantSuperCharge(float amount)
@@ -1520,6 +1564,13 @@ namespace MOBA.Core.Infrastructure
             _debugSnapshot.HyperchargeActive = State.Hypercharge.IsActive;
             _debugSnapshot.HyperchargeChargePercent = State.Hypercharge.ChargePercent;
             _debugSnapshot.SuperCharged = State.SuperCharge.IsReady;
+            _debugSnapshot.IsInBush = State.IsInBush;
+            _debugSnapshot.IsHidden = State.Stealth.IsHidden(currentTick);
+            _debugSnapshot.IsRevealed = State.IsRevealed;
+            _debugSnapshot.IsProximityRevealed = State.IsProximityRevealed;
+            _debugSnapshot.IsStatusRevealed = State.IsStatusRevealed;
+            _debugSnapshot.IsAttackRevealed = State.Stealth.IsAttackRevealed(currentTick);
+            _debugSnapshot.IsDamageRevealed = State.Stealth.IsDamageRevealed(currentTick);
             _debugSnapshot.Position = Position;
 
             BrawlerDebugTracker.UpdateSnapshot(this, _debugSnapshot);

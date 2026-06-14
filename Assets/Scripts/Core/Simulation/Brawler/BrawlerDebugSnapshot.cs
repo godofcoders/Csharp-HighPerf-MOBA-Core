@@ -43,6 +43,14 @@ namespace MOBA.Core.Simulation
         public float HyperchargeChargePercent;
         public bool SuperCharged;
 
+        public bool IsInBush;
+        public bool IsHidden;
+        public bool IsRevealed;
+        public bool IsProximityRevealed;
+        public bool IsStatusRevealed;
+        public bool IsAttackRevealed;
+        public bool IsDamageRevealed;
+
         public Vector3 Position;
 
         public void ClearLists()
