@@ -59,6 +59,7 @@ namespace MOBA.Core.Infrastructure
         private readonly BrawlerDebugSnapshot _debugSnapshot = new BrawlerDebugSnapshot();
         private int _entityId;
         private Vector3 _lastKnownPosition;
+        private BrawlerStealthPresentation _stealthPresentation;
 
         public BrawlerDefinition Definition => _definition;
         public BrawlerState State { get; private set; }
@@ -1338,7 +1339,16 @@ namespace MOBA.Core.Infrastructure
 
         private void UpdateVisualStealth()
         {
-            if (_visualModel == null || State == null)
+            if (State == null)
+                return;
+
+            if (_stealthPresentation != null)
+            {
+                _stealthPresentation.RefreshStealthPresentation();
+                return;
+            }
+
+            if (_visualModel == null)
                 return;
 
             if (!TryGetLocalObserverTeam(out TeamType observerTeam))
@@ -1640,11 +1650,11 @@ namespace MOBA.Core.Infrastructure
 
         private void EnsureStealthPresentation()
         {
-            BrawlerStealthPresentation presentation = GetComponent<BrawlerStealthPresentation>();
-            if (presentation == null)
-                presentation = gameObject.AddComponent<BrawlerStealthPresentation>();
+            _stealthPresentation = GetComponent<BrawlerStealthPresentation>();
+            if (_stealthPresentation == null)
+                _stealthPresentation = gameObject.AddComponent<BrawlerStealthPresentation>();
 
-            presentation.Bind(this);
+            _stealthPresentation.Bind(this);
         }
     }
 }

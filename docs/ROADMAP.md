@@ -78,7 +78,7 @@ Goal: make hiding in grass a real gameplay mechanic with simulation, AI, and pre
 - `[x]` Define stealth rules: hidden while inside grass, revealed by attack, revealed by damage, and status reveal. Close-range enemy proximity reveal is supported by config but disabled by default.
 - `[x]` Add team visibility rules: self/allies visible, enemies hidden unless revealed.
 - `[x]` Integrate stealth with AI perception and target memory.
-- `[~]` Add visual feedback: enemies now hide from the local player's team perspective, and friendly/self hidden state shows a subtle ground indicator; needs Unity readability QA.
+- `[~]` Add visual feedback: brawler visuals now fade through runtime transparent material clones, enemies hide from the local player's team perspective, and friendly/self hidden state shows a subtle ground indicator; needs Unity readability QA.
 - `[x]` Add debug visibility for hidden/revealed state.
 - `[ ]` Manual QA: enter grass, shoot from grass, take damage in grass, enemy bot loses/reacquires target correctly.
 
