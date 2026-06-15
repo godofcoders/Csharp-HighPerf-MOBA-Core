@@ -44,6 +44,7 @@ namespace MOBA.Core.Infrastructure
         private float _smoothedDirectionalRange;
         private bool _hasResolvedObstacleMask;
         private int _resolvedObstacleMask;
+        private int _handledPreviewCancelSequence;
 
         private void Awake()
         {
@@ -68,6 +69,11 @@ namespace MOBA.Core.Infrastructure
             if (_commandSource == null)
             {
                 HidePreview();
+                return;
+            }
+
+            if (ConsumePreviewCancellation())
+            {
                 return;
             }
 
@@ -469,6 +475,20 @@ namespace MOBA.Core.Infrastructure
             _hasSmoothedOrigin = false;
             _hasSmoothedDirectionalRange = false;
             _smoothedRangeKind = AimPreviewKind.None;
+        }
+
+        private bool ConsumePreviewCancellation()
+        {
+            if (_commandSource == null)
+                return false;
+
+            int cancelSequence = _commandSource.PreviewCancelSequence;
+            if (cancelSequence == _handledPreviewCancelSequence)
+                return false;
+
+            _handledPreviewCancelSequence = cancelSequence;
+            HidePreview();
+            return true;
         }
     }
 }

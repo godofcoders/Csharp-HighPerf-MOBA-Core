@@ -29,19 +29,22 @@ namespace MOBA.Core.Infrastructure
         [Header("Radius Ring")]
         [SerializeField] private int _ringSegments = 32;
 
+        private LineRenderer[] _allLineRenderers;
+
         private void Awake()
         {
+            CacheLineRenderers();
             Hide();
         }
 
         private void OnDisable()
         {
-            HideAll();
+            HideAll(true);
         }
 
         private void OnDestroy()
         {
-            HideAll();
+            HideAll(true);
         }
 
         public void Show(AimPreviewData data)
@@ -51,6 +54,9 @@ namespace MOBA.Core.Infrastructure
                 Hide();
                 return;
             }
+
+            if (!gameObject.activeSelf)
+                gameObject.SetActive(true);
 
             switch (data.Mode)
             {
@@ -74,7 +80,7 @@ namespace MOBA.Core.Infrastructure
 
         private void ShowDirectional(AimPreviewData data)
         {
-            HideAll();
+            HideAll(false);
 
             Vector3 dir = data.Direction.normalized;
             Vector3 endPoint = data.Origin + (dir * data.Range);
@@ -83,7 +89,7 @@ namespace MOBA.Core.Infrastructure
 
             if (_lineRenderer != null)
             {
-                _lineRenderer.enabled = true;
+                PrepareLineRenderer(_lineRenderer);
                 _lineRenderer.positionCount = 2;
                 _lineRenderer.widthMultiplier = width;
                 ApplyColor(_lineRenderer, color);
@@ -115,7 +121,7 @@ namespace MOBA.Core.Infrastructure
         private void SetEdgeLine(LineRenderer lr, Vector3 a, Vector3 b, Color color)
         {
             if (lr == null) return;
-            lr.enabled = true;
+            PrepareLineRenderer(lr);
             lr.positionCount = 2;
             lr.widthMultiplier = Mathf.Max(0.02f, _spreadEdgeWidth);
             ApplyColor(lr, color);
@@ -125,12 +131,12 @@ namespace MOBA.Core.Infrastructure
 
         private void ShowThrowable(AimPreviewData data)
         {
-            HideAll();
+            HideAll(false);
             Color color = ResolveColor(data);
 
             if (_arcRenderer != null)
             {
-                _arcRenderer.enabled = true;
+                PrepareLineRenderer(_arcRenderer);
                 _arcRenderer.positionCount = _arcSegments + 1;
                 ApplyColor(_arcRenderer, color);
 
@@ -156,12 +162,12 @@ namespace MOBA.Core.Infrastructure
 
         private void ShowPlacement(AimPreviewData data)
         {
-            HideAll();
+            HideAll(false);
             Color color = ResolveColor(data);
 
             if (_lineRenderer != null)
             {
-                _lineRenderer.enabled = true;
+                PrepareLineRenderer(_lineRenderer);
                 _lineRenderer.positionCount = 2;
                 _lineRenderer.widthMultiplier = Mathf.Max(0.05f, data.Width > 0f ? data.Width : _fallbackDirectionalWidth);
                 ApplyColor(_lineRenderer, color);
@@ -193,7 +199,7 @@ namespace MOBA.Core.Infrastructure
             if (_radiusRingRenderer == null)
                 return;
 
-            _radiusRingRenderer.enabled = true;
+            PrepareLineRenderer(_radiusRingRenderer);
             _radiusRingRenderer.positionCount = _ringSegments + 1;
             ApplyColor(_radiusRingRenderer, color);
 
@@ -233,28 +239,74 @@ namespace MOBA.Core.Infrastructure
 
         public void Hide()
         {
-            HideAll();
+            HideAll(true);
         }
 
-        private void HideAll()
+        private void CacheLineRenderers()
         {
+            _allLineRenderers = GetComponentsInChildren<LineRenderer>(true);
+        }
+
+        private void HideAll(bool deactivateLineObjects)
+        {
+            if (_allLineRenderers == null)
+                CacheLineRenderers();
+
+            if (_allLineRenderers != null)
+            {
+                for (int i = 0; i < _allLineRenderers.Length; i++)
+                {
+                    ClearLineRenderer(_allLineRenderers[i], deactivateLineObjects);
+                }
+            }
+
             if (_lineRenderer != null)
-                _lineRenderer.enabled = false;
+                ClearLineRenderer(_lineRenderer, deactivateLineObjects);
 
             if (_spreadLeftLine != null)
-                _spreadLeftLine.enabled = false;
+                ClearLineRenderer(_spreadLeftLine, deactivateLineObjects);
 
             if (_spreadRightLine != null)
-                _spreadRightLine.enabled = false;
+                ClearLineRenderer(_spreadRightLine, deactivateLineObjects);
 
             if (_arcRenderer != null)
-                _arcRenderer.enabled = false;
+                ClearLineRenderer(_arcRenderer, deactivateLineObjects);
 
             if (_radiusRingRenderer != null)
-                _radiusRingRenderer.enabled = false;
+                ClearLineRenderer(_radiusRingRenderer, deactivateLineObjects);
 
             if (_endMarker != null)
                 _endMarker.gameObject.SetActive(false);
+
+            // Keep this component alive and controllable; visibility belongs to
+            // the individual preview renderers and marker objects.
+        }
+
+        private void PrepareLineRenderer(LineRenderer lineRenderer)
+        {
+            if (lineRenderer == null)
+                return;
+
+            if (!lineRenderer.gameObject.activeSelf)
+                lineRenderer.gameObject.SetActive(true);
+
+            lineRenderer.enabled = true;
+        }
+
+        private void ClearLineRenderer(LineRenderer lineRenderer, bool deactivateObject)
+        {
+            if (lineRenderer == null)
+                return;
+
+            lineRenderer.enabled = false;
+            lineRenderer.positionCount = 0;
+
+            if (deactivateObject &&
+                lineRenderer.gameObject != gameObject &&
+                lineRenderer.gameObject.activeSelf)
+            {
+                lineRenderer.gameObject.SetActive(false);
+            }
         }
     }
 }

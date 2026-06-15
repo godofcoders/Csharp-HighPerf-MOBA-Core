@@ -47,6 +47,9 @@ namespace MOBA.Core.Infrastructure
         private Vector3 _queuedSuperDirection = Vector3.zero;
         private Vector3 _queuedSuperTargetPoint = Vector3.zero;
         private bool _queuedSuperHasTargetPoint;
+        private int _previewCancelSequence;
+
+        public int PreviewCancelSequence => _previewCancelSequence;
 
         private void Awake()
         {
@@ -149,6 +152,7 @@ namespace MOBA.Core.Infrastructure
                 _isHoldingSuperAim = false;
                 _heldSuperAimDirection = Vector3.zero;
                 _heldSuperTargetPoint = Vector3.zero;
+                MarkPreviewCanceled();
             }
 
             _wasSuperKeyHeldLastFrame = superKeyHeld;
@@ -161,6 +165,7 @@ namespace MOBA.Core.Infrastructure
 
         private void OnDisable()
         {
+            CancelPreviewState(true);
             _input.Player.Disable();
         }
 
@@ -661,6 +666,7 @@ namespace MOBA.Core.Infrastructure
                 _isHoldingMainAttackAim = false;
                 _heldMainAttackAimDirection = Vector3.zero;
                 _heldMainAttackTargetPoint = Vector3.zero;
+                MarkPreviewCanceled();
             }
 
             _wasRightMouseHeldLastFrame = rightMouseHeld;
@@ -784,6 +790,29 @@ namespace MOBA.Core.Infrastructure
             _queuedMainAttackHasTargetPoint = hasTargetPoint;
             _mainAttackQueued = true;
             _lastAimDirection = direction;
+        }
+
+        private void MarkPreviewCanceled()
+        {
+            _previewCancelSequence++;
+        }
+
+        private void CancelPreviewState(bool markCancellation)
+        {
+            bool wasPreviewing = _isHoldingMainAttackAim || _isHoldingSuperAim;
+
+            _isHoldingMainAttackAim = false;
+            _heldMainAttackAimDirection = Vector3.zero;
+            _heldMainAttackTargetPoint = Vector3.zero;
+            _wasRightMouseHeldLastFrame = false;
+
+            _isHoldingSuperAim = false;
+            _heldSuperAimDirection = Vector3.zero;
+            _heldSuperTargetPoint = Vector3.zero;
+            _wasSuperKeyHeldLastFrame = false;
+
+            if (markCancellation && wasPreviewing)
+                MarkPreviewCanceled();
         }
 
         private void QueueSuperCommand(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
