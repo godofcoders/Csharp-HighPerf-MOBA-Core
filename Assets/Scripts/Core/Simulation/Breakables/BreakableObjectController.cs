@@ -12,7 +12,7 @@ namespace MOBA.Core.Simulation
         [SerializeField] private BreakableObjectDefinition _definition;
         [SerializeField] private float _fallbackCollisionRadius = 0.55f;
 
-        private readonly MaterialPropertyBlock _propertyBlock = new MaterialPropertyBlock();
+        private MaterialPropertyBlock _propertyBlock;
         private Renderer[] _renderers;
         private Collider[] _colliders;
         private int _entityId;
@@ -37,6 +37,7 @@ namespace MOBA.Core.Simulation
 
         private void Awake()
         {
+            EnsurePropertyBlock();
             _entityId = gameObject.GetInstanceID();
             _lastKnownPosition = transform.position;
             CachePresentation();
@@ -271,11 +272,18 @@ namespace MOBA.Core.Simulation
                 if (renderer == null)
                     continue;
 
+                EnsurePropertyBlock();
                 renderer.GetPropertyBlock(_propertyBlock);
                 _propertyBlock.SetColor(BaseColorId, color);
                 _propertyBlock.SetColor(ColorId, color);
                 renderer.SetPropertyBlock(_propertyBlock);
             }
+        }
+
+        private void EnsurePropertyBlock()
+        {
+            if (_propertyBlock == null)
+                _propertyBlock = new MaterialPropertyBlock();
         }
 
         private void ClearColor()

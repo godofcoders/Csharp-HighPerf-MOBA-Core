@@ -35,11 +35,12 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Color _expiredColor = new Color(0.42f, 0.46f, 0.50f, 0.24f);
 
         private readonly List<PulseInstance> _pool = new List<PulseInstance>(48);
-        private readonly MaterialPropertyBlock _propertyBlock = new MaterialPropertyBlock();
+        private MaterialPropertyBlock _propertyBlock;
         private Material _pulseMaterial;
 
         private void Awake()
         {
+            EnsurePropertyBlock();
             _pulseMaterial = CreatePulseMaterial();
             PrewarmPool();
         }
@@ -231,10 +232,17 @@ namespace MOBA.Core.Infrastructure
 
             Color color = pulse.Color;
             color.a *= 1f - t;
+            EnsurePropertyBlock();
             pulse.Renderer.GetPropertyBlock(_propertyBlock);
             _propertyBlock.SetColor(ColorId, color);
             _propertyBlock.SetColor(BaseColorId, color);
             pulse.Renderer.SetPropertyBlock(_propertyBlock);
+        }
+
+        private void EnsurePropertyBlock()
+        {
+            if (_propertyBlock == null)
+                _propertyBlock = new MaterialPropertyBlock();
         }
 
         private sealed class PulseInstance

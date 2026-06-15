@@ -15,7 +15,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _auraRadius = 1.35f;
         [SerializeField] private float _auraAlpha = 0.36f;
 
-        private readonly MaterialPropertyBlock _propertyBlock = new MaterialPropertyBlock();
+        private MaterialPropertyBlock _propertyBlock;
         private Renderer[] _renderers;
         private GameObject _auraObject;
         private Renderer _auraRenderer;
@@ -24,6 +24,7 @@ namespace MOBA.Core.Infrastructure
 
         private void Awake()
         {
+            EnsurePropertyBlock();
             if (_brawler == null)
                 _brawler = GetComponent<BrawlerController>();
 
@@ -135,10 +136,17 @@ namespace MOBA.Core.Infrastructure
                 if (renderer == null || renderer == _auraRenderer)
                     continue;
 
+                EnsurePropertyBlock();
                 renderer.GetPropertyBlock(_propertyBlock);
                 _propertyBlock.SetColor(EmissionColorId, emission);
                 renderer.SetPropertyBlock(_propertyBlock);
             }
+        }
+
+        private void EnsurePropertyBlock()
+        {
+            if (_propertyBlock == null)
+                _propertyBlock = new MaterialPropertyBlock();
         }
 
         private void ClearRendererHighlight()
