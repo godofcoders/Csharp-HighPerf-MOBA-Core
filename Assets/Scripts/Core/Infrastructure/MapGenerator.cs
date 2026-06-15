@@ -43,7 +43,9 @@ namespace MOBA.Core.Infrastructure
             bool[,] groundedGrid = new bool[Width, Height];
             int groundedCells = 0;
             int groundMask = ResolveGroundMask();
+            int bushMask = ResolveBushMask();
             Vector3 obstacleProbeExtents = GetObstacleProbeExtents();
+            Vector3 bushProbeExtents = GetBushProbeExtents();
 
             for (int x = 0; x < Width; x++)
             {
@@ -84,7 +86,14 @@ namespace MOBA.Core.Infrastructure
                         !isBlocked &&
                         (!requireGround || groundedGrid[x, y]);
 
-                    bool isBush = Physics.CheckBox(worldPos + Vector3.up, new Vector3(CellSize / 2.1f, 0.5f, CellSize / 2.1f), Quaternion.identity, BushLayer);
+                    bool isBush =
+                        bushMask != 0 &&
+                        Physics.CheckBox(
+                            worldPos + Vector3.up,
+                            bushProbeExtents,
+                            Quaternion.identity,
+                            bushMask,
+                            QueryTriggerInteraction.Collide);
                     _mapData.BushGrid[x, y] = isBush;
                 }
             }
@@ -105,12 +114,30 @@ namespace MOBA.Core.Infrastructure
             return new Vector3(horizontalExtent, 0.5f, horizontalExtent);
         }
 
+        private Vector3 GetBushProbeExtents()
+        {
+            return new Vector3(CellSize / 2.1f, 0.5f, CellSize / 2.1f);
+        }
+
         private int ResolveGroundMask()
         {
             if (GroundLayer.value != 0)
                 return GroundLayer.value;
 
             return Physics.DefaultRaycastLayers & ~ObstacleLayer.value;
+        }
+
+        private int ResolveBushMask()
+        {
+            if (BushLayer.value != 0)
+                return BushLayer.value;
+
+            int bushesLayer = LayerMask.NameToLayer("Bushes");
+            if (bushesLayer >= 0)
+                return 1 << bushesLayer;
+
+            int bushLayer = LayerMask.NameToLayer("Bush");
+            return bushLayer >= 0 ? 1 << bushLayer : 0;
         }
 
         private bool HasPlayableGround(Vector3 worldPos, int groundMask)
