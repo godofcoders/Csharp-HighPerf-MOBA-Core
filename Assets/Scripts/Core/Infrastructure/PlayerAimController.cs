@@ -16,6 +16,10 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _defaultDirectionalWidth = 1f;
         [SerializeField] private float _minimumVisibleDirectionalRange = 1.15f;
 
+        [Header("Directional Presentation")]
+        [SerializeField] private float _directionalPlaneHeightOffset = 0.04f;
+        [SerializeField] private float _directionalStartPadding = 0.15f;
+
         [Header("Obstacle Clipping")]
         [SerializeField] private LayerMask _aimObstacleMask;
         [SerializeField] private float _traceStartOffset = 0.75f;
@@ -39,6 +43,7 @@ namespace MOBA.Core.Infrastructure
         private Vector3 _smoothedAimDirection = Vector3.forward;
         private bool _hasSmoothedOrigin;
         private Vector3 _smoothedOrigin;
+        private AimPreviewKind _smoothedOriginKind = AimPreviewKind.None;
         private bool _hasSmoothedDirectionalRange;
         private AimPreviewKind _smoothedRangeKind = AimPreviewKind.None;
         private float _smoothedDirectionalRange;
@@ -134,16 +139,19 @@ namespace MOBA.Core.Infrastructure
 
         private AimPreviewData BuildPreviewData(AimPreviewKind kind, AbilityDefinition ability, Vector3 aimDirection)
         {
-            Vector3 playerCenter = SmoothPreviewOrigin(_brawler.transform.position + Vector3.up * _originHeightOffset);
+            Vector3 brawlerPosition = _brawler.transform.position;
             Vector3 previewTargetPoint = _commandSource != null
                 ? _commandSource.GetPreviewTargetPoint()
-                : _brawler.transform.position + (aimDirection * _defaultRange);
+                : brawlerPosition + (aimDirection * _defaultRange);
 
             switch (ability.PreviewMode)
             {
                 case AimPreviewMode.Throwable:
                     {
-                        float actualRange = (previewTargetPoint - _brawler.transform.position).magnitude;
+                        Vector3 elevatedOrigin = SmoothPreviewOrigin(
+                            kind,
+                            brawlerPosition + Vector3.up * Mathf.Max(0f, _originHeightOffset));
+                        float actualRange = (previewTargetPoint - brawlerPosition).magnitude;
                         float radius = _defaultThrowableRadius;
 
                         if (ability is ThrownHybridAoEAbilityDefinition thrown)
@@ -154,7 +162,7 @@ namespace MOBA.Core.Infrastructure
                             IsValid = true,
                             Kind = kind,
                             Mode = AimPreviewMode.Throwable,
-                            Origin = playerCenter,
+                            Origin = elevatedOrigin,
                             Direction = aimDirection,
                             Range = actualRange,
                             TargetPoint = previewTargetPoint,
@@ -165,14 +173,17 @@ namespace MOBA.Core.Infrastructure
 
                 case AimPreviewMode.Placement:
                     {
-                        float actualRange = (previewTargetPoint - _brawler.transform.position).magnitude;
+                        Vector3 elevatedOrigin = SmoothPreviewOrigin(
+                            kind,
+                            brawlerPosition + Vector3.up * Mathf.Max(0f, _originHeightOffset));
+                        float actualRange = (previewTargetPoint - brawlerPosition).magnitude;
 
                         return new AimPreviewData
                         {
                             IsValid = true,
                             Kind = kind,
                             Mode = AimPreviewMode.Placement,
-                            Origin = playerCenter,
+                            Origin = elevatedOrigin,
                             Direction = aimDirection,
                             Range = actualRange,
                             TargetPoint = previewTargetPoint,
@@ -187,25 +198,31 @@ namespace MOBA.Core.Infrastructure
                         float directionalRange = ResolveDirectionalRange(ability);
                         float previewWidth = ResolveDirectionalWidth(ability);
                         float spreadHalfAngle = ResolveSpreadHalfAngle(ability);
+                        Vector3 traceOrigin = SmoothPreviewOrigin(
+                            kind,
+                            brawlerPosition + Vector3.up * Mathf.Max(0f, _directionalPlaneHeightOffset));
                         float visibleRange = ResolveVisibleDirectionalRange(
-                            playerCenter,
+                            traceOrigin,
                             aimDirection,
                             directionalRange,
                             previewWidth,
                             out bool isObstructed);
                         visibleRange = SmoothDirectionalRange(kind, visibleRange);
+                        float visualStartOffset = ResolveDirectionalVisualStartOffset(visibleRange);
+                        Vector3 visualOrigin = traceOrigin + aimDirection * visualStartOffset;
+                        float visualRange = Mathf.Max(0.05f, visibleRange - visualStartOffset);
 
                         return new AimPreviewData
                         {
                             IsValid = true,
                             Kind = kind,
                             Mode = AimPreviewMode.Directional,
-                            Origin = playerCenter,
+                            Origin = visualOrigin,
                             Direction = aimDirection,
-                            Range = visibleRange,
+                            Range = visualRange,
                             Width = previewWidth,
                             IsObstructed = isObstructed,
-                            TargetPoint = playerCenter + (aimDirection * visibleRange),
+                            TargetPoint = visualOrigin + (aimDirection * visualRange),
                             ArcHeight = 0f,
                             Radius = 0f,
                             SpreadHalfAngleDegrees = spreadHalfAngle
@@ -225,6 +242,16 @@ namespace MOBA.Core.Infrastructure
                 return volley.SpreadAngle * 0.5f;
 
             return 0f;
+        }
+
+        private float ResolveDirectionalVisualStartOffset(float visibleRange)
+        {
+            float collisionRadius = _brawler != null
+                ? Mathf.Max(0f, _brawler.CollisionRadius)
+                : 0.5f;
+
+            float requestedOffset = collisionRadius + Mathf.Max(0f, _directionalStartPadding);
+            return Mathf.Clamp(requestedOffset, 0f, Mathf.Max(0f, visibleRange - 0.05f));
         }
 
         private float ResolveDirectionalWidth(AbilityDefinition ability)
@@ -299,11 +326,12 @@ namespace MOBA.Core.Infrastructure
             return _smoothedAimDirection;
         }
 
-        private Vector3 SmoothPreviewOrigin(Vector3 rawOrigin)
+        private Vector3 SmoothPreviewOrigin(AimPreviewKind kind, Vector3 rawOrigin)
         {
-            if (!_hasSmoothedOrigin)
+            if (!_hasSmoothedOrigin || _smoothedOriginKind != kind)
             {
                 _hasSmoothedOrigin = true;
+                _smoothedOriginKind = kind;
                 _smoothedOrigin = rawOrigin;
                 return _smoothedOrigin;
             }
@@ -473,6 +501,7 @@ namespace MOBA.Core.Infrastructure
             _hasSmoothedAimDirection = false;
             _smoothedAimKind = AimPreviewKind.None;
             _hasSmoothedOrigin = false;
+            _smoothedOriginKind = AimPreviewKind.None;
             _hasSmoothedDirectionalRange = false;
             _smoothedRangeKind = AimPreviewKind.None;
         }
