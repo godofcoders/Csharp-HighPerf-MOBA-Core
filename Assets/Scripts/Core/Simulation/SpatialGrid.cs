@@ -94,6 +94,9 @@ namespace MOBA.Core.Simulation
                                 continue;
                             }
 
+                            if (target is BreakableObjectController breakable && breakable.IsDestroyed)
+                                continue;
+
                             bool sameTeam = target.Team == attackerTeam;
 
                             switch (hitRule)

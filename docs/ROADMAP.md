@@ -86,13 +86,13 @@ Goal: make hiding in grass a real gameplay mechanic with simulation, AI, and pre
 
 Goal: support destructible map objects with clear simulation rules and visual feedback.
 
-- `[ ]` Add breakable object definition: health, collision, team neutrality, destruction rules.
-- `[ ]` Add breakable object controller lifecycle and registry integration.
-- `[ ]` Define which attacks can damage breakables.
-- `[ ]` Make Colt super destroy eligible breakable objects.
-- `[ ]` Update projectile collision and area/super interactions.
-- `[ ]` Update navigation/grid/pathing when cover is destroyed.
-- `[ ]` Add visual feedback: hit flash, cracks/damage state, destruction VFX, debris/audio hook.
+- `[x]` Add breakable object definition: health, collision, team neutrality, destruction rules.
+- `[x]` Add breakable object controller lifecycle and registry integration.
+- `[x]` Define which attacks can damage breakables.
+- `[~]` Make Colt super destroy eligible breakable objects. Breakables can require super damage and an optional exact ability asset; Colt super asset wiring needs Unity authoring.
+- `[x]` Update projectile collision and area/super interactions.
+- `[x]` Update navigation/grid/pathing when cover is destroyed.
+- `[~]` Add visual feedback: hit flash, critical-health tint, destroyed visual prefab hook; cracks/debris/audio remain future polish.
 - `[ ]` Manual QA: damage object, destroy object, verify bots and projectiles route through destroyed cover.
 
 ## Milestone G-05: Solo Showdown Mode

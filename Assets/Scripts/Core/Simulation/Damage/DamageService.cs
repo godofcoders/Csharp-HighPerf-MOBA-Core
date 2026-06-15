@@ -15,6 +15,10 @@ namespace MOBA.Core.Simulation
             if (!SpatialEntityUtility.IsAlive(ctx.Target))
                 return;
 
+            BreakableObjectController targetBreakable = ctx.Target as BreakableObjectController;
+            if (targetBreakable != null && !targetBreakable.CanReceiveDamage(ctx))
+                return;
+
             float workingDamage = ctx.Damage;
             float shieldBefore = 0f;
             float shieldAfter = 0f;
@@ -26,6 +30,10 @@ namespace MOBA.Core.Simulation
             {
                 wasAliveBefore = !targetBrawler.State.IsDead;
                 shieldBefore = targetBrawler.State.ShieldHealth;
+            }
+            else if (targetBreakable != null)
+            {
+                wasAliveBefore = !targetBreakable.IsDestroyed;
             }
 
             if (ctx.Attacker != null && ctx.Attacker.State != null)
@@ -104,6 +112,10 @@ namespace MOBA.Core.Simulation
             if (targetBrawler != null && targetBrawler.State != null)
             {
                 wasFatal = wasAliveBefore && targetBrawler.State.IsDead;
+            }
+            else if (targetBreakable != null)
+            {
+                wasFatal = wasAliveBefore && targetBreakable.IsDestroyed;
             }
 
             var result = new DamageResultContext

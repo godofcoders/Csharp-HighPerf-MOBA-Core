@@ -108,8 +108,19 @@ namespace MOBA.Core.Simulation
 
             for (int i = 0; i < _targets.Count; i++)
             {
-                BrawlerController target = _targets[i] as BrawlerController;
-                if (target == null || target.State == null || target.State.IsDead)
+                ISpatialEntity target = _targets[i];
+                if (!SpatialEntityUtility.IsAlive(target))
+                    continue;
+
+                BrawlerController targetBrawler = target as BrawlerController;
+                BreakableObjectController targetBreakable = target as BreakableObjectController;
+                if (targetBrawler == null && targetBreakable == null)
+                    continue;
+
+                if (targetBrawler != null && (targetBrawler.State == null || targetBrawler.State.IsDead))
+                    continue;
+
+                if (targetBreakable != null && targetBreakable.IsDestroyed)
                     continue;
 
                 Vector3 targetPosition = target.Position;
@@ -138,7 +149,7 @@ namespace MOBA.Core.Simulation
                 {
                     EventType = CombatPresentationEventType.DamageHit,
                     Source = _owner,
-                    Target = target,
+                    Target = targetBrawler,
                     AbilityDefinition = _sourceAbility,
                     SlotType = _slotType,
                     Position = targetPosition,
@@ -149,7 +160,7 @@ namespace MOBA.Core.Simulation
             }
         }
 
-        private bool IsValidTarget(BrawlerController target)
+        private bool IsValidTarget(ISpatialEntity target)
         {
             switch (_definition.TargetTeamRule)
             {

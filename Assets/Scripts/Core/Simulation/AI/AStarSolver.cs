@@ -77,6 +77,54 @@ namespace MOBA.Core.Simulation.AI
             return node != null && node.IsWalkable;
         }
 
+        public bool TrySetWalkable(UnityEngine.Vector2Int coords, bool walkable)
+        {
+            PathNode node = GetNode(coords.x, coords.y);
+            if (node == null)
+                return false;
+
+            node.IsWalkable = walkable;
+
+            if (_mapData != null &&
+                _mapData.WalkabilityGrid != null &&
+                _mapData.IsInBounds(coords))
+            {
+                _mapData.WalkabilityGrid[coords.x, coords.y] = walkable;
+            }
+
+            return true;
+        }
+
+        public int SetWalkableCircle(UnityEngine.Vector3 worldPos, float radius, bool walkable)
+        {
+            UnityEngine.Vector2Int center = GetGridCoords(worldPos);
+            int cellRadius = UnityEngine.Mathf.Max(0, UnityEngine.Mathf.CeilToInt(radius / _cellSize));
+            float radiusSq = radius * radius;
+            int changed = 0;
+
+            for (int x = -cellRadius; x <= cellRadius; x++)
+            {
+                for (int y = -cellRadius; y <= cellRadius; y++)
+                {
+                    UnityEngine.Vector2Int coords = new UnityEngine.Vector2Int(center.x + x, center.y + y);
+                    if (!IsInBounds(coords))
+                        continue;
+
+                    UnityEngine.Vector3 cellWorld = GetWorldPos(coords);
+                    UnityEngine.Vector3 delta = cellWorld - worldPos;
+                    delta.y = 0f;
+
+                    if (delta.sqrMagnitude > radiusSq)
+                        continue;
+
+                    if (TrySetWalkable(coords, walkable))
+                        changed++;
+                }
+            }
+
+            return changed;
+        }
+
         public bool IsWalkableWithBoundaryClearance(
             UnityEngine.Vector2Int coords,
             int clearanceCells = 1)

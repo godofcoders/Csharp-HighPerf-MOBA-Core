@@ -203,11 +203,11 @@ namespace MOBA.Core.Infrastructure
                         continue;
                     }
 
-                    if (p.IsHybrid && targetBrawler != null && p.Owner != null)
+                    if (p.IsHybrid && p.Owner != null)
                     {
-                        bool isAlly = targetBrawler.Team == p.Owner.Team;
+                        bool isAllyBrawler = targetBrawler != null && targetBrawler.Team == p.Owner.Team;
 
-                        if (isAlly)
+                        if (isAllyBrawler)
                         {
                             Debug.Log($"[HYBRID PROJECTILE] {p.Owner.name} healed ally {targetBrawler.name} for {p.AllyHealAmount}");
                             float beforeHealth = targetBrawler.State.CurrentHealth;
@@ -238,7 +238,7 @@ namespace MOBA.Core.Infrastructure
                         }
                         else
                         {
-                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner.name} damaged enemy {targetBrawler.name} for {p.EnemyDamageAmount}");
+                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner.name} damaged target {hit.EntityID} for {p.EnemyDamageAmount}");
 
                             var damageService = ServiceProvider.Get<IDamageService>();
                             damageService.ApplyDamage(new DamageContext
@@ -528,16 +528,21 @@ namespace MOBA.Core.Infrastructure
 
             for (int i = 0; i < targets.Count; i++)
             {
-                BrawlerController targetBrawler = targets[i] as BrawlerController;
-                if (targetBrawler == null)
+                ISpatialEntity target = targets[i];
+                if (!SpatialEntityUtility.IsAlive(target))
                     continue;
 
-                Vector3 targetPosition = targetBrawler.Position;
+                BrawlerController targetBrawler = target as BrawlerController;
+                BreakableObjectController targetBreakable = target as BreakableObjectController;
+                if (targetBrawler == null && targetBreakable == null)
+                    continue;
+
+                Vector3 targetPosition = target.Position;
                 float distSq = (targetPosition - impactPosition).sqrMagnitude;
                 if (distSq > sqrRadius)
                     continue;
 
-                bool isAlly = targetBrawler.Team == p.Owner.Team;
+                bool isAlly = targetBrawler != null && targetBrawler.Team == p.Owner.Team;
 
                 if (isAlly)
                 {
@@ -571,7 +576,7 @@ namespace MOBA.Core.Infrastructure
                         damageService.ApplyDamage(new DamageContext
                         {
                             Attacker = p.Owner,
-                            Target = targetBrawler,
+                            Target = target,
                             Damage = p.ImpactEnemyDamage,
                             Type = DamageType.AoE,
                             HitPosition = impactPosition,
@@ -580,7 +585,7 @@ namespace MOBA.Core.Infrastructure
                             IsSuper = p.IsSuper
                         });
 
-                        Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} damaged enemy {targetBrawler.name} for {p.ImpactEnemyDamage}");
+                        Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} damaged target {target.EntityID} for {p.ImpactEnemyDamage}");
                     }
                 }
             }
