@@ -97,20 +97,12 @@ namespace MOBA.Core.Simulation
                             if (target is BreakableObjectController breakable && breakable.IsDestroyed)
                                 continue;
 
-                            bool sameTeam = target.Team == attackerTeam;
-
-                            switch (hitRule)
+                            if (!TeamRelationshipUtility.CanAffectTeam(
+                                    hitRule,
+                                    attackerTeam,
+                                    target.Team))
                             {
-                                case ProjectileHitTeamRule.EnemiesOnly:
-                                    if (sameTeam) continue;
-                                    break;
-
-                                case ProjectileHitTeamRule.AlliesOnly:
-                                    if (!sameTeam) continue;
-                                    break;
-
-                                case ProjectileHitTeamRule.AlliesAndEnemies:
-                                    break;
+                                continue;
                             }
 
                             float distSq = (target.Position - position).sqrMagnitude;

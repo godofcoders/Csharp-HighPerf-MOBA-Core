@@ -28,7 +28,7 @@ namespace MOBA.Core.Infrastructure
             if (subjectEntityId != 0 && subjectEntityId == localEntityId)
                 return BrawlerHealthBarPerspective.Own;
 
-            return subjectTeam == localTeam
+            return TeamRelationshipUtility.AreAllies(subjectTeam, localTeam)
                 ? BrawlerHealthBarPerspective.Ally
                 : BrawlerHealthBarPerspective.Enemy;
         }

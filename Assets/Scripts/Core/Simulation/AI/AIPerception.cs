@@ -106,7 +106,7 @@ namespace MOBA.Core.Simulation.AI
             if (entity.EntityID == self.EntityID)
                 return false;
 
-            if (entity.Team == self.Team)
+            if (!TeamRelationshipUtility.AreEnemies(entity.Team, self.Team))
                 return false;
 
             if (entity is BrawlerController targetBrawler)

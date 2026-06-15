@@ -14,6 +14,7 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Match Settings")]
         [SerializeField] private int _teamSize = 3;
+        [SerializeField] private int _soloShowdownContestantCount = 8;
         [SerializeField] private BrawlerDefinition _defaultBotBrawler;
         [SerializeField] private BrawlerDefinition[] _botBrawlerPool;
         [SerializeField] private bool _useCompositionAwareBotSelection = true;
@@ -25,7 +26,7 @@ namespace MOBA.Core.Infrastructure
         private List<MatchParticipant> _roster = new List<MatchParticipant>();
         private readonly List<BrawlerDefinition> _botPickBag = new List<BrawlerDefinition>(8);
 
-        public bool IsLobbyFull => _roster.Count >= _teamSize * 2;
+        public bool IsLobbyFull => _roster.Count >= GetTargetRosterSize();
 
         private void Awake() => Instance = this;
 
@@ -49,7 +50,14 @@ namespace MOBA.Core.Infrastructure
 
         public void JoinLocalPlayer(BrawlerDefinition selected)
         {
-            _roster.Add(new MatchParticipant("Player (You)", TeamType.Blue, selected, false));
+            _roster.Clear();
+            _botPickBag.Clear();
+
+            TeamType playerTeam = SceneSelection.SelectedMode == GameModeId.SoloShowdown
+                ? TeamType.Solo1
+                : TeamType.Blue;
+
+            _roster.Add(new MatchParticipant("Player (You)", playerTeam, selected, false));
             Debug.Log($"[Lobby] Player joined as {selected.BrawlerName}");
             
             FillWithBots();
@@ -57,7 +65,7 @@ namespace MOBA.Core.Infrastructure
 
         private void FillWithBots()
         {
-            int totalSlots = _teamSize * 2;
+            int totalSlots = GetTargetRosterSize();
             List<BrawlerDefinition> botPool = BuildBotPool();
 
             if (botPool.Count == 0)
@@ -68,9 +76,14 @@ namespace MOBA.Core.Infrastructure
 
             while (_roster.Count < totalSlots)
             {
-                // Fill Team Blue first, then Team Red
-                TeamType team = (_roster.Count < _teamSize) ? TeamType.Blue : TeamType.Red;
-                BrawlerDefinition botBrawler = PickBotBrawler(botPool, team, out string pickReason);
+                TeamType team = ResolveParticipantTeam(_roster.Count);
+                BrawlerDefinition botBrawler;
+                string pickReason;
+                if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
+                    botBrawler = PickSoloBotBrawler(botPool, out pickReason);
+                else
+                    botBrawler = PickBotBrawler(botPool, team, out pickReason);
+
                 string botName = $"Bot {_roster.Count} ({botBrawler.BrawlerName})";
                 _roster.Add(new MatchParticipant(botName, team, botBrawler, true));
 
@@ -87,6 +100,27 @@ namespace MOBA.Core.Infrastructure
 
             Debug.Log("[Lobby] Roster full. Initializing Spawn Sequence...");
             StartMatch();
+        }
+
+        private int GetTargetRosterSize()
+        {
+            if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
+            {
+                return Mathf.Clamp(
+                    _soloShowdownContestantCount,
+                    2,
+                    TeamRelationshipUtility.MaxSoloTeams);
+            }
+
+            return Mathf.Max(1, _teamSize) * 2;
+        }
+
+        private TeamType ResolveParticipantTeam(int rosterIndex)
+        {
+            if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
+                return TeamRelationshipUtility.GetSoloTeam(rosterIndex);
+
+            return rosterIndex < _teamSize ? TeamType.Blue : TeamType.Red;
         }
 
         private List<BrawlerDefinition> BuildBotPool()
@@ -142,6 +176,28 @@ namespace MOBA.Core.Infrastructure
             }
 
             pickReason = "legacy_bag";
+
+            if (pool.Count == 1 || !_avoidDuplicateBotBrawlersUntilPoolExhausted)
+            {
+                return pool[UnityEngine.Random.Range(0, pool.Count)];
+            }
+
+            if (_botPickBag.Count == 0)
+            {
+                RefillBotPickBag(pool);
+            }
+
+            int index = _botPickBag.Count - 1;
+            BrawlerDefinition picked = _botPickBag[index];
+            _botPickBag.RemoveAt(index);
+            return picked;
+        }
+
+        private BrawlerDefinition PickSoloBotBrawler(
+            List<BrawlerDefinition> pool,
+            out string pickReason)
+        {
+            pickReason = "showdown_global_bag";
 
             if (pool.Count == 1 || !_avoidDuplicateBotBrawlersUntilPoolExhausted)
             {

@@ -63,7 +63,7 @@ namespace MOBA.Core.Simulation.AI
 
                 case AIActionType.Retreat:
                 case AIActionType.Regroup:
-                    return EvaluateCarrierSafety(context);
+                    return EvaluateRetreatOrRegroup(context);
 
                 case AIActionType.Peel:
                     return EvaluatePeel(context);
@@ -99,6 +99,12 @@ namespace MOBA.Core.Simulation.AI
                     if (call == AIGameModeMacroCall.Push) return Result(10f, "zone_push");
                     if (call == AIGameModeMacroCall.Reset) return Result(12f, "zone_deny");
                     if (call == AIGameModeMacroCall.Hold) return Result(-4f, "zone_hold");
+                    break;
+
+                case GameModeId.SoloShowdown:
+                    if (call == AIGameModeMacroCall.Push) return Result(12f, "showdown_duel");
+                    if (call == AIGameModeMacroCall.Reset) return Result(-18f, "showdown_survive");
+                    if (call == AIGameModeMacroCall.Hold) return Result(-10f, "showdown_hold");
                     break;
 
                 case GameModeId.GemGrab:
@@ -149,6 +155,12 @@ namespace MOBA.Core.Simulation.AI
                     if (call == AIGameModeMacroCall.Hold) return Result(4f, "zone_hold");
                     break;
 
+                case GameModeId.SoloShowdown:
+                    if (call == AIGameModeMacroCall.Push) return Result(8f, "showdown_duel");
+                    if (call == AIGameModeMacroCall.Reset) return Result(4f, "showdown_safe_search");
+                    if (call == AIGameModeMacroCall.Hold) return Result(-4f, "showdown_hold");
+                    break;
+
                 case GameModeId.GemGrab:
                 default:
                     if (call == AIGameModeMacroCall.Push) return Result(12f, "macro_push");
@@ -196,6 +208,12 @@ namespace MOBA.Core.Simulation.AI
                     if (call == AIGameModeMacroCall.Hold) return Result(14f, "zone_hold");
                     break;
 
+                case GameModeId.SoloShowdown:
+                    if (call == AIGameModeMacroCall.Reset) return Result(24f, "showdown_safe_zone");
+                    if (call == AIGameModeMacroCall.Hold) return Result(10f, "showdown_hold_zone");
+                    if (call == AIGameModeMacroCall.Push) return Result(6f, "showdown_duel");
+                    break;
+
                 case GameModeId.GemGrab:
                 default:
                     if (call == AIGameModeMacroCall.Push) return Result(16f, "macro_push");
@@ -219,6 +237,24 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return AIMacroActionPolicyResult.None;
+        }
+
+        private static AIMacroActionPolicyResult EvaluateRetreatOrRegroup(
+            AIMacroActionContext context)
+        {
+            if (context.MacroState.Mode == GameModeId.SoloShowdown)
+            {
+                if (context.MacroState.Call == AIGameModeMacroCall.Reset)
+                    return Result(20f, "showdown_survive");
+
+                if (context.MacroState.Call == AIGameModeMacroCall.Hold)
+                    return Result(8f, "showdown_hold");
+
+                if (context.MacroState.Call == AIGameModeMacroCall.Push)
+                    return Result(-6f, "showdown_duel");
+            }
+
+            return EvaluateCarrierSafety(context);
         }
 
         private static AIMacroActionPolicyResult EvaluateCarrierSafety(
@@ -269,6 +305,15 @@ namespace MOBA.Core.Simulation.AI
         private static AIMacroActionPolicyResult EvaluateUseSuper(
             AIMacroActionContext context)
         {
+            if (context.MacroState.Mode == GameModeId.SoloShowdown)
+            {
+                if (context.MacroState.Call == AIGameModeMacroCall.Push)
+                    return Result(8f, "showdown_duel");
+
+                if (context.MacroState.Call == AIGameModeMacroCall.Reset)
+                    return Result(-8f, "showdown_survive");
+            }
+
             if (context.TargetCarriedGems <= 0)
                 return AIMacroActionPolicyResult.None;
 

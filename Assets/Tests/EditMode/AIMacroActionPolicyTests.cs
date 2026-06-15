@@ -61,6 +61,52 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void Evaluate_ShowdownResetPrioritizesSafeZoneAndRetreat()
+        {
+            var context = new AIMacroActionContext(
+                MacroState(GameModeId.SoloShowdown, AIGameModeMacroCall.Reset));
+
+            AIMacroActionPolicyResult objective = AIMacroActionPolicy.Evaluate(
+                AIActionType.Objective,
+                context);
+
+            AIMacroActionPolicyResult retreat = AIMacroActionPolicy.Evaluate(
+                AIActionType.Retreat,
+                context);
+
+            AIMacroActionPolicyResult approach = AIMacroActionPolicy.Evaluate(
+                AIActionType.Approach,
+                context);
+
+            Assert.AreEqual(24f, objective.Delta);
+            Assert.AreEqual("showdown_safe_zone", objective.Reason);
+            Assert.AreEqual(20f, retreat.Delta);
+            Assert.AreEqual("showdown_survive", retreat.Reason);
+            Assert.AreEqual(-18f, approach.Delta);
+            Assert.AreEqual("showdown_survive", approach.Reason);
+        }
+
+        [Test]
+        public void Evaluate_ShowdownPushEncouragesFinalDuel()
+        {
+            var context = new AIMacroActionContext(
+                MacroState(GameModeId.SoloShowdown, AIGameModeMacroCall.Push));
+
+            AIMacroActionPolicyResult approach = AIMacroActionPolicy.Evaluate(
+                AIActionType.Approach,
+                context);
+
+            AIMacroActionPolicyResult retreat = AIMacroActionPolicy.Evaluate(
+                AIActionType.Retreat,
+                context);
+
+            Assert.AreEqual(12f, approach.Delta);
+            Assert.AreEqual("showdown_duel", approach.Reason);
+            Assert.AreEqual(-6f, retreat.Delta);
+            Assert.AreEqual("showdown_duel", retreat.Reason);
+        }
+
+        [Test]
         public void Evaluate_ResetSuperPressureTargetsGemCarrier()
         {
             AIMacroActionPolicyResult result = AIMacroActionPolicy.Evaluate(

@@ -96,7 +96,7 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            bool sameTeam = observerTeam == _brawler.Team;
+            bool sameTeam = TeamRelationshipUtility.AreAllies(observerTeam, _brawler.Team);
 
             uint currentTick = ServiceProvider.TryGet<ISimulationClock>(out ISimulationClock clock)
                 ? clock.CurrentTick

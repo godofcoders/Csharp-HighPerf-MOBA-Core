@@ -14,6 +14,7 @@ namespace MOBA.Core.Infrastructure
         [Header("Mode buttons")]
         [SerializeField] private Button _gemGrabButton;
         [SerializeField] private Button _knockoutButton;
+        [SerializeField] private Button _soloShowdownButton;
 
         [Header("Navigation")]
         [SerializeField] private Button _backButton;
@@ -22,6 +23,7 @@ namespace MOBA.Core.Infrastructure
         {
             if (_gemGrabButton != null) _gemGrabButton.onClick.AddListener(OnGemGrab);
             if (_knockoutButton != null) _knockoutButton.onClick.AddListener(OnKnockout);
+            if (_soloShowdownButton != null) _soloShowdownButton.onClick.AddListener(OnSoloShowdown);
             if (_backButton != null) _backButton.onClick.AddListener(OnBack);
 
         }
@@ -30,6 +32,7 @@ namespace MOBA.Core.Infrastructure
         {
             if (_gemGrabButton != null) _gemGrabButton.onClick.RemoveListener(OnGemGrab);
             if (_knockoutButton != null) _knockoutButton.onClick.RemoveListener(OnKnockout);
+            if (_soloShowdownButton != null) _soloShowdownButton.onClick.RemoveListener(OnSoloShowdown);
             if (_backButton != null) _backButton.onClick.RemoveListener(OnBack);
         }
 
@@ -42,6 +45,12 @@ namespace MOBA.Core.Infrastructure
         private void OnKnockout()
         {
             SceneSelection.SelectedMode = GameModeId.Knockout;
+            SceneFlow.Instance?.LoadScene(SceneId.MapSelect);
+        }
+
+        private void OnSoloShowdown()
+        {
+            SceneSelection.SelectedMode = GameModeId.SoloShowdown;
             SceneFlow.Instance?.LoadScene(SceneId.MapSelect);
         }
 

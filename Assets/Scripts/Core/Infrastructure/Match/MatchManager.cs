@@ -39,10 +39,14 @@ namespace MOBA.Core.Infrastructure
 
         // Scores
         private Dictionary<TeamType, int> _teamScores = new Dictionary<TeamType, int>();
+        private TeamType _winner = TeamType.Neutral;
+        private bool _winnerKnown;
 
         // Events for UI to listen to
         public Action<MatchState> OnStateChanged;
         public Action<TeamType, int> OnScoreUpdated;
+        public bool WinnerKnown => _winnerKnown;
+        public TeamType Winner => _winner;
 
         private void Awake()
         {
@@ -60,6 +64,8 @@ namespace MOBA.Core.Infrastructure
 
         public void StartMatchFlow()
         {
+            _winner = TeamType.Neutral;
+            _winnerKnown = false;
             _countdownStartTime = Time.time;
             ChangeState(MatchState.CountingDown);
             Invoke(nameof(BeginGameplay), _countdownDuration);
@@ -67,6 +73,9 @@ namespace MOBA.Core.Infrastructure
 
         private void BeginGameplay()
         {
+            if (CurrentState != MatchState.CountingDown)
+                return;
+
             ChangeState(MatchState.Active);
         }
 
@@ -74,6 +83,7 @@ namespace MOBA.Core.Infrastructure
         {
             if (CurrentState != MatchState.Active) return;
 
+            EnsureTeamScore(team);
             _teamScores[team] += amount;
             OnScoreUpdated?.Invoke(team, _teamScores[team]);
 
@@ -84,10 +94,32 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
-        private void EndMatch(TeamType winner)
+        public int GetScore(TeamType team)
         {
+            return _teamScores.TryGetValue(team, out int score) ? score : 0;
+        }
+
+        public bool TryGetWinner(out TeamType winner)
+        {
+            winner = _winner;
+            return _winnerKnown;
+        }
+
+        public void EndMatch(TeamType winner)
+        {
+            if (CurrentState == MatchState.Ended)
+                return;
+
+            _winner = winner;
+            _winnerKnown = winner != TeamType.Neutral;
             ChangeState(MatchState.Ended);
             Debug.Log($"Match Over! Winner: {winner}");
+        }
+
+        private void EnsureTeamScore(TeamType team)
+        {
+            if (!_teamScores.ContainsKey(team))
+                _teamScores[team] = 0;
         }
 
         private void ChangeState(MatchState newState)

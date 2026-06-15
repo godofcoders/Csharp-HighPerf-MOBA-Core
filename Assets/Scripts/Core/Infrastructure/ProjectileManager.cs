@@ -205,7 +205,8 @@ namespace MOBA.Core.Infrastructure
 
                     if (p.IsHybrid && p.Owner != null)
                     {
-                        bool isAllyBrawler = targetBrawler != null && targetBrawler.Team == p.Owner.Team;
+                        bool isAllyBrawler = targetBrawler != null &&
+                                              TeamRelationshipUtility.AreAllies(targetBrawler.Team, p.Owner.Team);
 
                         if (isAllyBrawler)
                         {
@@ -479,7 +480,7 @@ namespace MOBA.Core.Infrastructure
         {
             if (projectile.HasHybridAoEImpact)
             {
-                bool enemy = observerTeam != projectile.Team;
+                bool enemy = TeamRelationshipUtility.AreEnemies(observerTeam, projectile.Team);
                 if (enemy && projectile.CanAffectEnemiesOnImpact)
                     return Mathf.Max(0f, projectile.ImpactEnemyDamage);
 
@@ -499,20 +500,10 @@ namespace MOBA.Core.Infrastructure
             TeamType projectileTeam,
             TeamType observerTeam)
         {
-            switch (hitTeamRule)
-            {
-                case ProjectileHitTeamRule.EnemiesOnly:
-                    return observerTeam != projectileTeam;
-
-                case ProjectileHitTeamRule.AlliesOnly:
-                    return observerTeam == projectileTeam;
-
-                case ProjectileHitTeamRule.AlliesAndEnemies:
-                    return true;
-
-                default:
-                    return false;
-            }
+            return TeamRelationshipUtility.CanAffectTeam(
+                hitTeamRule,
+                projectileTeam,
+                observerTeam);
         }
 
         private void ResolveHybridAoEImpact(ActiveProjectile p, Vector3 impactPosition)
@@ -542,7 +533,8 @@ namespace MOBA.Core.Infrastructure
                 if (distSq > sqrRadius)
                     continue;
 
-                bool isAlly = targetBrawler != null && targetBrawler.Team == p.Owner.Team;
+                bool isAlly = targetBrawler != null &&
+                               TeamRelationshipUtility.AreAllies(targetBrawler.Team, p.Owner.Team);
 
                 if (isAlly)
                 {
@@ -724,7 +716,7 @@ namespace MOBA.Core.Infrastructure
                 if (candidate == null)
                     continue;
 
-                if (candidate.Team == p.Team)
+                if (!TeamRelationshipUtility.AreEnemies(candidate.Team, p.Team))
                     continue;
 
                 if (candidate.State == null || candidate.State.IsDead)

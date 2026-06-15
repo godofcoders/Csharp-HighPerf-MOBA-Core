@@ -98,10 +98,10 @@ namespace MOBA.Core.Simulation
                     return candidate == request.Source;
 
                 case AbilityTargetTeamRule.Ally:
-                    return candidate.Team == request.Source.Team;
+                    return TeamRelationshipUtility.AreAllies(candidate.Team, request.Source.Team);
 
                 case AbilityTargetTeamRule.Enemy:
-                    return candidate.Team != request.Source.Team;
+                    return TeamRelationshipUtility.AreEnemies(candidate.Team, request.Source.Team);
 
                 case AbilityTargetTeamRule.Any:
                     return true;

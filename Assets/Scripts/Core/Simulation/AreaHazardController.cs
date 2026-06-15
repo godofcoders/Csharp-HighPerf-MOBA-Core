@@ -56,10 +56,10 @@ namespace MOBA.Core.Simulation
             switch (_definition.TargetTeamRule)
             {
                 case AbilityTargetTeamRule.Enemy:
-                    return observerTeam != _team;
+                    return TeamRelationshipUtility.AreEnemies(_team, observerTeam);
 
                 case AbilityTargetTeamRule.Ally:
-                    return observerTeam == _team;
+                    return TeamRelationshipUtility.AreAllies(_team, observerTeam);
 
                 case AbilityTargetTeamRule.Any:
                     return true;
@@ -165,10 +165,11 @@ namespace MOBA.Core.Simulation
             switch (_definition.TargetTeamRule)
             {
                 case AbilityTargetTeamRule.Enemy:
-                    return target.Team != _team;
+                    return target.Team == TeamType.Neutral ||
+                           TeamRelationshipUtility.AreEnemies(_team, target.Team);
 
                 case AbilityTargetTeamRule.Ally:
-                    return target.Team == _team;
+                    return TeamRelationshipUtility.AreAllies(_team, target.Team);
 
                 case AbilityTargetTeamRule.Any:
                     return true;

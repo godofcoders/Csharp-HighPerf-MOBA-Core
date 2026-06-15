@@ -1,6 +1,6 @@
 # MOBA Gameplay Roadmap
 
-Updated: 2026-06-10
+Updated: 2026-06-15
 
 This roadmap is the forward source of truth for the next gameplay, UI, content, and polish passes. The rule for every item is the same as the AI work: build real systems, not temporary patches. Each milestone should finish with a short manual QA checklist and a focused commit.
 
@@ -99,14 +99,14 @@ Goal: support destructible map objects with clear simulation rules and visual fe
 
 Goal: add a free-for-all/survival game mode as a second major gameplay showcase.
 
-- `[ ]` Add Solo Showdown mode definition and match rules.
-- `[ ]` Add free-for-all team/targeting behavior or temporary per-player team mapping.
-- `[ ]` Add spawn logic for multiple solo contestants.
-- `[ ]` Add win condition: last brawler alive.
-- `[ ]` Add poison/shrinking danger zone system.
+- `[x]` Add Solo Showdown mode definition and match rules.
+- `[x]` Add free-for-all team/targeting behavior or temporary per-player team mapping.
+- `[x]` Add spawn logic for multiple solo contestants.
+- `[x]` Add win condition: last brawler alive.
+- `[~]` Add poison/shrinking danger zone system. Runtime poison-zone component is available on the Solo Showdown mode prefab; needs Unity radius/damage tuning.
 - `[ ]` Add power cube or pickup progression if scoped in.
-- `[ ]` Add Solo Showdown AI macro behavior: survive, third-party, retreat from poison, value pickups.
-- `[ ]` Add scoreboard/result screen handling for placement.
+- `[~]` Add Solo Showdown AI macro behavior: survive, third-party, retreat from poison, value pickups. Survival/final-duel/poison macro is implemented; pickup value waits on power cubes.
+- `[~]` Add scoreboard/result screen handling for placement. Winner and internal placements are tracked; richer placement/result UI remains future polish.
 - `[ ]` Manual QA: match starts, bots fight each other, poison forces movement, match ends cleanly.
 
 ## Milestone G-06: HUD / Match Feedback

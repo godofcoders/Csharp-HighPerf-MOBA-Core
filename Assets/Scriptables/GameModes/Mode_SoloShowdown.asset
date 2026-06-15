@@ -9,10 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fb23456789abcdef6789012345abcdef, type: 3}
-  m_Name: Gem_Map1
-  m_EditorClassIdentifier: 
-  DisplayName: GemGrab_Map1
+  m_Script: {fileID: 11500000, guid: 2890123456abcdef3456789012abcdef, type: 3}
+  m_Name: Mode_SoloShowdown
+  m_EditorClassIdentifier:
+  Id: 4
+  DisplayName: Solo Showdown
   Icon: {fileID: 0}
-  MapPrefab: {fileID: 1590026745255197339, guid: 09bf88949507a42d3a52ebd11828ba1a, type: 3}
-  SupportedModes: 000000000100000004000000
+  ModePrefab: {fileID: 6310801524117629000, guid: b4a4cf64ca4149ee9a50724cbf10120d, type: 3}

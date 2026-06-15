@@ -181,6 +181,57 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void ResolveSoloShowdown_HoldsDuringCrowdedOpening()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveSoloShowdown(
+                ownAlive: 1,
+                aliveOpponents: 5,
+                totalAlive: 6,
+                outsideSafeZone: false,
+                distanceBeyondSafeZone: 0f,
+                matchTimeRemainingSeconds: 0f);
+
+            Assert.AreEqual(GameModeId.SoloShowdown, state.Mode);
+            Assert.AreEqual(AIGameModeMacroCall.Hold, state.Call);
+            Assert.AreEqual(AIGameModeObjectivePhase.Opening, state.Phase);
+            Assert.AreEqual("survive_field", state.Reason);
+        }
+
+        [Test]
+        public void ResolveSoloShowdown_ResetsWhenOutsideSafeZone()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveSoloShowdown(
+                ownAlive: 1,
+                aliveOpponents: 3,
+                totalAlive: 4,
+                outsideSafeZone: true,
+                distanceBeyondSafeZone: 2.5f,
+                matchTimeRemainingSeconds: 0f);
+
+            Assert.AreEqual(AIGameModeMacroCall.Reset, state.Call);
+            Assert.AreEqual(AIGameModeObjectivePhase.FinalPressure, state.Phase);
+            Assert.AreEqual("poison_escape_urgent", state.Reason);
+            Assert.IsTrue(state.IsBehind);
+        }
+
+        [Test]
+        public void ResolveSoloShowdown_PushesFinalDuel()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveSoloShowdown(
+                ownAlive: 1,
+                aliveOpponents: 1,
+                totalAlive: 2,
+                outsideSafeZone: false,
+                distanceBeyondSafeZone: 0f,
+                matchTimeRemainingSeconds: 0f);
+
+            Assert.AreEqual(AIGameModeMacroCall.Push, state.Call);
+            Assert.AreEqual(AIGameModeObjectivePhase.FinalPressure, state.Phase);
+            Assert.AreEqual("final_duel", state.Reason);
+            Assert.IsTrue(state.IsLeading);
+        }
+
+        [Test]
         public void ResolveCurrentMode_UsesRegisteredRuntimeProvider()
         {
             ServiceProvider.Register<IAIGameModeMacroStateProvider>(

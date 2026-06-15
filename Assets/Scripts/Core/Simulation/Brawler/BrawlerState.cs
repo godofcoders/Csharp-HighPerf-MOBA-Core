@@ -768,7 +768,7 @@ namespace MOBA.Core.Simulation
         public bool IsHiddenTo(TeamType observerTeam)
         {
             // Allies always see allies.
-            if (observerTeam == Team)
+            if (TeamRelationshipUtility.AreAllies(observerTeam, Team))
                 return false;
 
             // The pure "am I hidden right now" question belongs to the

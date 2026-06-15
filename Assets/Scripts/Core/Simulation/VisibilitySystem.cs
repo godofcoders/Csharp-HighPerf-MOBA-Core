@@ -60,7 +60,7 @@ namespace MOBA.Core.Simulation
                         if (other == brawler ||
                             !SpatialEntityUtility.IsAlive(other) ||
                             other.State == null ||
-                            other.Team == brawler.Team)
+                            !TeamRelationshipUtility.AreEnemies(other.Team, brawler.Team))
                         {
                             continue;
                         }

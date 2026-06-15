@@ -44,13 +44,24 @@ namespace MOBA.Core.Infrastructure
 
             // Capture scores immediately so any state mutations between
             // now and the delayed scene-load don't taint the snapshot.
-            int blue = 0;
-            int red = 0;
+            int blue = MatchManager.Instance != null
+                ? MatchManager.Instance.GetScore(TeamType.Blue)
+                : 0;
+            int red = MatchManager.Instance != null
+                ? MatchManager.Instance.GetScore(TeamType.Red)
+                : 0;
+            if (MatchManager.Instance != null &&
+                MatchManager.Instance.TryGetWinner(out TeamType winner))
+            {
+                _capturedWinner = winner;
+            }
+
             if (GemGrabMode.Instance != null)
             {
                 blue = GemGrabMode.Instance.BlueTeamGems;
                 red = GemGrabMode.Instance.RedTeamGems;
-                _capturedWinner = blue >= red ? TeamType.Blue : TeamType.Red;
+                if (MatchManager.Instance == null || !MatchManager.Instance.WinnerKnown)
+                    _capturedWinner = blue >= red ? TeamType.Blue : TeamType.Red;
             }
 
             MatchResultBoard.Capture(_capturedWinner, blue, red);

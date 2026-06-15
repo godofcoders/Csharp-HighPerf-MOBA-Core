@@ -44,5 +44,6 @@ namespace MOBA.Core.Infrastructure
         Knockout = 1,
         BrawlBall = 2,
         HotZone = 3,
+        SoloShowdown = 4,
     }
 }

@@ -14,6 +14,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private GameObject _brawlerBasePrefab;
         [SerializeField] private List<Transform> _blueSpawnPoints;
         [SerializeField] private List<Transform> _redSpawnPoints;
+        [SerializeField] private List<Transform> _soloSpawnPoints;
         [SerializeField] private float _respawnDelay = 5.0f;
 
         /// <summary>Seconds between death and respawn. Read by the death
@@ -32,6 +33,15 @@ namespace MOBA.Core.Infrastructure
         {
             if (blue != null) _blueSpawnPoints = blue;
             if (red != null) _redSpawnPoints = red;
+        }
+
+        public void SetSpawnPoints(
+            System.Collections.Generic.List<Transform> blue,
+            System.Collections.Generic.List<Transform> red,
+            System.Collections.Generic.List<Transform> solo)
+        {
+            SetSpawnPoints(blue, red);
+            if (solo != null) _soloSpawnPoints = solo;
         }
 
         public void SetPlayerTarget(Transform playerTransform)
@@ -63,7 +73,7 @@ namespace MOBA.Core.Infrastructure
         /// at round start.</summary>
         public void ForceRespawn(BrawlerController brawler, TeamType team)
         {
-            var list = team == TeamType.Blue ? _blueSpawnPoints : _redSpawnPoints;
+            var list = ResolveSpawnListForTeam(team);
             if (list == null || list.Count == 0 || brawler == null) return;
             Transform pt = list[0];
             brawler.gameObject.SetActive(true);
@@ -74,8 +84,7 @@ namespace MOBA.Core.Infrastructure
         {
             yield return new WaitForSeconds(_respawnDelay);
 
-            // FIX: Use the lists we defined for matchmaking
-            var spawnList = (team == TeamType.Blue) ? _blueSpawnPoints : _redSpawnPoints;
+            var spawnList = ResolveSpawnListForTeam(team);
 
             if (spawnList != null && spawnList.Count > 0)
             {
@@ -89,11 +98,16 @@ namespace MOBA.Core.Infrastructure
         {
             int blueIdx = 0;
             int redIdx = 0;
+            int soloIdx = 0;
+            List<Transform> soloSpawnPoints = BuildSoloSpawnPointList();
             bool[] blueSpawnClaims = _blueSpawnPoints != null
                 ? new bool[_blueSpawnPoints.Count]
                 : new bool[0];
             bool[] redSpawnClaims = _redSpawnPoints != null
                 ? new bool[_redSpawnPoints.Count]
+                : new bool[0];
+            bool[] soloSpawnClaims = soloSpawnPoints != null
+                ? new bool[soloSpawnPoints.Count]
                 : new bool[0];
 
             foreach (var participant in roster)
@@ -109,11 +123,17 @@ namespace MOBA.Core.Infrastructure
                     spawnList = _blueSpawnPoints;
                     spawnClaims = blueSpawnClaims;
                 }
-                else
+                else if (participant.Team == TeamType.Red)
                 {
                     teamOrdinal = redIdx++;
                     spawnList = _redSpawnPoints;
                     spawnClaims = redSpawnClaims;
+                }
+                else
+                {
+                    teamOrdinal = soloIdx++;
+                    spawnList = soloSpawnPoints;
+                    spawnClaims = soloSpawnClaims;
                 }
 
                 Transform spawnPoint = ResolveSpawnPoint(
@@ -155,6 +175,43 @@ namespace MOBA.Core.Infrastructure
 
                     SetPlayerTarget(controller.PresentationFollowTarget);
                 }
+            }
+        }
+
+        private List<Transform> ResolveSpawnListForTeam(TeamType team)
+        {
+            if (team == TeamType.Blue)
+                return _blueSpawnPoints;
+
+            if (team == TeamType.Red)
+                return _redSpawnPoints;
+
+            return BuildSoloSpawnPointList();
+        }
+
+        private List<Transform> BuildSoloSpawnPointList()
+        {
+            if (_soloSpawnPoints != null && _soloSpawnPoints.Count > 0)
+                return _soloSpawnPoints;
+
+            List<Transform> combined = new List<Transform>(
+                (_blueSpawnPoints != null ? _blueSpawnPoints.Count : 0) +
+                (_redSpawnPoints != null ? _redSpawnPoints.Count : 0));
+
+            AddSpawnPoints(combined, _blueSpawnPoints);
+            AddSpawnPoints(combined, _redSpawnPoints);
+            return combined;
+        }
+
+        private static void AddSpawnPoints(List<Transform> target, List<Transform> source)
+        {
+            if (target == null || source == null)
+                return;
+
+            for (int i = 0; i < source.Count; i++)
+            {
+                if (source[i] != null && !target.Contains(source[i]))
+                    target.Add(source[i]);
             }
         }
 

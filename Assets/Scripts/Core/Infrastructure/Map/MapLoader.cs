@@ -81,6 +81,7 @@ namespace MOBA.Core.Infrastructure
 
             List<Transform> blue = new List<Transform>(8);
             List<Transform> red = new List<Transform>(8);
+            List<Transform> solo = new List<Transform>(8);
 
             for (int i = 0; i < markers.Length; i++)
             {
@@ -88,16 +89,31 @@ namespace MOBA.Core.Infrastructure
                 if (m == null) continue;
                 if (m.Team == TeamType.Blue) blue.Add(m.transform);
                 else if (m.Team == TeamType.Red) red.Add(m.transform);
+                else if (TeamRelationshipUtility.IsSoloTeam(m.Team)) solo.Add(m.transform);
             }
 
-            if (blue.Count == 0 || red.Count == 0)
+            bool hasTeamSpawns = blue.Count > 0 && red.Count > 0;
+            bool hasSoloSpawns = solo.Count > 0;
+            if (!hasTeamSpawns &&
+                (!hasSoloSpawns || SceneSelection.SelectedMode != GameModeId.SoloShowdown))
             {
-                Debug.LogWarning($"[MapLoader] Map '{_mapPrefab.name}' has {blue.Count} Blue + {red.Count} Red SpawnPointMarkers. Both teams need at least one. SpawnManager will fall back to inspector-assigned points.");
+                Debug.LogWarning($"[MapLoader] Map '{ResolveLoadedMapName()}' has {blue.Count} Blue + {red.Count} Red + {solo.Count} Solo SpawnPointMarkers. Team modes need Blue/Red markers; Solo Showdown can use Solo markers. SpawnManager will fall back to inspector-assigned points.");
                 return;
             }
 
-            sm.SetSpawnPoints(blue, red);
-            Debug.Log($"[MapLoader] Map '{_mapPrefab.name}' loaded with {blue.Count} Blue + {red.Count} Red spawn points.");
+            sm.SetSpawnPoints(blue, red, solo);
+            Debug.Log($"[MapLoader] Map '{ResolveLoadedMapName()}' loaded with {blue.Count} Blue + {red.Count} Red + {solo.Count} Solo spawn points.");
+        }
+
+        private string ResolveLoadedMapName()
+        {
+            if (SpawnedMapInstance != null)
+                return SpawnedMapInstance.name;
+
+            if (_mapPrefab != null)
+                return _mapPrefab.name;
+
+            return "SelectedMap";
         }
     }
 }

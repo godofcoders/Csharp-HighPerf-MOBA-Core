@@ -183,7 +183,7 @@ namespace MOBA.Core.Infrastructure
             if (entityTeam == TeamType.Neutral)
                 return compactLabel;
 
-            return entityTeam == localTeam
+            return TeamRelationshipUtility.AreAllies(entityTeam, localTeam)
                 ? $"Ally {compactLabel}"
                 : $"Enemy {compactLabel}";
         }
@@ -235,12 +235,13 @@ namespace MOBA.Core.Infrastructure
             TeamType sourceTeam = entityTeamResolver(entry.SourceEntityId);
             TeamType targetTeam = entityTeamResolver(entry.TargetEntityId);
 
-            if (sourceTeam == localTeam && targetTeam != localTeam)
+            if (TeamRelationshipUtility.AreAllies(sourceTeam, localTeam) &&
+                TeamRelationshipUtility.AreEnemies(targetTeam, localTeam))
                 return GoodColor;
 
             if (sourceTeam != TeamType.Neutral &&
-                sourceTeam != localTeam &&
-                targetTeam == localTeam)
+                TeamRelationshipUtility.AreEnemies(sourceTeam, localTeam) &&
+                TeamRelationshipUtility.AreAllies(targetTeam, localTeam))
                 return BadColor;
 
             return NeutralColor;

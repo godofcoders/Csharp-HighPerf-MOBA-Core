@@ -164,10 +164,16 @@ namespace MOBA.Core.Simulation.AI
             if (KnockoutMode.Instance != null)
                 return ResolveKnockout(KnockoutMode.Instance, team);
 
+            if (SoloShowdownMode.Instance != null)
+                return ResolveSoloShowdown(SoloShowdownMode.Instance, team);
+
             switch (SceneSelection.SelectedMode)
             {
                 case GameModeId.Knockout:
                     return NeutralForMode(GameModeId.Knockout, "knockout_unavailable");
+
+                case GameModeId.SoloShowdown:
+                    return NeutralForMode(GameModeId.SoloShowdown, "showdown_unavailable");
 
                 case GameModeId.BrawlBall:
                     return ResolveBrawlBall(
@@ -285,6 +291,22 @@ namespace MOBA.Core.Simulation.AI
                 enemyTeamHasCountdown);
         }
 
+        public static AIGameModeMacroState ResolveSoloShowdown(
+            SoloShowdownMode mode,
+            TeamType team)
+        {
+            if (mode == null || !TeamRelationshipUtility.IsSoloTeam(team))
+                return NeutralForMode(GameModeId.SoloShowdown, "showdown_unavailable");
+
+            return ResolveSoloShowdown(
+                mode.IsTeamAlive(team) ? 1 : 0,
+                mode.GetAliveOpponentCount(team),
+                mode.AliveCount,
+                outsideSafeZone: false,
+                distanceBeyondSafeZone: 0f,
+                matchTimeRemainingSeconds: 0f);
+        }
+
         public static AIGameModeMacroState ResolveKnockout(
             int ownRoundsWon,
             int enemyRoundsWon,
@@ -358,6 +380,81 @@ namespace MOBA.Core.Simulation.AI
                 ownRoundsWon,
                 enemyRoundsWon,
                 roundsToWin,
+                0f,
+                matchTimeRemainingSeconds,
+                isLeading,
+                isBehind,
+                false,
+                false,
+                reason);
+        }
+
+        public static AIGameModeMacroState ResolveSoloShowdown(
+            int ownAlive,
+            int aliveOpponents,
+            int totalAlive,
+            bool outsideSafeZone,
+            float distanceBeyondSafeZone,
+            float matchTimeRemainingSeconds)
+        {
+            ownAlive = Mathf.Clamp(ownAlive, 0, 1);
+            aliveOpponents = Mathf.Max(0, aliveOpponents);
+            totalAlive = Mathf.Max(totalAlive, ownAlive + aliveOpponents);
+
+            AIGameModeObjectivePhase phase = totalAlive <= 2
+                ? AIGameModeObjectivePhase.FinalPressure
+                : totalAlive <= 4
+                    ? AIGameModeObjectivePhase.Contest
+                    : AIGameModeObjectivePhase.Opening;
+
+            AIGameModeMacroCall call;
+            string reason;
+
+            if (ownAlive <= 0)
+            {
+                call = AIGameModeMacroCall.Reset;
+                reason = "eliminated";
+            }
+            else if (outsideSafeZone)
+            {
+                call = AIGameModeMacroCall.Reset;
+                phase = AIGameModeObjectivePhase.FinalPressure;
+                reason = distanceBeyondSafeZone > 1f
+                    ? "poison_escape_urgent"
+                    : "poison_escape";
+            }
+            else if (aliveOpponents <= 0)
+            {
+                call = AIGameModeMacroCall.Hold;
+                reason = "last_standing";
+            }
+            else if (aliveOpponents == 1)
+            {
+                call = AIGameModeMacroCall.Push;
+                phase = AIGameModeObjectivePhase.FinalPressure;
+                reason = "final_duel";
+            }
+            else if (aliveOpponents <= 2)
+            {
+                call = AIGameModeMacroCall.Push;
+                reason = "thin_lobby";
+            }
+            else
+            {
+                call = AIGameModeMacroCall.Hold;
+                reason = "survive_field";
+            }
+
+            bool isLeading = ownAlive > 0 && aliveOpponents <= 1;
+            bool isBehind = ownAlive <= 0 || outsideSafeZone;
+
+            return new AIGameModeMacroState(
+                GameModeId.SoloShowdown,
+                call,
+                phase,
+                ownAlive,
+                aliveOpponents,
+                1,
                 0f,
                 matchTimeRemainingSeconds,
                 isLeading,

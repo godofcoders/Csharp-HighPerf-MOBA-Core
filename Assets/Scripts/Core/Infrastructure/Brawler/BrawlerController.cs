@@ -1282,14 +1282,19 @@ namespace MOBA.Core.Infrastructure
 
         private void HandleDeath()
         {
-            TeamType enemyTeam = (_team == TeamType.Blue) ? TeamType.Red : TeamType.Blue;
-            MatchManager.Instance.AddScore(enemyTeam, 1);
+            TeamType enemyTeam = TeamRelationshipUtility.GetPrimaryEnemyTeam(_team);
+            if (enemyTeam != TeamType.Neutral &&
+                SceneSelection.SelectedMode != GameModeId.SoloShowdown &&
+                MatchManager.Instance != null)
+            {
+                MatchManager.Instance.AddScore(enemyTeam, 1);
+            }
 
             gameObject.SetActive(false);
             _lastKnownPosition = Position;
             SimulationClock.Grid?.Remove(this, _lastKnownPosition);
 
-            SpawnManager.Instance.RequestRespawn(this, _team);
+            SpawnManager.Instance?.RequestRespawn(this, _team);
         }
 
         public void Respawn(Vector3 position)
