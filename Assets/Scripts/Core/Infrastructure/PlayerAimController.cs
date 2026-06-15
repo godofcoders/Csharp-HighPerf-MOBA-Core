@@ -51,10 +51,16 @@ namespace MOBA.Core.Infrastructure
                 _brawler = GetComponent<BrawlerController>();
         }
 
-        private void Update()
+        private void LateUpdate()
         {
-            if (_brawler == null || _aimIndicatorView == null)
+            if (_aimIndicatorView == null)
                 return;
+
+            if (_brawler == null)
+            {
+                HidePreview();
+                return;
+            }
 
             if (_commandSource == null)
                 _commandSource = GetComponent<PlayerCommandSource>();
@@ -90,6 +96,16 @@ namespace MOBA.Core.Infrastructure
             Vector3 smoothedAimDirection = SmoothAimDirection(kind, aimDirection.normalized);
             AimPreviewData data = BuildPreviewData(kind, ability, smoothedAimDirection);
             _aimIndicatorView.Show(data);
+        }
+
+        private void OnDisable()
+        {
+            HidePreview();
+        }
+
+        private void OnDestroy()
+        {
+            HidePreview();
         }
 
         private AbilityDefinition ResolvePreviewAbility(AimPreviewKind kind)
@@ -445,7 +461,9 @@ namespace MOBA.Core.Infrastructure
 
         private void HidePreview()
         {
-            _aimIndicatorView.Hide();
+            if (_aimIndicatorView != null)
+                _aimIndicatorView.Hide();
+
             _hasSmoothedAimDirection = false;
             _smoothedAimKind = AimPreviewKind.None;
             _hasSmoothedOrigin = false;

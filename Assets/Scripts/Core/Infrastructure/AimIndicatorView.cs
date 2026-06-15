@@ -34,6 +34,16 @@ namespace MOBA.Core.Infrastructure
             Hide();
         }
 
+        private void OnDisable()
+        {
+            HideAll();
+        }
+
+        private void OnDestroy()
+        {
+            HideAll();
+        }
+
         public void Show(AimPreviewData data)
         {
             if (!data.IsValid)
