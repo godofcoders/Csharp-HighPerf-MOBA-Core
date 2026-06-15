@@ -17,8 +17,6 @@ namespace MOBA.Core.Infrastructure
         private const float BarHeightWorld = 1.42f;
         private const int CanvasSortingOrder = 30;
 
-        private static Sprite _runtimeUISprite;
-
         private float _nextScanTime;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -168,11 +166,7 @@ namespace MOBA.Core.Infrastructure
 
         private static Sprite ResolveUISprite()
         {
-            if (_runtimeUISprite != null)
-                return _runtimeUISprite;
-
-            _runtimeUISprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
-            return _runtimeUISprite;
+            return RuntimeUISpriteUtility.GetSolidWhiteSprite();
         }
 
         private static void SetLayerRecursively(GameObject root, int layer)

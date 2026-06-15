@@ -16,7 +16,6 @@ namespace MOBA.Core.Infrastructure
         private const int RuntimeAmmoSlotCount = 5;
 
         private static Font _runtimeFont;
-        private static Sprite _runtimeUISprite;
 
         private bool _installed;
 
@@ -709,11 +708,7 @@ namespace MOBA.Core.Infrastructure
 
         private static Sprite ResolveUISprite()
         {
-            if (_runtimeUISprite != null)
-                return _runtimeUISprite;
-
-            _runtimeUISprite = Resources.GetBuiltinResource<Sprite>("UI/Skin/UISprite.psd");
-            return _runtimeUISprite;
+            return RuntimeUISpriteUtility.GetSolidWhiteSprite();
         }
 
         private static void SetLayerRecursively(GameObject root, int layer)
