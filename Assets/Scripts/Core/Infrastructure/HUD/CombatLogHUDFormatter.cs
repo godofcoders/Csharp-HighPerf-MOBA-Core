@@ -23,6 +23,7 @@ namespace MOBA.Core.Infrastructure
             {
                 case CombatLogEventType.Kill:
                 case CombatLogEventType.SuperUsed:
+                case CombatLogEventType.BreakableDestroyed:
                     return true;
 
                 case CombatLogEventType.Assist:
@@ -113,6 +114,9 @@ namespace MOBA.Core.Infrastructure
                 case CombatLogEventType.SuperUsed:
                     return prefix + $"{source} used Super";
 
+                case CombatLogEventType.BreakableDestroyed:
+                    return prefix + $"{source} broke cover";
+
                 default:
                     return prefix + $"{source} affected {target}";
             }
@@ -147,6 +151,9 @@ namespace MOBA.Core.Infrastructure
 
                 case CombatLogEventType.SuperUsed:
                     return $"{source} used Super";
+
+                case CombatLogEventType.BreakableDestroyed:
+                    return $"{source} broke cover";
 
                 default:
                     return $"{source} affected {target}";
@@ -209,6 +216,9 @@ namespace MOBA.Core.Infrastructure
                 case CombatLogEventType.SuperUsed:
                     return "[SUPER]";
 
+                case CombatLogEventType.BreakableDestroyed:
+                    return "[COVER]";
+
                 default:
                     return "[INFO]";
             }
@@ -228,6 +238,9 @@ namespace MOBA.Core.Infrastructure
             if (entry.EventType == CombatLogEventType.StatusApplied ||
                 entry.EventType == CombatLogEventType.StatusRemoved)
                 return StatusColor;
+
+            if (entry.EventType == CombatLogEventType.BreakableDestroyed)
+                return NeutralColor;
 
             if (localTeam == TeamType.Neutral || entityTeamResolver == null)
                 return NeutralColor;

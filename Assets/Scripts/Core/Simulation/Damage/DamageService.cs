@@ -144,6 +144,9 @@ namespace MOBA.Core.Simulation
             var combatLog = ServiceProvider.Get<ICombatLogService>();
             var currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
             combatLog.AddEntry(CombatLogEntry.CreateDamage(currentTick, result));
+
+            if (targetBreakable != null && wasFatal)
+                combatLog.AddEntry(CombatLogEntry.CreateBreakableDestroyed(currentTick, result));
         }
 
         private float ApplyOutgoingDamage(BrawlerController attacker, float damage)

@@ -121,5 +121,24 @@ namespace MOBA.Core.Simulation
                 IsSuper = false
             };
         }
+
+        public static CombatLogEntry CreateBreakableDestroyed(uint tick, DamageResultContext result)
+        {
+            int sourceEntityId = result.Damage.Attacker != null ? result.Damage.Attacker.EntityID : 0;
+            SpatialEntityUtility.TryGetEntityIdEvenIfDestroyed(result.Damage.Target, out int targetEntityId);
+
+            return new CombatLogEntry
+            {
+                EventType = CombatLogEventType.BreakableDestroyed,
+                Tick = tick,
+                SourceEntityId = sourceEntityId,
+                TargetEntityId = targetEntityId,
+                Value = result.FinalDamageApplied,
+                DamageType = result.Damage.Type,
+                StatusEffectType = default,
+                IsFatal = true,
+                IsSuper = result.Damage.IsSuper
+            };
+        }
     }
 }

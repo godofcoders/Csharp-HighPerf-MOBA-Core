@@ -31,5 +31,12 @@ namespace MOBA.Core.Simulation
         public Color CriticalTint = new Color(0.46f, 0.46f, 0.46f, 1f);
         [Range(0f, 1f)]
         public float CriticalHealthPercent = 0.35f;
+
+        [Header("Fallback Destroyed Visual")]
+        public bool SpawnFallbackDebris = true;
+        [Range(0, 12)]
+        public int FallbackDebrisPieces = 5;
+        public float FallbackDebrisLifetimeSeconds = 1.8f;
+        public Color FallbackDebrisColor = new Color(0.42f, 0.34f, 0.26f, 1f);
     }
 }

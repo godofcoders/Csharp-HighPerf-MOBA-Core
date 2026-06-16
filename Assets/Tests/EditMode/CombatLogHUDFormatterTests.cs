@@ -84,6 +84,22 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void ShouldDisplay_IncludesBreakableDestroyedByDefault()
+        {
+            CombatLogEntry entry = new CombatLogEntry
+            {
+                EventType = CombatLogEventType.BreakableDestroyed
+            };
+
+            Assert.IsTrue(CombatLogHUDFormatter.ShouldDisplay(
+                entry,
+                showAssists: false,
+                showFatalDamage: false,
+                showStatusEvents: false,
+                showHeals: false));
+        }
+
+        [Test]
         public void FormatLine_UsesResolvedLabelsForKillFeed()
         {
             CombatLogEntry entry = new CombatLogEntry
@@ -136,6 +152,24 @@ namespace MOBA.Tests.EditMode
                 includeTick: false);
 
             Assert.AreEqual("Blue Colt healed Red Jessie for 120", line);
+        }
+
+        [Test]
+        public void FormatLine_FormatsBreakableDestroyedEvents()
+        {
+            CombatLogEntry entry = new CombatLogEntry
+            {
+                EventType = CombatLogEventType.BreakableDestroyed,
+                SourceEntityId = 10,
+                TargetEntityId = 99
+            };
+
+            string line = CombatLogHUDFormatter.FormatLine(
+                entry,
+                ResolveTestLabel,
+                includeTick: false);
+
+            Assert.AreEqual("Blue Colt broke cover", line);
         }
 
         [Test]

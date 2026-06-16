@@ -26,3 +26,7 @@ MonoBehaviour:
   HitFlashSeconds: 0.08
   CriticalTint: {r: 0.46, g: 0.46, b: 0.46, a: 1}
   CriticalHealthPercent: 0.35
+  SpawnFallbackDebris: 1
+  FallbackDebrisPieces: 5
+  FallbackDebrisLifetimeSeconds: 1.8
+  FallbackDebrisColor: {r: 0.42, g: 0.34, b: 0.26, a: 1}

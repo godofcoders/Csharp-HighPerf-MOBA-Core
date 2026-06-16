@@ -8,6 +8,7 @@ namespace MOBA.Core.Simulation
         StatusRemoved,
         Kill,
         Assist,
-        SuperUsed
+        SuperUsed,
+        BreakableDestroyed
     }
 }

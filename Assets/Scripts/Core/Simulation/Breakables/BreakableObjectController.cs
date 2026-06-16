@@ -225,10 +225,93 @@ namespace MOBA.Core.Simulation
 
         private void SpawnDestroyedVisual()
         {
-            if (_definition == null || _definition.DestroyedVisualPrefab == null)
+            if (_definition == null)
                 return;
 
-            Instantiate(_definition.DestroyedVisualPrefab, transform.position, transform.rotation);
+            if (_definition.DestroyedVisualPrefab != null)
+            {
+                Instantiate(_definition.DestroyedVisualPrefab, transform.position, transform.rotation);
+                return;
+            }
+
+            if (_definition.SpawnFallbackDebris)
+                SpawnFallbackDebris();
+        }
+
+        private void SpawnFallbackDebris()
+        {
+            int pieceCount = Mathf.Clamp(_definition.FallbackDebrisPieces, 0, 12);
+            if (pieceCount <= 0)
+                return;
+
+            GameObject root = new GameObject($"{name}_DestroyedDebris");
+            root.transform.position = transform.position;
+            root.transform.rotation = Quaternion.identity;
+
+            Material debrisMaterial = CreateFallbackDebrisMaterial();
+            float radius = Mathf.Max(0.25f, CollisionRadius);
+
+            for (int i = 0; i < pieceCount; i++)
+            {
+                GameObject piece = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                piece.name = $"Debris_{i + 1}";
+                piece.transform.SetParent(root.transform, false);
+
+                float t = i / Mathf.Max(1f, pieceCount);
+                float angle = t * Mathf.PI * 2f;
+                float distance = radius * (0.25f + 0.08f * (i % 3));
+                piece.transform.localPosition = new Vector3(
+                    Mathf.Cos(angle) * distance,
+                    0.08f + 0.035f * (i % 4),
+                    Mathf.Sin(angle) * distance);
+
+                float size = 0.18f + 0.035f * (i % 3);
+                piece.transform.localScale = new Vector3(size * 1.25f, size * 0.65f, size);
+                piece.transform.localRotation = Quaternion.Euler(
+                    12f + i * 17f,
+                    Mathf.Rad2Deg * angle,
+                    8f + i * 23f);
+
+                Collider pieceCollider = piece.GetComponent<Collider>();
+                if (pieceCollider != null)
+                    DestroyGeneratedObject(pieceCollider);
+
+                Renderer pieceRenderer = piece.GetComponent<Renderer>();
+                if (pieceRenderer != null && debrisMaterial != null)
+                {
+                    pieceRenderer.sharedMaterial = debrisMaterial;
+                    pieceRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                    pieceRenderer.receiveShadows = false;
+                }
+            }
+
+            float lifetime = Mathf.Max(0.1f, _definition.FallbackDebrisLifetimeSeconds);
+            DestroyGeneratedObject(root, lifetime);
+            DestroyGeneratedObject(debrisMaterial, lifetime);
+        }
+
+        private Material CreateFallbackDebrisMaterial()
+        {
+            Shader shader =
+                Shader.Find("Universal Render Pipeline/Lit") ??
+                Shader.Find("Standard");
+
+            if (shader == null)
+                return null;
+
+            Material material = new Material(shader);
+            Color color = _definition != null
+                ? _definition.FallbackDebrisColor
+                : new Color(0.42f, 0.34f, 0.26f, 1f);
+
+            material.color = color;
+            if (material.HasProperty(BaseColorId))
+                material.SetColor(BaseColorId, color);
+
+            if (material.HasProperty(ColorId))
+                material.SetColor(ColorId, color);
+
+            return material;
         }
 
         private void CachePresentation()
@@ -325,11 +408,16 @@ namespace MOBA.Core.Simulation
 
         private static void DestroyGeneratedObject(Object target)
         {
+            DestroyGeneratedObject(target, 0f);
+        }
+
+        private static void DestroyGeneratedObject(Object target, float delaySeconds)
+        {
             if (target == null)
                 return;
 
             if (Application.isPlaying)
-                Destroy(target);
+                Destroy(target, Mathf.Max(0f, delaySeconds));
             else
                 DestroyImmediate(target);
         }
