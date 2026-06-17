@@ -71,6 +71,12 @@ namespace MOBA.Core.Infrastructure
         public int EntityID => GetEntityId();
         public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
 
+        [Header("World Collision")]
+        [SerializeField] private LayerMask _worldCollisionLayer;
+        [SerializeField] private float _worldCollisionRadius = 0.45f;
+        [SerializeField] private float _worldCollisionProbeHeight = 0.5f;
+        [SerializeField] private float _worldCollisionSkin = 0.03f;
+        [SerializeField] private bool _slideAlongWorldCollision = true;
         private int GetEntityId()
         {
             if (_entityId != 0)
@@ -579,22 +585,101 @@ namespace MOBA.Core.Infrastructure
                 ? _currentMoveInput / inputMagnitude
                 : Vector3.zero;
 
-            Vector3 movement = moveDirection * (speed * tickDelta * inputMagnitude);
-            transform.position += movement;
+            Vector3 desiredMovement = moveDirection * (speed * tickDelta * inputMagnitude);
 
-            if (movement != Vector3.zero)
+            // New: resolve movement against physical world colliders.
+            Vector3 resolvedMovement = ResolveMovementAgainstWorld(desiredMovement);
+
+            transform.position += resolvedMovement;
+
+            if (resolvedMovement != Vector3.zero)
             {
                 Vector3 facingDirection = IsActionFacingActive(currentTick)
                     ? _actionFacingDirection
-                    : movement;
+                    : resolvedMovement;
 
                 if (facingDirection.sqrMagnitude > 0.001f)
                     transform.rotation = Quaternion.LookRotation(facingDirection.normalized);
+            }
+            else if (desiredMovement.sqrMagnitude > 0.001f && IsActionFacingActive(currentTick))
+            {
+                // Optional: if blocked by a wall during action-facing, keep action-facing rotation.
+                if (_actionFacingDirection.sqrMagnitude > 0.001f)
+                    transform.rotation = Quaternion.LookRotation(_actionFacingDirection.normalized);
             }
 
             _currentSimPosition = transform.position;
             _currentSimRotation = transform.rotation;
             _lastSimulationUpdateTime = Time.time;
+        }
+
+        private Vector3 ResolveMovementAgainstWorld(Vector3 desiredMovement)
+        {
+            desiredMovement.y = 0f;
+
+            if (desiredMovement.sqrMagnitude <= 0.000001f)
+                return Vector3.zero;
+
+            // If no layer is assigned, preserve old behavior.
+            if (_worldCollisionLayer.value == 0)
+                return desiredMovement;
+
+            float desiredDistance = desiredMovement.magnitude;
+            Vector3 direction = desiredMovement / desiredDistance;
+
+            float radius = Mathf.Max(0.01f, _worldCollisionRadius);
+            float skin = Mathf.Max(0f, _worldCollisionSkin);
+
+            Vector3 origin = transform.position + Vector3.up * Mathf.Max(0f, _worldCollisionProbeHeight);
+
+            bool blocked = Physics.SphereCast(
+                origin,
+                radius,
+                direction,
+                out RaycastHit hit,
+                desiredDistance + skin,
+                _worldCollisionLayer,
+                QueryTriggerInteraction.Ignore);
+
+            if (!blocked)
+                return desiredMovement;
+
+            float allowedDistance = Mathf.Max(0f, hit.distance - skin);
+            Vector3 resolvedMovement = direction * allowedDistance;
+
+            if (!_slideAlongWorldCollision)
+                return resolvedMovement;
+
+            Vector3 remainingMovement = desiredMovement - resolvedMovement;
+
+            if (remainingMovement.sqrMagnitude <= 0.000001f)
+                return resolvedMovement;
+
+            Vector3 slideMovement = Vector3.ProjectOnPlane(remainingMovement, hit.normal);
+            slideMovement.y = 0f;
+
+            if (slideMovement.sqrMagnitude <= 0.000001f)
+                return resolvedMovement;
+
+            float slideDistance = slideMovement.magnitude;
+            Vector3 slideDirection = slideMovement / slideDistance;
+
+            Vector3 slideOrigin = transform.position + resolvedMovement + Vector3.up * Mathf.Max(0f, _worldCollisionProbeHeight);
+
+            bool slideBlocked = Physics.SphereCast(
+                slideOrigin,
+                radius,
+                slideDirection,
+                out RaycastHit slideHit,
+                slideDistance + skin,
+                _worldCollisionLayer,
+                QueryTriggerInteraction.Ignore);
+
+            if (!slideBlocked)
+                return resolvedMovement + slideMovement;
+
+            float allowedSlideDistance = Mathf.Max(0f, slideHit.distance - skin);
+            return resolvedMovement + slideDirection * allowedSlideDistance;
         }
 
         private void ApplyActionFacing(

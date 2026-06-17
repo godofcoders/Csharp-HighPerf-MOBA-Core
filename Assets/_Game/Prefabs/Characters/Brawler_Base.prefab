@@ -531,15 +531,17 @@ MonoBehaviour:
   _definition: {fileID: 0}
   _team: 2
   _visualModel: {fileID: 8109156716043714841}
+  _startingPowerLevel: 11
   _visualRoot: {fileID: 2199519913617797232}
   _presentationAnchor: {fileID: 5812970169776842825}
   _presentationAnchors: {fileID: 0}
-  _enablePresentationAnchorSmoothing: 1
-  _anchorPositionSmoothTime: 0.001
-  _anchorRotationSmoothSpeed: 16
-  _enablePresentationSmoothing: 1
-  _visualPositionSmoothTime: 0.05
-  _visualRotationSmoothSpeed: 10
+  _worldCollisionLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  _worldCollisionRadius: 0.45
+  _worldCollisionProbeHeight: 0.5
+  _worldCollisionSkin: 0.03
+  _slideAlongWorldCollision: 1
 --- !u!114 &4628134903754478412
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -557,9 +559,22 @@ MonoBehaviour:
   _aimIndicatorView: {fileID: 647043531423546988}
   _defaultRange: 8
   _originHeightOffset: 0.25
+  _defaultDirectionalWidth: 1
+  _minimumVisibleDirectionalRange: 1.15
+  _directionalPlaneHeightOffset: 0.04
+  _directionalStartPadding: 0.15
+  _aimObstacleMask:
+    serializedVersion: 2
+    m_Bits: 0
+  _traceStartOffset: 0.75
+  _traceRadiusScale: 0.35
+  _obstacleSkin: 0.05
   _defaultThrowableArcHeight: 1.75
   _defaultThrowableRadius: 1.5
   _defaultPlacementRadius: 0.75
+  _directionSmoothingSpeed: 16
+  _originSmoothingSpeed: 28
+  _rangeSmoothingSpeed: 24
 --- !u!1 &7629982395169635279
 GameObject:
   m_ObjectHideFlags: 0
@@ -748,6 +763,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _lineRenderer: {fileID: 5515728804044893118}
+  _spreadLeftLine: {fileID: 0}
+  _spreadRightLine: {fileID: 0}
+  _mainAttackColor: {r: 0.24, g: 0.78, b: 1, a: 0.88}
+  _superColor: {r: 1, g: 0.38, b: 0.14, a: 0.94}
+  _blockedColor: {r: 1, g: 0.18, b: 0.12, a: 0.92}
+  _fallbackDirectionalWidth: 0.8
+  _spreadEdgeWidth: 0.08
   _arcRenderer: {fileID: 2570568414221481207}
   _endMarker: {fileID: 3516289776301926394}
   _radiusRingRenderer: {fileID: 7127922564768453046}
