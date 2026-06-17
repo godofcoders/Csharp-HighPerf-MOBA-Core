@@ -11,8 +11,8 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7b4742816bb9445aa2e1dca3d4e5c2b7, type: 3}
   m_Name: BreakableObject
-  m_EditorClassIdentifier:
-  MaxHealth: 1200
+  m_EditorClassIdentifier: 
+  MaxHealth: 200
   CollisionRadius: 0.55
   BlocksNavigation: 1
   NavigationClearRadius: 0.75
