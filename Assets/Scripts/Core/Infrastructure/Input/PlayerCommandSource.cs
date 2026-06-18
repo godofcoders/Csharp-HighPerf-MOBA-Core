@@ -393,7 +393,7 @@ namespace MOBA.Core.Infrastructure
                 }
             }
 
-            AimAssistRequest request = BuildAimAssistRequest(actionType, abilityDefinition, GetFireAimDirection());
+            AimAssistRequest request = BuildAimAssistRequest(actionType, abilityDefinition, ResolveAutoAimForwardSeed());
             AimAssistResult result = AimAssistResolver.Resolve(request);
 
             if (result.HasResult && result.AimDirection.sqrMagnitude > 0.001f)
@@ -426,6 +426,10 @@ namespace MOBA.Core.Infrastructure
                 Forward = forward.sqrMagnitude > 0.001f ? forward.normalized : ResolveStableFacingDirection(),
                 Range = ResolveAimRange(abilityDefinition),
                 ProjectileRadius = ResolveAimProjectileRadius(abilityDefinition),
+                ProjectileSpeed = ResolveAimProjectileSpeed(abilityDefinition),
+                LowHealthBias = abilityDefinition != null ? abilityDefinition.AimAssistLowHealthBias : 1.35f,
+                GemCarrierBias = abilityDefinition != null ? abilityDefinition.AimAssistGemCarrierBias : 0.45f,
+                LeadStrength = abilityDefinition != null ? abilityDefinition.AimAssistLeadStrength : 0.55f,
                 IncludeSelf = ShouldIncludeSelf(actionType, abilityDefinition),
                 RequireAlive = true,
                 RequireLineOfSight = ShouldRequireLineOfSight(abilityDefinition)
@@ -506,6 +510,9 @@ namespace MOBA.Core.Infrastructure
             if (abilityDefinition is ThrownHybridAoEAbilityDefinition thrown)
                 return thrown.ThrowRange;
 
+            if (abilityDefinition is ThrownVolleyAoEAbilityDefinition thrownVolley)
+                return thrownVolley.ThrowRange;
+
             if (abilityDefinition is EffectAbilityDefinition effectAbility)
                 return effectAbility.PreviewRange;
 
@@ -520,6 +527,41 @@ namespace MOBA.Core.Infrastructure
             return abilityDefinition.AimPreviewWidth > 0.01f
                 ? Mathf.Max(0.05f, abilityDefinition.AimPreviewWidth * 0.5f)
                 : 0.5f;
+        }
+
+        private float ResolveAimProjectileSpeed(AbilityDefinition abilityDefinition)
+        {
+            if (abilityDefinition == null)
+                return 0f;
+
+            if (abilityDefinition is BasicProjectileAttackDefinition basicAttack)
+                return basicAttack.ProjectileSpeed;
+
+            if (abilityDefinition is BasicSuperDefinition basicSuper)
+                return basicSuper.ProjectileSpeed;
+
+            if (abilityDefinition is ProjectileAbilityDefinition projectile)
+                return projectile.Speed;
+
+            if (abilityDefinition is VolleyProjectileAbilityDefinition volley)
+                return volley.Speed;
+
+            if (abilityDefinition is BurstSequenceProjectileAbilityDefinition burst)
+                return burst.Speed;
+
+            if (abilityDefinition is ChainProjectileAbilityDefinition chain)
+                return chain.Speed;
+
+            if (abilityDefinition is HybridProjectileAbilityDefinition hybrid)
+                return hybrid.Speed;
+
+            if (abilityDefinition is ThrownHybridAoEAbilityDefinition thrown)
+                return thrown.ThrowSpeed;
+
+            if (abilityDefinition is ThrownVolleyAoEAbilityDefinition thrownVolley)
+                return thrownVolley.ThrowSpeed;
+
+            return 0f;
         }
 
         private bool ShouldRequireLineOfSight(AbilityDefinition abilityDefinition)
@@ -777,6 +819,20 @@ namespace MOBA.Core.Infrastructure
                 result.AimDirection = fallbackForward;
 
             return result;
+        }
+
+        private Vector3 ResolveAutoAimForwardSeed()
+        {
+            if (_hasManualAim && _manualAimDirection.sqrMagnitude > 0.001f)
+                return _manualAimDirection.normalized;
+
+            if (_lastAimDirection.sqrMagnitude > 0.001f)
+                return _lastAimDirection.normalized;
+
+            if (_controlledBrawler != null)
+                return _controlledBrawler.transform.forward;
+
+            return transform.forward;
         }
 
         private void QueueMainAttackCommand(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)

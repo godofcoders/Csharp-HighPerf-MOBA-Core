@@ -134,26 +134,22 @@ namespace MOBA.Core.Simulation
                 if (!CanUseAimAssistTarget(request, target))
                     continue;
 
-                Vector3 toTarget = target.Position - request.Origin;
+                Vector3 aimPoint = ResolvePredictedAimPoint(request, target);
+                Vector3 toTarget = aimPoint - request.Origin;
                 float dist = toTarget.magnitude;
                 if (dist <= 0.001f)
                     continue;
 
                 Vector3 dir = toTarget / dist;
-                float facingScore = Mathf.Max(0f, Vector3.Dot(forward, dir));
-
-                float distanceScore;
-                if (idealRange > 0f)
-                {
-                    float idealDelta = Mathf.Abs(dist - idealRange);
-                    distanceScore = 1f / Mathf.Max(1f, idealDelta + 1f);
-                }
-                else
-                {
-                    distanceScore = 1f / Mathf.Max(1f, dist);
-                }
-
-                float score = facingScore * forwardBias + distanceScore * distanceBias;
+                float score = ScoreSmartOffenseTarget(
+                    request,
+                    target,
+                    forward,
+                    dir,
+                    dist,
+                    forwardBias,
+                    distanceBias,
+                    idealRange);
 
                 if (score > bestScore)
                 {
@@ -245,6 +241,58 @@ namespace MOBA.Core.Simulation
             return result;
         }
 
+        private static float ScoreSmartOffenseTarget(
+            in AimAssistRequest request,
+            BrawlerController target,
+            Vector3 forward,
+            Vector3 targetDirection,
+            float distance,
+            float forwardBias,
+            float distanceBias,
+            float idealRange)
+        {
+            float facingScore = Mathf.Max(0f, Vector3.Dot(forward, targetDirection));
+            float distanceScore = ResolveDistanceScore(request.Range, distance, idealRange);
+            float lowHealthScore = ResolveLowHealthScore(target);
+            float carrierScore = ResolveGemCarrierScore(target);
+
+            return facingScore * Mathf.Max(0f, forwardBias) +
+                   distanceScore * Mathf.Max(0f, distanceBias) +
+                   lowHealthScore * Mathf.Max(0f, request.LowHealthBias) +
+                   carrierScore * Mathf.Max(0f, request.GemCarrierBias);
+        }
+
+        private static float ResolveDistanceScore(float range, float distance, float idealRange)
+        {
+            float safeRange = Mathf.Max(1f, range);
+
+            if (idealRange > 0f)
+            {
+                float spread = Mathf.Max(1f, Mathf.Max(idealRange, safeRange - idealRange));
+                return 1f - Mathf.Clamp01(Mathf.Abs(distance - idealRange) / spread);
+            }
+
+            return 1f - Mathf.Clamp01(distance / safeRange);
+        }
+
+        private static float ResolveLowHealthScore(BrawlerController target)
+        {
+            if (target == null || target.State == null)
+                return 0f;
+
+            float maxHealth = Mathf.Max(1f, target.State.MaxHealth.Value);
+            float healthRatio = Mathf.Clamp01(target.State.CurrentHealth / maxHealth);
+            return 1f - healthRatio;
+        }
+
+        private static float ResolveGemCarrierScore(BrawlerController target)
+        {
+            if (target == null || target.State == null)
+                return 0f;
+
+            return Mathf.Clamp01(target.State.CarriedGemCount / 5f);
+        }
+
         private static AimAssistResult BuildDefaultResult(in AimAssistRequest request)
         {
             Vector3 forward = request.Forward.sqrMagnitude > 0.001f
@@ -274,10 +322,11 @@ namespace MOBA.Core.Simulation
             if (pathfinder == null)
                 return true;
 
+            Vector3 aimPoint = ResolvePredictedAimPoint(request, target);
             return AimLineOfSightUtility.HasLineOfSight(
                 pathfinder,
                 request.Origin,
-                target.Position,
+                aimPoint,
                 request.ProjectileRadius);
         }
 
@@ -288,7 +337,8 @@ namespace MOBA.Core.Simulation
             if (target == null)
                 return result;
 
-            Vector3 dir = target.Position - request.Origin;
+            Vector3 aimPoint = ResolvePredictedAimPoint(request, target);
+            Vector3 dir = aimPoint - request.Origin;
             if (dir.sqrMagnitude > 0.001f)
                 dir.Normalize();
             else
@@ -297,8 +347,46 @@ namespace MOBA.Core.Simulation
             result.HasResult = true;
             result.Target = target;
             result.AimDirection = dir;
-            result.AimPoint = target.Position;
+            result.AimPoint = aimPoint;
             return result;
+        }
+
+        private static Vector3 ResolvePredictedAimPoint(in AimAssistRequest request, BrawlerController target)
+        {
+            if (target == null)
+                return request.Origin;
+
+            Vector3 targetPosition = target.Position;
+            float leadStrength = Mathf.Clamp01(request.LeadStrength);
+            float projectileSpeed = Mathf.Max(0f, request.ProjectileSpeed);
+
+            if (leadStrength <= 0f || projectileSpeed <= 0.001f)
+                return targetPosition;
+
+            Vector3 targetVelocity = target.PlanarVelocity;
+            targetVelocity.y = 0f;
+            if (targetVelocity.sqrMagnitude <= 0.001f)
+                return targetPosition;
+
+            Vector3 toTarget = targetPosition - request.Origin;
+            toTarget.y = 0f;
+            float distance = toTarget.magnitude;
+            if (distance <= 0.001f)
+                return targetPosition;
+
+            float leadTime = Mathf.Clamp(distance / projectileSpeed * leadStrength, 0f, 0.65f);
+            Vector3 predicted = targetPosition + targetVelocity * leadTime;
+
+            Vector3 predictedOffset = predicted - request.Origin;
+            predictedOffset.y = 0f;
+            float range = Mathf.Max(0.1f, request.Range);
+            if (predictedOffset.sqrMagnitude > range * range)
+            {
+                predicted = request.Origin + predictedOffset.normalized * range;
+                predicted.y = targetPosition.y;
+            }
+
+            return predicted;
         }
     }
 }

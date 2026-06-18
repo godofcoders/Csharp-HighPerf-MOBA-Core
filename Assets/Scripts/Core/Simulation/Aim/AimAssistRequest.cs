@@ -15,6 +15,10 @@ namespace MOBA.Core.Simulation
         public Vector3 Forward;
         public float Range;
         public float ProjectileRadius;
+        public float ProjectileSpeed;
+        public float LowHealthBias;
+        public float GemCarrierBias;
+        public float LeadStrength;
 
         public bool IncludeSelf;
         public bool RequireAlive;

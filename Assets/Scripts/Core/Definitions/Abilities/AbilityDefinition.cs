@@ -48,6 +48,12 @@ namespace MOBA.Core.Definitions
         public float AimAssistDistanceBias = 1f;
         public float AimAssistIdealRange = -1f;
         public float AimAssistPlacementDistance = 3f;
+        [Tooltip("Bonus applied when an offensive auto-aim target is low health. 0 disables low-health preference.")]
+        [Min(0f)] public float AimAssistLowHealthBias = 1.35f;
+        [Tooltip("Bonus applied per carried enemy gem, capped internally. 0 disables gem-carrier preference.")]
+        [Min(0f)] public float AimAssistGemCarrierBias = 0.45f;
+        [Tooltip("How aggressively auto-aim leads moving targets. 0 disables leading; 1 uses full projectile travel-time prediction.")]
+        [Range(0f, 1f)] public float AimAssistLeadStrength = 0.55f;
 
         [Header("Aim Preview")]
         public AimPreviewMode PreviewMode = AimPreviewMode.Directional;

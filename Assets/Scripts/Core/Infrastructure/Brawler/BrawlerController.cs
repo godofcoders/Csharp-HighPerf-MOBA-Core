@@ -46,6 +46,7 @@ namespace MOBA.Core.Infrastructure
         private Vector3 _currentMoveInput;
         private Vector3 _actionFacingDirection;
         private uint _actionFacingUntilTick;
+        private Vector3 _planarVelocity;
 
         private IAbilityLogic _mainAttack;
         private IAbilityLogic _superAbility;
@@ -76,6 +77,7 @@ namespace MOBA.Core.Infrastructure
         public float CollisionRadius => 0.5f;
         public int EntityID => GetEntityId();
         public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
+        public Vector3 PlanarVelocity => _planarVelocity;
 
         [Header("World Collision")]
         [SerializeField] private LayerMask _worldCollisionLayer;
@@ -533,6 +535,7 @@ namespace MOBA.Core.Infrastructure
 
             if (_currentMoveInput.sqrMagnitude <= 0.01f)
             {
+                _planarVelocity = Vector3.zero;
                 _previousSimPosition = _currentSimPosition;
                 _previousSimRotation = _currentSimRotation;
                 _currentSimPosition = transform.position;
@@ -600,6 +603,8 @@ namespace MOBA.Core.Infrastructure
             Vector3 resolvedMovement = ResolveMovementAgainstWorld(desiredMovement);
 
             transform.position += resolvedMovement;
+            _planarVelocity = tickDelta > 0f ? resolvedMovement / tickDelta : Vector3.zero;
+            _planarVelocity.y = 0f;
 
             if (resolvedMovement != Vector3.zero)
             {
@@ -1537,6 +1542,7 @@ namespace MOBA.Core.Infrastructure
         {
             transform.position = position;
             _lastTickPosition = position;
+            _planarVelocity = Vector3.zero;
 
             State.Reset();
 
