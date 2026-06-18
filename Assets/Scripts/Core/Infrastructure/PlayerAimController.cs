@@ -6,6 +6,8 @@ namespace MOBA.Core.Infrastructure
 {
     public class PlayerAimController : MonoBehaviour
     {
+        private const int AimObstacleOverlapBufferSize = 8;
+
         [SerializeField] private PlayerCommandSource _commandSource;
         [SerializeField] private BrawlerController _brawler;
         [SerializeField] private AimIndicatorView _aimIndicatorView;
@@ -50,6 +52,8 @@ namespace MOBA.Core.Infrastructure
         private bool _hasResolvedObstacleMask;
         private int _resolvedObstacleMask;
         private int _handledPreviewCancelSequence;
+        private readonly Collider[] _aimObstacleOverlapBuffer =
+            new Collider[AimObstacleOverlapBufferSize];
 
         private void Awake()
         {
@@ -431,6 +435,12 @@ namespace MOBA.Core.Infrastructure
             float radius = Mathf.Max(0.03f, previewWidth * 0.5f * Mathf.Max(0.05f, _traceRadiusScale));
             Vector3 castOrigin = origin + direction * startOffset;
 
+            if (IsOverlappingAimObstacle(castOrigin, radius, obstacleMask))
+            {
+                visibleRange = startOffset;
+                return true;
+            }
+
             if (!Physics.SphereCast(
                     castOrigin,
                     radius,
@@ -445,6 +455,25 @@ namespace MOBA.Core.Infrastructure
 
             visibleRange = startOffset + Mathf.Max(0f, hit.distance - Mathf.Max(0f, _obstacleSkin));
             return true;
+        }
+
+        private bool IsOverlappingAimObstacle(Vector3 origin, float radius, int obstacleMask)
+        {
+            int count = Physics.OverlapSphereNonAlloc(
+                origin,
+                radius,
+                _aimObstacleOverlapBuffer,
+                obstacleMask,
+                QueryTriggerInteraction.Ignore);
+
+            for (int i = 0; i < count && i < _aimObstacleOverlapBuffer.Length; i++)
+            {
+                Collider hit = _aimObstacleOverlapBuffer[i];
+                if (hit != null && hit.enabled && hit.gameObject.activeInHierarchy)
+                    return true;
+            }
+
+            return false;
         }
 
         private AimLineTraceResult TraceDirectionalPreviewGrid(
@@ -489,7 +518,21 @@ namespace MOBA.Core.Infrastructure
 
             _hasResolvedObstacleMask = true;
             MapGenerator generator = FindObjectOfType<MapGenerator>();
-            _resolvedObstacleMask = generator != null ? generator.ObstacleLayer.value : 0;
+            if (generator != null && generator.ObstacleLayer.value != 0)
+            {
+                _resolvedObstacleMask = generator.ObstacleLayer.value;
+                return _resolvedObstacleMask;
+            }
+
+            int obstaclesLayer = LayerMask.NameToLayer("Obstacles");
+            if (obstaclesLayer >= 0)
+            {
+                _resolvedObstacleMask = 1 << obstaclesLayer;
+                return _resolvedObstacleMask;
+            }
+
+            int obstacleLayer = LayerMask.NameToLayer("Obstacle");
+            _resolvedObstacleMask = obstacleLayer >= 0 ? 1 << obstacleLayer : 0;
             return _resolvedObstacleMask;
         }
 

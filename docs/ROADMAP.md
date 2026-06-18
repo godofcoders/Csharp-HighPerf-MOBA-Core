@@ -59,7 +59,7 @@ Goal: make player combat feel reliable and readable.
 
 - `[~]` Thick Brawl Stars-style directional aim preview.
 - `[~]` Held aim vs tap auto-aim behavior.
-- `[~]` Wall-aware aim preview clipping when blockers are in front. Directional preview now uses obstacle physics first, then grid fallback only when no obstacle mask exists; needs Unity playtest.
+- `[~]` Wall-aware aim preview clipping when blockers are in front. Directional preview now resolves obstacle masks from inspector, map generator, or the authored `Obstacles` layer, handles near-cover overlap, then uses grid fallback only when no physics mask exists; needs Unity playtest.
 - `[~]` Auto-aim should prefer valid targets and avoid bad wall angles. Direct projectile auto-aim now requires line-of-sight; needs Unity playtest around walls.
 - `[~]` Projectile visuals should always spawn and travel consistently.
 - `[~]` Projectile spawn direction should be independent of player movement after cast. Straight projectile spawn origin now derives from aim direction, and brawlers hold cast-facing through short attack/burst windows.
