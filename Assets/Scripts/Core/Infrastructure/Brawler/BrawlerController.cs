@@ -28,10 +28,16 @@ namespace MOBA.Core.Infrastructure
 
         private const float SimulationTickInterval = 1f / 30f;
         private const float LocalObserverRefreshIntervalSeconds = 0.5f;
+        private const int WorldCollisionOverlapBufferSize = 16;
+        private const int WorldCollisionDepenetrationPasses = 3;
+        private const float WorldCollisionEpsilon = 0.000001f;
+        private const float WorldCollisionSkinEpsilon = 0.001f;
 
         private static TeamType _cachedLocalObserverTeam = TeamType.Neutral;
         private static float _nextLocalObserverRefreshTime;
         private static bool _hasCachedLocalObserver;
+        private static readonly Collider[] _worldCollisionOverlapBuffer =
+            new Collider[WorldCollisionOverlapBufferSize];
 
         private GameObject _spawnedVisualInstance;
 
@@ -77,6 +83,10 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _worldCollisionProbeHeight = 0.5f;
         [SerializeField] private float _worldCollisionSkin = 0.03f;
         [SerializeField] private bool _slideAlongWorldCollision = true;
+
+        private bool _hasResolvedWorldCollisionMask;
+        private int _resolvedWorldCollisionMask;
+
         private int GetEntityId()
         {
             if (_entityId != 0)
@@ -587,7 +597,6 @@ namespace MOBA.Core.Infrastructure
 
             Vector3 desiredMovement = moveDirection * (speed * tickDelta * inputMagnitude);
 
-            // New: resolve movement against physical world colliders.
             Vector3 resolvedMovement = ResolveMovementAgainstWorld(desiredMovement);
 
             transform.position += resolvedMovement;
@@ -603,7 +612,6 @@ namespace MOBA.Core.Infrastructure
             }
             else if (desiredMovement.sqrMagnitude > 0.001f && IsActionFacingActive(currentTick))
             {
-                // Optional: if blocked by a wall during action-facing, keep action-facing rotation.
                 if (_actionFacingDirection.sqrMagnitude > 0.001f)
                     transform.rotation = Quaternion.LookRotation(_actionFacingDirection.normalized);
             }
@@ -617,11 +625,11 @@ namespace MOBA.Core.Infrastructure
         {
             desiredMovement.y = 0f;
 
-            if (desiredMovement.sqrMagnitude <= 0.000001f)
+            if (desiredMovement.sqrMagnitude <= WorldCollisionEpsilon)
                 return Vector3.zero;
 
-            // If no layer is assigned, preserve old behavior.
-            if (_worldCollisionLayer.value == 0)
+            int collisionMask = ResolveWorldCollisionMask();
+            if (collisionMask == 0)
                 return desiredMovement;
 
             float desiredDistance = desiredMovement.magnitude;
@@ -629,8 +637,31 @@ namespace MOBA.Core.Infrastructure
 
             float radius = Mathf.Max(0.01f, _worldCollisionRadius);
             float skin = Mathf.Max(0f, _worldCollisionSkin);
+            Vector3 startCorrection = ResolveWorldOverlap(transform.position, radius, skin, collisionMask);
+            Vector3 startPosition = transform.position + startCorrection;
 
-            Vector3 origin = transform.position + Vector3.up * Mathf.Max(0f, _worldCollisionProbeHeight);
+            Vector3 resolvedMovement = SweepWorldMovement(
+                startPosition,
+                desiredMovement,
+                direction,
+                desiredDistance,
+                radius,
+                skin,
+                collisionMask);
+
+            return startCorrection + resolvedMovement;
+        }
+
+        private Vector3 SweepWorldMovement(
+            Vector3 startPosition,
+            Vector3 desiredMovement,
+            Vector3 direction,
+            float desiredDistance,
+            float radius,
+            float skin,
+            int collisionMask)
+        {
+            Vector3 origin = startPosition + Vector3.up * Mathf.Max(0f, _worldCollisionProbeHeight);
 
             bool blocked = Physics.SphereCast(
                 origin,
@@ -638,7 +669,7 @@ namespace MOBA.Core.Infrastructure
                 direction,
                 out RaycastHit hit,
                 desiredDistance + skin,
-                _worldCollisionLayer,
+                collisionMask,
                 QueryTriggerInteraction.Ignore);
 
             if (!blocked)
@@ -652,19 +683,19 @@ namespace MOBA.Core.Infrastructure
 
             Vector3 remainingMovement = desiredMovement - resolvedMovement;
 
-            if (remainingMovement.sqrMagnitude <= 0.000001f)
+            if (remainingMovement.sqrMagnitude <= WorldCollisionEpsilon)
                 return resolvedMovement;
 
             Vector3 slideMovement = Vector3.ProjectOnPlane(remainingMovement, hit.normal);
             slideMovement.y = 0f;
 
-            if (slideMovement.sqrMagnitude <= 0.000001f)
+            if (slideMovement.sqrMagnitude <= WorldCollisionEpsilon)
                 return resolvedMovement;
 
             float slideDistance = slideMovement.magnitude;
             Vector3 slideDirection = slideMovement / slideDistance;
 
-            Vector3 slideOrigin = transform.position + resolvedMovement + Vector3.up * Mathf.Max(0f, _worldCollisionProbeHeight);
+            Vector3 slideOrigin = startPosition + resolvedMovement + Vector3.up * Mathf.Max(0f, _worldCollisionProbeHeight);
 
             bool slideBlocked = Physics.SphereCast(
                 slideOrigin,
@@ -672,7 +703,7 @@ namespace MOBA.Core.Infrastructure
                 slideDirection,
                 out RaycastHit slideHit,
                 slideDistance + skin,
-                _worldCollisionLayer,
+                collisionMask,
                 QueryTriggerInteraction.Ignore);
 
             if (!slideBlocked)
@@ -680,6 +711,126 @@ namespace MOBA.Core.Infrastructure
 
             float allowedSlideDistance = Mathf.Max(0f, slideHit.distance - skin);
             return resolvedMovement + slideDirection * allowedSlideDistance;
+        }
+
+        private int ResolveWorldCollisionMask()
+        {
+            if (_worldCollisionLayer.value != 0)
+                return _worldCollisionLayer.value;
+
+            if (_hasResolvedWorldCollisionMask)
+                return _resolvedWorldCollisionMask;
+
+            _hasResolvedWorldCollisionMask = true;
+
+            MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
+            if (mapGenerator != null && mapGenerator.ObstacleLayer.value != 0)
+            {
+                _resolvedWorldCollisionMask = mapGenerator.ObstacleLayer.value;
+                return _resolvedWorldCollisionMask;
+            }
+
+            int obstacleLayer = LayerMask.NameToLayer("Obstacles");
+            _resolvedWorldCollisionMask = obstacleLayer >= 0 ? 1 << obstacleLayer : 0;
+            return _resolvedWorldCollisionMask;
+        }
+
+        private Vector3 ResolveWorldOverlap(
+            Vector3 position,
+            float radius,
+            float skin,
+            int collisionMask)
+        {
+            Vector3 totalCorrection = Vector3.zero;
+            Vector3 correctedPosition = position;
+            float clearance = radius + skin;
+            float probeHeight = Mathf.Max(0f, _worldCollisionProbeHeight);
+
+            for (int pass = 0; pass < WorldCollisionDepenetrationPasses; pass++)
+            {
+                int hitCount = Physics.OverlapSphereNonAlloc(
+                    correctedPosition + Vector3.up * probeHeight,
+                    clearance,
+                    _worldCollisionOverlapBuffer,
+                    collisionMask,
+                    QueryTriggerInteraction.Ignore);
+
+                Vector3 strongestCorrection = Vector3.zero;
+
+                for (int i = 0; i < hitCount; i++)
+                {
+                    Collider hit = _worldCollisionOverlapBuffer[i];
+                    if (hit == null)
+                        continue;
+
+                    if (!TryGetPlanarBoundsPushOut(correctedPosition, hit.bounds, clearance, out Vector3 correction))
+                        continue;
+
+                    if (correction.sqrMagnitude > strongestCorrection.sqrMagnitude)
+                        strongestCorrection = correction;
+                }
+
+                if (strongestCorrection.sqrMagnitude <= WorldCollisionEpsilon)
+                    break;
+
+                correctedPosition += strongestCorrection;
+                totalCorrection += strongestCorrection;
+            }
+
+            return totalCorrection;
+        }
+
+        private static bool TryGetPlanarBoundsPushOut(
+            Vector3 position,
+            Bounds bounds,
+            float clearance,
+            out Vector3 correction)
+        {
+            float closestX = Mathf.Clamp(position.x, bounds.min.x, bounds.max.x);
+            float closestZ = Mathf.Clamp(position.z, bounds.min.z, bounds.max.z);
+            float deltaX = position.x - closestX;
+            float deltaZ = position.z - closestZ;
+            float distanceSq = deltaX * deltaX + deltaZ * deltaZ;
+
+            if (distanceSq > WorldCollisionEpsilon)
+            {
+                float distance = Mathf.Sqrt(distanceSq);
+                float depth = clearance - distance;
+                if (depth <= 0f)
+                {
+                    correction = Vector3.zero;
+                    return false;
+                }
+
+                float scale = (depth + WorldCollisionSkinEpsilon) / distance;
+                correction = new Vector3(deltaX * scale, 0f, deltaZ * scale);
+                return true;
+            }
+
+            float left = Mathf.Abs(position.x - bounds.min.x) + clearance;
+            float right = Mathf.Abs(bounds.max.x - position.x) + clearance;
+            float back = Mathf.Abs(position.z - bounds.min.z) + clearance;
+            float forward = Mathf.Abs(bounds.max.z - position.z) + clearance;
+
+            float best = left;
+            correction = new Vector3(-best, 0f, 0f);
+
+            if (right < best)
+            {
+                best = right;
+                correction = new Vector3(best, 0f, 0f);
+            }
+
+            if (back < best)
+            {
+                best = back;
+                correction = new Vector3(0f, 0f, -best);
+            }
+
+            if (forward < best)
+                correction = new Vector3(0f, 0f, forward);
+
+            return correction.sqrMagnitude > WorldCollisionEpsilon;
         }
 
         private void ApplyActionFacing(
