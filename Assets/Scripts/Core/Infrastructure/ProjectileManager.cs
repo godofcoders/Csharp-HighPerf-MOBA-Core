@@ -11,9 +11,20 @@ namespace MOBA.Core.Infrastructure
     {
         private const float DirectProjectileThreatRadius = 1.15f;
         private const float DirectProjectileThreatLookaheadSeconds = 1.25f;
+        private const int ProjectileWorldHitOverlapBufferSize = 8;
 
         private SimpleObjectPool _pool;
         private readonly List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>(64);
+        private readonly Collider[] _projectileWorldHitOverlapBuffer =
+            new Collider[ProjectileWorldHitOverlapBufferSize];
+
+        [Header("World Collision")]
+        [SerializeField] private LayerMask _projectileWorldCollisionLayer;
+        [SerializeField] private float _directProjectileWorldCollisionRadius = 0.22f;
+        [SerializeField] private float _projectileWorldCollisionHeightOffset = 0.25f;
+
+        private bool _hasResolvedProjectileWorldCollisionMask;
+        private int _resolvedProjectileWorldCollisionMask;
 
         private void Awake()
         {
@@ -144,8 +155,27 @@ namespace MOBA.Core.Infrastructure
                 }
                 else
                 {
+                    Vector3 previousPosition = p.GameObject.transform.position;
                     Vector3 movement = p.Direction * (p.Speed * SimulationClock.TickDeltaTime);
-                    p.GameObject.transform.position += movement;
+                    Vector3 nextPosition = previousPosition + movement;
+
+                    if (TryResolveDirectProjectileWorldImpact(
+                            p,
+                            previousPosition,
+                            nextPosition,
+                            out Vector3 worldImpactPosition,
+                            out BreakableObjectController worldBreakable))
+                    {
+                        p.GameObject.transform.position = worldImpactPosition;
+
+                        if (SpatialEntityUtility.IsAlive(worldBreakable))
+                            ApplyProjectileImpact(p, worldBreakable, worldImpactPosition);
+
+                        Despawn(i, ProjectileEndReason.Impact, worldImpactPosition, null);
+                        continue;
+                    }
+
+                    p.GameObject.transform.position = nextPosition;
 
                     ProjectileVisualController visualController = p.GameObject.GetComponent<ProjectileVisualController>();
                     if (visualController != null)
@@ -203,100 +233,7 @@ namespace MOBA.Core.Infrastructure
                         continue;
                     }
 
-                    if (p.IsHybrid && p.Owner != null)
-                    {
-                        bool isAllyBrawler = targetBrawler != null &&
-                                              TeamRelationshipUtility.AreAllies(targetBrawler.Team, p.Owner.Team);
-
-                        if (isAllyBrawler)
-                        {
-                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner.name} healed ally {targetBrawler.name} for {p.AllyHealAmount}");
-                            float beforeHealth = targetBrawler.State.CurrentHealth;
-                            targetBrawler.State.Heal(p.AllyHealAmount, p.Owner, true);
-                            float healingDone = targetBrawler.State.CurrentHealth - beforeHealth;
-                            if (healingDone > 0f)
-                            {
-                                AIReportCardTracker.RecordHealingDone(
-                                    p.Owner,
-                                    targetBrawler,
-                                    healingDone,
-                                    p.IsSuper,
-                                    AIReportCardTracker.GetCurrentTickOrZero());
-                            }
-
-                            CombatPresentationEventBus.Raise(new CombatPresentationEvent
-                            {
-                                EventType = CombatPresentationEventType.AbilityCastSucceeded,
-                                Source = p.Owner,
-                                Target = targetBrawler,
-                                AbilityDefinition = p.SourceAbility,
-                                SlotType = p.SlotType,
-                                Position = projectilePosition,
-                                Direction = p.Direction,
-                                Value = p.AllyHealAmount,
-                                IsSuper = p.IsSuper
-                            });
-                        }
-                        else
-                        {
-                            Debug.Log($"[HYBRID PROJECTILE] {p.Owner.name} damaged target {hit.EntityID} for {p.EnemyDamageAmount}");
-
-                            var damageService = ServiceProvider.Get<IDamageService>();
-                            damageService.ApplyDamage(new DamageContext
-                            {
-                                Attacker = p.Owner,
-                                Target = hit,
-                                Damage = p.EnemyDamageAmount,
-                                Type = DamageType.Projectile,
-                                HitPosition = projectilePosition,
-                                Direction = p.Direction,
-                                SourceAbility = p.SourceAbility,
-                                IsSuper = p.IsSuper
-                            });
-
-                            CombatPresentationEventBus.Raise(new CombatPresentationEvent
-                            {
-                                EventType = CombatPresentationEventType.DamageHit,
-                                Source = p.Owner,
-                                Target = targetBrawler,
-                                AbilityDefinition = p.SourceAbility,
-                                SlotType = p.SlotType,
-                                Position = projectilePosition,
-                                Direction = p.Direction,
-                                Value = p.EnemyDamageAmount,
-                                IsSuper = p.IsSuper
-                            });
-                        }
-                    }
-                    else
-                    {
-                        var damageService = ServiceProvider.Get<IDamageService>();
-
-                        damageService.ApplyDamage(new DamageContext
-                        {
-                            Attacker = p.Owner,
-                            Target = hit,
-                            Damage = p.Damage,
-                            Type = DamageType.Projectile,
-                            HitPosition = projectilePosition,
-                            Direction = p.Direction,
-                            SourceAbility = p.SourceAbility,
-                            IsSuper = p.IsSuper
-                        });
-
-                        CombatPresentationEventBus.Raise(new CombatPresentationEvent
-                        {
-                            EventType = CombatPresentationEventType.DamageHit,
-                            Source = p.Owner,
-                            Target = hit as BrawlerController,
-                            AbilityDefinition = p.SourceAbility,
-                            SlotType = p.SlotType,
-                            Position = projectilePosition,
-                            Direction = p.Direction,
-                            Value = p.Damage,
-                            IsSuper = p.IsSuper
-                        });
-                    }
+                    ApplyProjectileImpact(p, hit, projectilePosition);
 
                     // CHAIN PROJECTILE HANDLING
                     if (p.IsChainProjectile && targetBrawler != null)
@@ -329,6 +266,208 @@ namespace MOBA.Core.Infrastructure
                     Despawn(i, ProjectileEndReason.Impact, projectilePosition, targetBrawler, false);
                 }
             }
+        }
+
+        private bool TryResolveDirectProjectileWorldImpact(
+            ActiveProjectile projectile,
+            Vector3 previousPosition,
+            Vector3 nextPosition,
+            out Vector3 impactPosition,
+            out BreakableObjectController breakable)
+        {
+            impactPosition = Vector3.zero;
+            breakable = null;
+
+            if (projectile == null || projectile.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE)
+                return false;
+
+            int collisionMask = ResolveProjectileWorldCollisionMask();
+            if (collisionMask == 0)
+                return false;
+
+            float radius = Mathf.Max(0.01f, _directProjectileWorldCollisionRadius);
+            float heightOffset = Mathf.Max(0f, _projectileWorldCollisionHeightOffset);
+            Vector3 castOrigin = previousPosition + Vector3.up * heightOffset;
+
+            int overlapCount = Physics.OverlapSphereNonAlloc(
+                castOrigin,
+                radius,
+                _projectileWorldHitOverlapBuffer,
+                collisionMask,
+                QueryTriggerInteraction.Ignore);
+
+            if (overlapCount > 0)
+            {
+                Collider overlap = FindFirstValidWorldHit(_projectileWorldHitOverlapBuffer, overlapCount);
+                if (overlap != null)
+                {
+                    impactPosition = previousPosition;
+                    breakable = ResolveBreakable(overlap);
+                    return true;
+                }
+            }
+
+            Vector3 movement = nextPosition - previousPosition;
+            float distance = movement.magnitude;
+            if (distance <= 0.0001f)
+                return false;
+
+            Vector3 direction = movement / distance;
+
+            if (!Physics.SphereCast(
+                    castOrigin,
+                    radius,
+                    direction,
+                    out RaycastHit hit,
+                    distance,
+                    collisionMask,
+                    QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            impactPosition = previousPosition + direction * Mathf.Max(0f, hit.distance);
+            breakable = ResolveBreakable(hit.collider);
+            return true;
+        }
+
+        private int ResolveProjectileWorldCollisionMask()
+        {
+            if (_projectileWorldCollisionLayer.value != 0)
+                return _projectileWorldCollisionLayer.value;
+
+            if (_hasResolvedProjectileWorldCollisionMask)
+                return _resolvedProjectileWorldCollisionMask;
+
+            _hasResolvedProjectileWorldCollisionMask = true;
+
+            MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
+            if (mapGenerator != null && mapGenerator.ObstacleLayer.value != 0)
+            {
+                _resolvedProjectileWorldCollisionMask = mapGenerator.ObstacleLayer.value;
+                return _resolvedProjectileWorldCollisionMask;
+            }
+
+            int obstacleLayer = LayerMask.NameToLayer("Obstacles");
+            _resolvedProjectileWorldCollisionMask = obstacleLayer >= 0 ? 1 << obstacleLayer : 0;
+            return _resolvedProjectileWorldCollisionMask;
+        }
+
+        private static Collider FindFirstValidWorldHit(Collider[] colliders, int count)
+        {
+            if (colliders == null)
+                return null;
+
+            int max = Mathf.Min(count, colliders.Length);
+            for (int i = 0; i < max; i++)
+            {
+                Collider candidate = colliders[i];
+                if (candidate != null && candidate.enabled && candidate.gameObject.activeInHierarchy)
+                    return candidate;
+            }
+
+            return null;
+        }
+
+        private static BreakableObjectController ResolveBreakable(Collider collider)
+        {
+            if (collider == null)
+                return null;
+
+            BreakableObjectController breakable = collider.GetComponentInParent<BreakableObjectController>();
+            return breakable != null && !breakable.IsDestroyed
+                ? breakable
+                : null;
+        }
+
+        private BrawlerController ApplyProjectileImpact(
+            ActiveProjectile projectile,
+            ISpatialEntity hit,
+            Vector3 projectilePosition)
+        {
+            BrawlerController targetBrawler = hit as BrawlerController;
+
+            if (projectile.IsHybrid && projectile.Owner != null)
+            {
+                bool isAllyBrawler = targetBrawler != null &&
+                                      TeamRelationshipUtility.AreAllies(targetBrawler.Team, projectile.Owner.Team);
+
+                if (isAllyBrawler)
+                {
+                    Debug.Log($"[HYBRID PROJECTILE] {projectile.Owner.name} healed ally {targetBrawler.name} for {projectile.AllyHealAmount}");
+                    float beforeHealth = targetBrawler.State.CurrentHealth;
+                    targetBrawler.State.Heal(projectile.AllyHealAmount, projectile.Owner, true);
+                    float healingDone = targetBrawler.State.CurrentHealth - beforeHealth;
+                    if (healingDone > 0f)
+                    {
+                        AIReportCardTracker.RecordHealingDone(
+                            projectile.Owner,
+                            targetBrawler,
+                            healingDone,
+                            projectile.IsSuper,
+                            AIReportCardTracker.GetCurrentTickOrZero());
+                    }
+
+                    CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                    {
+                        EventType = CombatPresentationEventType.AbilityCastSucceeded,
+                        Source = projectile.Owner,
+                        Target = targetBrawler,
+                        AbilityDefinition = projectile.SourceAbility,
+                        SlotType = projectile.SlotType,
+                        Position = projectilePosition,
+                        Direction = projectile.Direction,
+                        Value = projectile.AllyHealAmount,
+                        IsSuper = projectile.IsSuper
+                    });
+                }
+                else
+                {
+                    Debug.Log($"[HYBRID PROJECTILE] {projectile.Owner.name} damaged target {hit.EntityID} for {projectile.EnemyDamageAmount}");
+                    ApplyProjectileDamage(projectile, hit, projectile.EnemyDamageAmount, projectilePosition, targetBrawler);
+                }
+            }
+            else
+            {
+                ApplyProjectileDamage(projectile, hit, projectile.Damage, projectilePosition, targetBrawler);
+            }
+
+            return targetBrawler;
+        }
+
+        private void ApplyProjectileDamage(
+            ActiveProjectile projectile,
+            ISpatialEntity hit,
+            float damage,
+            Vector3 projectilePosition,
+            BrawlerController targetBrawler)
+        {
+            var damageService = ServiceProvider.Get<IDamageService>();
+
+            damageService.ApplyDamage(new DamageContext
+            {
+                Attacker = projectile.Owner,
+                Target = hit,
+                Damage = damage,
+                Type = DamageType.Projectile,
+                HitPosition = projectilePosition,
+                Direction = projectile.Direction,
+                SourceAbility = projectile.SourceAbility,
+                IsSuper = projectile.IsSuper
+            });
+
+            CombatPresentationEventBus.Raise(new CombatPresentationEvent
+            {
+                EventType = CombatPresentationEventType.DamageHit,
+                Source = projectile.Owner,
+                Target = targetBrawler,
+                AbilityDefinition = projectile.SourceAbility,
+                SlotType = projectile.SlotType,
+                Position = projectilePosition,
+                Direction = projectile.Direction,
+                Value = damage,
+                IsSuper = projectile.IsSuper
+            });
         }
 
         public void AppendProjectileThreatsNonAlloc(
