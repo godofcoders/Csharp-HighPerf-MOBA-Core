@@ -429,6 +429,7 @@ namespace MOBA.Core.Infrastructure
                 ProjectileSpeed = ResolveAimProjectileSpeed(abilityDefinition),
                 LowHealthBias = abilityDefinition != null ? abilityDefinition.AimAssistLowHealthBias : 1.35f,
                 GemCarrierBias = abilityDefinition != null ? abilityDefinition.AimAssistGemCarrierBias : 0.45f,
+                CloseTargetRange = abilityDefinition != null ? abilityDefinition.AimAssistCloseTargetRange : 2.25f,
                 LeadStrength = abilityDefinition != null ? abilityDefinition.AimAssistLeadStrength : 0.55f,
                 IncludeSelf = ShouldIncludeSelf(actionType, abilityDefinition),
                 RequireAlive = true,

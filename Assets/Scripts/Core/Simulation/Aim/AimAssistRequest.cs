@@ -18,6 +18,7 @@ namespace MOBA.Core.Simulation
         public float ProjectileSpeed;
         public float LowHealthBias;
         public float GemCarrierBias;
+        public float CloseTargetRange;
         public float LeadStrength;
 
         public bool IncludeSelf;

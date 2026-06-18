@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
 using UnityEngine;
@@ -52,6 +53,8 @@ namespace MOBA.Core.Infrastructure
         private bool _hasResolvedObstacleMask;
         private int _resolvedObstacleMask;
         private int _handledPreviewCancelSequence;
+        private readonly List<BrawlerController> _aimPreviewBrawlerBuffer =
+            new List<BrawlerController>(16);
         private readonly Collider[] _aimObstacleOverlapBuffer =
             new Collider[AimObstacleOverlapBufferSize];
 
@@ -386,15 +389,26 @@ namespace MOBA.Core.Infrastructure
 
             direction.Normalize();
 
-            if (TryResolvePhysicsPreviewRange(
+            bool hasObstacleHit = TryResolvePhysicsPreviewRange(
                     origin,
                     direction,
                     safeRange,
                     previewWidth,
-                    out float physicsRange))
+                    out float obstacleRange);
+
+            bool hasTargetHit = TryResolveTargetPreviewRange(
+                origin,
+                direction,
+                safeRange,
+                previewWidth,
+                out float targetRange);
+
+            if (hasObstacleHit || hasTargetHit)
             {
-                isObstructed = true;
-                return ClampVisibleRange(physicsRange, safeRange);
+                bool targetIsCloser = hasTargetHit &&
+                                      (!hasObstacleHit || targetRange < obstacleRange);
+                isObstructed = !targetIsCloser;
+                return ClampVisibleRange(targetIsCloser ? targetRange : obstacleRange, safeRange);
             }
 
             int obstacleMask = ResolveObstacleMask();
@@ -412,6 +426,70 @@ namespace MOBA.Core.Infrastructure
 
             isObstructed = true;
             return ClampVisibleRange(gridTrace.ClearDistance, safeRange);
+        }
+
+        private bool TryResolveTargetPreviewRange(
+            Vector3 origin,
+            Vector3 direction,
+            float range,
+            float previewWidth,
+            out float visibleRange)
+        {
+            visibleRange = range;
+
+            if (_brawler == null || _brawler.State == null)
+                return false;
+
+            _aimPreviewBrawlerBuffer.Clear();
+            CombatRegistry.GetBrawlersNonAlloc(_aimPreviewBrawlerBuffer);
+
+            float laneRadius = Mathf.Max(0.03f, previewWidth * 0.5f);
+            float bestRange = range;
+            bool hasHit = false;
+
+            for (int i = 0; i < _aimPreviewBrawlerBuffer.Count; i++)
+            {
+                BrawlerController target = _aimPreviewBrawlerBuffer[i];
+                if (!CanPreviewHitTarget(target))
+                    continue;
+
+                Vector3 toTarget = target.Position - origin;
+                toTarget.y = 0f;
+
+                float forwardDistance = Vector3.Dot(toTarget, direction);
+                if (forwardDistance < 0f || forwardDistance > range)
+                    continue;
+
+                Vector3 closestPoint = direction * forwardDistance;
+                Vector3 lateral = toTarget - closestPoint;
+                float hitRadius = laneRadius + Mathf.Max(0.05f, target.CollisionRadius);
+                if (lateral.sqrMagnitude > hitRadius * hitRadius)
+                    continue;
+
+                float candidateRange = Mathf.Max(0f, forwardDistance - target.CollisionRadius);
+                if (candidateRange >= bestRange)
+                    continue;
+
+                bestRange = candidateRange;
+                hasHit = true;
+            }
+
+            visibleRange = bestRange;
+            return hasHit;
+        }
+
+        private bool CanPreviewHitTarget(BrawlerController target)
+        {
+            if (!SpatialEntityUtility.IsAlive(target) ||
+                target == _brawler ||
+                target.State == null ||
+                target.State.IsDead ||
+                !TeamRelationshipUtility.AreEnemies(_brawler.Team, target.Team))
+            {
+                return false;
+            }
+
+            return !target.State.IsHiddenTo(_brawler.Team);
         }
 
         private bool TryResolvePhysicsPreviewRange(

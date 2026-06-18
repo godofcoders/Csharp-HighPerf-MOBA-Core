@@ -59,8 +59,8 @@ Goal: make player combat feel reliable and readable.
 
 - `[~]` Thick Brawl Stars-style directional aim preview.
 - `[~]` Held aim vs tap auto-aim behavior.
-- `[~]` Wall-aware aim preview clipping when blockers are in front. Directional preview now resolves obstacle masks from inspector, map generator, or the authored `Obstacles` layer, handles near-cover overlap, then uses grid fallback only when no physics mask exists; needs Unity playtest.
-- `[~]` Auto-aim should prefer valid targets and avoid bad wall angles. Direct projectile auto-aim now requires line-of-sight, avoids movement-direction fallback bias, leads moving targets conservatively, and weights low-health / gem-carrying enemies; needs Unity playtest around walls and moving targets.
+- `[~]` Wall-aware aim preview clipping when blockers are in front. Directional preview now resolves obstacle masks from inspector, map generator, or the authored `Obstacles` layer, handles near-cover overlap, clips against visible enemy brawler bodies, then uses grid fallback only when no physics mask exists; needs Unity playtest.
+- `[~]` Auto-aim should prefer valid targets and avoid bad wall angles. Direct projectile auto-aim now requires line-of-sight, avoids movement-direction fallback bias, prioritizes very close enemy brawlers, leads moving targets conservatively, and weights low-health / gem-carrying enemies once targets are outside close-threat range; needs Unity playtest around walls and moving targets.
 - `[~]` Projectile visuals should always spawn and travel consistently.
 - `[~]` Projectile spawn direction should be independent of player movement after cast. Straight projectile spawn origin now derives from aim direction, and brawlers hold cast-facing through short attack/burst windows.
 - `[~]` Multi-projectile attacks should spawn in distinct lanes/spread positions when authored that way.

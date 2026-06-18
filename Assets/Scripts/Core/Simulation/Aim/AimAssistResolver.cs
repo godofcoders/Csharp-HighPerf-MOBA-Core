@@ -115,7 +115,9 @@ namespace MOBA.Core.Simulation
                 return result;
 
             BrawlerController best = null;
+            BrawlerController closeBest = null;
             float bestScore = float.MinValue;
+            float closestPriorityDistance = float.MaxValue;
 
             Vector3 forward = request.Forward.sqrMagnitude > 0.001f
                 ? request.Forward.normalized
@@ -124,6 +126,7 @@ namespace MOBA.Core.Simulation
             float forwardBias = request.AbilityDefinition != null ? request.AbilityDefinition.AimAssistForwardBias : 2f;
             float distanceBias = request.AbilityDefinition != null ? request.AbilityDefinition.AimAssistDistanceBias : 1f;
             float idealRange = request.AbilityDefinition != null ? request.AbilityDefinition.AimAssistIdealRange : -1f;
+            float closeTargetRange = Mathf.Max(0f, request.CloseTargetRange);
 
             for (int i = 0; i < _buffer.Count; i++)
             {
@@ -139,6 +142,14 @@ namespace MOBA.Core.Simulation
                 float dist = toTarget.magnitude;
                 if (dist <= 0.001f)
                     continue;
+
+                if (closeTargetRange > 0f &&
+                    dist <= closeTargetRange &&
+                    dist < closestPriorityDistance)
+                {
+                    closestPriorityDistance = dist;
+                    closeBest = target;
+                }
 
                 Vector3 dir = toTarget / dist;
                 float score = ScoreSmartOffenseTarget(
@@ -157,6 +168,9 @@ namespace MOBA.Core.Simulation
                     best = target;
                 }
             }
+
+            if (closeBest != null)
+                return BuildTargetResult(request, closeBest);
 
             return best != null ? BuildTargetResult(request, best) : result;
         }

@@ -52,6 +52,8 @@ namespace MOBA.Core.Definitions
         [Min(0f)] public float AimAssistLowHealthBias = 1.35f;
         [Tooltip("Bonus applied per carried enemy gem, capped internally. 0 disables gem-carrier preference.")]
         [Min(0f)] public float AimAssistGemCarrierBias = 0.45f;
+        [Tooltip("Enemy brawlers inside this range win offensive auto-aim before low-health/gem value scoring. 0 disables close target priority.")]
+        [Min(0f)] public float AimAssistCloseTargetRange = 2.25f;
         [Tooltip("How aggressively auto-aim leads moving targets. 0 disables leading; 1 uses full projectile travel-time prediction.")]
         [Range(0f, 1f)] public float AimAssistLeadStrength = 0.55f;
 
