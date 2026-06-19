@@ -86,11 +86,18 @@ namespace MOBA.Core.Simulation
                 return;
             }
             Instance = this;
+            EnsureGemPickupFeedbackView();
         }
 
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
+        }
+
+        private void EnsureGemPickupFeedbackView()
+        {
+            if (GetComponent<GemPickupFeedbackView>() == null)
+                gameObject.AddComponent<GemPickupFeedbackView>();
         }
 
         private void Start()

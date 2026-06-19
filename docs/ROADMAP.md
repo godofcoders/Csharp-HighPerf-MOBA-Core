@@ -36,7 +36,7 @@ These items are active now. We validate and fix the most disruptive gameplay-fee
   - Player movement should not bend or offset bullet direction after firing.
 
 - `[~]` Gem readability
-  - `[~]` Gem prefab should visually read as a gem, not a placeholder. Runtime Gem presentation now replaces the sphere mesh with a faceted diamond mesh while keeping pickup/collider behavior unchanged; needs Unity readability QA.
+  - `[~]` Gem prefab should visually read as a gem, not a placeholder. Runtime Gem presentation now replaces the sphere mesh with a faceted diamond mesh, pops it up from ground, and settles it onto the ground plane while keeping pickup/collider behavior unchanged; needs Unity readability QA.
   - `[~]` Multiple spawned/dropped gems should scatter on the ground with readable spacing. Mine spawns and carrier death drops now use deterministic no-overlap cluster slots; needs Unity camera-readability QA.
 
 ## Milestone G-01: Hypercharge Completion
@@ -134,7 +134,7 @@ Goal: add the feedback layer that makes the systems feel alive.
 - `[~]` Projectile prefab scale pass so bullets match gameplay width and character scale. Runtime projectile visuals now enforce a conservative minimum readable diameter while preserving authored prefab proportions; needs per-brawler tuning QA.
 - `[ ]` Hit stop for heavy/super hits.
 - `[ ]` Camera shake/impulse for impactful actions.
-- `[ ]` Gem pickup/drop feedback with scattered ground placement for multi-gem drops.
+- `[~]` Gem pickup/drop feedback with scattered ground placement for multi-gem drops. Pickup now emits a pooled ring/spark burst, and spawned gems pop up before landing on the ground plane; needs Unity playtest for timing/noise.
 - `[ ]` Hypercharge activation feedback.
 - `[ ]` Basic audio hooks for attack, hit, death, pickup, super, hypercharge.
 - `[ ]` Manual QA: effects are readable but not noisy, no missing references, no frame spikes from VFX.

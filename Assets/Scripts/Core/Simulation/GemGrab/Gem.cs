@@ -45,8 +45,18 @@ namespace MOBA.Core.Simulation
         [Header("Presentation")]
         [SerializeField] private bool _useRuntimeDiamondVisual = true;
         [SerializeField] private Color _diamondColor = new Color(1f, 0.18f, 0.92f, 1f);
+        [Min(0f)]
+        [SerializeField] private float _diamondRestHeight = 0.58f;
+        [Min(0f)]
+        [SerializeField] private float _spawnPopHeight = 0.86f;
+        [Min(0.01f)]
+        [SerializeField] private float _spawnLandDurationSeconds = 0.42f;
 
+        private Transform _diamondVisualTransform;
+        private MeshRenderer _diamondVisualRenderer;
         private MaterialPropertyBlock _presentationPropertyBlock;
+        private float _visualAgeSeconds;
+        private bool _isLandingVisualActive;
 
         // Reusable scratch buffer for the proximity query so we don't alloc
         // per tick. SpatialGrid.GetEntitiesInRadiusNonAlloc fills this.
@@ -135,6 +145,7 @@ namespace MOBA.Core.Simulation
             base.OnEnable();
             if (!_all.Contains(this)) _all.Add(this);
             EnsureRuntimeDiamondVisual();
+            BeginSpawnLandingVisual();
         }
 
         protected override void OnDisable()
@@ -159,20 +170,120 @@ namespace MOBA.Core.Simulation
             if (!_useRuntimeDiamondVisual)
                 return;
 
-            MeshFilter meshFilter = GetComponent<MeshFilter>();
-            MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
-            if (meshFilter == null || meshRenderer == null)
-                return;
+            MeshRenderer rootRenderer = GetComponent<MeshRenderer>();
+            Material sharedMaterial = rootRenderer != null ? rootRenderer.sharedMaterial : null;
+            if (rootRenderer != null)
+                rootRenderer.enabled = false;
+
+            MeshFilter rootMeshFilter = GetComponent<MeshFilter>();
+            if (rootMeshFilter != null)
+                rootMeshFilter.sharedMesh = null;
+
+            Transform visual = transform.Find("GemDiamondVisual");
+            if (visual == null)
+            {
+                GameObject visualGo = new GameObject("GemDiamondVisual");
+                visualGo.layer = gameObject.layer;
+                visualGo.transform.SetParent(transform, false);
+                visual = visualGo.transform;
+            }
+
+            _diamondVisualTransform = visual;
+            _diamondVisualTransform.localRotation = Quaternion.Euler(0f, 45f, 0f);
+
+            MeshFilter meshFilter = visual.GetComponent<MeshFilter>();
+            if (meshFilter == null)
+                meshFilter = visual.gameObject.AddComponent<MeshFilter>();
+
+            _diamondVisualRenderer = visual.GetComponent<MeshRenderer>();
+            if (_diamondVisualRenderer == null)
+                _diamondVisualRenderer = visual.gameObject.AddComponent<MeshRenderer>();
+
+            if (sharedMaterial != null)
+                _diamondVisualRenderer.sharedMaterial = sharedMaterial;
 
             meshFilter.sharedMesh = GetDiamondMesh();
+
+            ApplyDiamondColor();
+        }
+
+        private void ApplyDiamondColor()
+        {
+            if (_diamondVisualRenderer == null)
+                return;
 
             if (_presentationPropertyBlock == null)
                 _presentationPropertyBlock = new MaterialPropertyBlock();
 
-            meshRenderer.GetPropertyBlock(_presentationPropertyBlock);
+            _diamondVisualRenderer.GetPropertyBlock(_presentationPropertyBlock);
             _presentationPropertyBlock.SetColor(ColorId, _diamondColor);
             _presentationPropertyBlock.SetColor(BaseColorId, _diamondColor);
-            meshRenderer.SetPropertyBlock(_presentationPropertyBlock);
+            _diamondVisualRenderer.SetPropertyBlock(_presentationPropertyBlock);
+        }
+
+        private void BeginSpawnLandingVisual()
+        {
+            _visualAgeSeconds = 0f;
+            _isLandingVisualActive = _diamondVisualTransform != null && _spawnLandDurationSeconds > 0.01f;
+
+            if (!_isLandingVisualActive)
+                SetDiamondVisualPose(_diamondRestHeight, 1f);
+            else
+                SetDiamondVisualPose(0.06f, 0.62f);
+        }
+
+        private void Update()
+        {
+            UpdateSpawnLandingVisual(Time.deltaTime);
+        }
+
+        private void UpdateSpawnLandingVisual(float deltaTime)
+        {
+            if (!_isLandingVisualActive || _diamondVisualTransform == null)
+                return;
+
+            _visualAgeSeconds += Mathf.Max(0f, deltaTime);
+            float duration = Mathf.Max(0.01f, _spawnLandDurationSeconds);
+            float t = Mathf.Clamp01(_visualAgeSeconds / duration);
+            const float risePortion = 0.36f;
+
+            if (t < risePortion)
+            {
+                float riseT = EaseOutCubic(t / risePortion);
+                SetDiamondVisualPose(
+                    Mathf.Lerp(0.06f, _diamondRestHeight + _spawnPopHeight, riseT),
+                    Mathf.Lerp(0.62f, 1.08f, riseT));
+                return;
+            }
+
+            float fallT = (t - risePortion) / (1f - risePortion);
+            float ease = EaseOutCubic(fallT);
+            float bounce = Mathf.Sin(fallT * Mathf.PI * 2.5f) * 0.07f * (1f - fallT);
+            SetDiamondVisualPose(
+                _diamondRestHeight + _spawnPopHeight * (1f - ease) + bounce,
+                Mathf.Lerp(1.08f, 1f, ease));
+
+            if (t >= 1f)
+            {
+                _isLandingVisualActive = false;
+                SetDiamondVisualPose(_diamondRestHeight, 1f);
+            }
+        }
+
+        private void SetDiamondVisualPose(float localHeight, float scale)
+        {
+            if (_diamondVisualTransform == null)
+                return;
+
+            _diamondVisualTransform.localPosition = Vector3.up * Mathf.Max(0f, localHeight);
+            _diamondVisualTransform.localScale = Vector3.one * Mathf.Max(0.05f, scale);
+        }
+
+        private static float EaseOutCubic(float t)
+        {
+            t = Mathf.Clamp01(t);
+            float inverse = 1f - t;
+            return 1f - inverse * inverse * inverse;
         }
 
         private static Mesh GetDiamondMesh()
@@ -242,6 +353,7 @@ namespace MOBA.Core.Simulation
             // Fire pickup event so MatchStatsTracker can attribute
             // GemsCollected per brawler.
             GemEventBus.OnGemPickedUp?.Invoke(carrier, _value);
+            GemEventBus.OnGemPickedUpAt?.Invoke(transform.position, _value);
 
             // Hide immediately so any same-frame proximity check sees a
             // visually-gone gem; Destroy hands off to Unity for the actual

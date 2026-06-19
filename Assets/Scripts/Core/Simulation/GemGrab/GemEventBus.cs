@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
@@ -20,5 +21,9 @@ namespace MOBA.Core.Simulation
         /// for spawner-spawned gems; up-to-N for the death-drop scatter
         /// before it was switched to single-value gems).</summary>
         public static Action<BrawlerState, int> OnGemPickedUp;
+
+        /// <summary>Presentation-only pickup signal.
+        /// Args: (world position, amount).</summary>
+        public static Action<Vector3, int> OnGemPickedUpAt;
     }
 }
