@@ -15,7 +15,7 @@ MonoBehaviour:
   VisualPrefab: {fileID: 6291096669837962545, guid: f8046c9f7811a4f7197cb884150f3c8b, type: 3}
   LocalPosition: {x: 0, y: 0, z: 0}
   LocalRotationEuler: {x: 0, y: 0, z: 0}
-  LocalScale: {x: 1, y: 1, z: 1}
+  LocalScale: {x: 0.34, y: 0.34, z: 0.34}
   FaceMovementDirection: 1
   UseSpin: 0
   SpinEulerPerSecond: {x: 0, y: 0, z: 0}

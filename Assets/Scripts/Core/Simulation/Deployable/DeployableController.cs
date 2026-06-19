@@ -17,6 +17,7 @@ namespace MOBA.Core.Simulation
         private int _entityId;
         private Vector3 _lastKnownPosition;
         private bool _isDespawning;
+        private DeployablePresentationView _presentationView;
         public DeployableState State => _state;
 
         public DeployableDefinition Definition => _definition;
@@ -80,6 +81,7 @@ namespace MOBA.Core.Simulation
             transform.position = request.Position;
             _lastKnownPosition = request.Position;
             _isDespawning = false;
+            EnsurePresentation();
 
             _behavior = CreateBehavior(_definition.DeployableType);
             _behavior?.Initialize(this);
@@ -91,8 +93,6 @@ namespace MOBA.Core.Simulation
             // completes are safe no-ops.
             CombatRegistry.Register(this);
             SimulationClock.Grid?.Add(this);
-
-            Debug.Log($"[DEPLOYABLE] Initialized {name} Owner={Owner?.name} Team={Team}");
         }
 
         public override void Tick(uint currentTick)
@@ -114,7 +114,12 @@ namespace MOBA.Core.Simulation
 
             _lastKnownPosition = Position;
             _behavior?.Tick(currentTick);
-            Debug.Log($"[DEPLOYABLE] Tick {name} tick={currentTick}");
+            _presentationView?.TickPresentation(SimulationClock.TickDeltaTime);
+        }
+
+        public void SetPresentationAimDirection(Vector3 direction)
+        {
+            _presentationView?.SetAimDirection(direction);
         }
 
         public void TakeDamage(float amount)
@@ -165,6 +170,17 @@ namespace MOBA.Core.Simulation
                 default:
                     return null;
             }
+        }
+
+        private void EnsurePresentation()
+        {
+            if (_presentationView == null)
+                _presentationView = GetComponent<DeployablePresentationView>();
+
+            if (_presentationView == null)
+                _presentationView = gameObject.AddComponent<DeployablePresentationView>();
+
+            _presentationView.Build(this);
         }
 
         protected override void OnDisable()

@@ -6,6 +6,10 @@ namespace MOBA.Core.Infrastructure
 {
     public class ProjectileVisualController : MonoBehaviour
     {
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+
         private const float FallbackMinimumVisualDiameter = 0.16f;
         private const float FallbackTrailTime = 0.07f;
         private const float FallbackTrailStartWidth = 0.14f;
@@ -28,6 +32,10 @@ namespace MOBA.Core.Infrastructure
         private MaterialPropertyBlock _propertyBlock;
         private Material _fallbackVisualMaterial;
         private Material _trailMaterial;
+        private Material _runtimeFxMaterial;
+        private ParticleSystem _sparkParticles;
+        private ParticleSystemRenderer _sparkParticleRenderer;
+        private ProjectileVisualStyle _currentStyle;
 
         private Vector3 _spinEulerPerSecond;
         private bool _useSpin;
@@ -42,20 +50,23 @@ namespace MOBA.Core.Infrastructure
         {
             DestroyMaterial(_fallbackVisualMaterial);
             DestroyMaterial(_trailMaterial);
+            DestroyMaterial(_runtimeFxMaterial);
         }
 
         public void ApplyProfile(ProjectilePresentationProfile profile, bool isSuper = false)
         {
             _currentProfile = profile;
+            _currentStyle = ResolveStyle(profile, isSuper);
             _spinEulerPerSecond = Vector3.zero;
             _useSpin = false;
 
             ClearVisual();
-            ConfigureTrail(_currentProfile, isSuper);
+            ConfigureTrail(_currentProfile, _currentStyle);
 
             if (_currentProfile == null || _currentProfile.VisualPrefab == null)
             {
-                CreateFallbackVisual(isSuper);
+                CreateFallbackVisual(_currentStyle);
+                ConfigureProjectileParticles(_currentStyle);
                 return;
             }
 
@@ -68,6 +79,10 @@ namespace MOBA.Core.Infrastructure
 
             _useSpin = _currentProfile.UseSpin;
             _spinEulerPerSecond = _currentProfile.SpinEulerPerSecond;
+
+            ApplyStyleToRenderers(_currentVisualInstance, _currentStyle);
+            CreateRuntimeGlow(_currentStyle);
+            ConfigureProjectileParticles(_currentStyle);
         }
 
         public void TickVisual(float deltaTime)
@@ -83,7 +98,7 @@ namespace MOBA.Core.Infrastructure
             return _currentProfile == null || _currentProfile.FaceMovementDirection;
         }
 
-        private void ConfigureTrail(ProjectilePresentationProfile profile, bool isSuper)
+        private void ConfigureTrail(ProjectilePresentationProfile profile, ProjectileVisualStyle style)
         {
             bool useTrail = profile == null || profile.UseRuntimeTrail;
             TrailRenderer trail = EnsureTrailRenderer();
@@ -102,21 +117,22 @@ namespace MOBA.Core.Infrastructure
                 : FallbackMinimumVisualDiameter;
 
             float startWidth = profile != null
-                ? Mathf.Max(profile.TrailStartWidth, minimumDiameter * 0.55f)
+                ? Mathf.Max(profile.TrailStartWidth, minimumDiameter * 0.55f) * style.TrailWidthMultiplier
                 : FallbackTrailStartWidth;
 
             float endWidth = profile != null
-                ? Mathf.Max(0f, profile.TrailEndWidth)
+                ? Mathf.Max(0f, profile.TrailEndWidth) * style.TrailWidthMultiplier
                 : FallbackTrailEndWidth;
 
-            Color startColor = profile != null
-                ? isSuper ? profile.SuperTrailColor : profile.TrailColor
-                : isSuper ? FallbackSuperTrailColor : FallbackTrailColor;
+            Color startColor = style.TrailColor;
 
             Color endColor = startColor;
             endColor.a = 0f;
 
-            trail.time = profile != null ? Mathf.Max(0.01f, profile.TrailTime) : FallbackTrailTime;
+            float baseTrailTime = profile != null
+                ? Mathf.Max(0.01f, profile.TrailTime)
+                : FallbackTrailTime;
+            trail.time = baseTrailTime * style.TrailTimeMultiplier;
             trail.startWidth = startWidth;
             trail.endWidth = endWidth;
             trail.startColor = startColor;
@@ -145,7 +161,7 @@ namespace MOBA.Core.Infrastructure
             return _trailRenderer;
         }
 
-        private void CreateFallbackVisual(bool isSuper)
+        private void CreateFallbackVisual(ProjectileVisualStyle style)
         {
             if (!_createFallbackVisualWhenMissing)
                 return;
@@ -173,10 +189,12 @@ namespace MOBA.Core.Infrastructure
 
             EnsurePropertyBlock();
             renderer.GetPropertyBlock(_propertyBlock);
-            Color color = isSuper ? FallbackSuperVisualColor : FallbackVisualColor;
-            _propertyBlock.SetColor("_Color", color);
-            _propertyBlock.SetColor("_BaseColor", color);
+            _propertyBlock.SetColor(ColorId, style.CoreColor);
+            _propertyBlock.SetColor(BaseColorId, style.CoreColor);
+            _propertyBlock.SetColor(EmissionColorId, style.CoreColor);
             renderer.SetPropertyBlock(_propertyBlock);
+
+            CreateRuntimeGlow(style);
         }
 
         private static Vector3 ResolveReadableScale(Vector3 requestedScale, float minimumDiameter)
@@ -217,6 +235,12 @@ namespace MOBA.Core.Infrastructure
             _currentProfile = null;
             _spinEulerPerSecond = Vector3.zero;
             _useSpin = false;
+
+            if (_sparkParticles != null)
+            {
+                _sparkParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                _sparkParticles.Clear(true);
+            }
         }
 
         private Material ResolveFallbackVisualMaterial()
@@ -235,6 +259,280 @@ namespace MOBA.Core.Infrastructure
 
             _trailMaterial = CreateUnlitMaterial(FallbackTrailColor);
             return _trailMaterial;
+        }
+
+        private Material ResolveRuntimeFxMaterial()
+        {
+            if (_runtimeFxMaterial != null)
+                return _runtimeFxMaterial;
+
+            _runtimeFxMaterial = CreateUnlitMaterial(Color.white);
+            return _runtimeFxMaterial;
+        }
+
+        private void ApplyStyleToRenderers(GameObject visualInstance, ProjectileVisualStyle style)
+        {
+            if (visualInstance == null)
+                return;
+
+            Renderer[] renderers = visualInstance.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null)
+                    continue;
+
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+
+                EnsurePropertyBlock();
+                renderer.GetPropertyBlock(_propertyBlock);
+                _propertyBlock.SetColor(ColorId, style.CoreColor);
+                _propertyBlock.SetColor(BaseColorId, style.CoreColor);
+                _propertyBlock.SetColor(EmissionColorId, style.CoreColor);
+                renderer.SetPropertyBlock(_propertyBlock);
+            }
+        }
+
+        private void CreateRuntimeGlow(ProjectileVisualStyle style)
+        {
+            if (!style.UseGlow)
+                return;
+
+            GameObject glow = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            glow.name = "RuntimeProjectileGlow";
+            glow.transform.SetParent(_visualRoot, false);
+            glow.transform.localPosition = Vector3.zero;
+            glow.transform.localRotation = Quaternion.identity;
+            glow.transform.localScale = Vector3.one * Mathf.Max(0.01f, style.GlowDiameter);
+
+            Collider collider = glow.GetComponent<Collider>();
+            if (collider != null)
+                Destroy(collider);
+
+            Renderer renderer = glow.GetComponent<Renderer>();
+            if (renderer == null)
+                return;
+
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.sharedMaterial = ResolveRuntimeFxMaterial();
+
+            EnsurePropertyBlock();
+            renderer.GetPropertyBlock(_propertyBlock);
+            _propertyBlock.SetColor(ColorId, style.GlowColor);
+            _propertyBlock.SetColor(BaseColorId, style.GlowColor);
+            _propertyBlock.SetColor(EmissionColorId, style.GlowColor);
+            renderer.SetPropertyBlock(_propertyBlock);
+        }
+
+        private void ConfigureProjectileParticles(ProjectileVisualStyle style)
+        {
+            ParticleSystem particles = EnsureSparkParticles();
+            if (particles == null)
+                return;
+
+            if (!style.UseParticles)
+            {
+                particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                particles.Clear(true);
+                return;
+            }
+
+            var main = particles.main;
+            main.duration = 1f;
+            main.loop = true;
+            main.startLifetime = style.ParticleLifetime;
+            main.startSpeed = style.ParticleSpeed;
+            main.startSize = style.ParticleSize;
+            main.startColor = style.ParticleColor;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 96;
+            main.playOnAwake = false;
+
+            var emission = particles.emission;
+            emission.enabled = true;
+            emission.rateOverTime = style.ParticleRate;
+
+            var shape = particles.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = style.ParticleRadius;
+
+            var colorOverLifetime = particles.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient gradient = new Gradient();
+            Color fadeColor = style.ParticleColor;
+            fadeColor.a = 0f;
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(style.ParticleColor, 0f),
+                    new GradientColorKey(style.ParticleColor, 0.35f),
+                    new GradientColorKey(fadeColor, 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(style.ParticleColor.a, 0f),
+                    new GradientAlphaKey(style.ParticleColor.a * 0.55f, 0.45f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = gradient;
+
+            var sizeOverLifetime = particles.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(
+                1f,
+                new AnimationCurve(
+                    new Keyframe(0f, 1f),
+                    new Keyframe(0.65f, 0.62f),
+                    new Keyframe(1f, 0f)));
+
+            if (_sparkParticleRenderer == null)
+                _sparkParticleRenderer = particles.GetComponent<ParticleSystemRenderer>();
+
+            if (_sparkParticleRenderer != null)
+            {
+                _sparkParticleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
+                _sparkParticleRenderer.material = ResolveRuntimeFxMaterial();
+                _sparkParticleRenderer.sortingOrder = 8;
+            }
+
+            particles.Clear(true);
+            particles.Play(true);
+        }
+
+        private ParticleSystem EnsureSparkParticles()
+        {
+            if (_sparkParticles != null)
+                return _sparkParticles;
+
+            _sparkParticles = GetComponent<ParticleSystem>();
+            if (_sparkParticles == null)
+                _sparkParticles = gameObject.AddComponent<ParticleSystem>();
+
+            _sparkParticleRenderer = _sparkParticles.GetComponent<ParticleSystemRenderer>();
+            return _sparkParticles;
+        }
+
+        private static ProjectileVisualStyle ResolveStyle(
+            ProjectilePresentationProfile profile,
+            bool isSuper)
+        {
+            string profileName = profile != null && !string.IsNullOrEmpty(profile.name)
+                ? profile.name.ToLowerInvariant()
+                : string.Empty;
+
+            if (profileName.Contains("barley"))
+            {
+                return new ProjectileVisualStyle(
+                    new Color(0.66f, 0.22f, 1f, 1f),
+                    new Color(0.90f, 0.58f, 1f, 0.58f),
+                    new Color(0.58f, 0.20f, 1f, 0.82f),
+                    new Color(0.90f, 0.45f, 1f, 0.62f),
+                    0.24f,
+                    1.18f,
+                    1.22f,
+                    34f,
+                    0.12f,
+                    0.16f,
+                    0.36f,
+                    0.045f);
+            }
+
+            if (profileName.Contains("byron"))
+            {
+                Color core = isSuper
+                    ? new Color(0.72f, 0.18f, 1f, 1f)
+                    : new Color(0.16f, 1f, 0.76f, 1f);
+                Color glow = isSuper
+                    ? new Color(0.92f, 0.28f, 1f, 0.60f)
+                    : new Color(0.20f, 1f, 0.86f, 0.55f);
+                return new ProjectileVisualStyle(
+                    core,
+                    glow,
+                    glow,
+                    glow,
+                    isSuper ? 0.32f : 0.22f,
+                    isSuper ? 1.35f : 1.10f,
+                    isSuper ? 1.28f : 1.12f,
+                    isSuper ? 46f : 30f,
+                    isSuper ? 0.14f : 0.10f,
+                    0.15f,
+                    isSuper ? 0.48f : 0.32f,
+                    0.045f);
+            }
+
+            if (profileName.Contains("jesse") || profileName.Contains("jessie"))
+            {
+                return new ProjectileVisualStyle(
+                    new Color(0.18f, 0.82f, 1f, 1f),
+                    new Color(1f, 0.96f, 0.16f, 0.62f),
+                    new Color(0.28f, 0.88f, 1f, 0.86f),
+                    new Color(1f, 0.98f, 0.22f, 0.70f),
+                    0.26f,
+                    1.24f,
+                    1.22f,
+                    42f,
+                    0.115f,
+                    0.18f,
+                    0.38f,
+                    0.050f);
+            }
+
+            if (profileName.Contains("scrappy"))
+            {
+                return new ProjectileVisualStyle(
+                    new Color(1f, 0.58f, 0.12f, 1f),
+                    new Color(0.18f, 0.86f, 1f, 0.62f),
+                    new Color(1f, 0.62f, 0.16f, 0.88f),
+                    new Color(0.25f, 0.92f, 1f, 0.72f),
+                    0.30f,
+                    1.28f,
+                    1.35f,
+                    44f,
+                    0.13f,
+                    0.20f,
+                    0.42f,
+                    0.055f);
+            }
+
+            if (profileName.Contains("colt"))
+            {
+                Color core = isSuper
+                    ? new Color(1f, 0.22f, 0.86f, 1f)
+                    : new Color(1f, 0.78f, 0.20f, 1f);
+                Color glow = isSuper
+                    ? new Color(1f, 0.30f, 0.92f, 0.64f)
+                    : new Color(1f, 0.38f, 0.08f, 0.58f);
+                return new ProjectileVisualStyle(
+                    core,
+                    glow,
+                    glow,
+                    glow,
+                    isSuper ? 0.34f : 0.22f,
+                    isSuper ? 1.32f : 1.12f,
+                    isSuper ? 1.22f : 1.05f,
+                    isSuper ? 48f : 32f,
+                    isSuper ? 0.13f : 0.095f,
+                    0.18f,
+                    isSuper ? 0.42f : 0.30f,
+                    0.045f);
+            }
+
+            return new ProjectileVisualStyle(
+                FallbackVisualColor,
+                FallbackSuperVisualColor,
+                FallbackTrailColor,
+                FallbackTrailColor,
+                0.20f,
+                1f,
+                1f,
+                24f,
+                0.09f,
+                0.14f,
+                0.30f,
+                0.04f);
         }
 
         private static Material CreateUnlitMaterial(Color color)
@@ -275,6 +573,54 @@ namespace MOBA.Core.Infrastructure
                 Destroy(material);
             else
                 DestroyImmediate(material);
+        }
+
+        private readonly struct ProjectileVisualStyle
+        {
+            public readonly Color CoreColor;
+            public readonly Color GlowColor;
+            public readonly Color TrailColor;
+            public readonly Color ParticleColor;
+            public readonly float GlowDiameter;
+            public readonly float TrailWidthMultiplier;
+            public readonly float TrailTimeMultiplier;
+            public readonly float ParticleRate;
+            public readonly float ParticleSize;
+            public readonly float ParticleLifetime;
+            public readonly float ParticleSpeed;
+            public readonly float ParticleRadius;
+            public readonly bool UseGlow;
+            public readonly bool UseParticles;
+
+            public ProjectileVisualStyle(
+                Color coreColor,
+                Color glowColor,
+                Color trailColor,
+                Color particleColor,
+                float glowDiameter,
+                float trailWidthMultiplier,
+                float trailTimeMultiplier,
+                float particleRate,
+                float particleSize,
+                float particleLifetime,
+                float particleSpeed,
+                float particleRadius)
+            {
+                CoreColor = coreColor;
+                GlowColor = glowColor;
+                TrailColor = trailColor;
+                ParticleColor = particleColor;
+                GlowDiameter = glowDiameter;
+                TrailWidthMultiplier = trailWidthMultiplier;
+                TrailTimeMultiplier = trailTimeMultiplier;
+                ParticleRate = particleRate;
+                ParticleSize = particleSize;
+                ParticleLifetime = particleLifetime;
+                ParticleSpeed = particleSpeed;
+                ParticleRadius = particleRadius;
+                UseGlow = glowDiameter > 0f;
+                UseParticles = particleRate > 0f;
+            }
         }
     }
 }

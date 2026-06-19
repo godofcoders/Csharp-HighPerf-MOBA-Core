@@ -9,6 +9,7 @@ namespace MOBA.Core.Infrastructure
     {
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private const int EquipParticleCount = 9;
         private static Mesh _sparkMesh;
 
         [Header("Pool")]
@@ -28,15 +29,24 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Color _ringColor = new Color(1f, 0.66f, 0.08f, 0.92f);
 
         [Header("Spark")]
-        [SerializeField] private float _sparkStartHeight = 0.22f;
-        [SerializeField] private float _sparkEndHeight = 1.05f;
-        [SerializeField] private float _sparkStartScale = 0.34f;
-        [SerializeField] private float _sparkEndScale = 0.10f;
+        [SerializeField] private float _sparkStartHeight = 0.12f;
+        [SerializeField] private float _sparkEndHeight = 0.62f;
+        [SerializeField] private float _sparkStartScale = 0.18f;
+        [SerializeField] private float _sparkEndScale = 0.05f;
         [SerializeField] private Color _sparkColor = new Color(1f, 0.88f, 0.30f, 0.98f);
+
+        [Header("Equip Spread")]
+        [SerializeField] private float _particleStartRadius = 0.05f;
+        [SerializeField] private float _particleEndRadius = 0.82f;
+        [SerializeField] private float _particleEndHeight = 0.52f;
+        [SerializeField] private float _particleStartScale = 0.14f;
+        [SerializeField] private float _particleEndScale = 0.035f;
+        [SerializeField] private Color _particleColor = new Color(1f, 0.74f, 0.12f, 0.98f);
 
         private readonly List<BurstInstance> _pool = new List<BurstInstance>(36);
         private MaterialPropertyBlock _propertyBlock;
         private Material _material;
+        private int _burstSequence;
 
         private void Awake()
         {
@@ -114,6 +124,7 @@ namespace MOBA.Core.Infrastructure
             burst.AmountScale = 1f + Mathf.Clamp(amount - 1, 0, 5) * 0.08f;
             burst.ElapsedSeconds = 0f;
             burst.DurationSeconds = Mathf.Max(0.05f, _durationSeconds);
+            burst.AngleOffset = (_burstSequence++ * 31f) % 360f;
             burst.SetActive(true);
             ApplyBurstVisual(burst, 0f);
         }
@@ -161,12 +172,32 @@ namespace MOBA.Core.Infrastructure
             Renderer sparkRenderer = spark.GetComponent<Renderer>();
             ConfigureRenderer(sparkRenderer);
 
+            Transform[] particles = new Transform[EquipParticleCount];
+            Renderer[] particleRenderers = new Renderer[EquipParticleCount];
+            for (int i = 0; i < EquipParticleCount; i++)
+            {
+                GameObject particle = new GameObject(
+                    "EquipParticle",
+                    typeof(MeshFilter),
+                    typeof(MeshRenderer));
+                particle.transform.SetParent(root.transform, false);
+                particle.GetComponent<MeshFilter>().sharedMesh = GetSparkMesh();
+
+                Renderer particleRenderer = particle.GetComponent<Renderer>();
+                ConfigureRenderer(particleRenderer);
+
+                particles[i] = particle.transform;
+                particleRenderers[i] = particleRenderer;
+            }
+
             BurstInstance burst = new BurstInstance(
                 root,
                 ring.transform,
                 ringRenderer,
                 spark.transform,
-                sparkRenderer);
+                sparkRenderer,
+                particles,
+                particleRenderers);
 
             burst.SetActive(false);
             return burst;
@@ -198,7 +229,7 @@ namespace MOBA.Core.Infrastructure
                 _ringEndRadius,
                 ease) * burst.AmountScale;
 
-            burst.Ring.localPosition = Vector3.up * 0.04f;
+            burst.Ring.localPosition = Vector3.up * 0.06f;
             burst.Ring.localScale = new Vector3(
                 ringRadius,
                 Mathf.Max(0.001f, _ringHeight),
@@ -219,13 +250,59 @@ namespace MOBA.Core.Infrastructure
                 ease) * burst.AmountScale;
             burst.Spark.localScale = Vector3.one * Mathf.Max(0.01f, sparkScale);
 
+            ApplyEquipParticles(burst, ease, fade);
+
             Color ringColor = _ringColor;
-            ringColor.a *= fade;
+            ringColor.a *= fade * 0.68f;
             Color sparkColor = _sparkColor;
-            sparkColor.a *= fade;
+            sparkColor.a *= fade * 0.54f;
 
             ApplyRendererColor(burst.RingRenderer, ringColor);
             ApplyRendererColor(burst.SparkRenderer, sparkColor);
+        }
+
+        private void ApplyEquipParticles(BurstInstance burst, float ease, float fade)
+        {
+            if (burst.Particles == null || burst.ParticleRenderers == null)
+                return;
+
+            float radius = Mathf.Lerp(
+                _particleStartRadius,
+                _particleEndRadius * burst.AmountScale,
+                ease);
+
+            float baseHeight = Mathf.Lerp(0.02f, _particleEndHeight, ease);
+            float scale = Mathf.Lerp(
+                _particleStartScale,
+                _particleEndScale,
+                ease) * burst.AmountScale;
+
+            for (int i = 0; i < burst.Particles.Length; i++)
+            {
+                Transform particle = burst.Particles[i];
+                if (particle == null)
+                    continue;
+
+                float angle = burst.AngleOffset + (360f / burst.Particles.Length) * i;
+                Vector3 direction = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
+                float heightOffset = ((i % 3) - 1) * 0.08f * ease;
+
+                particle.localPosition =
+                    direction * radius +
+                    Vector3.up * (baseHeight + heightOffset);
+                particle.localRotation = Quaternion.Euler(
+                    35f + ease * 180f,
+                    angle + ease * 260f,
+                    45f);
+                particle.localScale = Vector3.one * Mathf.Max(0.01f, scale);
+
+                if (i < burst.ParticleRenderers.Length)
+                {
+                    Color particleColor = _particleColor;
+                    particleColor.a *= fade;
+                    ApplyRendererColor(burst.ParticleRenderers[i], particleColor);
+                }
+            }
         }
 
         private void ApplyRendererColor(Renderer renderer, Color color)
@@ -329,24 +406,31 @@ namespace MOBA.Core.Infrastructure
             public readonly Renderer RingRenderer;
             public readonly Transform Spark;
             public readonly Renderer SparkRenderer;
+            public readonly Transform[] Particles;
+            public readonly Renderer[] ParticleRenderers;
 
             public bool IsActive;
             public float ElapsedSeconds;
             public float DurationSeconds;
             public float AmountScale;
+            public float AngleOffset;
 
             public BurstInstance(
                 GameObject root,
                 Transform ring,
                 Renderer ringRenderer,
                 Transform spark,
-                Renderer sparkRenderer)
+                Renderer sparkRenderer,
+                Transform[] particles,
+                Renderer[] particleRenderers)
             {
                 Root = root.transform;
                 Ring = ring;
                 RingRenderer = ringRenderer;
                 Spark = spark;
                 SparkRenderer = sparkRenderer;
+                Particles = particles;
+                ParticleRenderers = particleRenderers;
             }
 
             public void SetActive(bool active)

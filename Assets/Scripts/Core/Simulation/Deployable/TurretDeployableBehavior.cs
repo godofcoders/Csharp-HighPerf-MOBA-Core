@@ -28,7 +28,6 @@ namespace MOBA.Core.Simulation
                 return;
 
             FireAt(target, currentTick);
-            Debug.Log($"[SCRAPPY] Behavior tick for {_controller.name}");
         }
 
         private BrawlerController ResolveTarget()
@@ -45,7 +44,6 @@ namespace MOBA.Core.Simulation
                 IncludeSelf = false,
                 RequireAlive = true
             };
-            Debug.Log($"[SCRAPPY] Target resolved for {_controller.name}");
             return AbilityTargetResolver.ResolveSingleTarget(request);
         }
 
@@ -60,13 +58,22 @@ namespace MOBA.Core.Simulation
             if (ability == null || logic == null || _controller.AbilityUser == null)
                 return;
 
+            Vector3 fireDirection = target.Position - _controller.Position;
+            fireDirection.y = 0f;
+            if (fireDirection.sqrMagnitude <= 0.001f)
+                fireDirection = _controller.transform.forward;
+            else
+                fireDirection.Normalize();
+
+            _controller.SetPresentationAimDirection(fireDirection);
+
             AbilityExecutionContext context = new AbilityExecutionContext
             {
                 Source = _controller.Owner,
                 AbilityDefinition = ability,
                 SlotType = AbilitySlotType.MainAttack,
                 Origin = _controller.Position,
-                Direction = (target.Position - _controller.Position).normalized,
+                Direction = fireDirection,
                 StartTick = currentTick,
                 IsSuper = false,
                 IsGadget = false
@@ -74,7 +81,6 @@ namespace MOBA.Core.Simulation
 
             logic.Execute(_controller.AbilityUser, context);
             _nextActionTick = currentTick + SimulationClock.SecondsToTicks(_controller.Definition.ActionIntervalSeconds);
-            Debug.Log($"[SCRAPPY] Firing at {target.name}");
         }
     }
 }
