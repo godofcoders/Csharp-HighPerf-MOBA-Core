@@ -32,6 +32,8 @@ namespace MOBA.Core.Simulation
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static Mesh _diamondMesh;
+        private const float PickupFeedbackMinHeightAboveBrawler = 1.2f;
+        private const float PickupFeedbackExtraLift = 0.35f;
 
         [Header("Tuning")]
         [Tooltip("How many gems this world-object grants when picked up. Default 1.")]
@@ -342,7 +344,22 @@ namespace MOBA.Core.Simulation
         /// <see cref="Object.Destroy(Object)"/> so the spatial grid and
         /// simulation registry release it on the next tick boundary.
         /// </summary>
+        public bool TryPickupBy(BrawlerController carrier)
+        {
+            if (carrier == null)
+                return false;
+
+            return TryPickupBy(
+                carrier.State,
+                ResolvePickupFeedbackPosition(carrier));
+        }
+
         public bool TryPickupBy(BrawlerState carrier)
+        {
+            return TryPickupBy(carrier, transform.position);
+        }
+
+        private bool TryPickupBy(BrawlerState carrier, Vector3 pickupFeedbackPosition)
         {
             if (IsPickedUp || carrier == null || carrier.IsDead)
                 return false;
@@ -353,7 +370,7 @@ namespace MOBA.Core.Simulation
             // Fire pickup event so MatchStatsTracker can attribute
             // GemsCollected per brawler.
             GemEventBus.OnGemPickedUp?.Invoke(carrier, _value);
-            GemEventBus.OnGemPickedUpAt?.Invoke(transform.position, _value);
+            GemEventBus.OnGemPickedUpAt?.Invoke(pickupFeedbackPosition, _value);
 
             // Hide immediately so any same-frame proximity check sees a
             // visually-gone gem; Destroy hands off to Unity for the actual
@@ -362,6 +379,21 @@ namespace MOBA.Core.Simulation
             Object.Destroy(gameObject);
 
             return true;
+        }
+
+        private Vector3 ResolvePickupFeedbackPosition(BrawlerController carrier)
+        {
+            Vector3 carrierPosition = carrier.Position;
+            Transform presentationTarget = carrier.PresentationFollowTarget;
+            Vector3 position = presentationTarget != null
+                ? presentationTarget.position
+                : carrierPosition;
+
+            float minimumHeight = carrierPosition.y + PickupFeedbackMinHeightAboveBrawler;
+            if (position.y < minimumHeight)
+                position.y = minimumHeight;
+
+            return position + Vector3.up * PickupFeedbackExtraLift;
         }
 
         public override void Tick(uint currentTick)
@@ -397,7 +429,7 @@ namespace MOBA.Core.Simulation
                 if (dx * dx + dz * dz > pickupRadiusSq)
                     continue;
 
-                if (TryPickupBy(brawler.State))
+                if (TryPickupBy(brawler))
                     return; // gem consumed
             }
         }

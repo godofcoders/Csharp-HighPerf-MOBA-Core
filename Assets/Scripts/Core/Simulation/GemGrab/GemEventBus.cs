@@ -23,7 +23,7 @@ namespace MOBA.Core.Simulation
         public static Action<BrawlerState, int> OnGemPickedUp;
 
         /// <summary>Presentation-only pickup signal.
-        /// Args: (world position, amount).</summary>
+        /// Args: (world presentation position, amount).</summary>
         public static Action<Vector3, int> OnGemPickedUpAt;
     }
 }

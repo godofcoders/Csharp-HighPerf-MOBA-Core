@@ -19,20 +19,20 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Timing")]
         [Min(0.05f)]
-        [SerializeField] private float _durationSeconds = 0.34f;
+        [SerializeField] private float _durationSeconds = 0.42f;
 
         [Header("Ring")]
-        [SerializeField] private float _ringStartRadius = 0.16f;
-        [SerializeField] private float _ringEndRadius = 0.62f;
+        [SerializeField] private float _ringStartRadius = 0.20f;
+        [SerializeField] private float _ringEndRadius = 0.76f;
         [SerializeField] private float _ringHeight = 0.018f;
-        [SerializeField] private Color _ringColor = new Color(1f, 0.22f, 0.92f, 0.72f);
+        [SerializeField] private Color _ringColor = new Color(1f, 0.66f, 0.08f, 0.92f);
 
         [Header("Spark")]
         [SerializeField] private float _sparkStartHeight = 0.22f;
         [SerializeField] private float _sparkEndHeight = 1.05f;
         [SerializeField] private float _sparkStartScale = 0.34f;
         [SerializeField] private float _sparkEndScale = 0.10f;
-        [SerializeField] private Color _sparkColor = new Color(1f, 0.78f, 1f, 0.92f);
+        [SerializeField] private Color _sparkColor = new Color(1f, 0.88f, 0.30f, 0.98f);
 
         private readonly List<BurstInstance> _pool = new List<BurstInstance>(36);
         private MaterialPropertyBlock _propertyBlock;

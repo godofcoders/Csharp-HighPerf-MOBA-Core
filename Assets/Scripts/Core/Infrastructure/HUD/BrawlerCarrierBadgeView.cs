@@ -59,6 +59,28 @@ namespace MOBA.Core.Infrastructure
         private Camera _camera;
         private int _lastCount = -1; // -1 forces first-frame text update
 
+        public void Bind(
+            BrawlerController brawlerController,
+            GameObject badgeRoot,
+            Image gemIcon,
+            TMP_Text countTmp,
+            Text countLegacy,
+            Canvas canvas)
+        {
+            _brawlerController = brawlerController;
+            _badgeRoot = badgeRoot;
+            _gemIcon = gemIcon;
+            _countTmp = countTmp;
+            _countLegacy = countLegacy;
+            _canvas = canvas;
+            _lastCount = -1;
+
+            if (_gemIcon != null && _brawlerController != null)
+                _gemIcon.color = ResolveTeamColor(_brawlerController.Team);
+
+            SetVisible(false);
+        }
+
         private void Awake()
         {
             if (_brawlerController == null)
