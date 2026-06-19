@@ -36,6 +36,10 @@ namespace MOBA.Core.Simulation
         [Tooltip("Spawn position offset from this transform. Useful if the spawner GameObject is the mine root and gems should pop out at a child point.")]
         [SerializeField] private Vector3 _spawnOffset = Vector3.zero;
 
+        [Tooltip("Minimum XZ spacing used when several unpicked gems accumulate near the same mine.")]
+        [Min(0.1f)]
+        [SerializeField] private float _spawnGemSpacing = 0.82f;
+
         // Active gems we've spawned that haven't been picked up yet.
         // Unity nulls the reference when Object.Destroy completes; the
         // pre-spawn cleanup pass below uses that to count live gems.
@@ -79,7 +83,14 @@ namespace MOBA.Core.Simulation
             if (_gemPrefab == null)
                 return;
 
-            Vector3 spawnPos = transform.position + _spawnOffset;
+            Vector3 spawnCenter = transform.position + _spawnOffset;
+            Vector3 spawnPos = GemPlacementUtility.ResolveReadablePosition(
+                spawnCenter,
+                _active.Count,
+                _spawnGemSpacing,
+                Gem.All,
+                null);
+
             Gem spawned = Object.Instantiate(_gemPrefab, spawnPos, Quaternion.identity);
             _active.Add(spawned);
         }

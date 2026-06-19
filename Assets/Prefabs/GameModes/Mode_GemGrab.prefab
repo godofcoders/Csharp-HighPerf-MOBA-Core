@@ -49,6 +49,7 @@ MonoBehaviour:
   _spawnIntervalSeconds: 6
   _maxActiveGems: 4
   _spawnOffset: {x: 0, y: 0, z: 0}
+  _spawnGemSpacing: 0.82
 --- !u!114 &8581270707043312556
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -114,4 +115,4 @@ MonoBehaviour:
   _gemsToWin: 10
   _winTimerSeconds: 16
   _matchDurationSeconds: 150
-  _deathDropScatterRadius: 0.7
+  _deathDropScatterRadius: 0.82

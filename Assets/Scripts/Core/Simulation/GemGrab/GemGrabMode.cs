@@ -11,9 +11,9 @@ namespace MOBA.Core.Simulation
     ///
     /// Three responsibilities (Day 3 scope):
     ///   1. Death-drop. When a registered brawler dies with carried gems,
-    ///      spawn a single Gem at their last position carrying the full
-    ///      dropped count, then clear the brawler's carrier so the team
-    ///      total drops correctly.
+    ///      spawn readable single-value gems around their last position,
+    ///      then clear the brawler's carrier so the team total drops
+    ///      correctly.
     ///   2. Team totals. Each tick, sum CarriedGemCount across each
     ///      team's living brawlers.
     ///   3. Win timer. When a team's total ≥ <see cref="_gemsToWin"/>,
@@ -56,9 +56,9 @@ namespace MOBA.Core.Simulation
         [Min(10f)]
         [SerializeField] private float _matchDurationSeconds = 150f;
 
-        [Tooltip("Radius around the death position over which dropped gems are scattered. Each gem is placed at an even angle around the ring at this radius.")]
+        [Tooltip("Minimum XZ spacing used when dropped gems scatter around a defeated carrier.")]
         [Min(0.1f)]
-        [SerializeField] private float _deathDropScatterRadius = 0.7f;
+        [SerializeField] private float _deathDropScatterRadius = 0.82f;
 
         // Read-only views for HUD work in later sessions.
         public int BlueTeamGems { get; private set; }
@@ -76,6 +76,7 @@ namespace MOBA.Core.Simulation
         public bool MatchEndedByTimeout { get; private set; }
 
         private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
+        private readonly List<Vector3> _deathDropReservedPositions = new List<Vector3>(12);
 
         private void Awake()
         {
@@ -142,24 +143,31 @@ namespace MOBA.Core.Simulation
             if (dropped <= 0)
                 return;
 
-            // Scatter N single-value gems on an evenly-spaced ring around
-            // the death position. Even angles → deterministic placement
-            // (no Random; future fixed-point determinism in Phase 2 stays
-            // intact). N=1 collapses to a single gem at angle 0.
+            // Scatter N single-value gems in deterministic readable rings
+            // around the death position. The reserved list prevents gems in
+            // this same drop batch from selecting the same fallback slot.
             if (_gemPrefab != null && dropped > 0)
             {
-                Vector3 center = dying.transform.position;
-                float angleStep = (Mathf.PI * 2f) / dropped;
+                Vector3 center = dying.Position;
+                _deathDropReservedPositions.Clear();
+
                 for (int i = 0; i < dropped; i++)
                 {
-                    float angle = angleStep * i;
-                    Vector3 offset = new Vector3(
-                        Mathf.Cos(angle) * _deathDropScatterRadius,
-                        0f,
-                        Mathf.Sin(angle) * _deathDropScatterRadius);
-                    Gem g = Object.Instantiate(_gemPrefab, center + offset, Quaternion.identity);
+                    int layoutIndex = dropped > 1 ? i + 1 : 0;
+                    Vector3 spawnPosition = GemPlacementUtility.ResolveReadablePosition(
+                        center,
+                        layoutIndex,
+                        _deathDropScatterRadius,
+                        Gem.All,
+                        _deathDropReservedPositions);
+
+                    _deathDropReservedPositions.Add(spawnPosition);
+
+                    Gem g = Object.Instantiate(_gemPrefab, spawnPosition, Quaternion.identity);
                     g.SetValue(1);
                 }
+
+                _deathDropReservedPositions.Clear();
             }
 
             // Clear the dying brawler's carrier immediately so the team
