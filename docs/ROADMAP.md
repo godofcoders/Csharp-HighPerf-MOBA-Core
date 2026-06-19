@@ -115,7 +115,7 @@ Goal: make the match readable for a player and for project review/demo.
 
 - `[~]` Health bars above friendly/enemy brawlers.
 - `[ ]` Verify health bars update immediately on damage, heal, death, respawn.
-- `[ ]` Show team gem counts and carrier gem counts clearly.
+- `[~]` Show team gem counts and carrier gem counts clearly. Runtime fallback HUD now has a dedicated top-center Gem Grab score strip with blue/red totals, match clock, carrier badge support, and countdown leader highlight; needs Unity readability QA.
 - `[ ]` Show match timer and countdown state.
 - `[ ]` Show opening countdown: 3, 2, 1, start.
 - `[ ]` Add kill feed / combat log presentation.

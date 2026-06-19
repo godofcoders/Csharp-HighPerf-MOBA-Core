@@ -30,6 +30,16 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Legacy UnityEngine.UI.Text fallback. Used only if TMP target is null.")]
         [SerializeField] private Text _legacyText;
 
+        [Header("Gem Grab score targets")]
+        [SerializeField] private TMP_Text _blueGemTmp;
+        [SerializeField] private Text _blueGemLegacy;
+        [SerializeField] private TMP_Text _redGemTmp;
+        [SerializeField] private Text _redGemLegacy;
+        [SerializeField] private TMP_Text _matchTimerTmp;
+        [SerializeField] private Text _matchTimerLegacy;
+        [SerializeField] private GameObject _blueLeaderHighlight;
+        [SerializeField] private GameObject _redLeaderHighlight;
+
         [Header("Tuning")]
         [Tooltip("Hide the HUD before the match goes Active (lobby/countdown phases).")]
         [SerializeField] private bool _hideBeforeActive = false;
@@ -37,6 +47,26 @@ namespace MOBA.Core.Infrastructure
         private void Awake()
         {
             AutoBindTextTargets();
+        }
+
+        public void BindGemScoreWidgets(
+            TMP_Text blueGemTmp,
+            Text blueGemLegacy,
+            TMP_Text redGemTmp,
+            Text redGemLegacy,
+            TMP_Text matchTimerTmp,
+            Text matchTimerLegacy,
+            GameObject blueLeaderHighlight,
+            GameObject redLeaderHighlight)
+        {
+            _blueGemTmp = blueGemTmp;
+            _blueGemLegacy = blueGemLegacy;
+            _redGemTmp = redGemTmp;
+            _redGemLegacy = redGemLegacy;
+            _matchTimerTmp = matchTimerTmp;
+            _matchTimerLegacy = matchTimerLegacy;
+            _blueLeaderHighlight = blueLeaderHighlight;
+            _redLeaderHighlight = redLeaderHighlight;
         }
 
         public void BindTextTargets(TMP_Text tmpText, Text legacyText)
@@ -57,6 +87,8 @@ namespace MOBA.Core.Infrastructure
 
         private void Update()
         {
+            UpdateGemScoreWidgets();
+
             string status = ComposeStatus();
             WriteStatus(status);
         }
@@ -90,6 +122,12 @@ namespace MOBA.Core.Infrastructure
             if (gg == null)
                 return "Match active (no Gem Grab in scene)";
 
+            if (HasDedicatedGemScoreWidgets())
+                return MatchHUDFormatter.FormatGemGrabHoldStatus(
+                    gg.HasLeader,
+                    gg.LeadingTeam,
+                    gg.WinTimerRemainingSeconds);
+
             return MatchHUDFormatter.FormatActiveGemGrabStatus(
                 gg.BlueTeamGems,
                 gg.RedTeamGems,
@@ -100,10 +138,65 @@ namespace MOBA.Core.Infrastructure
                 gg.MatchTimeRemainingSeconds);
         }
 
+        private void UpdateGemScoreWidgets()
+        {
+            if (!HasDedicatedGemScoreWidgets())
+                return;
+
+            MatchManager mm = MatchManager.Instance;
+            GemGrabMode gg = GemGrabMode.Instance;
+            bool active = mm != null && mm.CurrentState == MatchState.Active && gg != null;
+
+            if (!active)
+            {
+                SetText(_blueGemTmp, _blueGemLegacy, "--");
+                SetText(_redGemTmp, _redGemLegacy, "--");
+                SetText(_matchTimerTmp, _matchTimerLegacy, "--:--");
+                SetActive(_blueLeaderHighlight, false);
+                SetActive(_redLeaderHighlight, false);
+                return;
+            }
+
+            int target = Mathf.Max(1, gg.GemsToWin);
+            SetText(_blueGemTmp, _blueGemLegacy, $"{gg.BlueTeamGems}/{target}");
+            SetText(_redGemTmp, _redGemLegacy, $"{gg.RedTeamGems}/{target}");
+            SetText(
+                _matchTimerTmp,
+                _matchTimerLegacy,
+                MatchHUDFormatter.FormatClock(gg.MatchTimeRemainingSeconds));
+
+            SetActive(_blueLeaderHighlight, gg.HasLeader && gg.LeadingTeam == TeamType.Blue);
+            SetActive(_redLeaderHighlight, gg.HasLeader && gg.LeadingTeam == TeamType.Red);
+        }
+
+        private bool HasDedicatedGemScoreWidgets()
+        {
+            return _blueGemTmp != null ||
+                   _blueGemLegacy != null ||
+                   _redGemTmp != null ||
+                   _redGemLegacy != null ||
+                   _matchTimerTmp != null ||
+                   _matchTimerLegacy != null;
+        }
+
         private void WriteStatus(string s)
         {
             if (_tmpText != null) _tmpText.text = s;
             else if (_legacyText != null) _legacyText.text = s;
+        }
+
+        private static void SetText(TMP_Text tmp, Text legacy, string text)
+        {
+            if (tmp != null)
+                tmp.text = text;
+            else if (legacy != null)
+                legacy.text = text;
+        }
+
+        private static void SetActive(GameObject root, bool active)
+        {
+            if (root != null && root.activeSelf != active)
+                root.SetActive(active);
         }
     }
 }

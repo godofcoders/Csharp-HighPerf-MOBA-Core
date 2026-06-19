@@ -42,5 +42,17 @@ namespace MOBA.Tests.EditMode
 
             Assert.AreEqual("Gems  Blue 10/10  Red 8/10  Match 1:32  Blue hold 12.3s", status);
         }
+
+        [Test]
+        public void FormatGemGrabHoldStatus_UsesObjectivePromptUntilCountdownStarts()
+        {
+            Assert.AreEqual(
+                "Collect gems",
+                MatchHUDFormatter.FormatGemGrabHoldStatus(false, TeamType.Red, 0f));
+
+            Assert.AreEqual(
+                "Red hold 6.8s",
+                MatchHUDFormatter.FormatGemGrabHoldStatus(true, TeamType.Red, 6.78f));
+        }
     }
 }

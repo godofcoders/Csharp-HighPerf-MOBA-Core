@@ -96,22 +96,146 @@ namespace MOBA.Core.Infrastructure
 
         private static void CreateMatchStatus(Transform parent)
         {
-            Text statusText = CreateText(
+            GameObject panel = CreateRectPanel(
                 parent,
-                "MatchStatusText",
-                string.Empty,
+                "GemScorePanel",
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
-                new Vector2(0f, -18f),
-                new Vector2(1180f, 42f),
-                24,
+                new Vector2(0f, -16f),
+                new Vector2(620f, 82f),
+                new Color(0f, 0f, 0f, 0.32f));
+
+            Text blueGemText = CreateTeamGemCard(
+                panel.transform,
+                "BlueGemScore",
+                new Vector2(18f, 0f),
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                "BLUE",
+                new Color(0.22f, 0.48f, 1f, 0.34f),
+                out GameObject blueLeaderHighlight);
+
+            Text redGemText = CreateTeamGemCard(
+                panel.transform,
+                "RedGemScore",
+                new Vector2(-18f, 0f),
+                new Vector2(1f, 0.5f),
+                new Vector2(1f, 0.5f),
+                "RED",
+                new Color(1f, 0.22f, 0.28f, 0.34f),
+                out GameObject redLeaderHighlight);
+
+            Text timerText = CreateText(
+                panel.transform,
+                "MatchTimerText",
+                "--:--",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0f, 11f),
+                new Vector2(150f, 32f),
+                28,
                 TextAnchor.UpperCenter,
                 Color.white,
                 FontStyle.Bold);
 
-            MatchHUD hud = statusText.gameObject.AddComponent<MatchHUD>();
+            Text statusText = CreateText(
+                panel.transform,
+                "HoldStatusText",
+                string.Empty,
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0f, 7f),
+                new Vector2(260f, 22f),
+                16,
+                TextAnchor.MiddleCenter,
+                new Color(1f, 1f, 1f, 0.82f),
+                FontStyle.Bold);
+
+            MatchHUD hud = panel.AddComponent<MatchHUD>();
             hud.BindTextTargets(null, statusText);
+            hud.BindGemScoreWidgets(
+                null,
+                blueGemText,
+                null,
+                redGemText,
+                null,
+                timerText,
+                blueLeaderHighlight,
+                redLeaderHighlight);
+        }
+
+        private static Text CreateTeamGemCard(
+            Transform parent,
+            string name,
+            Vector2 anchoredPosition,
+            Vector2 anchor,
+            Vector2 pivot,
+            string label,
+            Color teamColor,
+            out GameObject leaderHighlight)
+        {
+            GameObject card = CreateRectPanel(
+                parent,
+                name,
+                anchor,
+                anchor,
+                pivot,
+                anchoredPosition,
+                new Vector2(160f, 52f),
+                new Color(0f, 0f, 0f, 0.24f));
+
+            leaderHighlight = CreateRectPanel(
+                card.transform,
+                name + "LeaderHighlight",
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                teamColor);
+            leaderHighlight.SetActive(false);
+
+            Image gemIcon = CreateImage(
+                card.transform,
+                name + "GemIcon",
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(26f, 0f),
+                new Vector2(22f, 22f),
+                new Color(1f, 0.24f, 0.92f, 0.94f));
+            gemIcon.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+
+            CreateText(
+                card.transform,
+                name + "Label",
+                label,
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(52f, 10f),
+                new Vector2(86f, 18f),
+                12,
+                TextAnchor.MiddleLeft,
+                new Color(1f, 1f, 1f, 0.68f),
+                FontStyle.Bold);
+
+            return CreateText(
+                card.transform,
+                name + "CountText",
+                "--",
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(52f, -9f),
+                new Vector2(92f, 30f),
+                24,
+                TextAnchor.MiddleLeft,
+                Color.white,
+                FontStyle.Bold);
         }
 
         private static void CreatePlayerResourceHUD(Transform parent)

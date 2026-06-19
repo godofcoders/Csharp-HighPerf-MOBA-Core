@@ -24,6 +24,17 @@ namespace MOBA.Core.Infrastructure
             return status + $"  {leadingTeam} hold {Mathf.Max(0f, winTimerRemainingSeconds):0.0}s";
         }
 
+        public static string FormatGemGrabHoldStatus(
+            bool hasLeader,
+            TeamType leadingTeam,
+            float winTimerRemainingSeconds)
+        {
+            if (!hasLeader)
+                return "Collect gems";
+
+            return $"{leadingTeam} hold {Mathf.Max(0f, winTimerRemainingSeconds):0.0}s";
+        }
+
         public static string FormatClock(float seconds)
         {
             float clamped = Mathf.Max(0f, seconds);
