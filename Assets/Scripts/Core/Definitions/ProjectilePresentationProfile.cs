@@ -25,7 +25,7 @@ namespace MOBA.Core.Definitions
 
         [Header("Runtime Trail")]
         public bool UseRuntimeTrail = true;
-        [Min(0.01f)] public float TrailTime = 0.10f;
+        [Min(0.01f)] public float TrailTime = 0.07f;
         [Min(0f)] public float TrailStartWidth = 0.14f;
         [Min(0f)] public float TrailEndWidth = 0.025f;
         public Color TrailColor = new Color(1f, 0.78f, 0.26f, 0.78f);

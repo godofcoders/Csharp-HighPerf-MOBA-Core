@@ -29,6 +29,10 @@ namespace MOBA.Core.Simulation
     /// </summary>
     public sealed class Gem : SimulationEntity
     {
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static Mesh _diamondMesh;
+
         [Header("Tuning")]
         [Tooltip("How many gems this world-object grants when picked up. Default 1.")]
         [Min(1)]
@@ -37,6 +41,12 @@ namespace MOBA.Core.Simulation
         [Tooltip("Pickup radius in world units. Brawlers within this distance get the gem.")]
         [Min(0.1f)]
         [SerializeField] private float _pickupRadius = 1.0f;
+
+        [Header("Presentation")]
+        [SerializeField] private bool _useRuntimeDiamondVisual = true;
+        [SerializeField] private Color _diamondColor = new Color(1f, 0.18f, 0.92f, 1f);
+
+        private MaterialPropertyBlock _presentationPropertyBlock;
 
         // Reusable scratch buffer for the proximity query so we don't alloc
         // per tick. SpatialGrid.GetEntitiesInRadiusNonAlloc fills this.
@@ -114,10 +124,17 @@ namespace MOBA.Core.Simulation
             return true;
         }
 
+        protected override void Awake()
+        {
+            base.Awake();
+            EnsureRuntimeDiamondVisual();
+        }
+
         protected override void OnEnable()
         {
             base.OnEnable();
             if (!_all.Contains(this)) _all.Add(this);
+            EnsureRuntimeDiamondVisual();
         }
 
         protected override void OnDisable()
@@ -135,6 +152,73 @@ namespace MOBA.Core.Simulation
         {
             if (value < 1) value = 1;
             _value = value;
+        }
+
+        private void EnsureRuntimeDiamondVisual()
+        {
+            if (!_useRuntimeDiamondVisual)
+                return;
+
+            MeshFilter meshFilter = GetComponent<MeshFilter>();
+            MeshRenderer meshRenderer = GetComponent<MeshRenderer>();
+            if (meshFilter == null || meshRenderer == null)
+                return;
+
+            meshFilter.sharedMesh = GetDiamondMesh();
+
+            if (_presentationPropertyBlock == null)
+                _presentationPropertyBlock = new MaterialPropertyBlock();
+
+            meshRenderer.GetPropertyBlock(_presentationPropertyBlock);
+            _presentationPropertyBlock.SetColor(ColorId, _diamondColor);
+            _presentationPropertyBlock.SetColor(BaseColorId, _diamondColor);
+            meshRenderer.SetPropertyBlock(_presentationPropertyBlock);
+        }
+
+        private static Mesh GetDiamondMesh()
+        {
+            if (_diamondMesh != null)
+                return _diamondMesh;
+
+            _diamondMesh = new Mesh
+            {
+                name = "RuntimeGemDiamond"
+            };
+
+            Vector3 top = new Vector3(0f, 0.58f, 0f);
+            Vector3 east = new Vector3(0.42f, 0f, 0f);
+            Vector3 north = new Vector3(0f, 0f, 0.42f);
+            Vector3 west = new Vector3(-0.42f, 0f, 0f);
+            Vector3 south = new Vector3(0f, 0f, -0.42f);
+            Vector3 bottom = new Vector3(0f, -0.58f, 0f);
+
+            _diamondMesh.vertices = new[]
+            {
+                top, north, east,
+                top, west, north,
+                top, south, west,
+                top, east, south,
+                bottom, east, north,
+                bottom, north, west,
+                bottom, west, south,
+                bottom, south, east
+            };
+
+            _diamondMesh.triangles = new[]
+            {
+                0, 1, 2,
+                3, 4, 5,
+                6, 7, 8,
+                9, 10, 11,
+                12, 13, 14,
+                15, 16, 17,
+                18, 19, 20,
+                21, 22, 23
+            };
+
+            _diamondMesh.RecalculateNormals();
+            _diamondMesh.RecalculateBounds();
+            return _diamondMesh;
         }
 
         /// <summary>

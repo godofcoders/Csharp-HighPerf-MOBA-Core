@@ -36,7 +36,7 @@ These items are active now. We validate and fix the most disruptive gameplay-fee
   - Player movement should not bend or offset bullet direction after firing.
 
 - `[~]` Gem readability
-  - Gem prefab should visually read as a gem, not a placeholder.
+  - `[~]` Gem prefab should visually read as a gem, not a placeholder. Runtime Gem presentation now replaces the sphere mesh with a faceted diamond mesh while keeping pickup/collider behavior unchanged; needs Unity readability QA.
   - Multiple dropped gems should scatter on the ground with readable spacing.
 
 ## Milestone G-01: Hypercharge Completion
@@ -156,7 +156,7 @@ Goal: make maps support gameplay, AI, and future modes cleanly.
 
 - `[ ]` Author grass zones.
 - `[ ]` Author breakable cover.
-- `[ ]` Replace placeholder gem visuals with a readable gem prefab.
+- `[~]` Replace placeholder gem visuals with a readable gem prefab. Runtime Gem presentation now uses a magenta faceted diamond mesh instead of the placeholder sphere; authored prefab art can replace this later.
 - `[ ]` Add gem drop scatter rules for deaths with multiple carried gems.
 - `[ ]` Author lanes/chokes/cover semantics where needed.
 - `[ ]` Add mode-specific spawn sets: Gem Grab teams, Solo Showdown solo spawns.

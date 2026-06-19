@@ -7,7 +7,7 @@ namespace MOBA.Core.Infrastructure
     public class ProjectileVisualController : MonoBehaviour
     {
         private const float FallbackMinimumVisualDiameter = 0.16f;
-        private const float FallbackTrailTime = 0.10f;
+        private const float FallbackTrailTime = 0.07f;
         private const float FallbackTrailStartWidth = 0.14f;
         private const float FallbackTrailEndWidth = 0.025f;
 
