@@ -10,10 +10,10 @@ namespace MOBA.Core.Infrastructure
 
         [SerializeField] private BrawlerController _brawler;
         [SerializeField] private Color _activeColor = new Color(0.72f, 0.22f, 1f, 1f);
-        [SerializeField] private float _emissionIntensity = 1.65f;
-        [SerializeField] private float _pulseSpeed = 7.5f;
-        [SerializeField] private float _auraRadius = 1.35f;
-        [SerializeField] private float _auraAlpha = 0.36f;
+        [SerializeField] private float _emissionIntensity = 2.45f;
+        [SerializeField] private float _pulseSpeed = 8.6f;
+        [SerializeField] private float _auraRadius = 1.85f;
+        [SerializeField] private float _auraAlpha = 0.52f;
 
         private MaterialPropertyBlock _propertyBlock;
         private Renderer[] _renderers;

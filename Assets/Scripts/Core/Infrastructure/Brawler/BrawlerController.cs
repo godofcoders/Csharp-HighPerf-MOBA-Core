@@ -15,6 +15,10 @@ namespace MOBA.Core.Infrastructure
         [Range(1, 11)]
         [SerializeField] private int _startingPowerLevel = 11;
 
+        [Header("Debug / Testing")]
+        [Tooltip("Temporary playtest helper: the locally controlled brawler starts and respawns with full super + hypercharge.")]
+        [SerializeField] private bool _debugReadySuperAndHyperchargeForPlayer = true;
+
         [SerializeField] private Transform _visualRoot;
 
         [SerializeField] private Transform _presentationAnchor;
@@ -78,6 +82,7 @@ namespace MOBA.Core.Infrastructure
         public int EntityID => GetEntityId();
         public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
         public Vector3 PlanarVelocity => _planarVelocity;
+        public bool DebugReadySuperAndHyperchargeForPlayer => _debugReadySuperAndHyperchargeForPlayer;
 
         [Header("World Collision")]
         [SerializeField] private LayerMask _worldCollisionLayer;
@@ -168,6 +173,7 @@ namespace MOBA.Core.Infrastructure
             BuildVisualFromDefinition();
             EnsureHyperchargePresentation();
             EnsureStealthPresentation();
+            EnsureLingeringDamagePresentation();
 
             State = new BrawlerState(_definition, _team);
             State.Owner = this;
@@ -1022,6 +1028,7 @@ namespace MOBA.Core.Infrastructure
                             HasTargetPoint = cmd.HasTargetPoint,
                             StartTick = currentTick,
                             IsSuper = false,
+                            IsHypercharged = false,
                             IsGadget = false
                         };
 
@@ -1157,6 +1164,7 @@ namespace MOBA.Core.Infrastructure
                             Direction = cmd.Direction,
                             StartTick = currentTick,
                             IsSuper = false,
+                            IsHypercharged = false,
                             IsGadget = true
                         };
 
@@ -1266,6 +1274,8 @@ namespace MOBA.Core.Infrastructure
                         Debug.Log("Executing Super");
                         AbilityDefinition currentSuperDef = State.GetCurrentSuperDefinition();
                         BrawlerActionRequestType actionType = BrawlerActionRequestType.Super;
+                        bool isHyperchargedSuper = State.Hypercharge != null &&
+                                                    State.Hypercharge.IsActive;
 
                         if (currentSuperDef == null || !State.CanUseAction(actionType, currentTick))
                             break;
@@ -1294,6 +1304,7 @@ namespace MOBA.Core.Infrastructure
                             HasTargetPoint = cmd.HasTargetPoint,
                             StartTick = currentTick,
                             IsSuper = true,
+                            IsHypercharged = isHyperchargedSuper,
                             IsGadget = false
                         };
 
@@ -1321,7 +1332,8 @@ namespace MOBA.Core.Infrastructure
                             Position = executionContext.Origin,
                             Direction = executionContext.Direction,
                             Value = 0f,
-                            IsSuper = true
+                            IsSuper = true,
+                            IsHypercharged = isHyperchargedSuper
                         });
 
                         BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
@@ -1375,7 +1387,8 @@ namespace MOBA.Core.Infrastructure
                                 Position = executionContext.Origin,
                                 Direction = executionContext.Direction,
                                 Value = 0f,
-                                IsSuper = true
+                                IsSuper = true,
+                                IsHypercharged = isHyperchargedSuper
                             });
 
                             BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
@@ -1560,6 +1573,12 @@ namespace MOBA.Core.Infrastructure
             State.SetEquippedHypercharge(_equippedHypercharge ?? _definition.Hypercharge);
             State.RefreshGadgetChargesFromRuntimeKit();
 
+            if (_debugReadySuperAndHyperchargeForPlayer &&
+                GetComponent<PlayerCommandSource>() != null)
+            {
+                GrantTestingReadyCharge();
+            }
+
             _previousSimPosition = position;
             _currentSimPosition = position;
             _previousSimRotation = transform.rotation;
@@ -1644,6 +1663,15 @@ namespace MOBA.Core.Infrastructure
         public void GrantSuperCharge(float amount)
         {
             State?.AddSuperCharge(amount);
+        }
+
+        public void GrantTestingReadyCharge()
+        {
+            if (State == null)
+                return;
+
+            State.AddSuperCharge(1f);
+            State.Resources?.AddHypercharge(1f);
         }
 
         private void TrySetMove(Vector3 direction)
@@ -1902,6 +1930,16 @@ namespace MOBA.Core.Infrastructure
                 _stealthPresentation = gameObject.AddComponent<BrawlerStealthPresentation>();
 
             _stealthPresentation.Bind(this);
+        }
+
+        private void EnsureLingeringDamagePresentation()
+        {
+            BrawlerLingeringDamagePresentation presentation =
+                GetComponent<BrawlerLingeringDamagePresentation>();
+            if (presentation == null)
+                presentation = gameObject.AddComponent<BrawlerLingeringDamagePresentation>();
+
+            presentation.Bind(this);
         }
     }
 }

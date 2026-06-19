@@ -173,6 +173,9 @@ namespace MOBA.Core.Infrastructure
 
                     controller.SetCommandSource(playerSource);
 
+                    if (controller.DebugReadySuperAndHyperchargeForPlayer)
+                        controller.GrantTestingReadyCharge();
+
                     SetPlayerTarget(controller.PresentationFollowTarget);
                 }
             }

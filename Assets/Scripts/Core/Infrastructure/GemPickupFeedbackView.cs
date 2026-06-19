@@ -20,28 +20,33 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Timing")]
         [Min(0.05f)]
-        [SerializeField] private float _durationSeconds = 0.42f;
+        [SerializeField] private float _durationSeconds = 0.48f;
 
         [Header("Ring")]
-        [SerializeField] private float _ringStartRadius = 0.20f;
-        [SerializeField] private float _ringEndRadius = 0.76f;
-        [SerializeField] private float _ringHeight = 0.018f;
-        [SerializeField] private Color _ringColor = new Color(1f, 0.66f, 0.08f, 0.92f);
+        [SerializeField] private float _ringStartRadius = 0.12f;
+        [SerializeField] private float _ringEndRadius = 0.42f;
+        [SerializeField] private float _ringHeight = 0.010f;
+        [SerializeField] private Color _ringColor = new Color(1f, 0.76f, 0.12f, 0.55f);
+
+        [Header("Pickup Beam")]
+        [SerializeField] private float _beamHeight = 0.92f;
+        [SerializeField] private float _beamRadius = 0.085f;
+        [SerializeField] private Color _beamColor = new Color(1f, 0.84f, 0.24f, 0.46f);
 
         [Header("Spark")]
-        [SerializeField] private float _sparkStartHeight = 0.12f;
-        [SerializeField] private float _sparkEndHeight = 0.62f;
-        [SerializeField] private float _sparkStartScale = 0.18f;
-        [SerializeField] private float _sparkEndScale = 0.05f;
-        [SerializeField] private Color _sparkColor = new Color(1f, 0.88f, 0.30f, 0.98f);
+        [SerializeField] private float _sparkStartHeight = 0.22f;
+        [SerializeField] private float _sparkEndHeight = 1.08f;
+        [SerializeField] private float _sparkStartScale = 0.17f;
+        [SerializeField] private float _sparkEndScale = 0.08f;
+        [SerializeField] private Color _sparkColor = new Color(1f, 0.93f, 0.34f, 0.98f);
 
         [Header("Equip Spread")]
         [SerializeField] private float _particleStartRadius = 0.05f;
-        [SerializeField] private float _particleEndRadius = 0.82f;
-        [SerializeField] private float _particleEndHeight = 0.52f;
-        [SerializeField] private float _particleStartScale = 0.14f;
-        [SerializeField] private float _particleEndScale = 0.035f;
-        [SerializeField] private Color _particleColor = new Color(1f, 0.74f, 0.12f, 0.98f);
+        [SerializeField] private float _particleEndRadius = 0.38f;
+        [SerializeField] private float _particleEndHeight = 0.78f;
+        [SerializeField] private float _particleStartScale = 0.10f;
+        [SerializeField] private float _particleEndScale = 0.025f;
+        [SerializeField] private Color _particleColor = new Color(0.72f, 1f, 0.92f, 0.90f);
 
         private readonly List<BurstInstance> _pool = new List<BurstInstance>(36);
         private MaterialPropertyBlock _propertyBlock;
@@ -162,8 +167,19 @@ namespace MOBA.Core.Infrastructure
             Renderer ringRenderer = ring.GetComponent<Renderer>();
             ConfigureRenderer(ringRenderer);
 
+            GameObject beam = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            beam.name = "PickupBeam";
+            beam.transform.SetParent(root.transform, false);
+
+            Collider beamCollider = beam.GetComponent<Collider>();
+            if (beamCollider != null)
+                Destroy(beamCollider);
+
+            Renderer beamRenderer = beam.GetComponent<Renderer>();
+            ConfigureRenderer(beamRenderer);
+
             GameObject spark = new GameObject(
-                "Spark",
+                "PickupGem",
                 typeof(MeshFilter),
                 typeof(MeshRenderer));
             spark.transform.SetParent(root.transform, false);
@@ -194,6 +210,8 @@ namespace MOBA.Core.Infrastructure
                 root,
                 ring.transform,
                 ringRenderer,
+                beam.transform,
+                beamRenderer,
                 spark.transform,
                 sparkRenderer,
                 particles,
@@ -235,29 +253,41 @@ namespace MOBA.Core.Infrastructure
                 Mathf.Max(0.001f, _ringHeight),
                 ringRadius);
 
+            float beamFade = Mathf.Sin(Mathf.Clamp01(1f - Mathf.Abs(t - 0.38f) * 1.7f) * Mathf.PI * 0.5f);
+            burst.Beam.localPosition = Vector3.up * (_beamHeight * 0.52f);
+            burst.Beam.localScale = new Vector3(
+                Mathf.Max(0.001f, _beamRadius) * (0.65f + beamFade * 0.35f),
+                Mathf.Max(0.001f, _beamHeight * 0.5f),
+                Mathf.Max(0.001f, _beamRadius) * (0.65f + beamFade * 0.35f));
+
             burst.Spark.localPosition = Vector3.up * Mathf.Lerp(
                 _sparkStartHeight,
                 _sparkEndHeight,
                 ease);
             burst.Spark.localRotation = Quaternion.Euler(
-                0f,
-                45f + ease * 220f,
-                0f);
+                16f + ease * 18f,
+                45f + ease * 300f,
+                8f);
 
+            float pop = Mathf.Sin(Mathf.Clamp01(t) * Mathf.PI);
             float sparkScale = Mathf.Lerp(
                 _sparkStartScale,
                 _sparkEndScale,
-                ease) * burst.AmountScale;
+                ease) * burst.AmountScale +
+                pop * 0.08f;
             burst.Spark.localScale = Vector3.one * Mathf.Max(0.01f, sparkScale);
 
             ApplyEquipParticles(burst, ease, fade);
 
             Color ringColor = _ringColor;
-            ringColor.a *= fade * 0.68f;
+            ringColor.a *= fade * 0.52f;
+            Color beamColor = _beamColor;
+            beamColor.a *= beamFade * fade;
             Color sparkColor = _sparkColor;
-            sparkColor.a *= fade * 0.54f;
+            sparkColor.a *= fade;
 
             ApplyRendererColor(burst.RingRenderer, ringColor);
+            ApplyRendererColor(burst.BeamRenderer, beamColor);
             ApplyRendererColor(burst.SparkRenderer, sparkColor);
         }
 
@@ -286,14 +316,15 @@ namespace MOBA.Core.Infrastructure
                 float angle = burst.AngleOffset + (360f / burst.Particles.Length) * i;
                 Vector3 direction = Quaternion.Euler(0f, angle, 0f) * Vector3.forward;
                 float heightOffset = ((i % 3) - 1) * 0.08f * ease;
+                float spiral = ease * 95f;
 
                 particle.localPosition =
-                    direction * radius +
+                    (Quaternion.Euler(0f, spiral, 0f) * direction) * radius +
                     Vector3.up * (baseHeight + heightOffset);
                 particle.localRotation = Quaternion.Euler(
-                    35f + ease * 180f,
-                    angle + ease * 260f,
-                    45f);
+                    18f + ease * 140f,
+                    angle + ease * 190f,
+                    35f);
                 particle.localScale = Vector3.one * Mathf.Max(0.01f, scale);
 
                 if (i < burst.ParticleRenderers.Length)
@@ -404,6 +435,8 @@ namespace MOBA.Core.Infrastructure
             public readonly Transform Root;
             public readonly Transform Ring;
             public readonly Renderer RingRenderer;
+            public readonly Transform Beam;
+            public readonly Renderer BeamRenderer;
             public readonly Transform Spark;
             public readonly Renderer SparkRenderer;
             public readonly Transform[] Particles;
@@ -419,6 +452,8 @@ namespace MOBA.Core.Infrastructure
                 GameObject root,
                 Transform ring,
                 Renderer ringRenderer,
+                Transform beam,
+                Renderer beamRenderer,
                 Transform spark,
                 Renderer sparkRenderer,
                 Transform[] particles,
@@ -427,6 +462,8 @@ namespace MOBA.Core.Infrastructure
                 Root = root.transform;
                 Ring = ring;
                 RingRenderer = ringRenderer;
+                Beam = beam;
+                BeamRenderer = beamRenderer;
                 Spark = spark;
                 SparkRenderer = sparkRenderer;
                 Particles = particles;

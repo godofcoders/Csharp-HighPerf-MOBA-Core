@@ -39,6 +39,7 @@ namespace MOBA.Core.Infrastructure
 
         private Vector3 _spinEulerPerSecond;
         private bool _useSpin;
+        private float _powerVisualScale = 1f;
 
         private void Awake()
         {
@@ -53,10 +54,14 @@ namespace MOBA.Core.Infrastructure
             DestroyMaterial(_runtimeFxMaterial);
         }
 
-        public void ApplyProfile(ProjectilePresentationProfile profile, bool isSuper = false)
+        public void ApplyProfile(
+            ProjectilePresentationProfile profile,
+            bool isSuper = false,
+            bool isHypercharged = false)
         {
             _currentProfile = profile;
             _currentStyle = ResolveStyle(profile, isSuper);
+            _powerVisualScale = ResolvePowerVisualScale(isSuper, isHypercharged);
             _spinEulerPerSecond = Vector3.zero;
             _useSpin = false;
 
@@ -75,7 +80,7 @@ namespace MOBA.Core.Infrastructure
             _currentVisualInstance.transform.localRotation = Quaternion.Euler(_currentProfile.LocalRotationEuler);
             _currentVisualInstance.transform.localScale = ResolveReadableScale(
                 _currentProfile.LocalScale,
-                _currentProfile.MinimumVisualDiameter);
+                _currentProfile.MinimumVisualDiameter) * _powerVisualScale;
 
             _useSpin = _currentProfile.UseSpin;
             _spinEulerPerSecond = _currentProfile.SpinEulerPerSecond;
@@ -119,10 +124,12 @@ namespace MOBA.Core.Infrastructure
             float startWidth = profile != null
                 ? Mathf.Max(profile.TrailStartWidth, minimumDiameter * 0.55f) * style.TrailWidthMultiplier
                 : FallbackTrailStartWidth;
+            startWidth *= Mathf.Lerp(1f, _powerVisualScale, 0.65f);
 
             float endWidth = profile != null
                 ? Mathf.Max(0f, profile.TrailEndWidth) * style.TrailWidthMultiplier
                 : FallbackTrailEndWidth;
+            endWidth *= Mathf.Lerp(1f, _powerVisualScale, 0.45f);
 
             Color startColor = style.TrailColor;
 
@@ -132,7 +139,7 @@ namespace MOBA.Core.Infrastructure
             float baseTrailTime = profile != null
                 ? Mathf.Max(0.01f, profile.TrailTime)
                 : FallbackTrailTime;
-            trail.time = baseTrailTime * style.TrailTimeMultiplier;
+            trail.time = baseTrailTime * style.TrailTimeMultiplier * Mathf.Lerp(1f, _powerVisualScale, 0.24f);
             trail.startWidth = startWidth;
             trail.endWidth = endWidth;
             trail.startColor = startColor;
@@ -172,7 +179,7 @@ namespace MOBA.Core.Infrastructure
             _currentVisualInstance.transform.localPosition = Vector3.zero;
             _currentVisualInstance.transform.localRotation = Quaternion.identity;
 
-            float diameter = Mathf.Max(0.05f, _fallbackVisualDiameter);
+            float diameter = Mathf.Max(0.05f, _fallbackVisualDiameter) * _powerVisualScale;
             _currentVisualInstance.transform.localScale = Vector3.one * diameter;
 
             Collider collider = _currentVisualInstance.GetComponent<Collider>();
@@ -235,6 +242,7 @@ namespace MOBA.Core.Infrastructure
             _currentProfile = null;
             _spinEulerPerSecond = Vector3.zero;
             _useSpin = false;
+            _powerVisualScale = 1f;
 
             if (_sparkParticles != null)
             {
@@ -304,7 +312,8 @@ namespace MOBA.Core.Infrastructure
             glow.transform.SetParent(_visualRoot, false);
             glow.transform.localPosition = Vector3.zero;
             glow.transform.localRotation = Quaternion.identity;
-            glow.transform.localScale = Vector3.one * Mathf.Max(0.01f, style.GlowDiameter);
+            glow.transform.localScale =
+                Vector3.one * Mathf.Max(0.01f, style.GlowDiameter * _powerVisualScale);
 
             Collider collider = glow.GetComponent<Collider>();
             if (collider != null)
@@ -342,9 +351,9 @@ namespace MOBA.Core.Infrastructure
             var main = particles.main;
             main.duration = 1f;
             main.loop = true;
-            main.startLifetime = style.ParticleLifetime;
-            main.startSpeed = style.ParticleSpeed;
-            main.startSize = style.ParticleSize;
+            main.startLifetime = style.ParticleLifetime * Mathf.Lerp(1f, _powerVisualScale, 0.22f);
+            main.startSpeed = style.ParticleSpeed * Mathf.Lerp(1f, _powerVisualScale, 0.34f);
+            main.startSize = style.ParticleSize * Mathf.Lerp(1f, _powerVisualScale, 0.58f);
             main.startColor = style.ParticleColor;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
             main.maxParticles = 96;
@@ -352,12 +361,12 @@ namespace MOBA.Core.Infrastructure
 
             var emission = particles.emission;
             emission.enabled = true;
-            emission.rateOverTime = style.ParticleRate;
+            emission.rateOverTime = style.ParticleRate * Mathf.Lerp(1f, _powerVisualScale, 0.55f);
 
             var shape = particles.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = style.ParticleRadius;
+            shape.radius = style.ParticleRadius * Mathf.Lerp(1f, _powerVisualScale, 0.42f);
 
             var colorOverLifetime = particles.colorOverLifetime;
             colorOverLifetime.enabled = true;
@@ -533,6 +542,14 @@ namespace MOBA.Core.Infrastructure
                 0.14f,
                 0.30f,
                 0.04f);
+        }
+
+        private static float ResolvePowerVisualScale(bool isSuper, bool isHypercharged)
+        {
+            if (isHypercharged)
+                return 1.85f;
+
+            return isSuper ? 1.38f : 1f;
         }
 
         private static Material CreateUnlitMaterial(Color color)

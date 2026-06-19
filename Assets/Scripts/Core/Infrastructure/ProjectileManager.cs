@@ -63,11 +63,15 @@ namespace MOBA.Core.Infrastructure
             GameObject go = _pool.Get();
             go.transform.position = context.Origin;
             go.transform.rotation = Quaternion.LookRotation(context.Direction);
+            bool isHypercharged = ResolveIsHypercharged(context);
 
             ProjectileVisualController visualController = go.GetComponent<ProjectileVisualController>();
             if (visualController != null)
             {
-                visualController.ApplyProfile(context.PresentationProfile, context.IsSuper);
+                visualController.ApplyProfile(
+                    context.PresentationProfile,
+                    context.IsSuper,
+                    isHypercharged);
             }
 
             _activeProjectiles.Add(new ActiveProjectile
@@ -76,6 +80,7 @@ namespace MOBA.Core.Infrastructure
                 SourceAbility = context.SourceAbility,
                 SlotType = context.SlotType,
                 IsSuper = context.IsSuper,
+                IsHypercharged = isHypercharged,
                 IsGadget = context.IsGadget,
 
                 GameObject = go,
@@ -125,7 +130,8 @@ namespace MOBA.Core.Infrastructure
                 Position = context.Origin,
                 Direction = context.Direction,
                 Value = context.Damage,
-                IsSuper = context.IsSuper
+                IsSuper = context.IsSuper,
+                IsHypercharged = isHypercharged
             });
         }
 
@@ -418,7 +424,8 @@ namespace MOBA.Core.Infrastructure
                         Position = projectilePosition,
                         Direction = projectile.Direction,
                         Value = projectile.AllyHealAmount,
-                        IsSuper = projectile.IsSuper
+                        IsSuper = projectile.IsSuper,
+                        IsHypercharged = projectile.IsHypercharged
                     });
                 }
                 else
@@ -466,7 +473,8 @@ namespace MOBA.Core.Infrastructure
                 Position = projectilePosition,
                 Direction = projectile.Direction,
                 Value = damage,
-                IsSuper = projectile.IsSuper
+                IsSuper = projectile.IsSuper,
+                IsHypercharged = projectile.IsHypercharged
             });
         }
 
@@ -734,7 +742,8 @@ namespace MOBA.Core.Infrastructure
                         Position = impactPosition,
                         SourceAbility = p.SourceAbility,
                         SlotType = p.SlotType,
-                        IsSuper = p.IsSuper
+                        IsSuper = p.IsSuper,
+                        IsHypercharged = p.IsHypercharged
                     });
                 }
             }
@@ -749,7 +758,8 @@ namespace MOBA.Core.Infrastructure
                 Position = impactPosition,
                 Direction = p.Direction,
                 Value = p.ImpactRadius,
-                IsSuper = p.IsSuper
+                IsSuper = p.IsSuper,
+                IsHypercharged = p.IsHypercharged
             });
         }
 
@@ -797,7 +807,8 @@ namespace MOBA.Core.Infrastructure
                 Position = position,
                 Direction = projectile.Direction,
                 Value = ResolveImpactFeedbackRadius(projectile),
-                IsSuper = projectile.IsSuper
+                IsSuper = projectile.IsSuper,
+                IsHypercharged = projectile.IsHypercharged
             });
         }
 
@@ -809,7 +820,19 @@ namespace MOBA.Core.Infrastructure
             if (projectile.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE && projectile.ImpactRadius > 0f)
                 return Mathf.Clamp(projectile.ImpactRadius * 0.18f, 0.34f, 0.82f);
 
+            if (projectile.IsHypercharged)
+                return 0.62f;
+
             return projectile.IsSuper ? 0.42f : 0.26f;
+        }
+
+        private static bool ResolveIsHypercharged(in ProjectileSpawnContext context)
+        {
+            return context.IsSuper &&
+                   context.Owner != null &&
+                   context.Owner.State != null &&
+                   context.Owner.State.Hypercharge != null &&
+                   context.Owner.State.Hypercharge.IsActive;
         }
 
         private void ClearActiveProjectilesForShutdown()
@@ -881,6 +904,7 @@ namespace MOBA.Core.Infrastructure
             public AbilityDefinition SourceAbility;
             public AbilitySlotType SlotType;
             public bool IsSuper;
+            public bool IsHypercharged;
             public bool IsGadget;
 
             public GameObject GameObject;

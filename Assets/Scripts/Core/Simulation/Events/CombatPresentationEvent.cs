@@ -19,5 +19,7 @@ namespace MOBA.Core.Simulation
 
         public float Value;
         public bool IsSuper;
+        public bool IsHypercharged;
+        public bool IsLingeringAreaEffect;
     }
 }

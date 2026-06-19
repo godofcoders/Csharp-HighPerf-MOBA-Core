@@ -40,6 +40,7 @@ namespace MOBA.Core.Infrastructure
         [Header("Colors")]
         [SerializeField] private Color _impactColor = new Color(1f, 0.56f, 0.10f, 0.90f);
         [SerializeField] private Color _superImpactColor = new Color(1f, 0.30f, 0.95f, 0.90f);
+        [SerializeField] private Color _hyperImpactColor = new Color(0.72f, 0.20f, 1f, 0.96f);
         [SerializeField] private Color _expiredColor = new Color(0.42f, 0.46f, 0.50f, 0.20f);
 
         private readonly List<PulseInstance> _pool = new List<PulseInstance>(48);
@@ -123,9 +124,20 @@ namespace MOBA.Core.Infrastructure
             switch (evt.EventType)
             {
                 case CombatPresentationEventType.ProjectileImpacted:
-                    Color impactColor = ResolveImpactColor(evt.IsSuper);
-                    SpawnPulse(evt.Position, ResolveRadius(evt.Value), impactColor, _impactDurationSeconds);
-                    SpawnSpark(evt.Position, evt.Direction, impactColor, _sparkDurationSeconds);
+                    float impactScale = ResolveImpactScale(evt.IsSuper, evt.IsHypercharged);
+                    Color impactColor = ResolveImpactColor(evt.IsSuper, evt.IsHypercharged);
+                    float durationScale = Mathf.Lerp(1f, impactScale, 0.24f);
+                    SpawnPulse(
+                        evt.Position,
+                        ResolveRadius(evt.Value) * impactScale,
+                        impactColor,
+                        _impactDurationSeconds * durationScale);
+                    SpawnSpark(
+                        evt.Position,
+                        evt.Direction,
+                        impactColor,
+                        _sparkDurationSeconds * durationScale,
+                        Mathf.Lerp(1f, impactScale, 0.72f));
                     break;
 
                 case CombatPresentationEventType.ProjectileExpired:
@@ -166,7 +178,8 @@ namespace MOBA.Core.Infrastructure
             Vector3 position,
             Vector3 direction,
             Color color,
-            float durationSeconds)
+            float durationSeconds,
+            float scaleMultiplier = 1f)
         {
             if (!_spawnImpactSpark)
                 return;
@@ -185,8 +198,8 @@ namespace MOBA.Core.Infrastructure
 
             spark.Transform.position = position;
             spark.Transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
-            spark.Length = Mathf.Max(0.04f, _sparkLength);
-            spark.Width = Mathf.Max(0.01f, _sparkWidth);
+            spark.Length = Mathf.Max(0.04f, _sparkLength * scaleMultiplier);
+            spark.Width = Mathf.Max(0.01f, _sparkWidth * Mathf.Lerp(1f, scaleMultiplier, 0.75f));
             spark.Color = color;
             spark.DurationSeconds = Mathf.Max(0.05f, durationSeconds);
             spark.ElapsedSeconds = 0f;
@@ -280,9 +293,20 @@ namespace MOBA.Core.Infrastructure
             return spark;
         }
 
-        private Color ResolveImpactColor(bool isSuper)
+        private Color ResolveImpactColor(bool isSuper, bool isHypercharged)
         {
+            if (isHypercharged)
+                return _hyperImpactColor;
+
             return isSuper ? _superImpactColor : _impactColor;
+        }
+
+        private static float ResolveImpactScale(bool isSuper, bool isHypercharged)
+        {
+            if (isHypercharged)
+                return 1.55f;
+
+            return isSuper ? 1.18f : 1f;
         }
 
         private static float ResolveRadius(float eventValue)

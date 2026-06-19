@@ -41,6 +41,7 @@ namespace MOBA.Core.Infrastructure
         private bool _isHoldingSuperAim;
         private Vector3 _heldSuperAimDirection = Vector3.zero;
         private bool _wasSuperKeyHeldLastFrame;
+        private bool _wasHyperchargeKeyHeldLastFrame;
         private float _superAimHoldStartTime;
         private Vector3 _heldMainAttackTargetPoint = Vector3.zero;
         private Vector3 _heldSuperTargetPoint = Vector3.zero;
@@ -158,6 +159,18 @@ namespace MOBA.Core.Infrastructure
             _wasSuperKeyHeldLastFrame = superKeyHeld;
         }
 
+        private void UpdateDesktopHyperchargeFlow()
+        {
+            if (_controlledBrawler == null || Keyboard.current == null)
+                return;
+
+            bool hyperchargeKeyHeld = Keyboard.current.rKey.isPressed;
+            if (hyperchargeKeyHeld && !_wasHyperchargeKeyHeldLastFrame)
+                _hyperchargeQueued = true;
+
+            _wasHyperchargeKeyHeldLastFrame = hyperchargeKeyHeld;
+        }
+
         private void OnEnable()
         {
             _input.Player.Enable();
@@ -181,6 +194,7 @@ namespace MOBA.Core.Infrastructure
             UpdateHoldAimSnapshots();
             UpdateDesktopMainAttackAimReleaseFlow();
             UpdateDesktopSuperAimReleaseFlow();
+            UpdateDesktopHyperchargeFlow();
         }
 
         public void SetControlledBrawler(BrawlerController controller)
@@ -867,6 +881,7 @@ namespace MOBA.Core.Infrastructure
             _heldSuperAimDirection = Vector3.zero;
             _heldSuperTargetPoint = Vector3.zero;
             _wasSuperKeyHeldLastFrame = false;
+            _wasHyperchargeKeyHeldLastFrame = false;
 
             if (markCancellation && wasPreviewing)
                 MarkPreviewCanceled();

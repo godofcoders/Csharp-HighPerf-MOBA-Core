@@ -30,7 +30,8 @@ namespace MOBA.Core.Definitions
                 Position = spawnPosition,
                 SourceAbility = context.AbilityDefinition,
                 SlotType = context.SlotType,
-                IsSuper = context.IsSuper
+                IsSuper = context.IsSuper,
+                IsHypercharged = context.IsHypercharged
             });
 
             return true;

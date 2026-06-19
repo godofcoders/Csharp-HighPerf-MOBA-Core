@@ -14,5 +14,6 @@ namespace MOBA.Core.Simulation
         public AbilityDefinition SourceAbility;
         public AbilitySlotType SlotType;
         public bool IsSuper;
+        public bool IsHypercharged;
     }
 }

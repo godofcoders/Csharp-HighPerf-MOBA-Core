@@ -15,6 +15,7 @@ namespace MOBA.Core.Simulation
         public uint StartTick;
 
         public bool IsSuper;
+        public bool IsHypercharged;
         public bool IsGadget;
 
         public Vector3 TargetPoint;

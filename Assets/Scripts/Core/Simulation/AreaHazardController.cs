@@ -20,6 +20,7 @@ namespace MOBA.Core.Simulation
         private AbilityDefinition _sourceAbility;
         private AbilitySlotType _slotType;
         private bool _isSuper;
+        private bool _isHypercharged;
         private AreaHazardService _hazardService;
 
         private float _elapsedLifetime;
@@ -54,6 +55,12 @@ namespace MOBA.Core.Simulation
             _sourceAbility = request.SourceAbility;
             _slotType = request.SlotType;
             _isSuper = request.IsSuper;
+            _isHypercharged = request.IsHypercharged ||
+                              (request.IsSuper &&
+                               request.Owner != null &&
+                               request.Owner.State != null &&
+                               request.Owner.State.Hypercharge != null &&
+                               request.Owner.State.Hypercharge.IsActive);
             _hazardService = hazardService;
 
             transform.position = request.Position;
@@ -175,7 +182,9 @@ namespace MOBA.Core.Simulation
                     Position = targetPosition,
                     Direction = delta.sqrMagnitude > 0.001f ? delta.normalized : Vector3.forward,
                     Value = _definition.DamagePerTick,
-                    IsSuper = _isSuper
+                    IsSuper = _isSuper,
+                    IsHypercharged = _isHypercharged,
+                    IsLingeringAreaEffect = true
                 });
             }
         }
@@ -201,7 +210,7 @@ namespace MOBA.Core.Simulation
 
         private void BuildVisual()
         {
-            float diameter = _definition.Radius * 2f;
+            float diameter = ResolveVisualDiameter();
             bool runtimeOnly = ShouldUseRuntimeOnlyHazardVisual();
             ResolveHazardPalette(
                 out _puddleCoreColor,
@@ -347,7 +356,7 @@ namespace MOBA.Core.Simulation
             float remaining = Mathf.Clamp01((duration - _elapsedLifetime) / duration);
             float fade = Mathf.Clamp01(remaining / 0.18f);
             float pulse = 1f + Mathf.Sin(Time.time * 5.2f + transform.position.x) * 0.035f;
-            float diameter = _definition.Radius * 2f;
+            float diameter = ResolveVisualDiameter();
 
             if (_puddleCore != null)
                 _puddleCore.localScale = new Vector3(
@@ -394,6 +403,20 @@ namespace MOBA.Core.Simulation
         {
             return $"{_definition?.name} {_definition?.HazardName} {_sourceAbility?.name}"
                 .ToLowerInvariant();
+        }
+
+        private float ResolveVisualDiameter()
+        {
+            float diameter = _definition != null ? _definition.Radius * 2f : 1f;
+            string key = ResolveHazardKey();
+
+            if (key.Contains("barley") || key.Contains("puddle"))
+            {
+                float superScale = _isHypercharged ? 0.94f : _isSuper ? 0.82f : 0.70f;
+                return diameter * superScale;
+            }
+
+            return diameter * (_isHypercharged ? 1.18f : _isSuper ? 1.08f : 1f);
         }
 
         private void ResolveHazardPalette(
