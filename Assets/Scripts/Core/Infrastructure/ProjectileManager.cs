@@ -67,7 +67,7 @@ namespace MOBA.Core.Infrastructure
             ProjectileVisualController visualController = go.GetComponent<ProjectileVisualController>();
             if (visualController != null)
             {
-                visualController.ApplyProfile(context.PresentationProfile);
+                visualController.ApplyProfile(context.PresentationProfile, context.IsSuper);
             }
 
             _activeProjectiles.Add(new ActiveProjectile

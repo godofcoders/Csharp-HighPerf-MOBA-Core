@@ -19,22 +19,31 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Timing")]
         [Min(0.05f)]
-        [SerializeField] private float _impactDurationSeconds = 0.22f;
+        [SerializeField] private float _impactDurationSeconds = 0.16f;
 
         [Min(0.05f)]
-        [SerializeField] private float _expiredDurationSeconds = 0.14f;
+        [SerializeField] private float _expiredDurationSeconds = 0.12f;
 
         [Header("Scale")]
-        [SerializeField] private float _verticalScale = 0.035f;
-        [SerializeField] private float _startScaleMultiplier = 0.22f;
-        [SerializeField] private float _endScaleMultiplier = 0.72f;
+        [SerializeField] private float _verticalScale = 0.025f;
+        [SerializeField] private float _startScaleMultiplier = 0.16f;
+        [SerializeField] private float _endScaleMultiplier = 0.42f;
+
+        [Header("Spark")]
+        [SerializeField] private bool _spawnImpactSpark = true;
+        [Min(0.05f)]
+        [SerializeField] private float _sparkDurationSeconds = 0.12f;
+        [SerializeField] private float _sparkLength = 0.34f;
+        [SerializeField] private float _sparkWidth = 0.045f;
+        [SerializeField] private float _sparkHeightOffset = 0.14f;
 
         [Header("Colors")]
-        [SerializeField] private Color _impactColor = new Color(1f, 0.42f, 0.06f, 0.86f);
-        [SerializeField] private Color _superImpactColor = new Color(1f, 0.30f, 0.95f, 0.88f);
-        [SerializeField] private Color _expiredColor = new Color(0.42f, 0.46f, 0.50f, 0.24f);
+        [SerializeField] private Color _impactColor = new Color(1f, 0.56f, 0.10f, 0.90f);
+        [SerializeField] private Color _superImpactColor = new Color(1f, 0.30f, 0.95f, 0.90f);
+        [SerializeField] private Color _expiredColor = new Color(0.42f, 0.46f, 0.50f, 0.20f);
 
         private readonly List<PulseInstance> _pool = new List<PulseInstance>(48);
+        private readonly List<SparkInstance> _sparkPool = new List<SparkInstance>(48);
         private MaterialPropertyBlock _propertyBlock;
         private Material _pulseMaterial;
 
@@ -88,6 +97,25 @@ namespace MOBA.Core.Infrastructure
 
                 ApplyPulseVisual(pulse, t);
             }
+
+            for (int i = 0; i < _sparkPool.Count; i++)
+            {
+                SparkInstance spark = _sparkPool[i];
+                if (spark == null || !spark.IsActive)
+                    continue;
+
+                spark.ElapsedSeconds += deltaTime;
+                float duration = Mathf.Max(0.001f, spark.DurationSeconds);
+                float t = Mathf.Clamp01(spark.ElapsedSeconds / duration);
+
+                if (t >= 1f)
+                {
+                    spark.SetActive(false);
+                    continue;
+                }
+
+                ApplySparkVisual(spark, t);
+            }
         }
 
         private void HandleCombatPresentationEvent(CombatPresentationEvent evt)
@@ -95,7 +123,9 @@ namespace MOBA.Core.Infrastructure
             switch (evt.EventType)
             {
                 case CombatPresentationEventType.ProjectileImpacted:
-                    SpawnPulse(evt.Position, ResolveRadius(evt.Value), ResolveImpactColor(evt.IsSuper), _impactDurationSeconds);
+                    Color impactColor = ResolveImpactColor(evt.IsSuper);
+                    SpawnPulse(evt.Position, ResolveRadius(evt.Value), impactColor, _impactDurationSeconds);
+                    SpawnSpark(evt.Position, evt.Direction, impactColor, _sparkDurationSeconds);
                     break;
 
                 case CombatPresentationEventType.ProjectileExpired:
@@ -110,6 +140,7 @@ namespace MOBA.Core.Infrastructure
             for (int i = 0; i < count; i++)
             {
                 _pool.Add(CreatePulseInstance());
+                _sparkPool.Add(CreateSparkInstance());
             }
         }
 
@@ -131,6 +162,38 @@ namespace MOBA.Core.Infrastructure
             ApplyPulseVisual(pulse, 0f);
         }
 
+        private void SpawnSpark(
+            Vector3 position,
+            Vector3 direction,
+            Color color,
+            float durationSeconds)
+        {
+            if (!_spawnImpactSpark)
+                return;
+
+            SparkInstance spark = GetSparkInstance();
+            if (spark == null)
+                return;
+
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.001f)
+                direction = Vector3.forward;
+            else
+                direction.Normalize();
+
+            position.y += Mathf.Max(0f, _sparkHeightOffset);
+
+            spark.Transform.position = position;
+            spark.Transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+            spark.Length = Mathf.Max(0.04f, _sparkLength);
+            spark.Width = Mathf.Max(0.01f, _sparkWidth);
+            spark.Color = color;
+            spark.DurationSeconds = Mathf.Max(0.05f, durationSeconds);
+            spark.ElapsedSeconds = 0f;
+            spark.SetActive(true);
+            ApplySparkVisual(spark, 0f);
+        }
+
         private PulseInstance GetPulseInstance()
         {
             for (int i = 0; i < _pool.Count; i++)
@@ -145,6 +208,23 @@ namespace MOBA.Core.Infrastructure
 
             PulseInstance created = CreatePulseInstance();
             _pool.Add(created);
+            return created;
+        }
+
+        private SparkInstance GetSparkInstance()
+        {
+            for (int i = 0; i < _sparkPool.Count; i++)
+            {
+                SparkInstance spark = _sparkPool[i];
+                if (spark != null && !spark.IsActive)
+                    return spark;
+            }
+
+            if (_sparkPool.Count >= Mathf.Max(1, _maxPoolSize))
+                return null;
+
+            SparkInstance created = CreateSparkInstance();
+            _sparkPool.Add(created);
             return created;
         }
 
@@ -172,6 +252,32 @@ namespace MOBA.Core.Infrastructure
             PulseInstance pulse = new PulseInstance(go, renderer);
             pulse.SetActive(false);
             return pulse;
+        }
+
+        private SparkInstance CreateSparkInstance()
+        {
+            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = "ProjectileImpactSpark";
+            go.transform.SetParent(transform, false);
+            go.transform.localScale = Vector3.zero;
+
+            Collider collider = go.GetComponent<Collider>();
+            if (collider != null)
+                Destroy(collider);
+
+            Renderer renderer = go.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                if (_pulseMaterial != null)
+                    renderer.sharedMaterial = _pulseMaterial;
+
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            SparkInstance spark = new SparkInstance(go, renderer);
+            spark.SetActive(false);
+            return spark;
         }
 
         private Color ResolveImpactColor(bool isSuper)
@@ -232,11 +338,39 @@ namespace MOBA.Core.Infrastructure
 
             Color color = pulse.Color;
             color.a *= 1f - t;
+            ApplyRendererColor(pulse.Renderer, color);
+        }
+
+        private void ApplySparkVisual(SparkInstance spark, float normalizedTime)
+        {
+            if (spark == null)
+                return;
+
+            float t = Mathf.Clamp01(normalizedTime);
+            float ease = EaseOutCubic(t);
+            float length = Mathf.Lerp(spark.Length, spark.Length * 0.38f, ease);
+            float width = Mathf.Lerp(spark.Width, spark.Width * 0.18f, ease);
+
+            spark.Transform.localScale = new Vector3(width, width, length);
+
+            if (spark.Renderer == null)
+                return;
+
+            Color color = spark.Color;
+            color.a *= 1f - t;
+            ApplyRendererColor(spark.Renderer, color);
+        }
+
+        private void ApplyRendererColor(Renderer renderer, Color color)
+        {
+            if (renderer == null)
+                return;
+
             EnsurePropertyBlock();
-            pulse.Renderer.GetPropertyBlock(_propertyBlock);
+            renderer.GetPropertyBlock(_propertyBlock);
             _propertyBlock.SetColor(ColorId, color);
             _propertyBlock.SetColor(BaseColorId, color);
-            pulse.Renderer.SetPropertyBlock(_propertyBlock);
+            renderer.SetPropertyBlock(_propertyBlock);
         }
 
         private void EnsurePropertyBlock()
@@ -258,6 +392,35 @@ namespace MOBA.Core.Infrastructure
             public Color Color;
 
             public PulseInstance(GameObject gameObject, Renderer renderer)
+            {
+                GameObject = gameObject;
+                Transform = gameObject.transform;
+                Renderer = renderer;
+            }
+
+            public void SetActive(bool active)
+            {
+                IsActive = active;
+
+                if (GameObject != null && GameObject.activeSelf != active)
+                    GameObject.SetActive(active);
+            }
+        }
+
+        private sealed class SparkInstance
+        {
+            public readonly GameObject GameObject;
+            public readonly Transform Transform;
+            public readonly Renderer Renderer;
+
+            public bool IsActive;
+            public float ElapsedSeconds;
+            public float DurationSeconds;
+            public float Length;
+            public float Width;
+            public Color Color;
+
+            public SparkInstance(GameObject gameObject, Renderer renderer)
             {
                 GameObject = gameObject;
                 Transform = gameObject.transform;

@@ -130,8 +130,8 @@ Goal: add the feedback layer that makes the systems feel alive.
 
 - `[ ]` Damage numbers.
 - `[ ]` Hit flash / hurt flash.
-- `[ ]` Projectile trails and impact effects.
-- `[ ]` Projectile prefab scale pass so bullets match gameplay width and character scale.
+- `[~]` Projectile trails and impact effects. Projectile presentation profiles now support runtime trail tuning, pooled projectiles get a fallback trail, and projectile impacts use smaller pooled pulses plus directional spark hits; needs Unity readability QA.
+- `[~]` Projectile prefab scale pass so bullets match gameplay width and character scale. Runtime projectile visuals now enforce a conservative minimum readable diameter while preserving authored prefab proportions; needs per-brawler tuning QA.
 - `[ ]` Hit stop for heavy/super hits.
 - `[ ]` Camera shake/impulse for impactful actions.
 - `[ ]` Gem pickup/drop feedback with scattered ground placement for multi-gem drops.
