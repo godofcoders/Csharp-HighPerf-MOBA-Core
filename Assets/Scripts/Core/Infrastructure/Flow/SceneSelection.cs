@@ -16,7 +16,7 @@ namespace MOBA.Core.Infrastructure
     {
         public static BrawlerDefinition SelectedBrawler;
         public static BrawlerBuildDefinition SelectedBuild;
-        public static int SelectedBuildPowerLevel = PlayerBrawlerProgress.MaxLevel;
+        public static int SelectedBuildPowerLevel = PlayerBrawlerProgress.MinLevel;
         public static GameModeId SelectedMode = GameModeId.GemGrab;
         /// <summary>Picked on the map-select UI. MapLoader prefers this
         /// over its inspector _mapPrefab fallback when set.</summary>

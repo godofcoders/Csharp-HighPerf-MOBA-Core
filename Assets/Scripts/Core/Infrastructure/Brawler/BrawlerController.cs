@@ -64,6 +64,7 @@ namespace MOBA.Core.Infrastructure
         private HyperchargeDefinition _equippedHypercharge;
         private BrawlerBuildDefinition _resolvedBuildSource;
         private BrawlerBuildDefinition _buildOverride;
+        private int _powerLevelOverride;
 
         private readonly List<BrawlerCommand> _commandBuffer = new List<BrawlerCommand>(8);
         private IBrawlerCommandSource _commandSource;
@@ -155,9 +156,11 @@ namespace MOBA.Core.Infrastructure
         public void InitializeFromMatchmaking(
             BrawlerDefinition def,
             TeamType team,
-            BrawlerBuildDefinition buildOverride = null)
+            BrawlerBuildDefinition buildOverride = null,
+            int powerLevelOverride = 0)
         {
             _buildOverride = buildOverride;
+            _powerLevelOverride = powerLevelOverride;
             InternalInitialize(def, team);
         }
 
@@ -182,7 +185,7 @@ namespace MOBA.Core.Infrastructure
 
             State = new BrawlerState(_definition, _team);
             State.Owner = this;
-            State.SetPowerLevel(Mathf.Clamp(_startingPowerLevel, 1, 11), false);
+            State.SetPowerLevel(ResolveStartingPowerLevel(), false);
 
             _mainAttack = _definition.MainAttack?.CreateLogic();
             _superAbility = _definition.SuperAbility?.CreateLogic();
@@ -315,6 +318,15 @@ namespace MOBA.Core.Infrastructure
                 return _buildOverride;
 
             return _definition.GetUsableDefaultBuild(State.CurrentPowerLevel);
+        }
+
+        private int ResolveStartingPowerLevel()
+        {
+            int requested = _powerLevelOverride > 0
+                ? _powerLevelOverride
+                : _startingPowerLevel;
+
+            return Mathf.Clamp(requested, 1, 11);
         }
 
         private void ApplyResolvedBuild(ResolvedBrawlerBuild resolved)

@@ -46,7 +46,9 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Container for generated gadget/star power/gear/hypercharge slot buttons. If empty, the runtime view provides one.")]
         [SerializeField] private Transform _loadoutContainer;
         [SerializeField] private TMP_Text _loadoutStatusText;
-        [Tooltip("Power level used when previewing build slots. Prototype defaults to 11 so every slot can be tested.")]
+        [Tooltip("Use saved per-brawler progression power instead of forcing every preview to the fallback level.")]
+        [SerializeField] private bool _usePlayerProgressPowerLevel = true;
+        [Tooltip("Fallback power level used when progression preview is disabled.")]
         [Range(1, 11)]
         [SerializeField] private int _previewPowerLevel = PlayerBrawlerProgress.MaxLevel;
         [SerializeField] private bool _createRuntimeLoadoutPanelWhenMissing = true;
@@ -162,10 +164,7 @@ namespace MOBA.Core.Infrastructure
         private void Commit(BrawlerDefinition def)
         {
             SceneSelection.SelectedBrawler = def;
-            SceneSelection.SelectedBuildPowerLevel = Mathf.Clamp(
-                _previewPowerLevel,
-                PlayerBrawlerProgress.MinLevel,
-                PlayerBrawlerProgress.MaxLevel);
+            SceneSelection.SelectedBuildPowerLevel = ResolvePreviewPowerLevel(def);
             ReleaseRuntimeSelectedBuild();
             SceneSelection.SelectedBuild = CreateSelectedBuild(def, true);
 
@@ -515,7 +514,7 @@ namespace MOBA.Core.Infrastructure
                 TMP_Text power = CreateText(
                     card.transform,
                     "Power",
-                    $"P{Mathf.Clamp(_previewPowerLevel, 1, 11)}",
+                    $"P{ResolvePreviewPowerLevel(def)}",
                     13,
                     TextAlignmentOptions.Right,
                     _goldColor);
@@ -616,7 +615,7 @@ namespace MOBA.Core.Infrastructure
                 _heroRoleText.color = _goldColor;
             }
             if (_heroPowerText != null)
-                _heroPowerText.text = $"POWER {Mathf.Clamp(_previewPowerLevel, 1, 11)}";
+                _heroPowerText.text = $"POWER {ResolvePreviewPowerLevel(_previewed)}";
             if (_heroSummaryText != null)
             {
                 _heroSummaryText.text =
@@ -643,7 +642,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             int powerLevel = Mathf.Clamp(
-                _previewPowerLevel,
+                ResolvePreviewPowerLevel(_previewed),
                 PlayerBrawlerProgress.MinLevel,
                 PlayerBrawlerProgress.MaxLevel);
             BrawlerProgressionBonus bonus = _previewed.GetProgressionBonus(powerLevel);
@@ -692,8 +691,12 @@ namespace MOBA.Core.Infrastructure
 
             if (stat.ValueText != null)
                 stat.ValueText.text = value;
-            if (stat.FillImage != null)
-                stat.FillImage.fillAmount = Mathf.Clamp01(fill);
+            if (stat.FillRect != null)
+            {
+                Vector2 anchorMax = stat.FillRect.anchorMax;
+                anchorMax.x = Mathf.Clamp01(fill);
+                stat.FillRect.anchorMax = anchorMax;
+            }
         }
 
         private void EnsureFallbackLoadoutPanel()
@@ -775,19 +778,13 @@ namespace MOBA.Core.Infrastructure
             if (def == null || def.BuildLayout == null || def.BuildLayout.Slots == null)
                 return;
 
-            int powerLevel = Mathf.Clamp(
-                _previewPowerLevel,
-                PlayerBrawlerProgress.MinLevel,
-                PlayerBrawlerProgress.MaxLevel);
+            int powerLevel = ResolvePreviewPowerLevel(def);
 
             BrawlerBuildSlotDefinition[] slots = def.BuildLayout.Slots;
             for (int i = 0; i < slots.Length; i++)
             {
                 BrawlerBuildSlotDefinition slot = slots[i];
                 if (string.IsNullOrWhiteSpace(slot.SlotId))
-                    continue;
-
-                if (powerLevel < slot.UnlockPowerLevel)
                     continue;
 
                 _previewSlots.Add(slot);
@@ -808,6 +805,9 @@ namespace MOBA.Core.Infrastructure
                     if (!TryGetPreviewSlot(selection.SlotId, out BrawlerBuildSlotDefinition slot))
                         continue;
 
+                    if (!IsSlotUnlocked(slot, powerLevel))
+                        continue;
+
                     if (IsOptionAvailableForSlot(def, slot, selection.SelectedOption))
                         _selectedOptions[selection.SlotId] = selection.SelectedOption;
                 }
@@ -819,6 +819,9 @@ namespace MOBA.Core.Infrastructure
             for (int i = 0; i < _previewSlots.Count; i++)
             {
                 BrawlerBuildSlotDefinition slot = _previewSlots[i];
+                if (!IsSlotUnlocked(slot, powerLevel))
+                    continue;
+
                 if (_selectedOptions.ContainsKey(slot.SlotId))
                     continue;
 
@@ -862,15 +865,20 @@ namespace MOBA.Core.Infrastructure
             for (int i = 0; i < _previewSlots.Count; i++)
             {
                 BrawlerBuildSlotDefinition slot = _previewSlots[i];
+                int powerLevel = ResolvePreviewPowerLevel(_previewed);
+                bool locked = !IsSlotUnlocked(slot, powerLevel);
                 _selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition selected);
-                string label = $"{ResolveSlotDisplayName(slot)}\n{ResolveOptionDisplayName(selected)}";
+                string label = locked
+                    ? $"{ResolveSlotDisplayName(slot)}\nLOCKED P{slot.UnlockPowerLevel}"
+                    : $"{ResolveSlotDisplayName(slot)}\n{ResolveOptionDisplayName(selected)}";
 
                 Button button = CreateButton(
                     _loadoutContainer,
                     $"LoadoutSlot_{slot.SlotId}",
                     label,
-                    ResolveSlotColor(slot.SlotType),
+                    locked ? new Color(0.16f, 0.18f, 0.24f, 0.88f) : ResolveSlotColor(slot.SlotType),
                     () => CycleSlot(slot));
+                button.interactable = !locked && BuildOptionsForSlot(_previewed, slot).Count > 0;
 
                 LayoutElement layout = button.gameObject.AddComponent<LayoutElement>();
                 layout.preferredHeight = _useBrawlInspiredRuntimeView ? 68f : 42f;
@@ -901,6 +909,9 @@ namespace MOBA.Core.Infrastructure
         private void CycleSlot(BrawlerBuildSlotDefinition slot)
         {
             if (_previewed == null)
+                return;
+
+            if (!IsSlotUnlocked(slot, ResolvePreviewPowerLevel(_previewed)))
                 return;
 
             List<BrawlerBuildOptionDefinition> options = BuildOptionsForSlot(_previewed, slot);
@@ -1105,7 +1116,7 @@ namespace MOBA.Core.Infrastructure
             BrawlerBuildValidationResult validation = BrawlerBuildValidator.Validate(
                 _previewed,
                 build,
-                Mathf.Clamp(_previewPowerLevel, PlayerBrawlerProgress.MinLevel, PlayerBrawlerProgress.MaxLevel));
+                ResolvePreviewPowerLevel(_previewed));
 
             DestroyRuntimeBuild(build);
             return validation;
@@ -1128,6 +1139,9 @@ namespace MOBA.Core.Infrastructure
             for (int i = 0; i < _previewSlots.Count; i++)
             {
                 BrawlerBuildSlotDefinition slot = _previewSlots[i];
+                if (!IsSlotUnlocked(slot, ResolvePreviewPowerLevel(def)))
+                    continue;
+
                 if (!_selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition option))
                     continue;
 
@@ -1173,16 +1187,13 @@ namespace MOBA.Core.Infrastructure
             Anchor(barBack.GetComponent<RectTransform>(), new Vector2(0.33f, 0.28f), new Vector2(0.73f, 0.72f), Vector2.zero, Vector2.zero);
 
             Image fill = CreatePanel("Fill", barBack.transform, _goldColor).GetComponent<Image>();
-            fill.type = Image.Type.Filled;
-            fill.fillMethod = Image.FillMethod.Horizontal;
-            fill.fillAmount = 0f;
-            Stretch(fill.rectTransform);
+            Anchor(fill.rectTransform, Vector2.zero, new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
 
             TMP_Text value = CreateText(row.transform, "Value", "-", 13, TextAlignmentOptions.Right, _goldColor);
             value.fontStyle = FontStyles.Bold;
             Anchor(value.rectTransform, new Vector2(0.75f, 0f), new Vector2(0.97f, 1f), Vector2.zero, Vector2.zero);
 
-            return new StatRowView(value, fill);
+            return new StatRowView(value, fill.rectTransform);
         }
 
         private TMP_Text CreateAbilityBox(
@@ -1288,6 +1299,25 @@ namespace MOBA.Core.Infrastructure
             rect.anchorMax = anchorMax;
             rect.offsetMin = offsetMin;
             rect.offsetMax = offsetMax;
+        }
+
+        private int ResolvePreviewPowerLevel(BrawlerDefinition brawler)
+        {
+            int powerLevel = _usePlayerProgressPowerLevel
+                ? PlayerBrawlerProgress.GetLevel(brawler)
+                : _previewPowerLevel;
+
+            return Mathf.Clamp(
+                powerLevel,
+                PlayerBrawlerProgress.MinLevel,
+                PlayerBrawlerProgress.MaxLevel);
+        }
+
+        private static bool IsSlotUnlocked(
+            BrawlerBuildSlotDefinition slot,
+            int powerLevel)
+        {
+            return powerLevel >= slot.UnlockPowerLevel;
         }
 
         private static string ResolveSlotDisplayName(BrawlerBuildSlotDefinition slot)
@@ -1495,12 +1525,12 @@ namespace MOBA.Core.Infrastructure
         private sealed class StatRowView
         {
             public readonly TMP_Text ValueText;
-            public readonly Image FillImage;
+            public readonly RectTransform FillRect;
 
-            public StatRowView(TMP_Text valueText, Image fillImage)
+            public StatRowView(TMP_Text valueText, RectTransform fillRect)
             {
                 ValueText = valueText;
-                FillImage = fillImage;
+                FillRect = fillRect;
             }
         }
     }

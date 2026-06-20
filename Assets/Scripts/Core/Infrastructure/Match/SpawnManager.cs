@@ -156,7 +156,8 @@ namespace MOBA.Core.Infrastructure
                 controller.InitializeFromMatchmaking(
                     participant.SelectedBrawler,
                     participant.Team,
-                    participant.SelectedBuild);
+                    participant.SelectedBuild,
+                    participant.PowerLevel);
 
                 // 4. If participant is AI, attach the Brain
                 if (participant.IsAI)

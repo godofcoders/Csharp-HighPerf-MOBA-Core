@@ -8,6 +8,7 @@ namespace MOBA.Core.Simulation
         public TeamType Team;
         public BrawlerDefinition SelectedBrawler;
         public BrawlerBuildDefinition SelectedBuild;
+        public int PowerLevel;
         public bool IsAI;
 
         public MatchParticipant(
@@ -15,13 +16,15 @@ namespace MOBA.Core.Simulation
             TeamType team,
             BrawlerDefinition brawler,
             bool isAI,
-            BrawlerBuildDefinition build = null)
+            BrawlerBuildDefinition build = null,
+            int powerLevel = 0)
         {
             Name = name;
             Team = team;
             SelectedBrawler = brawler;
             IsAI = isAI;
             SelectedBuild = build;
+            PowerLevel = powerLevel;
         }
     }
 }

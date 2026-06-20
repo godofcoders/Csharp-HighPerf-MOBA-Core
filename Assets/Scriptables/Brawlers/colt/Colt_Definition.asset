@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BrawlerName: Colt
   ModelPrefab: {fileID: 3855221367005763782, guid: a76577bae713344a784c8935ec7cc346, type: 3}
-  Portrait: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  Portrait: {fileID: 0}
   BaseHealth: 3000
   BaseMoveSpeed: 5
   BaseDamage: 500
@@ -43,6 +43,6 @@ MonoBehaviour:
   HyperchargeOptions:
   - {fileID: 11400000, guid: 0d19e5f78203104aab2d4e7f9c1d5e8f, type: 2}
   DefaultBuild: {fileID: 11400000, guid: c017de4a01b1c2d3e4f5a6b7c8d9e0f1, type: 2}
-  SharedGearCatalog: {fileID: 0}
+  SharedGearCatalog: {fileID: 11400000, guid: 2c8a3f42481ae4759af11d8341de507a, type: 2}
   GearOptions: []
   ExtraGearOptions: []
