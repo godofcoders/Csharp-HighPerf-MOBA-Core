@@ -41,6 +41,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Color _panelDarkColor = new Color(0.025f, 0.045f, 0.11f, 0.98f);
         [SerializeField] private Color _goldColor = new Color(1f, 0.76f, 0.12f, 1f);
         [SerializeField] private Color _cyanColor = new Color(0.12f, 0.76f, 1f, 1f);
+        private const string LockIcon = "\uD83D\uDD12";
 
         [Header("Loadout preview")]
         [Tooltip("Container for generated gadget/star power/gear/hypercharge slot buttons. If empty, the runtime view provides one.")]
@@ -76,16 +77,18 @@ namespace MOBA.Core.Infrastructure
         private TMP_Text _heroRoleText;
         private TMP_Text _heroPowerText;
         private TMP_Text _heroSummaryText;
+        private Button _upgradeButton;
+        private TMP_Text _upgradeButtonText;
         private TMP_Text _attackTitleText;
         private TMP_Text _attackDetailText;
         private TMP_Text _superTitleText;
         private TMP_Text _superDetailText;
+        private GameObject _superAbilityBox;
         private StatRowView _healthStat;
         private StatRowView _attackStat;
         private StatRowView _superStat;
         private StatRowView _rangeStat;
         private StatRowView _speedStat;
-        private StatRowView _teamStat;
 
         private void Start()
         {
@@ -104,6 +107,8 @@ namespace MOBA.Core.Infrastructure
                 _backButton.onClick.AddListener(OnBack);
             if (_confirmButton != null)
                 _confirmButton.onClick.AddListener(OnConfirm);
+            if (_upgradeButton != null)
+                _upgradeButton.onClick.AddListener(OnUpgrade);
 
             UpdateConfirmButtonInteractable();
 
@@ -117,6 +122,8 @@ namespace MOBA.Core.Infrastructure
                 _backButton.onClick.RemoveListener(OnBack);
             if (_confirmButton != null)
                 _confirmButton.onClick.RemoveListener(OnConfirm);
+            if (_upgradeButton != null)
+                _upgradeButton.onClick.RemoveListener(OnUpgrade);
         }
 
         private void PreviewInitialBrawler()
@@ -159,6 +166,22 @@ namespace MOBA.Core.Infrastructure
         {
             if (_previewed != null)
                 Commit(_previewed);
+        }
+
+        private void OnUpgrade()
+        {
+            if (_previewed == null || !PlayerBrawlerProgress.CanUpgrade(_previewed))
+            {
+                RefreshUpgradeButton();
+                return;
+            }
+
+            PlayerBrawlerProgress.Upgrade(_previewed);
+
+            if (_useBrawlInspiredRuntimeView)
+                BuildRuntimeRosterCards();
+
+            SetPreview(_previewed);
         }
 
         private void Commit(BrawlerDefinition def)
@@ -356,6 +379,15 @@ namespace MOBA.Core.Infrastructure
             Anchor(powerBg.rectTransform, new Vector2(0.31f, 0.23f), new Vector2(0.69f, 0.31f), Vector2.zero, Vector2.zero);
             Anchor(_heroPowerText.rectTransform, new Vector2(0.31f, 0.23f), new Vector2(0.69f, 0.31f), Vector2.zero, Vector2.zero);
 
+            _upgradeButton = CreateButton(
+                panel.transform,
+                "UpgradeButton",
+                "UPGRADE",
+                new Color(0.10f, 0.66f, 0.26f, 1f),
+                null);
+            _upgradeButtonText = _upgradeButton.GetComponentInChildren<TMP_Text>();
+            Anchor(_upgradeButton.GetComponent<RectTransform>(), new Vector2(0.28f, 0.145f), new Vector2(0.72f, 0.22f), Vector2.zero, Vector2.zero);
+
             _heroSummaryText = CreateText(
                 panel.transform,
                 "HeroSummary",
@@ -363,7 +395,7 @@ namespace MOBA.Core.Infrastructure
                 17,
                 TextAlignmentOptions.Center,
                 new Color(0.88f, 0.94f, 1f, 1f));
-            Anchor(_heroSummaryText.rectTransform, new Vector2(0.08f, 0.08f), new Vector2(0.92f, 0.22f), Vector2.zero, Vector2.zero);
+            Anchor(_heroSummaryText.rectTransform, new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.13f), Vector2.zero, Vector2.zero);
         }
 
         private void BuildStatsPanel(Transform parent)
@@ -395,10 +427,9 @@ namespace MOBA.Core.Infrastructure
             _superStat = CreateStatRow(panel.transform, "Super");
             _rangeStat = CreateStatRow(panel.transform, "Range");
             _speedStat = CreateStatRow(panel.transform, "Speed");
-            _teamStat = CreateStatRow(panel.transform, "Teamplay");
 
-            _attackTitleText = CreateAbilityBox(panel.transform, "Main Attack", out _attackDetailText);
-            _superTitleText = CreateAbilityBox(panel.transform, "Super", out _superDetailText);
+            CreateAbilityBox(panel.transform, "Main Attack", out _attackTitleText, out _attackDetailText);
+            _superAbilityBox = CreateAbilityBox(panel.transform, "Super", out _superTitleText, out _superDetailText);
         }
 
         private void BuildLoadoutBar(Transform parent)
@@ -601,6 +632,7 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             RefreshRosterSelection();
+            RefreshUpgradeButton();
 
             if (_previewed == null)
                 return;
@@ -618,8 +650,10 @@ namespace MOBA.Core.Infrastructure
                 _heroPowerText.text = $"POWER {ResolvePreviewPowerLevel(_previewed)}";
             if (_heroSummaryText != null)
             {
-                _heroSummaryText.text =
-                    $"{ResolveAbilityName(_previewed.MainAttack)} / {ResolveAbilityName(_previewed.SuperAbility)}";
+                string mainName = ResolveAbilityName(_previewed.MainAttack);
+                _heroSummaryText.text = HasAbility(_previewed.SuperAbility)
+                    ? $"{mainName} / {ResolveAbilityName(_previewed.SuperAbility)}"
+                    : mainName;
             }
 
             if (_heroPortraitImage != null && _heroInitialText != null)
@@ -652,21 +686,25 @@ namespace MOBA.Core.Infrastructure
             float mainDamage = Mathf.Max(0f, ResolveAbilityDamageTotal(_previewed.MainAttack, _previewed.BaseDamage + bonus.BonusDamage));
             float superDamage = Mathf.Max(0f, ResolveAbilityDamageTotal(_previewed.SuperAbility, 0f));
             float range = Mathf.Max(0f, ResolveAbilityRange(_previewed.MainAttack));
+            bool hasSuper = HasAbility(_previewed.SuperAbility);
 
             SetStat(_healthStat, Mathf.RoundToInt(health).ToString(), Mathf.InverseLerp(2500f, 9000f, health));
             SetStat(_attackStat, ResolveAbilityDamageText(_previewed.MainAttack, _previewed.BaseDamage + bonus.BonusDamage), Mathf.InverseLerp(300f, 3200f, mainDamage));
-            SetStat(_superStat, ResolveAbilityDamageText(_previewed.SuperAbility, 0f), Mathf.InverseLerp(0f, 4200f, superDamage));
+            SetStatVisible(_superStat, hasSuper);
+            if (hasSuper)
+                SetStat(_superStat, ResolveAbilityDamageText(_previewed.SuperAbility, 0f), Mathf.InverseLerp(0f, 4200f, superDamage));
             SetStat(_rangeStat, range.ToString("0.0"), Mathf.Clamp01(range / 12f));
             SetStat(_speedStat, moveSpeed.ToString("0.0"), Mathf.Clamp01(moveSpeed / 8f));
-            SetStat(_teamStat, _previewed.TeamplayWeight.ToString("0.0"), Mathf.Clamp01(_previewed.TeamplayWeight * 0.5f));
 
             if (_attackTitleText != null)
                 _attackTitleText.text = ResolveAbilityName(_previewed.MainAttack).ToUpperInvariant();
             if (_attackDetailText != null)
                 _attackDetailText.text = ResolveAbilityDetail(_previewed.MainAttack, _previewed.BaseDamage + bonus.BonusDamage);
-            if (_superTitleText != null)
+            if (_superAbilityBox != null)
+                _superAbilityBox.SetActive(hasSuper);
+            if (hasSuper && _superTitleText != null)
                 _superTitleText.text = ResolveAbilityName(_previewed.SuperAbility).ToUpperInvariant();
-            if (_superDetailText != null)
+            if (hasSuper && _superDetailText != null)
                 _superDetailText.text = ResolveAbilityDetail(_previewed.SuperAbility, 0f);
         }
 
@@ -697,6 +735,12 @@ namespace MOBA.Core.Infrastructure
                 anchorMax.x = Mathf.Clamp01(fill);
                 stat.FillRect.anchorMax = anchorMax;
             }
+        }
+
+        private static void SetStatVisible(StatRowView stat, bool visible)
+        {
+            if (stat?.Root != null)
+                stat.Root.SetActive(visible);
         }
 
         private void EnsureFallbackLoadoutPanel()
@@ -869,7 +913,7 @@ namespace MOBA.Core.Infrastructure
                 bool locked = !IsSlotUnlocked(slot, powerLevel);
                 _selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition selected);
                 string label = locked
-                    ? $"{ResolveSlotDisplayName(slot)}\nLOCKED P{slot.UnlockPowerLevel}"
+                    ? $"{ResolveSlotDisplayName(slot)}\n{LockIcon} P{slot.UnlockPowerLevel}"
                     : $"{ResolveSlotDisplayName(slot)}\n{ResolveOptionDisplayName(selected)}";
 
                 Button button = CreateButton(
@@ -1093,6 +1137,31 @@ namespace MOBA.Core.Infrastructure
                 _confirmButton.interactable = _previewed != null && IsCurrentLoadoutValid();
         }
 
+        private void RefreshUpgradeButton()
+        {
+            if (_upgradeButton == null)
+                return;
+
+            if (_previewed == null || !_usePlayerProgressPowerLevel)
+            {
+                _upgradeButton.interactable = false;
+                if (_upgradeButtonText != null)
+                    _upgradeButtonText.text = "UPGRADE";
+                return;
+            }
+
+            int currentLevel = ResolvePreviewPowerLevel(_previewed);
+            bool canUpgrade = PlayerBrawlerProgress.CanUpgrade(_previewed);
+            _upgradeButton.interactable = canUpgrade;
+
+            if (_upgradeButtonText != null)
+            {
+                _upgradeButtonText.text = canUpgrade
+                    ? $"UPGRADE\nPOWER {currentLevel + 1}"
+                    : "MAX\nPOWER";
+            }
+        }
+
         private bool IsCurrentLoadoutValid()
         {
             if (_previewed == null)
@@ -1193,26 +1262,27 @@ namespace MOBA.Core.Infrastructure
             value.fontStyle = FontStyles.Bold;
             Anchor(value.rectTransform, new Vector2(0.75f, 0f), new Vector2(0.97f, 1f), Vector2.zero, Vector2.zero);
 
-            return new StatRowView(value, fill.rectTransform);
+            return new StatRowView(row, value, fill.rectTransform);
         }
 
-        private TMP_Text CreateAbilityBox(
+        private GameObject CreateAbilityBox(
             Transform parent,
             string label,
+            out TMP_Text title,
             out TMP_Text detailText)
         {
             GameObject box = CreatePanel("Ability_" + label, parent, new Color(0.08f, 0.13f, 0.26f, 0.90f));
             LayoutElement boxLayout = box.AddComponent<LayoutElement>();
             boxLayout.preferredHeight = 68f;
 
-            TMP_Text title = CreateText(box.transform, "Title", label.ToUpperInvariant(), 15, TextAlignmentOptions.Left, _goldColor);
+            title = CreateText(box.transform, "Title", label.ToUpperInvariant(), 15, TextAlignmentOptions.Left, _goldColor);
             title.fontStyle = FontStyles.Bold;
             Anchor(title.rectTransform, new Vector2(0.05f, 0.48f), new Vector2(0.95f, 0.96f), Vector2.zero, Vector2.zero);
 
             detailText = CreateText(box.transform, "Detail", "", 12, TextAlignmentOptions.Left, new Color(0.88f, 0.94f, 1f, 1f));
             Anchor(detailText.rectTransform, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.52f), Vector2.zero, Vector2.zero);
 
-            return title;
+            return box;
         }
 
         private static GameObject CreatePanel(
@@ -1373,6 +1443,11 @@ namespace MOBA.Core.Infrastructure
                 : ability.name;
         }
 
+        private static bool HasAbility(AbilityDefinition ability)
+        {
+            return ability != null;
+        }
+
         private static string ResolveAbilityDetail(AbilityDefinition ability, float fallbackDamage)
         {
             if (ability == null)
@@ -1524,11 +1599,13 @@ namespace MOBA.Core.Infrastructure
 
         private sealed class StatRowView
         {
+            public readonly GameObject Root;
             public readonly TMP_Text ValueText;
             public readonly RectTransform FillRect;
 
-            public StatRowView(TMP_Text valueText, RectTransform fillRect)
+            public StatRowView(GameObject root, TMP_Text valueText, RectTransform fillRect)
             {
+                Root = root;
                 ValueText = valueText;
                 FillRect = fillRect;
             }

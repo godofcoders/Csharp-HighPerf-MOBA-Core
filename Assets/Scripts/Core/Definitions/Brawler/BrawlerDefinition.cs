@@ -127,7 +127,7 @@ namespace MOBA.Core.Definitions
             best.PowerLevel = 1;
 
             if (ProgressionBonuses == null || ProgressionBonuses.Length == 0)
-                return best;
+                return BuildDefaultProgressionBonus(powerLevel);
 
             bool foundAny = false;
 
@@ -146,6 +146,20 @@ namespace MOBA.Core.Definitions
             }
 
             return best;
+        }
+
+        private BrawlerProgressionBonus BuildDefaultProgressionBonus(int powerLevel)
+        {
+            int clampedLevel = Mathf.Clamp(powerLevel, 1, 11);
+            float progressionScale = Mathf.Max(0, clampedLevel - 1) * 0.05f;
+
+            return new BrawlerProgressionBonus
+            {
+                PowerLevel = clampedLevel,
+                BonusHealth = BaseHealth * progressionScale,
+                BonusDamage = BaseDamage * progressionScale,
+                BonusMoveSpeed = 0f
+            };
         }
 
         public List<PassiveDefinition> BuildDefaultPassiveLoadout()
