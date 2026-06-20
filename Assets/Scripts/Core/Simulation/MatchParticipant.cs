@@ -7,14 +7,21 @@ namespace MOBA.Core.Simulation
         public string Name;
         public TeamType Team;
         public BrawlerDefinition SelectedBrawler;
+        public BrawlerBuildDefinition SelectedBuild;
         public bool IsAI;
 
-        public MatchParticipant(string name, TeamType team, BrawlerDefinition brawler, bool isAI)
+        public MatchParticipant(
+            string name,
+            TeamType team,
+            BrawlerDefinition brawler,
+            bool isAI,
+            BrawlerBuildDefinition build = null)
         {
             Name = name;
             Team = team;
             SelectedBrawler = brawler;
             IsAI = isAI;
+            SelectedBuild = build;
         }
     }
 }

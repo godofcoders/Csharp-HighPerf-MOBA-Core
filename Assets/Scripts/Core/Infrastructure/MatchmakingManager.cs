@@ -57,7 +57,17 @@ namespace MOBA.Core.Infrastructure
                 ? TeamType.Solo1
                 : TeamType.Blue;
 
-            _roster.Add(new MatchParticipant("Player (You)", playerTeam, selected, false));
+            BrawlerBuildDefinition selectedBuild =
+                SceneSelection.SelectedBrawler == selected
+                    ? SceneSelection.SelectedBuild
+                    : null;
+
+            _roster.Add(new MatchParticipant(
+                "Player (You)",
+                playerTeam,
+                selected,
+                false,
+                selectedBuild));
             Debug.Log($"[Lobby] Player joined as {selected.BrawlerName}");
             
             FillWithBots();

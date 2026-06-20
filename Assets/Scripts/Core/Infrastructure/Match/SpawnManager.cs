@@ -153,7 +153,10 @@ namespace MOBA.Core.Infrastructure
                 BrawlerController controller = go.GetComponent<BrawlerController>();
 
                 // 3. Inject the specific Brawler Definition
-                controller.InitializeFromMatchmaking(participant.SelectedBrawler, participant.Team);
+                controller.InitializeFromMatchmaking(
+                    participant.SelectedBrawler,
+                    participant.Team,
+                    participant.SelectedBuild);
 
                 // 4. If participant is AI, attach the Brain
                 if (participant.IsAI)

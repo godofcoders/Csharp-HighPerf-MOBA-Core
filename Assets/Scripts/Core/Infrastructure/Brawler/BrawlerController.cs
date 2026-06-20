@@ -63,6 +63,7 @@ namespace MOBA.Core.Infrastructure
         private readonly List<GadgetDefinition> _equippedGadgets = new List<GadgetDefinition>(2);
         private HyperchargeDefinition _equippedHypercharge;
         private BrawlerBuildDefinition _resolvedBuildSource;
+        private BrawlerBuildDefinition _buildOverride;
 
         private readonly List<BrawlerCommand> _commandBuffer = new List<BrawlerCommand>(8);
         private IBrawlerCommandSource _commandSource;
@@ -151,8 +152,12 @@ namespace MOBA.Core.Infrastructure
             _commandSource = source;
         }
 
-        public void InitializeFromMatchmaking(BrawlerDefinition def, TeamType team)
+        public void InitializeFromMatchmaking(
+            BrawlerDefinition def,
+            TeamType team,
+            BrawlerBuildDefinition buildOverride = null)
         {
+            _buildOverride = buildOverride;
             InternalInitialize(def, team);
         }
 
@@ -305,6 +310,9 @@ namespace MOBA.Core.Infrastructure
         {
             if (_definition == null || State == null)
                 return null;
+
+            if (_buildOverride != null)
+                return _buildOverride;
 
             return _definition.GetUsableDefaultBuild(State.CurrentPowerLevel);
         }
