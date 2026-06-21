@@ -186,6 +186,7 @@ namespace MOBA.Core.Infrastructure
 
         private void Commit(BrawlerDefinition def)
         {
+            SaveCurrentLoadoutSelection(def);
             SceneSelection.SelectedBrawler = def;
             SceneSelection.SelectedBuildPowerLevel = ResolvePreviewPowerLevel(def);
             ReleaseRuntimeSelectedBuild();
@@ -857,6 +858,8 @@ namespace MOBA.Core.Infrastructure
                 }
             }
 
+            ApplySavedLoadoutSelections(def, powerLevel);
+
             if (!_autoSelectFirstOptionPerSlot)
                 return;
 
@@ -873,6 +876,65 @@ namespace MOBA.Core.Infrastructure
                 BrawlerBuildOptionDefinition first = FindFirstAllowedOption(slot, options);
                 if (first != null)
                     _selectedOptions[slot.SlotId] = first;
+            }
+        }
+
+        private void ApplySavedLoadoutSelections(BrawlerDefinition def, int powerLevel)
+        {
+            Dictionary<string, BrawlerBuildOptionDefinition> savedCandidates =
+                new Dictionary<string, BrawlerBuildOptionDefinition>(_previewSlots.Count);
+
+            for (int i = 0; i < _previewSlots.Count; i++)
+            {
+                BrawlerBuildSlotDefinition slot = _previewSlots[i];
+                if (!IsSlotUnlocked(slot, powerLevel))
+                    continue;
+
+                string savedOptionId = PlayerBrawlerProgress.GetSelectedLoadoutOptionId(def, slot.SlotId);
+                if (string.IsNullOrWhiteSpace(savedOptionId))
+                    continue;
+
+                List<BrawlerBuildOptionDefinition> options = BuildOptionsForSlot(def, slot);
+                BrawlerBuildOptionDefinition savedOption = FindOptionByPersistenceId(options, savedOptionId);
+                if (savedOption == null)
+                {
+                    PlayerBrawlerProgress.ClearSelectedLoadoutOption(def, slot.SlotId);
+                    continue;
+                }
+
+                savedCandidates[slot.SlotId] = savedOption;
+            }
+
+            foreach (string slotId in savedCandidates.Keys)
+                _selectedOptions.Remove(slotId);
+
+            for (int i = 0; i < _previewSlots.Count; i++)
+            {
+                BrawlerBuildSlotDefinition slot = _previewSlots[i];
+                if (!savedCandidates.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition savedOption))
+                    continue;
+
+                if (WouldViolateDuplicateRule(slot, savedOption))
+                    continue;
+
+                _selectedOptions[slot.SlotId] = savedOption;
+            }
+        }
+
+        private void SaveCurrentLoadoutSelection(BrawlerDefinition def)
+        {
+            if (def == null)
+                return;
+
+            int powerLevel = ResolvePreviewPowerLevel(def);
+            for (int i = 0; i < _previewSlots.Count; i++)
+            {
+                BrawlerBuildSlotDefinition slot = _previewSlots[i];
+                if (!IsSlotUnlocked(slot, powerLevel))
+                    continue;
+
+                if (_selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition option))
+                    PlayerBrawlerProgress.SetSelectedLoadoutOption(def, slot.SlotId, option);
             }
         }
 
@@ -976,6 +1038,7 @@ namespace MOBA.Core.Infrastructure
                     continue;
 
                 _selectedOptions[slot.SlotId] = candidate;
+                PlayerBrawlerProgress.SetSelectedLoadoutOption(_previewed, slot.SlotId, candidate);
                 RefreshLoadoutUI();
                 RefreshRuntimePreview();
                 UpdateConfirmButtonInteractable();
@@ -1112,6 +1175,31 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             target.Add(option);
+        }
+
+        private static BrawlerBuildOptionDefinition FindOptionByPersistenceId(
+            List<BrawlerBuildOptionDefinition> options,
+            string optionId)
+        {
+            if (options == null || string.IsNullOrWhiteSpace(optionId))
+                return null;
+
+            for (int i = 0; i < options.Count; i++)
+            {
+                BrawlerBuildOptionDefinition option = options[i];
+                if (option == null)
+                    continue;
+
+                if (string.Equals(
+                    PlayerBrawlerProgress.BuildOptionPersistenceId(option),
+                    optionId,
+                    System.StringComparison.Ordinal))
+                {
+                    return option;
+                }
+            }
+
+            return null;
         }
 
         private void UpdateLoadoutStatus()
