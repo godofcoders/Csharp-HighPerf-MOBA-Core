@@ -80,6 +80,19 @@ namespace MOBA.Core.Infrastructure
             brawler.Respawn(pt.position);
         }
 
+        public void ForceRespawn(BrawlerController brawler, TeamType team, int teamOrdinal)
+        {
+            var list = ResolveSpawnListForTeam(team);
+            if (list == null || list.Count == 0 || brawler == null) return;
+
+            int index = Mathf.Max(0, teamOrdinal) % list.Count;
+            Transform pt = list[index];
+            if (pt == null) return;
+
+            brawler.gameObject.SetActive(true);
+            brawler.Respawn(pt.position);
+        }
+
         private IEnumerator RespawnRoutine(BrawlerController brawler, TeamType team)
         {
             yield return new WaitForSeconds(_respawnDelay);

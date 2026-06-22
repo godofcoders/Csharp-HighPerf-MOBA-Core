@@ -56,7 +56,14 @@ namespace MOBA.Core.Infrastructure
                 _capturedWinner = winner;
             }
 
-            if (GemGrabMode.Instance != null)
+            if (KnockoutMode.Instance != null)
+            {
+                blue = KnockoutMode.Instance.BlueRoundsWon;
+                red = KnockoutMode.Instance.RedRoundsWon;
+                if (MatchManager.Instance == null || !MatchManager.Instance.WinnerKnown)
+                    _capturedWinner = blue >= red ? TeamType.Blue : TeamType.Red;
+            }
+            else if (GemGrabMode.Instance != null)
             {
                 blue = GemGrabMode.Instance.BlueTeamGems;
                 red = GemGrabMode.Instance.RedTeamGems;

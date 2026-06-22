@@ -15,4 +15,4 @@ MonoBehaviour:
   DisplayName: Crystal Crossfire
   Icon: {fileID: 0}
   MapPrefab: {fileID: 1590026745255197339, guid: d1f9a7269f8b4d64a477a383a08f1c51, type: 3}
-  SupportedModes: 00000000
+  SupportedModes: 0000000001000000

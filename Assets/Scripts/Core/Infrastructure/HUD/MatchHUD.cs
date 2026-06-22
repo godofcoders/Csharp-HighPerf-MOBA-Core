@@ -118,17 +118,21 @@ namespace MOBA.Core.Infrastructure
 
         private string ComposeActiveStatus()
         {
+            KnockoutMode knockout = KnockoutMode.Instance;
+            if (knockout != null)
+                return ComposeKnockoutStatus(knockout);
+
             GemGrabMode gg = GemGrabMode.Instance;
             if (gg == null)
-                return "Match active (no Gem Grab in scene)";
+                return $"{ResolveModeMapPrefix()} | Match active";
 
             if (HasDedicatedGemScoreWidgets())
-                return MatchHUDFormatter.FormatGemGrabHoldStatus(
+                return $"{ResolveModeMapPrefix()} | " + MatchHUDFormatter.FormatGemGrabHoldStatus(
                     gg.HasLeader,
                     gg.LeadingTeam,
                     gg.WinTimerRemainingSeconds);
 
-            return MatchHUDFormatter.FormatActiveGemGrabStatus(
+            return $"{ResolveModeMapPrefix()} | " + MatchHUDFormatter.FormatActiveGemGrabStatus(
                 gg.BlueTeamGems,
                 gg.RedTeamGems,
                 gg.GemsToWin,
@@ -138,22 +142,65 @@ namespace MOBA.Core.Infrastructure
                 gg.MatchTimeRemainingSeconds);
         }
 
+        private string ComposeKnockoutStatus(KnockoutMode knockout)
+        {
+            int target = Mathf.Max(1, knockout.RoundsToWin);
+            int blueSize = Mathf.Max(1, knockout.GetRegisteredCount(TeamType.Blue));
+            int redSize = Mathf.Max(1, knockout.GetRegisteredCount(TeamType.Red));
+            int blueAlive = knockout.GetAliveCount(TeamType.Blue);
+            int redAlive = knockout.GetAliveCount(TeamType.Red);
+
+            string status = HasDedicatedGemScoreWidgets()
+                ? MatchHUDFormatter.FormatKnockoutRoundStatus(
+                    blueAlive,
+                    redAlive,
+                    blueSize,
+                    redSize,
+                    knockout.CurrentRound,
+                    knockout.IsRoundEnding)
+                : MatchHUDFormatter.FormatActiveKnockoutStatus(
+                    knockout.BlueRoundsWon,
+                    knockout.RedRoundsWon,
+                    target,
+                    blueAlive,
+                    redAlive,
+                    blueSize,
+                    redSize,
+                    knockout.CurrentRound,
+                    knockout.IsRoundEnding);
+
+            return $"{ResolveModeMapPrefix()} | {status}";
+        }
+
         private void UpdateGemScoreWidgets()
         {
             if (!HasDedicatedGemScoreWidgets())
                 return;
 
             MatchManager mm = MatchManager.Instance;
+            KnockoutMode knockout = KnockoutMode.Instance;
             GemGrabMode gg = GemGrabMode.Instance;
-            bool active = mm != null && mm.CurrentState == MatchState.Active && gg != null;
+            bool active = mm != null && mm.CurrentState == MatchState.Active;
 
-            if (!active)
+            if (!active || (gg == null && knockout == null))
             {
                 SetText(_blueGemTmp, _blueGemLegacy, "--");
                 SetText(_redGemTmp, _redGemLegacy, "--");
                 SetText(_matchTimerTmp, _matchTimerLegacy, "--:--");
                 SetActive(_blueLeaderHighlight, false);
                 SetActive(_redLeaderHighlight, false);
+                return;
+            }
+
+            if (knockout != null)
+            {
+                int targetRounds = Mathf.Max(1, knockout.RoundsToWin);
+                SetText(_blueGemTmp, _blueGemLegacy, $"{knockout.BlueRoundsWon}/{targetRounds}");
+                SetText(_redGemTmp, _redGemLegacy, $"{knockout.RedRoundsWon}/{targetRounds}");
+                SetText(_matchTimerTmp, _matchTimerLegacy, $"R{Mathf.Max(1, knockout.CurrentRound)}");
+
+                SetActive(_blueLeaderHighlight, knockout.BlueRoundsWon > knockout.RedRoundsWon);
+                SetActive(_redLeaderHighlight, knockout.RedRoundsWon > knockout.BlueRoundsWon);
                 return;
             }
 
@@ -177,6 +224,19 @@ namespace MOBA.Core.Infrastructure
                    _redGemLegacy != null ||
                    _matchTimerTmp != null ||
                    _matchTimerLegacy != null;
+        }
+
+        private static string ResolveModeMapPrefix()
+        {
+            string mapName = string.Empty;
+            if (SceneSelection.SelectedMap != null)
+            {
+                mapName = !string.IsNullOrWhiteSpace(SceneSelection.SelectedMap.DisplayName)
+                    ? SceneSelection.SelectedMap.DisplayName
+                    : SceneSelection.SelectedMap.name;
+            }
+
+            return MatchHUDFormatter.FormatModeMapPrefix(SceneSelection.SelectedMode, mapName);
         }
 
         private void WriteStatus(string s)

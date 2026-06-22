@@ -25,7 +25,7 @@ namespace MOBA.Core.Infrastructure
             errors += Require<MatchManager>("MatchManager", "drives match-state lifecycle (Waiting → CountingDown → Active → Ended)");
             errors += Require<SpawnManager>("SpawnManager", "instantiates brawlers from the roster + handles respawn");
             errors += Require<MatchmakingManager>("MatchmakingManager", "builds the roster from SceneSelection + bots, calls SpawnManager.PrepareMatch");
-            errors += Require<GemGrabMode>("GemGrabMode", "Gem Grab game-mode coordinator (death-drop, win timer, sudden death)");
+            errors += Require<GameModeLoader>("GameModeLoader", "instantiates the selected game-mode prefab for the match");
             errors += Require<SimulationClock>("SimulationClock", "drives the tick pipeline; without it nothing in the simulation updates");
 
             // ---------- Recommended ----------
@@ -54,6 +54,13 @@ namespace MOBA.Core.Infrastructure
                 Debug.Log("[SetupCheck] All required + recommended components present.");
         }
 
+        private void Start()
+        {
+            // GameModeLoader instantiates the selected coordinator during
+            // Awake. Validate in Start so all scene Awake calls have run.
+            ValidateSelectedModeCoordinator();
+        }
+
         private static int Require<T>(string label, string why) where T : Component
         {
             T found = FindObjectOfType<T>();
@@ -74,6 +81,41 @@ namespace MOBA.Core.Infrastructure
                 return 1;
             }
             return 0;
+        }
+
+        private static void ValidateSelectedModeCoordinator()
+        {
+            switch (SceneSelection.SelectedMode)
+            {
+                case GameModeId.Knockout:
+                    RequireMode<KnockoutMode>("KnockoutMode", "round wins, no-respawn rules, and knockout end conditions");
+                    break;
+
+                case GameModeId.SoloShowdown:
+                    RequireMode<SoloShowdownMode>("SoloShowdownMode", "solo placements, no-respawn rules, and showdown end conditions");
+                    break;
+
+                case GameModeId.BrawlBall:
+                    RequireMode<BrawlBallMode>("BrawlBallMode", "ball possession and goal logic");
+                    break;
+
+                case GameModeId.HotZone:
+                    RequireMode<HotZoneMode>("HotZoneMode", "zone-control scoring and objective state");
+                    break;
+
+                case GameModeId.GemGrab:
+                default:
+                    RequireMode<GemGrabMode>("GemGrabMode", "death-drop, win timer, and sudden death");
+                    break;
+            }
+        }
+
+        private static void RequireMode<T>(string label, string why) where T : Component
+        {
+            if (FindObjectOfType<T>() != null)
+                return;
+
+            Debug.LogError($"[SetupCheck] MISSING selected-mode component: {label} — {why}");
         }
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation.AI;
 
 namespace MOBA.Core.Simulation
 {
@@ -18,7 +19,8 @@ namespace MOBA.Core.Simulation
     /// MatchManager.AddScore(winner, 10) which trips its existing
     /// EndMatch path (same trick GemGrabMode uses).
     /// </summary>
-    public sealed class KnockoutMode : MonoBehaviour
+    public sealed class KnockoutMode : MonoBehaviour,
+        IAIGameModeMacroStateProvider
     {
         public static KnockoutMode Instance { get; private set; }
 
@@ -30,10 +32,15 @@ namespace MOBA.Core.Simulation
         [Min(0f)]
         [SerializeField] private float _interRoundDelaySeconds = 2.5f;
 
+        [Tooltip("Keep scanning briefly for brawlers spawned after this mode prefab starts.")]
+        [SerializeField] private bool _autoDiscoverBrawlers = true;
+
         public int BlueRoundsWon { get; private set; }
         public int RedRoundsWon { get; private set; }
         public int CurrentRound { get; private set; } = 1;
         public int RoundsToWin => _roundsToWin;
+        public bool IsRoundEnding => _roundEnding;
+        public GameModeId ModeId => GameModeId.Knockout;
 
         private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
         private bool _roundEnding;
@@ -44,10 +51,22 @@ namespace MOBA.Core.Simulation
             Instance = this;
         }
 
+        private void OnEnable()
+        {
+            if (Instance == this)
+                ServiceProvider.Register<IAIGameModeMacroStateProvider>(this);
+        }
+
+        private void OnDisable()
+        {
+            ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
+        }
+
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
             if (SpawnManager.Instance != null) SpawnManager.Instance.AllowAutoRespawn = true;
+            ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
         }
 
         private void Start()
@@ -56,11 +75,30 @@ namespace MOBA.Core.Simulation
             // every dead brawler after a delay; Knockout disables that.
             if (SpawnManager.Instance != null) SpawnManager.Instance.AllowAutoRespawn = false;
 
-            BrawlerController[] discovered = FindObjectsOfType<BrawlerController>();
-            for (int i = 0; i < discovered.Length; i++) Register(discovered[i]);
+            DiscoverBrawlers();
         }
 
-        private void Register(BrawlerController b)
+        private void Update()
+        {
+            if (_autoDiscoverBrawlers && Time.frameCount % 30 == 0)
+                DiscoverBrawlers();
+        }
+
+        private void DiscoverBrawlers()
+        {
+            BrawlerController[] discovered = FindObjectsOfType<BrawlerController>();
+            for (int i = 0; i < discovered.Length; i++)
+                RegisterBrawler(discovered[i]);
+
+            if (_brawlers.Count > 0 &&
+                GetRegisteredCount(TeamType.Blue) > 0 &&
+                GetRegisteredCount(TeamType.Red) > 0)
+            {
+                _autoDiscoverBrawlers = false;
+            }
+        }
+
+        public void RegisterBrawler(BrawlerController b)
         {
             if (b == null || _brawlers.Contains(b)) return;
             _brawlers.Add(b);
@@ -80,6 +118,18 @@ namespace MOBA.Core.Simulation
                 return RedRoundsWon;
 
             return 0;
+        }
+
+        public bool TryResolveMacroState(
+            TeamType team,
+            out AIGameModeMacroState state)
+        {
+            state = AIGameModeMacroState.Neutral;
+            if (team == TeamType.Neutral)
+                return false;
+
+            state = AIGameModeMacroStrategy.ResolveKnockout(this, team);
+            return true;
         }
 
         public int GetAliveCount(TeamType team)
@@ -153,11 +203,21 @@ namespace MOBA.Core.Simulation
             CurrentRound++;
             _roundEnding = false;
             if (SpawnManager.Instance == null) return;
+
+            int blueOrdinal = 0;
+            int redOrdinal = 0;
             for (int i = 0; i < _brawlers.Count; i++)
             {
                 BrawlerController b = _brawlers[i];
                 if (b == null) continue;
-                SpawnManager.Instance.ForceRespawn(b, b.Team);
+
+                int teamOrdinal = 0;
+                if (b.Team == TeamType.Blue)
+                    teamOrdinal = blueOrdinal++;
+                else if (b.Team == TeamType.Red)
+                    teamOrdinal = redOrdinal++;
+
+                SpawnManager.Instance.ForceRespawn(b, b.Team, teamOrdinal);
             }
         }
     }

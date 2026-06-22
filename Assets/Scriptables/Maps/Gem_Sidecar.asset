@@ -15,4 +15,4 @@ MonoBehaviour:
   DisplayName: Side Lane Split
   Icon: {fileID: 0}
   MapPrefab: {fileID: 1590026745255197339, guid: bbd15686b7024f2eb44fbef1918266de, type: 3}
-  SupportedModes: 00000000
+  SupportedModes: 0000000001000000

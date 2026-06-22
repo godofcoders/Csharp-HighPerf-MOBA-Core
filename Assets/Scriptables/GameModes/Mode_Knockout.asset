@@ -15,4 +15,4 @@ MonoBehaviour:
   Id: 1
   DisplayName: Knockout
   Icon: {fileID: 0}
-  ModePrefab: {fileID: 0}
+  ModePrefab: {fileID: 7426708578510709000, guid: 29fd22fa98c74f9eb3e1676ab4b509ad, type: 3}
