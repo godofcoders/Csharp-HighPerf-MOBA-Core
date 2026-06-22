@@ -860,9 +860,12 @@ namespace MOBA.Core.Infrastructure
 
             ApplySavedLoadoutSelections(def, powerLevel);
 
-            if (!_autoSelectFirstOptionPerSlot)
-                return;
+            if (_autoSelectFirstOptionPerSlot || _useBrawlInspiredRuntimeView)
+                EnsureUnlockedSlotsHaveSelection(def, powerLevel);
+        }
 
+        private void EnsureUnlockedSlotsHaveSelection(BrawlerDefinition def, int powerLevel)
+        {
             for (int i = 0; i < _previewSlots.Count; i++)
             {
                 BrawlerBuildSlotDefinition slot = _previewSlots[i];
@@ -872,7 +875,7 @@ namespace MOBA.Core.Infrastructure
                 if (_selectedOptions.ContainsKey(slot.SlotId))
                     continue;
 
-                List<BrawlerBuildOptionDefinition> options = BuildOptionsForSlot(def, slot);
+                List<BrawlerBuildOptionDefinition> options = BuildValidOptionsForSlot(def, slot);
                 BrawlerBuildOptionDefinition first = FindFirstAllowedOption(slot, options);
                 if (first != null)
                     _selectedOptions[slot.SlotId] = first;
@@ -894,7 +897,7 @@ namespace MOBA.Core.Infrastructure
                 if (string.IsNullOrWhiteSpace(savedOptionId))
                     continue;
 
-                List<BrawlerBuildOptionDefinition> options = BuildOptionsForSlot(def, slot);
+                List<BrawlerBuildOptionDefinition> options = BuildValidOptionsForSlot(def, slot);
                 BrawlerBuildOptionDefinition savedOption = FindOptionByPersistenceId(options, savedOptionId);
                 if (savedOption == null)
                 {
@@ -968,15 +971,18 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
+            int powerLevel = ResolvePreviewPowerLevel(_previewed);
+            EnsureUnlockedSlotsHaveSelection(_previewed, powerLevel);
+
             for (int i = 0; i < _previewSlots.Count; i++)
             {
                 BrawlerBuildSlotDefinition slot = _previewSlots[i];
-                int powerLevel = ResolvePreviewPowerLevel(_previewed);
                 bool locked = !IsSlotUnlocked(slot, powerLevel);
+                List<BrawlerBuildOptionDefinition> options = BuildValidOptionsForSlot(_previewed, slot);
                 _selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition selected);
                 string label = locked
-                    ? $"{ResolveSlotDisplayName(slot)}\n{LockIcon} P{slot.UnlockPowerLevel}"
-                    : $"{ResolveSlotDisplayName(slot)}\n{ResolveOptionDisplayName(selected)}";
+                    ? $"{ResolveSlotDisplayName(slot)}\n{LockIcon} UNLOCKS P{slot.UnlockPowerLevel}"
+                    : ResolveLoadoutSlotLabel(slot, selected, options.Count);
 
                 Button button = CreateButton(
                     _loadoutContainer,
@@ -984,7 +990,7 @@ namespace MOBA.Core.Infrastructure
                     label,
                     locked ? new Color(0.16f, 0.18f, 0.24f, 0.88f) : ResolveSlotColor(slot.SlotType),
                     () => CycleSlot(slot));
-                button.interactable = !locked && BuildOptionsForSlot(_previewed, slot).Count > 0;
+                button.interactable = !locked && options.Count > 0;
 
                 LayoutElement layout = button.gameObject.AddComponent<LayoutElement>();
                 layout.preferredHeight = _useBrawlInspiredRuntimeView ? 68f : 42f;
@@ -1020,7 +1026,7 @@ namespace MOBA.Core.Infrastructure
             if (!IsSlotUnlocked(slot, ResolvePreviewPowerLevel(_previewed)))
                 return;
 
-            List<BrawlerBuildOptionDefinition> options = BuildOptionsForSlot(_previewed, slot);
+            List<BrawlerBuildOptionDefinition> options = BuildValidOptionsForSlot(_previewed, slot);
             if (options.Count == 0)
                 return;
 
@@ -1106,8 +1112,24 @@ namespace MOBA.Core.Infrastructure
             if (def == null || option == null || !option.CanEquipInBuildSlot(slot.SlotType))
                 return false;
 
-            List<BrawlerBuildOptionDefinition> options = BuildOptionsForSlot(def, slot);
+            List<BrawlerBuildOptionDefinition> options = BuildValidOptionsForSlot(def, slot);
             return options.Contains(option);
+        }
+
+        private List<BrawlerBuildOptionDefinition> BuildValidOptionsForSlot(
+            BrawlerDefinition def,
+            BrawlerBuildSlotDefinition slot)
+        {
+            List<BrawlerBuildOptionDefinition> options = BuildOptionsForSlot(def, slot);
+
+            for (int i = options.Count - 1; i >= 0; i--)
+            {
+                BrawlerBuildOptionDefinition option = options[i];
+                if (option == null || !option.CanEquipInBuildSlot(slot.SlotType))
+                    options.RemoveAt(i);
+            }
+
+            return options;
         }
 
         private List<BrawlerBuildOptionDefinition> BuildOptionsForSlot(
@@ -1484,6 +1506,37 @@ namespace MOBA.Core.Infrastructure
                 return slot.DisplayName.ToUpperInvariant();
 
             return slot.SlotType.ToString().ToUpperInvariant();
+        }
+
+        private static string ResolveLoadoutSlotLabel(
+            BrawlerBuildSlotDefinition slot,
+            BrawlerBuildOptionDefinition selected,
+            int optionCount)
+        {
+            string slotName = ResolveSlotDisplayName(slot);
+            if (selected != null)
+                return $"{slotName}\n{ResolveOptionDisplayName(selected)}";
+
+            return optionCount > 0
+                ? $"{slotName}\nSELECT"
+                : $"{slotName}\nNO {ResolveSlotTypeName(slot.SlotType)}";
+        }
+
+        private static string ResolveSlotTypeName(BrawlerBuildSlotType slotType)
+        {
+            switch (slotType)
+            {
+                case BrawlerBuildSlotType.Gadget:
+                    return "GADGET";
+                case BrawlerBuildSlotType.StarPower:
+                    return "STAR POWER";
+                case BrawlerBuildSlotType.Hypercharge:
+                    return "HYPERCHARGE";
+                case BrawlerBuildSlotType.Gear:
+                    return "GEAR";
+                default:
+                    return "OPTION";
+            }
         }
 
         private static string ResolveOptionDisplayName(BrawlerBuildOptionDefinition option)
