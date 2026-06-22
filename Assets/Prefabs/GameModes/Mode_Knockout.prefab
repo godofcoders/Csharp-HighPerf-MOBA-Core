@@ -45,5 +45,6 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   _roundsToWin: 2
+  _teamSize: 3
   _interRoundDelaySeconds: 2.5
   _autoDiscoverBrawlers: 1

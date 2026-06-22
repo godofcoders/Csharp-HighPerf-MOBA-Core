@@ -28,6 +28,10 @@ namespace MOBA.Core.Simulation
         [Min(1)]
         [SerializeField] private int _roundsToWin = 2;
 
+        [Tooltip("Expected brawlers per team. Used by HUD before late-spawn discovery finishes.")]
+        [Min(1)]
+        [SerializeField] private int _teamSize = 3;
+
         [Tooltip("Seconds between a round ending and the next round starting (lets victory SFX play).")]
         [Min(0f)]
         [SerializeField] private float _interRoundDelaySeconds = 2.5f;
@@ -39,10 +43,12 @@ namespace MOBA.Core.Simulation
         public int RedRoundsWon { get; private set; }
         public int CurrentRound { get; private set; } = 1;
         public int RoundsToWin => _roundsToWin;
+        public int MaxRounds => Mathf.Max(1, (_roundsToWin * 2) - 1);
         public bool IsRoundEnding => _roundEnding;
         public GameModeId ModeId => GameModeId.Knockout;
 
         private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
+        private readonly List<TeamType> _roundWinners = new List<TeamType>(3);
         private bool _roundEnding;
 
         private void Awake()
@@ -120,6 +126,34 @@ namespace MOBA.Core.Simulation
             return 0;
         }
 
+        public TeamType GetRoundWinner(int roundIndex)
+        {
+            if (roundIndex < 0 || roundIndex >= _roundWinners.Count)
+                return TeamType.Neutral;
+
+            return _roundWinners[roundIndex];
+        }
+
+        public bool HasRoundResult(int roundIndex)
+        {
+            return roundIndex >= 0 && roundIndex < _roundWinners.Count;
+        }
+
+        public int GetDisplayTeamSize(TeamType team)
+        {
+            int registered = GetRegisteredCount(team);
+            return Mathf.Max(1, Mathf.Max(_teamSize, registered));
+        }
+
+        public int GetEliminatedCount(TeamType team)
+        {
+            int registered = GetRegisteredCount(team);
+            if (registered <= 0)
+                return 0;
+
+            return Mathf.Clamp(registered - GetAliveCount(team), 0, GetDisplayTeamSize(team));
+        }
+
         public bool TryResolveMacroState(
             TeamType team,
             out AIGameModeMacroState state)
@@ -160,6 +194,31 @@ namespace MOBA.Core.Simulation
             return count;
         }
 
+        public bool TryGetTeamBrawler(TeamType team, int teamIndex, out BrawlerController brawler)
+        {
+            brawler = null;
+            if (teamIndex < 0)
+                return false;
+
+            int seen = 0;
+            for (int i = 0; i < _brawlers.Count; i++)
+            {
+                BrawlerController candidate = _brawlers[i];
+                if (candidate == null || candidate.Team != team)
+                    continue;
+
+                if (seen == teamIndex)
+                {
+                    brawler = candidate;
+                    return true;
+                }
+
+                seen++;
+            }
+
+            return false;
+        }
+
         private void HandleDeath(BrawlerController dying)
         {
             if (_roundEnding) return;
@@ -185,6 +244,9 @@ namespace MOBA.Core.Simulation
         private void EndRound(TeamType winner)
         {
             _roundEnding = true;
+            if (_roundWinners.Count < MaxRounds)
+                _roundWinners.Add(winner);
+
             if (winner == TeamType.Blue) BlueRoundsWon++;
             else if (winner == TeamType.Red) RedRoundsWon++;
 

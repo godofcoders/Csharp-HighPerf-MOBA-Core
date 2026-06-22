@@ -40,9 +40,26 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private GameObject _blueLeaderHighlight;
         [SerializeField] private GameObject _redLeaderHighlight;
 
+        [Header("Knockout targets")]
+        [SerializeField] private GameObject _knockoutWidgetsRoot;
+        [SerializeField] private Image[] _blueKnockoutPortraits;
+        [SerializeField] private GameObject[] _blueKnockoutCrosses;
+        [SerializeField] private Text[] _blueKnockoutLabels;
+        [SerializeField] private Image[] _redKnockoutPortraits;
+        [SerializeField] private GameObject[] _redKnockoutCrosses;
+        [SerializeField] private Text[] _redKnockoutLabels;
+        [SerializeField] private Image[] _knockoutRoundMarkers;
+
         [Header("Tuning")]
         [Tooltip("Hide the HUD before the match goes Active (lobby/countdown phases).")]
         [SerializeField] private bool _hideBeforeActive = false;
+
+        private static readonly Color BlueRoundColor = new Color(0.18f, 0.46f, 1f, 0.94f);
+        private static readonly Color RedRoundColor = new Color(1f, 0.22f, 0.28f, 0.94f);
+        private static readonly Color EmptyRoundColor = new Color(1f, 1f, 1f, 0.18f);
+        private static readonly Color NeutralRoundColor = new Color(1f, 0.82f, 0.28f, 0.62f);
+        private static readonly Color VisiblePortraitColor = new Color(1f, 1f, 1f, 0.96f);
+        private static readonly Color KnockedPortraitColor = new Color(0.35f, 0.35f, 0.35f, 0.58f);
 
         private void Awake()
         {
@@ -76,6 +93,26 @@ namespace MOBA.Core.Infrastructure
             AutoBindTextTargets();
         }
 
+        public void BindKnockoutWidgets(
+            GameObject knockoutWidgetsRoot,
+            Image[] bluePortraits,
+            GameObject[] blueCrosses,
+            Text[] blueLabels,
+            Image[] redPortraits,
+            GameObject[] redCrosses,
+            Text[] redLabels,
+            Image[] roundMarkers)
+        {
+            _knockoutWidgetsRoot = knockoutWidgetsRoot;
+            _blueKnockoutPortraits = bluePortraits;
+            _blueKnockoutCrosses = blueCrosses;
+            _blueKnockoutLabels = blueLabels;
+            _redKnockoutPortraits = redPortraits;
+            _redKnockoutCrosses = redCrosses;
+            _redKnockoutLabels = redLabels;
+            _knockoutRoundMarkers = roundMarkers;
+        }
+
         private void AutoBindTextTargets()
         {
             if (_tmpText == null)
@@ -88,6 +125,7 @@ namespace MOBA.Core.Infrastructure
         private void Update()
         {
             UpdateGemScoreWidgets();
+            UpdateKnockoutWidgets(KnockoutMode.Instance);
 
             string status = ComposeStatus();
             WriteStatus(status);
@@ -145,8 +183,8 @@ namespace MOBA.Core.Infrastructure
         private string ComposeKnockoutStatus(KnockoutMode knockout)
         {
             int target = Mathf.Max(1, knockout.RoundsToWin);
-            int blueSize = Mathf.Max(1, knockout.GetRegisteredCount(TeamType.Blue));
-            int redSize = Mathf.Max(1, knockout.GetRegisteredCount(TeamType.Red));
+            int blueSize = knockout.GetDisplayTeamSize(TeamType.Blue);
+            int redSize = knockout.GetDisplayTeamSize(TeamType.Red);
             int blueAlive = knockout.GetAliveCount(TeamType.Blue);
             int redAlive = knockout.GetAliveCount(TeamType.Red);
 
@@ -182,25 +220,29 @@ namespace MOBA.Core.Infrastructure
             GemGrabMode gg = GemGrabMode.Instance;
             bool active = mm != null && mm.CurrentState == MatchState.Active;
 
-            if (!active || (gg == null && knockout == null))
+            if (knockout != null && (mm == null || mm.CurrentState != MatchState.Ended))
+            {
+                int blueTeamSize = knockout.GetDisplayTeamSize(TeamType.Blue);
+                int redTeamSize = knockout.GetDisplayTeamSize(TeamType.Red);
+                int blueEliminated = knockout.GetEliminatedCount(TeamType.Blue);
+                int redEliminated = knockout.GetEliminatedCount(TeamType.Red);
+
+                SetText(_blueGemTmp, _blueGemLegacy, $"{blueEliminated}/{blueTeamSize}");
+                SetText(_redGemTmp, _redGemLegacy, $"{redEliminated}/{redTeamSize}");
+                SetText(_matchTimerTmp, _matchTimerLegacy, $"R{Mathf.Max(1, knockout.CurrentRound)}");
+
+                SetActive(_blueLeaderHighlight, blueEliminated < redEliminated);
+                SetActive(_redLeaderHighlight, redEliminated < blueEliminated);
+                return;
+            }
+
+            if (!active || gg == null)
             {
                 SetText(_blueGemTmp, _blueGemLegacy, "--");
                 SetText(_redGemTmp, _redGemLegacy, "--");
                 SetText(_matchTimerTmp, _matchTimerLegacy, "--:--");
                 SetActive(_blueLeaderHighlight, false);
                 SetActive(_redLeaderHighlight, false);
-                return;
-            }
-
-            if (knockout != null)
-            {
-                int targetRounds = Mathf.Max(1, knockout.RoundsToWin);
-                SetText(_blueGemTmp, _blueGemLegacy, $"{knockout.BlueRoundsWon}/{targetRounds}");
-                SetText(_redGemTmp, _redGemLegacy, $"{knockout.RedRoundsWon}/{targetRounds}");
-                SetText(_matchTimerTmp, _matchTimerLegacy, $"R{Mathf.Max(1, knockout.CurrentRound)}");
-
-                SetActive(_blueLeaderHighlight, knockout.BlueRoundsWon > knockout.RedRoundsWon);
-                SetActive(_redLeaderHighlight, knockout.RedRoundsWon > knockout.BlueRoundsWon);
                 return;
             }
 
@@ -224,6 +266,109 @@ namespace MOBA.Core.Infrastructure
                    _redGemLegacy != null ||
                    _matchTimerTmp != null ||
                    _matchTimerLegacy != null;
+        }
+
+        private void UpdateKnockoutWidgets(KnockoutMode knockout)
+        {
+            bool visible = knockout != null;
+            SetActive(_knockoutWidgetsRoot, visible);
+            if (!visible)
+                return;
+
+            UpdateKnockoutTeamSlots(
+                knockout,
+                TeamType.Blue,
+                _blueKnockoutPortraits,
+                _blueKnockoutCrosses,
+                _blueKnockoutLabels);
+
+            UpdateKnockoutTeamSlots(
+                knockout,
+                TeamType.Red,
+                _redKnockoutPortraits,
+                _redKnockoutCrosses,
+                _redKnockoutLabels);
+
+            if (_knockoutRoundMarkers != null)
+            {
+                for (int i = 0; i < _knockoutRoundMarkers.Length; i++)
+                {
+                    Image marker = _knockoutRoundMarkers[i];
+                    if (marker == null)
+                        continue;
+
+                    marker.color = knockout.HasRoundResult(i)
+                        ? ResolveRoundMarkerColor(knockout.GetRoundWinner(i))
+                        : EmptyRoundColor;
+                }
+            }
+        }
+
+        private static void UpdateKnockoutTeamSlots(
+            KnockoutMode knockout,
+            TeamType team,
+            Image[] portraits,
+            GameObject[] crosses,
+            Text[] labels)
+        {
+            int slotCount = portraits != null ? portraits.Length : 0;
+            for (int i = 0; i < slotCount; i++)
+            {
+                Image portrait = portraits[i];
+                GameObject cross = crosses != null && i < crosses.Length ? crosses[i] : null;
+                Text label = labels != null && i < labels.Length ? labels[i] : null;
+
+                bool hasBrawler = knockout.TryGetTeamBrawler(team, i, out BrawlerController brawler);
+                bool knockedOut = hasBrawler &&
+                                  brawler.State != null &&
+                                  brawler.State.IsDead;
+
+                if (portrait != null)
+                {
+                    Sprite sprite = hasBrawler && brawler.Definition != null
+                        ? brawler.Definition.Portrait
+                        : null;
+
+                    portrait.sprite = sprite;
+                    portrait.color = hasBrawler
+                        ? knockedOut ? KnockedPortraitColor : VisiblePortraitColor
+                        : new Color(1f, 1f, 1f, 0.10f);
+                }
+
+                if (label != null)
+                {
+                    label.text = hasBrawler && brawler.Definition != null
+                        ? BuildShortBrawlerLabel(brawler.Definition.BrawlerName, brawler.Definition.name)
+                        : string.Empty;
+                }
+
+                SetActive(cross, knockedOut);
+            }
+        }
+
+        private static Color ResolveRoundMarkerColor(TeamType winner)
+        {
+            if (winner == TeamType.Blue)
+                return BlueRoundColor;
+
+            if (winner == TeamType.Red)
+                return RedRoundColor;
+
+            return winner == TeamType.Neutral ? NeutralRoundColor : EmptyRoundColor;
+        }
+
+        private static string BuildShortBrawlerLabel(string displayName, string fallbackName)
+        {
+            string source = !string.IsNullOrWhiteSpace(displayName)
+                ? displayName
+                : fallbackName;
+
+            if (string.IsNullOrWhiteSpace(source))
+                return string.Empty;
+
+            return source.Length <= 4
+                ? source.ToUpperInvariant()
+                : source.Substring(0, 4).ToUpperInvariant();
         }
 
         private static string ResolveModeMapPrefix()

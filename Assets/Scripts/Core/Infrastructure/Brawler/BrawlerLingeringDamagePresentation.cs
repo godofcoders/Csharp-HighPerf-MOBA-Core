@@ -13,22 +13,17 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerController _brawler;
         [SerializeField] private float _visibleSeconds = 0.72f;
         [SerializeField] private float _pulseSpeed = 8.5f;
-        [SerializeField] private float _bodyHeight = 1.05f;
-        [SerializeField] private Color _burnColor = new Color(1f, 0.32f, 0.06f, 0.48f);
-        [SerializeField] private Color _poisonColor = new Color(0.78f, 0.18f, 1f, 0.42f);
-        [SerializeField] private Color _poisonEdgeColor = new Color(0.82f, 1f, 0.20f, 0.38f);
+        [SerializeField] private Color _burnColor = new Color(1f, 0.36f, 0.05f, 0.48f);
+        [SerializeField] private Color _poisonEdgeColor = new Color(0.30f, 1f, 0.16f, 0.44f);
 
         private Material _overlayMaterial;
         private MaterialPropertyBlock _propertyBlock;
         private GameObject _root;
-        private Transform _bodyOverlay;
         private Transform _edgeOverlay;
         private Transform[] _wisps;
-        private Renderer _bodyRenderer;
         private Renderer _edgeRenderer;
         private Renderer[] _wispRenderers;
         private float _visibleUntilTime;
-        private Color _activeBodyColor;
         private Color _activeEdgeColor;
 
         private void Awake()
@@ -90,19 +85,12 @@ namespace MOBA.Core.Infrastructure
             float pulse = 0.82f + Mathf.Sin(Time.time * _pulseSpeed) * 0.18f;
             float alphaScale = Mathf.Clamp01(remaining * 1.4f) * pulse;
 
-            if (_bodyOverlay != null)
-            {
-                float bodyScale = 0.92f + pulse * 0.12f;
-                _bodyOverlay.localScale = new Vector3(bodyScale, _bodyHeight, bodyScale);
-            }
-
             if (_edgeOverlay != null)
             {
-                float edgeScale = 1.10f + pulse * 0.18f;
-                _edgeOverlay.localScale = new Vector3(edgeScale, 0.026f, edgeScale);
+                float edgeScale = 0.95f + pulse * 0.16f;
+                _edgeOverlay.localScale = new Vector3(edgeScale, 0.018f, edgeScale);
             }
 
-            ApplyColor(_bodyRenderer, _activeBodyColor, alphaScale);
             ApplyColor(_edgeRenderer, _activeEdgeColor, alphaScale);
 
             if (_wisps == null || _wispRenderers == null)
@@ -116,12 +104,12 @@ namespace MOBA.Core.Infrastructure
 
                 float phase = Time.time * (2.8f + i * 0.35f) + i * 1.7f;
                 float angle = phase * 52f + i * 120f;
-                float radius = 0.34f + Mathf.Sin(phase) * 0.06f;
+                float radius = 0.42f + Mathf.Sin(phase) * 0.08f;
                 Vector3 offset = Quaternion.Euler(0f, angle, 0f) * Vector3.forward * radius;
-                offset.y = 0.42f + Mathf.PingPong(phase * 0.12f, 0.45f);
+                offset.y = 0.28f + Mathf.PingPong(phase * 0.16f, 0.34f);
                 wisp.localPosition = offset;
                 wisp.localRotation = Quaternion.Euler(0f, angle, 18f + Mathf.Sin(phase) * 10f);
-                wisp.localScale = new Vector3(0.10f, 0.30f + pulse * 0.08f, 0.10f);
+                wisp.localScale = new Vector3(0.08f, 0.20f + pulse * 0.06f, 0.08f);
 
                 if (i < _wispRenderers.Length)
                     ApplyColor(_wispRenderers[i], _activeEdgeColor, alphaScale);
@@ -139,7 +127,6 @@ namespace MOBA.Core.Infrastructure
             }
 
             bool poison = IsPoisonLike(evt);
-            _activeBodyColor = poison ? _poisonColor : _burnColor;
             _activeEdgeColor = poison ? _poisonEdgeColor : _burnColor;
             _visibleUntilTime = Time.time + Mathf.Max(0.05f, _visibleSeconds);
 
@@ -153,7 +140,7 @@ namespace MOBA.Core.Infrastructure
                 ? evt.AbilityDefinition.name.ToLowerInvariant()
                 : string.Empty;
 
-            return key.Contains("barley") || key.Contains("puddle") || key.Contains("poison");
+            return key.Contains("poison") || key.Contains("toxic") || key.Contains("venom");
         }
 
         private void EnsureVisuals()
@@ -167,21 +154,12 @@ namespace MOBA.Core.Infrastructure
             _root.transform.localRotation = Quaternion.identity;
             _root.transform.localScale = Vector3.one;
 
-            _bodyOverlay = CreatePrimitive(
-                _root.transform,
-                "BodyHeat",
-                PrimitiveType.Cylinder,
-                new Vector3(0f, 0.58f, 0f),
-                new Vector3(0.92f, _bodyHeight, 0.92f),
-                Quaternion.identity,
-                out _bodyRenderer);
-
             _edgeOverlay = CreatePrimitive(
                 _root.transform,
-                "GroundFume",
+                "GroundBurn",
                 PrimitiveType.Cylinder,
-                new Vector3(0f, 0.045f, 0f),
-                new Vector3(1.08f, 0.026f, 1.08f),
+                new Vector3(0f, 0.035f, 0f),
+                new Vector3(0.95f, 0.018f, 0.95f),
                 Quaternion.identity,
                 out _edgeRenderer);
 

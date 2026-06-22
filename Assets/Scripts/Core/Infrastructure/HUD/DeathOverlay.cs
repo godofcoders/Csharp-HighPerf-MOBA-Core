@@ -49,10 +49,16 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private string _titleLabel = "You died";
         [Tooltip("Format string for the countdown. {0} = remaining seconds (integer).")]
         [SerializeField] private string _countdownFormat = "Respawning in {0}";
+        [SerializeField] private string _knockoutTitleLabel = "Knocked out";
+        [SerializeField] private string _spectatingLabel = "Spectating teammate";
+        [SerializeField] private float _knockoutNoticeSeconds = 1.25f;
 
         private float _deathTime = -1f;
+        private float _knockoutNoticeUntilTime = -1f;
         private float _nextAutoDiscoverTime;
         private bool _wasDead;
+        private bool _spectatingAfterDeath;
+        private BrawlerController _spectatedBrawler;
 
         private void Awake()
         {
@@ -128,6 +134,8 @@ namespace MOBA.Core.Infrastructure
             if (dead && !_wasDead)
             {
                 _deathTime = Time.time;
+                _knockoutNoticeUntilTime = Time.time + Mathf.Max(0.1f, _knockoutNoticeSeconds);
+                _spectatingAfterDeath = false;
                 BrawlerController killer = _localBrawler.State.LastAttacker;
                 if (killer != null && killer != _localBrawler && killer.Definition != null)
                 {
@@ -140,13 +148,25 @@ namespace MOBA.Core.Infrastructure
             else if (!dead && _wasDead)
             {
                 _deathTime = -1f;
+                _knockoutNoticeUntilTime = -1f;
+                RestorePlayerCameraTarget();
                 SetKiller(string.Empty); // wipe killer line on respawn
             }
             _wasDead = dead;
 
             if (!dead)
             {
+                SetTitle(_titleLabel);
                 Show(false);
+                return;
+            }
+
+            if (!ShouldShowRespawnCountdown())
+            {
+                bool spectatingTeammate = TrySpectateLivingTeammate();
+                SetTitle(_knockoutTitleLabel);
+                SetCountdown(spectatingTeammate ? _spectatingLabel : string.Empty);
+                Show(Time.time < _knockoutNoticeUntilTime);
                 return;
             }
 
@@ -171,6 +191,69 @@ namespace MOBA.Core.Infrastructure
 
             _nextAutoDiscoverTime = Time.unscaledTime + 0.5f;
             AutoDiscoverBrawler();
+        }
+
+        private static bool ShouldShowRespawnCountdown()
+        {
+            return SpawnManager.Instance == null || SpawnManager.Instance.AllowAutoRespawn;
+        }
+
+        private bool TrySpectateLivingTeammate()
+        {
+            if (_spectatingAfterDeath && IsAlive(_spectatedBrawler))
+                return true;
+
+            BrawlerController teammate = FindLivingTeammate();
+            if (teammate == null || teammate.PresentationFollowTarget == null)
+            {
+                _spectatedBrawler = null;
+                _spectatingAfterDeath = false;
+                return false;
+            }
+
+            CameraController.Instance?.SetTarget(teammate.PresentationFollowTarget);
+            _spectatedBrawler = teammate;
+            _spectatingAfterDeath = true;
+            return true;
+        }
+
+        private BrawlerController FindLivingTeammate()
+        {
+            if (_localBrawler == null)
+                return null;
+
+            BrawlerController[] all = FindObjectsOfType<BrawlerController>();
+            for (int i = 0; i < all.Length; i++)
+            {
+                BrawlerController candidate = all[i];
+                if (candidate == null ||
+                    candidate == _localBrawler ||
+                    candidate.Team != _localBrawler.Team ||
+                    candidate.State == null ||
+                    candidate.State.IsDead)
+                {
+                    continue;
+                }
+
+                return candidate;
+            }
+
+            return null;
+        }
+
+        private static bool IsAlive(BrawlerController brawler)
+        {
+            return brawler != null && brawler.State != null && !brawler.State.IsDead;
+        }
+
+        private void RestorePlayerCameraTarget()
+        {
+            if (!_spectatingAfterDeath || _localBrawler == null)
+                return;
+
+            CameraController.Instance?.SetTarget(_localBrawler.PresentationFollowTarget);
+            _spectatedBrawler = null;
+            _spectatingAfterDeath = false;
         }
 
         private void Show(bool visible)

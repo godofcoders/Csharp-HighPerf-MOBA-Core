@@ -103,13 +103,13 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
                 new Vector2(0f, -16f),
-                new Vector2(620f, 82f),
+                new Vector2(780f, 128f),
                 new Color(0f, 0f, 0f, 0.32f));
 
             Text blueGemText = CreateTeamGemCard(
                 panel.transform,
                 "BlueGemScore",
-                new Vector2(18f, 0f),
+                new Vector2(18f, 20f),
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
                 "BLUE",
@@ -119,7 +119,7 @@ namespace MOBA.Core.Infrastructure
             Text redGemText = CreateTeamGemCard(
                 panel.transform,
                 "RedGemScore",
-                new Vector2(-18f, 0f),
+                new Vector2(-18f, 20f),
                 new Vector2(1f, 0.5f),
                 new Vector2(1f, 0.5f),
                 "RED",
@@ -133,7 +133,7 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 11f),
+                new Vector2(0f, 28f),
                 new Vector2(150f, 32f),
                 28,
                 TextAnchor.UpperCenter,
@@ -147,12 +147,34 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0f),
                 new Vector2(0.5f, 0f),
                 new Vector2(0.5f, 0f),
-                new Vector2(0f, 7f),
-                new Vector2(260f, 22f),
+                new Vector2(0f, 38f),
+                new Vector2(300f, 22f),
                 16,
                 TextAnchor.MiddleCenter,
                 new Color(1f, 1f, 1f, 0.82f),
                 FontStyle.Bold);
+
+            GameObject knockoutRoot = CreateController(panel.transform, "KnockoutWidgets");
+            CreateKnockoutTeamSlots(
+                knockoutRoot.transform,
+                "BlueKnockout",
+                true,
+                new Color(0.18f, 0.46f, 1f, 0.38f),
+                out Image[] bluePortraits,
+                out GameObject[] blueCrosses,
+                out Text[] blueLabels);
+
+            CreateKnockoutTeamSlots(
+                knockoutRoot.transform,
+                "RedKnockout",
+                false,
+                new Color(1f, 0.22f, 0.28f, 0.38f),
+                out Image[] redPortraits,
+                out GameObject[] redCrosses,
+                out Text[] redLabels);
+
+            Image[] roundMarkers = CreateKnockoutRoundMarkers(knockoutRoot.transform);
+            knockoutRoot.SetActive(false);
 
             MatchHUD hud = panel.AddComponent<MatchHUD>();
             hud.BindTextTargets(null, statusText);
@@ -165,6 +187,127 @@ namespace MOBA.Core.Infrastructure
                 timerText,
                 blueLeaderHighlight,
                 redLeaderHighlight);
+            hud.BindKnockoutWidgets(
+                knockoutRoot,
+                bluePortraits,
+                blueCrosses,
+                blueLabels,
+                redPortraits,
+                redCrosses,
+                redLabels,
+                roundMarkers);
+        }
+
+        private static void CreateKnockoutTeamSlots(
+            Transform parent,
+            string prefix,
+            bool leftSide,
+            Color teamColor,
+            out Image[] portraits,
+            out GameObject[] crosses,
+            out Text[] labels)
+        {
+            const int slotCount = 3;
+            portraits = new Image[slotCount];
+            crosses = new GameObject[slotCount];
+            labels = new Text[slotCount];
+
+            Vector2 anchor = leftSide ? new Vector2(0f, 0.5f) : new Vector2(1f, 0.5f);
+            Vector2 pivot = leftSide ? new Vector2(0f, 0.5f) : new Vector2(1f, 0.5f);
+            float direction = leftSide ? 1f : -1f;
+
+            for (int i = 0; i < slotCount; i++)
+            {
+                GameObject slot = CreateRectPanel(
+                    parent,
+                    $"{prefix}Slot{i + 1}",
+                    anchor,
+                    anchor,
+                    pivot,
+                    new Vector2(direction * (24f + i * 43f), -34f),
+                    new Vector2(36f, 36f),
+                    new Color(0f, 0f, 0f, 0.35f));
+
+                portraits[i] = CreateImage(
+                    slot.transform,
+                    $"{prefix}Portrait{i + 1}",
+                    Vector2.zero,
+                    Vector2.one,
+                    new Vector2(0.5f, 0.5f),
+                    Vector2.zero,
+                    Vector2.zero,
+                    teamColor);
+
+                labels[i] = CreateText(
+                    slot.transform,
+                    $"{prefix}Label{i + 1}",
+                    string.Empty,
+                    Vector2.zero,
+                    Vector2.one,
+                    new Vector2(0.5f, 0f),
+                    new Vector2(0f, 1f),
+                    Vector2.zero,
+                    9,
+                    TextAnchor.LowerCenter,
+                    Color.white,
+                    FontStyle.Bold);
+
+                crosses[i] = CreateKnockoutCross(slot.transform, $"{prefix}Cross{i + 1}");
+                crosses[i].SetActive(false);
+            }
+        }
+
+        private static GameObject CreateKnockoutCross(Transform parent, string name)
+        {
+            GameObject root = new GameObject(name, typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            Stretch(root.GetComponent<RectTransform>());
+
+            GameObject slashA = CreateRectPanel(
+                root.transform,
+                "SlashA",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                new Vector2(44f, 5f),
+                new Color(1f, 0.08f, 0.08f, 0.94f));
+            slashA.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+
+            GameObject slashB = CreateRectPanel(
+                root.transform,
+                "SlashB",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                new Vector2(44f, 5f),
+                new Color(1f, 0.08f, 0.08f, 0.94f));
+            slashB.transform.localRotation = Quaternion.Euler(0f, 0f, -45f);
+            return root;
+        }
+
+        private static Image[] CreateKnockoutRoundMarkers(Transform parent)
+        {
+            const int markerCount = 3;
+            Image[] markers = new Image[markerCount];
+
+            for (int i = 0; i < markerCount; i++)
+            {
+                GameObject marker = CreateRectPanel(
+                    parent,
+                    $"KnockoutRoundMarker{i + 1}",
+                    new Vector2(0.5f, 0.5f),
+                    new Vector2(0.5f, 0.5f),
+                    new Vector2(0.5f, 0.5f),
+                    new Vector2(-30f + i * 30f, -35f),
+                    new Vector2(22f, 14f),
+                    new Color(1f, 1f, 1f, 0.18f));
+
+                markers[i] = marker.GetComponent<Image>();
+            }
+
+            return markers;
         }
 
         private static Text CreateTeamGemCard(
