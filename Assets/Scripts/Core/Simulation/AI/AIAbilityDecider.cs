@@ -39,6 +39,10 @@ namespace MOBA.Core.Simulation.AI
             if (currentTick < _nextPrimaryAttackTick)
                 return;
 
+            AbilityDefinition ability = GetCurrentMainAttackDefinition();
+            if (ability == null)
+                return;
+
             if (_failureRecovery != null &&
                 _failureRecovery.IsAbilitySuppressed(AbilitySlotType.MainAttack, currentTick))
             {
@@ -58,6 +62,17 @@ namespace MOBA.Core.Simulation.AI
                 plan,
                 _self.Position,
                 _profile.AimErrorDegrees);
+
+            if (!AIShotObstacleUtility.CanFireAtTarget(
+                    _self,
+                    ability,
+                    plan,
+                    plan.Target,
+                    maxRange,
+                    out _))
+            {
+                return;
+            }
 
             if (_commandSource != null)
             {
@@ -335,10 +350,15 @@ namespace MOBA.Core.Simulation.AI
 
         private float GetMainAttackRange()
         {
-            AbilityDefinition attack = _self.State != null
+            AbilityDefinition attack = GetCurrentMainAttackDefinition();
+            return attack != null ? attack.GetAIMaxRange() : 6f;
+        }
+
+        private AbilityDefinition GetCurrentMainAttackDefinition()
+        {
+            return _self.State != null
                 ? _self.State.GetCurrentMainAttackDefinition()
                 : _self.Definition?.MainAttack;
-            return attack != null ? attack.GetAIMaxRange() : 6f;
         }
 
         private float GetSuperRange()

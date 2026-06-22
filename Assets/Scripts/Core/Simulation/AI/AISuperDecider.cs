@@ -52,6 +52,10 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
+            AbilityDefinition super = GetCurrentSuperDefinition();
+            if (super == null)
+                return;
+
             if (_specialistPlanner.ShouldHoldSuperForSpecialistValue())
                 return;
 
@@ -97,6 +101,17 @@ namespace MOBA.Core.Simulation.AI
                 plan,
                 _self.Position,
                 _profile.AimErrorDegrees);
+
+            if (!AIShotObstacleUtility.CanFireAtTarget(
+                    _self,
+                    super,
+                    plan,
+                    plan.Target,
+                    superRange,
+                    out _))
+            {
+                return;
+            }
 
             if (_commandSource != null)
             {

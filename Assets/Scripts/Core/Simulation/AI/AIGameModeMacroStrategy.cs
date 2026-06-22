@@ -207,18 +207,20 @@ namespace MOBA.Core.Simulation.AI
                 return NeutralForMode(GameModeId.Knockout, "knockout_unavailable");
 
             TeamType enemyTeam = GetEnemyTeam(team);
+            int teamSize = Mathf.Max(
+                mode.GetDisplayTeamSize(team),
+                mode.GetDisplayTeamSize(enemyTeam));
             int ownRegistered = mode.GetRegisteredCount(team);
             int enemyRegistered = mode.GetRegisteredCount(enemyTeam);
-            int teamSize = ownRegistered > 0 || enemyRegistered > 0
-                ? Mathf.Max(ownRegistered, enemyRegistered)
-                : 3;
+            int ownAlive = ownRegistered > 0 ? mode.GetAliveCount(team) : teamSize;
+            int enemyAlive = enemyRegistered > 0 ? mode.GetAliveCount(enemyTeam) : teamSize;
 
             return ResolveKnockout(
                 mode.GetTeamRoundsWon(team),
                 mode.GetTeamRoundsWon(enemyTeam),
                 mode.RoundsToWin,
-                mode.GetAliveCount(team),
-                mode.GetAliveCount(enemyTeam),
+                ownAlive,
+                enemyAlive,
                 teamSize,
                 matchTimeRemainingSeconds: 0f);
         }

@@ -47,13 +47,22 @@ namespace MOBA.Core.Simulation.AI
             AIActionType actionType,
             AIMacroActionContext context)
         {
-            if (context.MacroState.Call == AIGameModeMacroCall.Neutral)
+            if (context.MacroState.Call == AIGameModeMacroCall.Neutral &&
+                context.MacroState.Phase == AIGameModeObjectivePhase.None)
+            {
                 return AIMacroActionPolicyResult.None;
+            }
 
             switch (actionType)
             {
                 case AIActionType.Approach:
                     return EvaluateApproach(context);
+
+                case AIActionType.HoldRange:
+                    return EvaluateHoldRange(context);
+
+                case AIActionType.Reposition:
+                    return EvaluateReposition(context);
 
                 case AIActionType.Search:
                     return EvaluateSearch(context);
@@ -84,9 +93,10 @@ namespace MOBA.Core.Simulation.AI
             switch (context.MacroState.Mode)
             {
                 case GameModeId.Knockout:
-                    if (call == AIGameModeMacroCall.Push) return Result(14f, "knockout_push");
-                    if (call == AIGameModeMacroCall.Reset) return Result(-16f, "knockout_stabilize");
-                    if (call == AIGameModeMacroCall.Hold) return Result(-8f, "knockout_hold");
+                    if (call == AIGameModeMacroCall.Push) return Result(18f, "knockout_numbers_push");
+                    if (call == AIGameModeMacroCall.Reset) return Result(-24f, "knockout_stabilize");
+                    if (call == AIGameModeMacroCall.Hold) return Result(-14f, "knockout_hold_round");
+                    if (context.MacroState.Phase == AIGameModeObjectivePhase.Opening) return Result(-4f, "knockout_opening_hold");
                     break;
 
                 case GameModeId.BrawlBall:
@@ -130,6 +140,66 @@ namespace MOBA.Core.Simulation.AI
             return AIMacroActionPolicyResult.None;
         }
 
+        private static AIMacroActionPolicyResult EvaluateHoldRange(
+            AIMacroActionContext context)
+        {
+            AIGameModeMacroCall call = context.MacroState.Call;
+
+            switch (context.MacroState.Mode)
+            {
+                case GameModeId.Knockout:
+                    if (call == AIGameModeMacroCall.Hold) return Result(18f, "knockout_hold_round");
+                    if (call == AIGameModeMacroCall.Reset) return Result(12f, "knockout_stabilize");
+                    if (call == AIGameModeMacroCall.Push) return Result(6f, "knockout_trade_safe");
+                    if (context.MacroState.Phase == AIGameModeObjectivePhase.Opening) return Result(10f, "knockout_opening_lanes");
+                    break;
+
+                case GameModeId.SoloShowdown:
+                    if (call == AIGameModeMacroCall.Hold) return Result(10f, "showdown_hold_angle");
+                    if (call == AIGameModeMacroCall.Reset) return Result(8f, "showdown_survive");
+                    break;
+
+                case GameModeId.HotZone:
+                    if (call == AIGameModeMacroCall.Hold) return Result(10f, "zone_hold");
+                    break;
+            }
+
+            return AIMacroActionPolicyResult.None;
+        }
+
+        private static AIMacroActionPolicyResult EvaluateReposition(
+            AIMacroActionContext context)
+        {
+            AIGameModeMacroCall call = context.MacroState.Call;
+
+            switch (context.MacroState.Mode)
+            {
+                case GameModeId.Knockout:
+                    if (call == AIGameModeMacroCall.Reset) return Result(18f, "knockout_reset_angle");
+                    if (call == AIGameModeMacroCall.Hold) return Result(12f, "knockout_hold_angle");
+                    if (call == AIGameModeMacroCall.Push) return Result(8f, "knockout_pinch_angle");
+                    if (context.MacroState.Phase == AIGameModeObjectivePhase.Opening) return Result(8f, "knockout_opening_spacing");
+                    break;
+
+                case GameModeId.BrawlBall:
+                    if (call == AIGameModeMacroCall.Reset) return Result(10f, "ball_defensive_angle");
+                    if (call == AIGameModeMacroCall.Push) return Result(8f, "ball_support_lane");
+                    break;
+
+                case GameModeId.HotZone:
+                    if (call == AIGameModeMacroCall.Reset) return Result(12f, "zone_retake_angle");
+                    if (call == AIGameModeMacroCall.Hold) return Result(8f, "zone_hold_angle");
+                    break;
+
+                case GameModeId.SoloShowdown:
+                    if (call == AIGameModeMacroCall.Reset) return Result(14f, "showdown_escape_angle");
+                    if (call == AIGameModeMacroCall.Hold) return Result(8f, "showdown_hold_angle");
+                    break;
+            }
+
+            return AIMacroActionPolicyResult.None;
+        }
+
         private static AIMacroActionPolicyResult EvaluateSearch(
             AIMacroActionContext context)
         {
@@ -138,9 +208,10 @@ namespace MOBA.Core.Simulation.AI
             switch (context.MacroState.Mode)
             {
                 case GameModeId.Knockout:
-                    if (call == AIGameModeMacroCall.Push) return Result(6f, "knockout_push");
-                    if (call == AIGameModeMacroCall.Reset) return Result(-4f, "knockout_stabilize");
-                    if (call == AIGameModeMacroCall.Hold) return Result(-8f, "knockout_hold");
+                    if (call == AIGameModeMacroCall.Push) return Result(8f, "knockout_find_trade");
+                    if (call == AIGameModeMacroCall.Reset) return Result(-8f, "knockout_stabilize");
+                    if (call == AIGameModeMacroCall.Hold) return Result(-10f, "knockout_hold_round");
+                    if (context.MacroState.Phase == AIGameModeObjectivePhase.Opening) return Result(6f, "knockout_opening_lanes");
                     break;
 
                 case GameModeId.BrawlBall:
@@ -191,9 +262,10 @@ namespace MOBA.Core.Simulation.AI
             switch (context.MacroState.Mode)
             {
                 case GameModeId.Knockout:
-                    if (call == AIGameModeMacroCall.Push) return Result(4f, "knockout_push");
-                    if (call == AIGameModeMacroCall.Reset) return Result(-10f, "knockout_stabilize");
-                    if (call == AIGameModeMacroCall.Hold) return Result(-8f, "knockout_hold");
+                    if (call == AIGameModeMacroCall.Push) return Result(2f, "knockout_map_pressure");
+                    if (call == AIGameModeMacroCall.Reset) return Result(-14f, "knockout_stabilize");
+                    if (call == AIGameModeMacroCall.Hold) return Result(-12f, "knockout_hold_round");
+                    if (context.MacroState.Phase == AIGameModeObjectivePhase.Opening) return Result(-6f, "knockout_no_static_objective");
                     break;
 
                 case GameModeId.BrawlBall:
@@ -242,6 +314,18 @@ namespace MOBA.Core.Simulation.AI
         private static AIMacroActionPolicyResult EvaluateRetreatOrRegroup(
             AIMacroActionContext context)
         {
+            if (context.MacroState.Mode == GameModeId.Knockout)
+            {
+                if (context.MacroState.Call == AIGameModeMacroCall.Reset)
+                    return Result(24f, "knockout_down_players_regroup");
+
+                if (context.MacroState.Call == AIGameModeMacroCall.Hold)
+                    return Result(8f, "knockout_hold_shape");
+
+                if (context.MacroState.Call == AIGameModeMacroCall.Push)
+                    return Result(-8f, "knockout_numbers_push");
+            }
+
             if (context.MacroState.Mode == GameModeId.SoloShowdown)
             {
                 if (context.MacroState.Call == AIGameModeMacroCall.Reset)
@@ -285,6 +369,15 @@ namespace MOBA.Core.Simulation.AI
         private static AIMacroActionPolicyResult EvaluatePeel(
             AIMacroActionContext context)
         {
+            if (context.MacroState.Mode == GameModeId.Knockout)
+            {
+                if (context.MacroState.Call == AIGameModeMacroCall.Reset)
+                    return Result(12f, "knockout_save_teammate");
+
+                if (context.MacroState.Call == AIGameModeMacroCall.Hold)
+                    return Result(10f, "knockout_hold_shape");
+            }
+
             if (context.AllyCarriedGems <= 0 ||
                 context.MacroState.Call != AIGameModeMacroCall.Hold)
             {
@@ -305,6 +398,18 @@ namespace MOBA.Core.Simulation.AI
         private static AIMacroActionPolicyResult EvaluateUseSuper(
             AIMacroActionContext context)
         {
+            if (context.MacroState.Mode == GameModeId.Knockout)
+            {
+                if (context.MacroState.Call == AIGameModeMacroCall.Push)
+                    return Result(12f, "knockout_confirm_trade");
+
+                if (context.MacroState.Call == AIGameModeMacroCall.Reset)
+                    return Result(6f, "knockout_escape_super");
+
+                if (context.MacroState.Call == AIGameModeMacroCall.Hold)
+                    return Result(4f, "knockout_hold_super");
+            }
+
             if (context.MacroState.Mode == GameModeId.SoloShowdown)
             {
                 if (context.MacroState.Call == AIGameModeMacroCall.Push)

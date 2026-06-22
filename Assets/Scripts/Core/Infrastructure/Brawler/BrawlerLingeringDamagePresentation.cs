@@ -126,12 +126,24 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
+            if (IsBarleyLingering(evt))
+                return;
+
             bool poison = IsPoisonLike(evt);
             _activeEdgeColor = poison ? _poisonEdgeColor : _burnColor;
             _visibleUntilTime = Time.time + Mathf.Max(0.05f, _visibleSeconds);
 
             EnsureVisuals();
             SetVisible(true);
+        }
+
+        private bool IsBarleyLingering(CombatPresentationEvent evt)
+        {
+            string key = evt.AbilityDefinition != null
+                ? evt.AbilityDefinition.name.ToLowerInvariant()
+                : string.Empty;
+
+            return key.Contains("barley") || key.Contains("puddle");
         }
 
         private bool IsPoisonLike(CombatPresentationEvent evt)
