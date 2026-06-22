@@ -253,6 +253,14 @@ namespace MOBA.Core.Definitions
                 Debug.LogWarning($"[BrawlerDefinition] '{name}' has no StarPowerOptions configured.");
             }
 
+            if (gearSlots > 0 &&
+                SharedGearCatalog == null &&
+                (GearOptions == null || GearOptions.Length == 0) &&
+                (ExtraGearOptions == null || ExtraGearOptions.Length == 0))
+            {
+                Debug.LogWarning($"[BrawlerDefinition] '{name}' has gear slots but no shared or local gear options configured.");
+            }
+
             if (DefaultBuild != null)
             {
                 BrawlerBuildValidationResult result = BrawlerBuildValidator.Validate(this, DefaultBuild, 999);
