@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
 using MOBA.Core.Definitions;
@@ -8,12 +9,7 @@ namespace MOBA.Core.Infrastructure
 {
     /// <summary>
     /// Map-select screen. Filters MapCatalog by SceneSelection.SelectedMode
-    /// and instantiates one card per supported map. Card click previews;
-    /// Confirm commits SceneSelection.SelectedMap and loads Match.
-    ///
-    /// Mirrors BrawlerSelectScreen's two-pane shape (cards + detail panel +
-    /// confirm). Detail panel here is just title + description Text since
-    /// maps don't have a rich stat block. Designer can extend.
+    /// and commits SceneSelection.SelectedMap before loading Match.
     /// </summary>
     public class MapSelectScreen : MonoBehaviour
     {
@@ -21,14 +17,14 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private MapCatalog _catalog;
 
         [Header("Defaults (used if nothing was picked yet)")]
-        [Tooltip("Used when SceneSelection.SelectedBrawler is null on Confirm — happens when the player skipped BrawlerSelect (e.g. tapped Play directly).")]
+        [Tooltip("Used when SceneSelection.SelectedBrawler is null on Confirm.")]
         [SerializeField] private BrawlerDefinition _defaultBrawler;
 
-        [Header("Card spawning")]
+        [Header("Legacy card spawning")]
         [SerializeField] private GameObject _cardPrefab;
         [SerializeField] private Transform _cardContainer;
 
-        [Header("Detail preview (optional)")]
+        [Header("Legacy detail preview")]
         [SerializeField] private TMP_Text _previewNameTmp;
         [SerializeField] private Text _previewNameLegacy;
         [SerializeField] private Image _previewIcon;
@@ -38,12 +34,44 @@ namespace MOBA.Core.Infrastructure
         [Header("Navigation")]
         [SerializeField] private Button _backButton;
 
+        [Header("Runtime View")]
+        [SerializeField] private bool _useBrawlInspiredRuntimeView = true;
+        [SerializeField] private bool _hideLegacySceneWidgetsWhenRuntimeViewActive = true;
+        [SerializeField] private Color _screenBackground = new Color(0.025f, 0.055f, 0.14f, 1f);
+        [SerializeField] private Color _panelColor = new Color(0.055f, 0.115f, 0.25f, 0.98f);
+        [SerializeField] private Color _panelDarkColor = new Color(0.018f, 0.035f, 0.095f, 0.98f);
+        [SerializeField] private Color _goldColor = new Color(1f, 0.76f, 0.12f, 1f);
+        [SerializeField] private Color _cyanColor = new Color(0.12f, 0.76f, 1f, 1f);
+
         private MapDefinition _previewed;
         private readonly List<GameObject> _spawnedCards = new List<GameObject>(8);
+        private readonly Dictionary<MapDefinition, RuntimeMapCardView> _runtimeCards =
+            new Dictionary<MapDefinition, RuntimeMapCardView>(8);
+
+        private RectTransform _runtimeRoot;
+        private Transform _runtimeCardContainer;
+        private TMP_Text _modeHeaderText;
+        private TMP_Text _detailNameText;
+        private TMP_Text _detailModeText;
+        private TMP_Text _detailTagText;
+        private TMP_Text _detailDescriptionText;
+        private TMP_Text _detailPrefabText;
+        private TMP_Text _detailSelectedText;
+        private Image _detailPreviewBackground;
+        private Image _detailSelectedBackground;
 
         private void Start()
         {
-            BuildCards();
+            if (_useBrawlInspiredRuntimeView)
+            {
+                BuildRuntimeView();
+                BuildRuntimeCards();
+            }
+            else
+            {
+                BuildLegacyCards();
+            }
+
             if (_backButton != null) _backButton.onClick.AddListener(OnBack);
             if (_confirmButton != null) _confirmButton.onClick.AddListener(OnConfirm);
             UpdateConfirmInteractable();
@@ -55,7 +83,242 @@ namespace MOBA.Core.Infrastructure
             if (_confirmButton != null) _confirmButton.onClick.RemoveListener(OnConfirm);
         }
 
-        private void BuildCards()
+        private void BuildRuntimeView()
+        {
+            RectTransform host = transform as RectTransform;
+            Transform parent = host != null ? host : transform;
+
+            GameObject rootObject = CreatePanel("BrawlStyleMapSelect", parent, _screenBackground);
+            _runtimeRoot = rootObject.GetComponent<RectTransform>();
+            Stretch(_runtimeRoot);
+            _runtimeRoot.SetAsLastSibling();
+
+            if (_hideLegacySceneWidgetsWhenRuntimeViewActive)
+                HideLegacySceneWidgets(rootObject.transform);
+
+            BuildHeader(_runtimeRoot);
+            BuildMapListPanel(_runtimeRoot);
+            BuildDetailPanel(_runtimeRoot);
+            BuildActionButtons(_runtimeRoot);
+        }
+
+        private void HideLegacySceneWidgets(Transform runtimeRoot)
+        {
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = transform.GetChild(i);
+                if (child == runtimeRoot)
+                    continue;
+
+                child.gameObject.SetActive(false);
+            }
+        }
+
+        private void BuildHeader(Transform parent)
+        {
+            GameObject header = CreatePanel("Header", parent, new Color(0.04f, 0.13f, 0.32f, 0.98f));
+            RectTransform rect = header.GetComponent<RectTransform>();
+            Anchor(rect, new Vector2(0f, 0.88f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
+
+            TMP_Text title = CreateText(header.transform, "Title", "MAPS", 42, TextAlignmentOptions.Left, Color.white);
+            title.fontStyle = FontStyles.Bold;
+            Anchor(title.rectTransform, new Vector2(0.035f, 0f), new Vector2(0.42f, 1f), Vector2.zero, Vector2.zero);
+
+            _modeHeaderText = CreateText(
+                header.transform,
+                "Mode",
+                ResolveModeLabel(SceneSelection.SelectedMode),
+                22,
+                TextAlignmentOptions.Right,
+                _goldColor);
+            _modeHeaderText.fontStyle = FontStyles.Bold;
+            Anchor(_modeHeaderText.rectTransform, new Vector2(0.48f, 0f), new Vector2(0.965f, 1f), Vector2.zero, Vector2.zero);
+        }
+
+        private void BuildMapListPanel(Transform parent)
+        {
+            GameObject panel = CreatePanel("MapListPanel", parent, _panelDarkColor);
+            RectTransform rect = panel.GetComponent<RectTransform>();
+            Anchor(rect, new Vector2(0.035f, 0.16f), new Vector2(0.625f, 0.84f), Vector2.zero, Vector2.zero);
+
+            VerticalLayoutGroup panelLayout = panel.AddComponent<VerticalLayoutGroup>();
+            panelLayout.padding = new RectOffset(16, 16, 14, 14);
+            panelLayout.spacing = 12f;
+            panelLayout.childControlWidth = true;
+            panelLayout.childControlHeight = true;
+            panelLayout.childForceExpandWidth = true;
+            panelLayout.childForceExpandHeight = false;
+
+            TMP_Text label = CreateText(panel.transform, "ListTitle", "AVAILABLE MAPS", 22, TextAlignmentOptions.Left, _goldColor);
+            label.fontStyle = FontStyles.Bold;
+            LayoutElement labelLayout = label.gameObject.AddComponent<LayoutElement>();
+            labelLayout.preferredHeight = 34f;
+
+            GameObject grid = new GameObject("MapGrid", typeof(RectTransform));
+            grid.transform.SetParent(panel.transform, false);
+            GridLayoutGroup gridLayout = grid.AddComponent<GridLayoutGroup>();
+            gridLayout.cellSize = new Vector2(260f, 138f);
+            gridLayout.spacing = new Vector2(14f, 14f);
+            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gridLayout.constraintCount = 2;
+            gridLayout.childAlignment = TextAnchor.UpperLeft;
+
+            LayoutElement gridLayoutElement = grid.AddComponent<LayoutElement>();
+            gridLayoutElement.flexibleHeight = 1f;
+            gridLayoutElement.minHeight = 440f;
+
+            _runtimeCardContainer = grid.transform;
+            _cardContainer = _runtimeCardContainer;
+        }
+
+        private void BuildDetailPanel(Transform parent)
+        {
+            GameObject panel = CreatePanel("DetailPanel", parent, _panelColor);
+            RectTransform rect = panel.GetComponent<RectTransform>();
+            Anchor(rect, new Vector2(0.655f, 0.16f), new Vector2(0.965f, 0.84f), Vector2.zero, Vector2.zero);
+
+            _detailPreviewBackground = CreatePanel("MapPreview", panel.transform, new Color(0.12f, 0.24f, 0.42f, 1f)).GetComponent<Image>();
+            Anchor(_detailPreviewBackground.rectTransform, new Vector2(0.07f, 0.52f), new Vector2(0.93f, 0.94f), Vector2.zero, Vector2.zero);
+            BuildPreviewGraphic(_detailPreviewBackground.transform);
+
+            _detailSelectedText = CreateText(panel.transform, "SelectedBadge", "SELECTED", 15, TextAlignmentOptions.Center, Color.black);
+            _detailSelectedText.fontStyle = FontStyles.Bold;
+            _detailSelectedBackground = CreatePanel("SelectedBadgeBg", panel.transform, _goldColor).GetComponent<Image>();
+            _detailSelectedBackground.transform.SetSiblingIndex(_detailSelectedText.transform.GetSiblingIndex());
+            Anchor(_detailSelectedBackground.rectTransform, new Vector2(0.57f, 0.86f), new Vector2(0.90f, 0.925f), Vector2.zero, Vector2.zero);
+            Anchor(_detailSelectedText.rectTransform, new Vector2(0.57f, 0.86f), new Vector2(0.90f, 0.925f), Vector2.zero, Vector2.zero);
+
+            _detailNameText = CreateText(panel.transform, "MapName", "SELECT MAP", 34, TextAlignmentOptions.Left, Color.white);
+            _detailNameText.fontStyle = FontStyles.Bold;
+            _detailNameText.enableAutoSizing = true;
+            _detailNameText.fontSizeMin = 20f;
+            _detailNameText.fontSizeMax = 34f;
+            Anchor(_detailNameText.rectTransform, new Vector2(0.07f, 0.39f), new Vector2(0.93f, 0.50f), Vector2.zero, Vector2.zero);
+
+            _detailModeText = CreateText(panel.transform, "MapMode", ResolveModeLabel(SceneSelection.SelectedMode), 18, TextAlignmentOptions.Left, _goldColor);
+            _detailModeText.fontStyle = FontStyles.Bold;
+            Anchor(_detailModeText.rectTransform, new Vector2(0.07f, 0.335f), new Vector2(0.93f, 0.39f), Vector2.zero, Vector2.zero);
+
+            _detailTagText = CreateText(panel.transform, "MapTag", "", 18, TextAlignmentOptions.Left, _cyanColor);
+            _detailTagText.fontStyle = FontStyles.Bold;
+            Anchor(_detailTagText.rectTransform, new Vector2(0.07f, 0.275f), new Vector2(0.93f, 0.33f), Vector2.zero, Vector2.zero);
+
+            _detailDescriptionText = CreateText(panel.transform, "MapDescription", "", 15, TextAlignmentOptions.Left, new Color(0.88f, 0.94f, 1f, 1f));
+            Anchor(_detailDescriptionText.rectTransform, new Vector2(0.07f, 0.14f), new Vector2(0.93f, 0.265f), Vector2.zero, Vector2.zero);
+
+            _detailPrefabText = CreateText(panel.transform, "MapPrefab", "", 13, TextAlignmentOptions.Left, new Color(0.62f, 0.74f, 0.92f, 1f));
+            Anchor(_detailPrefabText.rectTransform, new Vector2(0.07f, 0.055f), new Vector2(0.93f, 0.12f), Vector2.zero, Vector2.zero);
+        }
+
+        private void BuildPreviewGraphic(Transform parent)
+        {
+            CreatePreviewLane(parent, "TopLane", new Vector2(0.08f, 0.68f), new Vector2(0.92f, 0.77f), new Color(0.90f, 0.34f, 0.18f, 1f));
+            CreatePreviewLane(parent, "MidLane", new Vector2(0.08f, 0.45f), new Vector2(0.92f, 0.56f), _goldColor);
+            CreatePreviewLane(parent, "BotLane", new Vector2(0.08f, 0.23f), new Vector2(0.92f, 0.32f), new Color(0.12f, 0.70f, 0.42f, 1f));
+
+            GameObject gem = CreatePanel("GemMine", parent, new Color(0.94f, 0.18f, 0.84f, 1f));
+            Anchor(gem.GetComponent<RectTransform>(), new Vector2(0.43f, 0.39f), new Vector2(0.57f, 0.62f), Vector2.zero, Vector2.zero);
+        }
+
+        private void CreatePreviewLane(Transform parent, string name, Vector2 min, Vector2 max, Color color)
+        {
+            GameObject lane = CreatePanel(name, parent, color);
+            Image image = lane.GetComponent<Image>();
+            image.raycastTarget = false;
+            Anchor(lane.GetComponent<RectTransform>(), min, max, Vector2.zero, Vector2.zero);
+        }
+
+        private void BuildActionButtons(Transform parent)
+        {
+            _backButton = CreateButton(parent, "BackButton", "BACK", new Color(0.18f, 0.26f, 0.42f, 1f), null);
+            Anchor(_backButton.GetComponent<RectTransform>(), new Vector2(0.035f, 0.045f), new Vector2(0.18f, 0.12f), Vector2.zero, Vector2.zero);
+
+            _confirmButton = CreateButton(parent, "SelectButton", "SELECT", new Color(0.96f, 0.66f, 0.10f, 1f), null);
+            Anchor(_confirmButton.GetComponent<RectTransform>(), new Vector2(0.735f, 0.045f), new Vector2(0.965f, 0.12f), Vector2.zero, Vector2.zero);
+        }
+
+        private void BuildRuntimeCards()
+        {
+            ClearSpawnedCards();
+            _runtimeCards.Clear();
+
+            if (_runtimeCardContainer == null || _catalog == null)
+            {
+                SetPreview(null);
+                return;
+            }
+
+            List<MapDefinition> maps = _catalog.GetMapsForMode(SceneSelection.SelectedMode);
+            if (maps.Count == 0)
+            {
+                SetPreview(null);
+                return;
+            }
+
+            MapDefinition preferred = SceneSelection.SelectedMap != null &&
+                                      SceneSelection.SelectedMap.SupportsMode(SceneSelection.SelectedMode)
+                ? SceneSelection.SelectedMap
+                : null;
+
+            for (int i = 0; i < maps.Count; i++)
+            {
+                MapDefinition map = maps[i];
+                if (map == null)
+                    continue;
+
+                CreateRuntimeMapCard(map, i);
+
+                if (preferred == null && _autoPreviewFirst && _previewed == null)
+                    SetPreview(map);
+            }
+
+            if (preferred != null)
+                SetPreview(preferred);
+        }
+
+        private void CreateRuntimeMapCard(MapDefinition map, int index)
+        {
+            Color baseColor = ResolveMapColor(map, index);
+            GameObject card = CreatePanel("MapCard_" + ResolveMapName(map), _runtimeCardContainer, baseColor * 0.82f);
+            _spawnedCards.Add(card);
+
+            Button button = card.AddComponent<Button>();
+            button.targetGraphic = card.GetComponent<Image>();
+            MapDefinition captured = map;
+            button.onClick.AddListener(() => SetPreview(captured));
+
+            Image accent = CreatePanel("Accent", card.transform, _cyanColor).GetComponent<Image>();
+            accent.raycastTarget = false;
+            Anchor(accent.rectTransform, new Vector2(0f, 0f), new Vector2(0.035f, 1f), Vector2.zero, Vector2.zero);
+
+            Image selectedOverlay = CreatePanel("SelectedOverlay", card.transform, new Color(1f, 0.76f, 0.12f, 0.22f)).GetComponent<Image>();
+            selectedOverlay.raycastTarget = false;
+            Anchor(selectedOverlay.rectTransform, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            selectedOverlay.enabled = false;
+
+            TMP_Text selectedLabel = CreateText(card.transform, "SelectedLabel", "SELECTED", 13, TextAlignmentOptions.Right, _goldColor);
+            selectedLabel.fontStyle = FontStyles.Bold;
+            Anchor(selectedLabel.rectTransform, new Vector2(0.52f, 0.74f), new Vector2(0.94f, 0.94f), Vector2.zero, Vector2.zero);
+            selectedLabel.gameObject.SetActive(false);
+
+            TMP_Text title = CreateText(card.transform, "MapName", ResolveMapName(map).ToUpperInvariant(), 25, TextAlignmentOptions.Left, Color.white);
+            title.fontStyle = FontStyles.Bold;
+            title.enableAutoSizing = true;
+            title.fontSizeMin = 15f;
+            title.fontSizeMax = 25f;
+            Anchor(title.rectTransform, new Vector2(0.10f, 0.46f), new Vector2(0.94f, 0.78f), Vector2.zero, Vector2.zero);
+
+            TMP_Text mode = CreateText(card.transform, "Mode", ResolveModeLabel(SceneSelection.SelectedMode), 14, TextAlignmentOptions.Left, _goldColor);
+            mode.fontStyle = FontStyles.Bold;
+            Anchor(mode.rectTransform, new Vector2(0.10f, 0.27f), new Vector2(0.94f, 0.45f), Vector2.zero, Vector2.zero);
+
+            TMP_Text tag = CreateText(card.transform, "Tag", ResolveMapTag(map), 13, TextAlignmentOptions.Left, new Color(0.84f, 0.93f, 1f, 1f));
+            Anchor(tag.rectTransform, new Vector2(0.10f, 0.08f), new Vector2(0.94f, 0.26f), Vector2.zero, Vector2.zero);
+
+            _runtimeCards[map] = new RuntimeMapCardView(card.GetComponent<Image>(), accent, selectedOverlay, selectedLabel);
+        }
+
+        private void BuildLegacyCards()
         {
             ClearSpawnedCards();
 
@@ -65,7 +328,7 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            var maps = _catalog.GetMapsForMode(SceneSelection.SelectedMode);
+            List<MapDefinition> maps = _catalog.GetMapsForMode(SceneSelection.SelectedMode);
             if (maps.Count == 0)
             {
                 SetPreview(null);
@@ -85,9 +348,8 @@ namespace MOBA.Core.Infrastructure
                 GameObject card = Instantiate(_cardPrefab, _cardContainer);
                 _spawnedCards.Add(card);
 
-                // Name label.
                 TMP_Text labelTmp = card.GetComponentInChildren<TMP_Text>();
-                string nm = !string.IsNullOrWhiteSpace(map.DisplayName) ? map.DisplayName : map.name;
+                string nm = ResolveMapName(map);
                 if (labelTmp != null) labelTmp.text = nm;
                 else
                 {
@@ -95,8 +357,6 @@ namespace MOBA.Core.Infrastructure
                     if (labelLegacy != null) labelLegacy.text = nm;
                 }
 
-                // Icon (assigns the FIRST Image in the card that ISN'T the
-                // root Button background — heuristic: child Image).
                 if (map.Icon != null)
                 {
                     Image[] images = card.GetComponentsInChildren<Image>();
@@ -126,24 +386,84 @@ namespace MOBA.Core.Infrastructure
         private void SetPreview(MapDefinition map)
         {
             _previewed = map;
-            string nm = map != null && !string.IsNullOrWhiteSpace(map.DisplayName) ? map.DisplayName : (map != null ? map.name : "");
+
+            string nm = ResolveMapName(map);
             if (_previewNameTmp != null) _previewNameTmp.text = nm;
             else if (_previewNameLegacy != null) _previewNameLegacy.text = nm;
+
             if (_previewIcon != null)
             {
                 _previewIcon.sprite = map != null ? map.Icon : null;
                 _previewIcon.enabled = map != null && map.Icon != null;
             }
 
+            RefreshRuntimePreview();
             UpdateConfirmInteractable();
+        }
+
+        private void RefreshRuntimePreview()
+        {
+            if (!_useBrawlInspiredRuntimeView)
+                return;
+
+            RefreshRuntimeCardSelection();
+
+            if (_modeHeaderText != null)
+                _modeHeaderText.text = ResolveModeLabel(SceneSelection.SelectedMode);
+
+            if (_previewed == null)
+            {
+                if (_detailNameText != null) _detailNameText.text = "NO MAPS";
+                if (_detailModeText != null) _detailModeText.text = ResolveModeLabel(SceneSelection.SelectedMode);
+                if (_detailTagText != null) _detailTagText.text = "";
+                if (_detailDescriptionText != null) _detailDescriptionText.text = "No maps are available for this mode.";
+                if (_detailPrefabText != null) _detailPrefabText.text = "";
+                if (_detailSelectedText != null) _detailSelectedText.text = "";
+                if (_detailSelectedBackground != null) _detailSelectedBackground.gameObject.SetActive(false);
+                return;
+            }
+
+            Color mapColor = ResolveMapColor(_previewed, 0);
+            if (_detailPreviewBackground != null)
+                _detailPreviewBackground.color = mapColor * 0.74f;
+            if (_detailSelectedText != null)
+                _detailSelectedText.text = "SELECTED";
+            if (_detailSelectedBackground != null)
+                _detailSelectedBackground.gameObject.SetActive(true);
+            if (_detailNameText != null)
+                _detailNameText.text = ResolveMapName(_previewed).ToUpperInvariant();
+            if (_detailModeText != null)
+                _detailModeText.text = ResolveModeLabel(SceneSelection.SelectedMode);
+            if (_detailTagText != null)
+                _detailTagText.text = ResolveMapTag(_previewed);
+            if (_detailDescriptionText != null)
+                _detailDescriptionText.text = ResolveMapDescription(_previewed);
+            if (_detailPrefabText != null)
+                _detailPrefabText.text = _previewed.MapPrefab != null ? _previewed.MapPrefab.name : "NO PREFAB";
+        }
+
+        private void RefreshRuntimeCardSelection()
+        {
+            foreach (KeyValuePair<MapDefinition, RuntimeMapCardView> entry in _runtimeCards)
+            {
+                bool selected = entry.Key == _previewed;
+                if (entry.Value.Background != null)
+                    entry.Value.Background.color = selected
+                        ? _cyanColor
+                        : ResolveMapColor(entry.Key, 0) * 0.82f;
+                if (entry.Value.Accent != null)
+                    entry.Value.Accent.color = selected ? _goldColor : _cyanColor;
+                if (entry.Value.SelectedOverlay != null)
+                    entry.Value.SelectedOverlay.enabled = selected;
+                if (entry.Value.SelectedLabel != null)
+                    entry.Value.SelectedLabel.gameObject.SetActive(selected);
+            }
         }
 
         private void OnConfirm()
         {
             if (_previewed == null) return;
             SceneSelection.SelectedMap = _previewed;
-            // Backfill brawler default so Match doesn't NRE when the player
-            // skipped BrawlerSelect (Play → GameModeSelect → MapSelect path).
             if (SceneSelection.SelectedBrawler == null) SceneSelection.SelectedBrawler = _defaultBrawler;
             SceneFlow.Instance?.LoadScene(SceneId.Match);
         }
@@ -165,6 +485,177 @@ namespace MOBA.Core.Infrastructure
 
             _spawnedCards.Clear();
             _previewed = null;
+        }
+
+        private static string ResolveMapName(MapDefinition map)
+        {
+            if (map == null)
+                return "";
+
+            return !string.IsNullOrWhiteSpace(map.DisplayName)
+                ? map.DisplayName
+                : map.name;
+        }
+
+        private static string ResolveModeLabel(GameModeId mode)
+        {
+            switch (mode)
+            {
+                case GameModeId.GemGrab:
+                    return "GEM GRAB";
+                case GameModeId.Knockout:
+                    return "KNOCKOUT";
+                case GameModeId.BrawlBall:
+                    return "BRAWL BALL";
+                case GameModeId.HotZone:
+                    return "HOT ZONE";
+                case GameModeId.SoloShowdown:
+                    return "SOLO SHOWDOWN";
+                default:
+                    return mode.ToString().ToUpperInvariant();
+            }
+        }
+
+        private static string ResolveMapTag(MapDefinition map)
+        {
+            string name = ResolveMapName(map).ToLowerInvariant();
+            if (name.Contains("crossfire"))
+                return "MID CONTROL";
+            if (name.Contains("side"))
+                return "SIDE LANES";
+            if (name.Contains("yard"))
+                return "BALANCED";
+
+            return "STANDARD";
+        }
+
+        private static string ResolveMapDescription(MapDefinition map)
+        {
+            string name = ResolveMapName(map).ToLowerInvariant();
+            if (name.Contains("crossfire"))
+                return "Compact center cover creates quick fights around the gem mine and rewards clean lane pressure.";
+            if (name.Contains("side"))
+                return "Wider side routes give flankers room while the center stays open enough for ranged control.";
+            if (name.Contains("yard"))
+                return "Classic three-lane layout with simple cover, readable rotations, and a clear center objective.";
+
+            return "Playable arena for the selected mode.";
+        }
+
+        private Color ResolveMapColor(MapDefinition map, int fallbackIndex)
+        {
+            string name = ResolveMapName(map).ToLowerInvariant();
+            if (name.Contains("crossfire"))
+                return new Color(0.82f, 0.20f, 0.24f, 1f);
+            if (name.Contains("side"))
+                return new Color(0.18f, 0.58f, 0.78f, 1f);
+            if (name.Contains("yard"))
+                return new Color(0.18f, 0.68f, 0.35f, 1f);
+
+            switch (fallbackIndex % 3)
+            {
+                case 0:
+                    return new Color(0.18f, 0.68f, 0.35f, 1f);
+                case 1:
+                    return new Color(0.82f, 0.20f, 0.24f, 1f);
+                default:
+                    return new Color(0.18f, 0.58f, 0.78f, 1f);
+            }
+        }
+
+        private static GameObject CreatePanel(string name, Transform parent, Color color)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
+            go.transform.SetParent(parent, false);
+
+            Image image = go.GetComponent<Image>();
+            image.color = color;
+            image.raycastTarget = true;
+            return go;
+        }
+
+        private static Button CreateButton(
+            Transform parent,
+            string name,
+            string label,
+            Color color,
+            UnityAction onClick)
+        {
+            GameObject go = CreatePanel(name, parent, color);
+            Button button = go.AddComponent<Button>();
+            button.targetGraphic = go.GetComponent<Image>();
+
+            if (onClick != null)
+                button.onClick.AddListener(onClick);
+
+            TMP_Text text = CreateText(go.transform, "Label", label, 17, TextAlignmentOptions.Center, Color.white);
+            text.fontStyle = FontStyles.Bold;
+            Anchor(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(8f, 4f), new Vector2(-8f, -4f));
+
+            return button;
+        }
+
+        private static TMP_Text CreateText(
+            Transform parent,
+            string name,
+            string text,
+            int fontSize,
+            TextAlignmentOptions alignment,
+            Color color)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
+            go.transform.SetParent(parent, false);
+
+            TextMeshProUGUI label = go.GetComponent<TextMeshProUGUI>();
+            label.text = text;
+            label.fontSize = fontSize;
+            label.alignment = alignment;
+            label.color = color;
+            label.raycastTarget = false;
+            label.enableWordWrapping = true;
+
+            return label;
+        }
+
+        private static void Stretch(RectTransform rect)
+        {
+            Anchor(rect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+        }
+
+        private static void Anchor(
+            RectTransform rect,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 offsetMin,
+            Vector2 offsetMax)
+        {
+            if (rect == null)
+                return;
+
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+        }
+
+        private sealed class RuntimeMapCardView
+        {
+            public readonly Image Background;
+            public readonly Image Accent;
+            public readonly Image SelectedOverlay;
+            public readonly TMP_Text SelectedLabel;
+
+            public RuntimeMapCardView(
+                Image background,
+                Image accent,
+                Image selectedOverlay,
+                TMP_Text selectedLabel)
+            {
+                Background = background;
+                Accent = accent;
+                SelectedOverlay = selectedOverlay;
+                SelectedLabel = selectedLabel;
+            }
         }
     }
 }
