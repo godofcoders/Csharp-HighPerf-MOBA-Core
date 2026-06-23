@@ -147,6 +147,40 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void AStarSolver_FindsNearestNavigationClearCell_AwayFromObstacle()
+        {
+            MapData map = MakeMap(7, 7, true);
+            map.WalkabilityGrid[3, 3] = false;
+            AStarSolver solver = new AStarSolver(map);
+
+            Vector2Int nearObstacle = new Vector2Int(3, 2);
+
+            Assert.IsTrue(solver.IsWalkableWithBoundaryClearance(nearObstacle));
+            Assert.IsFalse(solver.IsWalkableWithNavigationClearance(nearObstacle));
+            Assert.IsTrue(solver.TryGetNearestWalkableCoordsWithNavigationClearance(
+                nearObstacle,
+                3,
+                out Vector2Int repaired));
+            Assert.IsTrue(solver.HasObstacleClearance(repaired));
+        }
+
+        [Test]
+        public void AStarSolver_NavigationClearPath_AvoidsObstacleAdjacentCells()
+        {
+            MapData map = MakeMap(7, 7, true);
+            map.WalkabilityGrid[3, 3] = false;
+            AStarSolver solver = new AStarSolver(map);
+
+            var path = solver.FindPathWithNavigationClearance(1, 3, 5, 3);
+
+            Assert.IsNotNull(path);
+            foreach (PathNode node in path)
+            {
+                Assert.IsTrue(solver.HasObstacleClearance(new Vector2Int(node.X, node.Y)));
+            }
+        }
+
+        [Test]
         public void AIMapNavigationUtility_DetectsCoverBetweenPositions()
         {
             MapData map = MakeMap(5, 3, true);
@@ -183,6 +217,21 @@ namespace MOBA.Tests.EditMode
                 map.GetWorldPos(4, 4));
 
             Assert.AreEqual(map.GetWorldPos(3, 3), resolved);
+        }
+
+        [Test]
+        public void AIMapNavigationUtility_BudgetSafeDestination_PrefersObstacleClearCell()
+        {
+            MapData map = MakeMap(7, 7, true);
+            map.WalkabilityGrid[3, 3] = false;
+            AStarSolver solver = new AStarSolver(map);
+
+            Vector3 resolved = AIMapNavigationUtility.ResolveBudgetSafeDestination(
+                solver,
+                null,
+                map.GetWorldPos(3, 2));
+
+            Assert.IsTrue(solver.HasObstacleClearance(solver.GetGridCoords(resolved)));
         }
 
         private static MapData MakeMap(int width, int height, bool walkable)

@@ -6,6 +6,10 @@ namespace MOBA.Core.Simulation.AI
 {
     public class NavigationAgent
     {
+        private const int BoundaryClearanceCells = 1;
+        private const int ObstacleClearanceCells = 1;
+        private const uint AvoidanceDirectionLockTicks = 6;
+
         private readonly BrawlerController _brawler;
         private readonly ISimulationClock _clock;
         private readonly AICommandSource _commandSource;
@@ -36,6 +40,9 @@ namespace MOBA.Core.Simulation.AI
         private uint _lastQueuedMoveTick;
         private int _consecutiveActiveZeroMoveTicks;
         private int _consecutivePathBudgetDeferrals;
+        private Vector3 _lastAvoidanceDirection;
+        private uint _avoidanceDirectionLockUntilTick;
+        private bool _hasAvoidanceDirection;
 
         public Vector3 Position => _brawler.Position;
         public bool HasDestination => _hasDestination;
@@ -125,17 +132,31 @@ namespace MOBA.Core.Simulation.AI
             bool foundStart = true;
             bool foundEnd = true;
 
-            if (!SimulationClock.Pathfinder.IsWalkable(start))
-                foundStart = SimulationClock.Pathfinder.TryGetNearestWalkableCoords(
-                    start,
-                    endpointRepairRadius,
-                    out start);
+            if (!SimulationClock.Pathfinder.IsWalkableWithNavigationClearance(start))
+            {
+                foundStart =
+                    SimulationClock.Pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(
+                        start,
+                        endpointRepairRadius,
+                        out start) ||
+                    SimulationClock.Pathfinder.TryGetNearestWalkableCoords(
+                        start,
+                        endpointRepairRadius,
+                        out start);
+            }
 
-            if (!SimulationClock.Pathfinder.IsWalkableWithBoundaryClearance(end))
-                foundEnd = SimulationClock.Pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(
-                    end,
-                    endpointRepairRadius,
-                    out end);
+            if (!SimulationClock.Pathfinder.IsWalkableWithNavigationClearance(end))
+            {
+                foundEnd =
+                    SimulationClock.Pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(
+                        end,
+                        endpointRepairRadius,
+                        out end) ||
+                    SimulationClock.Pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(
+                        end,
+                        endpointRepairRadius,
+                        out end);
+            }
 
             if (!foundStart || !foundEnd)
             {
@@ -205,7 +226,17 @@ namespace MOBA.Core.Simulation.AI
             }
 
             _consecutivePathBudgetDeferrals = 0;
-            _path = SimulationClock.Pathfinder.FindPath(start.x, start.y, end.x, end.y);
+            _path = SimulationClock.Pathfinder.FindPathWithNavigationClearance(
+                start.x,
+                start.y,
+                end.x,
+                end.y,
+                BoundaryClearanceCells,
+                ObstacleClearanceCells);
+
+            if (_path == null)
+                _path = SimulationClock.Pathfinder.FindPath(start.x, start.y, end.x, end.y);
+
             _pathIndex = 0;
             _hasDestination = true;
             _routeBlocked = _path == null;
@@ -227,6 +258,7 @@ namespace MOBA.Core.Simulation.AI
             _consecutiveRouteFailures = 0;
             _consecutiveActiveZeroMoveTicks = 0;
             _consecutivePathBudgetDeferrals = 0;
+            _hasAvoidanceDirection = false;
             QueueMove(Vector3.zero);
         }
 
@@ -242,6 +274,7 @@ namespace MOBA.Core.Simulation.AI
             _consecutiveActiveZeroMoveTicks = 0;
             _consecutivePathBudgetDeferrals = 0;
             _lastQueuedMoveDirection = Vector3.zero;
+            _hasAvoidanceDirection = false;
         }
 
         public void Tick()
@@ -402,7 +435,8 @@ namespace MOBA.Core.Simulation.AI
             AStarSolver pathfinder = SimulationClock.Pathfinder;
             Vector2Int start = pathfinder.GetGridCoords(_brawler.Position);
 
-            if (!pathfinder.IsWalkable(start) &&
+            if (!pathfinder.IsWalkableWithNavigationClearance(start) &&
+                !pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(start, 2, out start) &&
                 !pathfinder.TryGetNearestWalkableCoords(start, 2, out start))
             {
                 return false;
@@ -418,7 +452,8 @@ namespace MOBA.Core.Simulation.AI
                 Vector3 candidateWorld = _brawler.Position + direction * detourDistance;
                 Vector2Int candidateCoords = pathfinder.GetGridCoords(candidateWorld);
 
-                if (!pathfinder.IsWalkableWithBoundaryClearance(candidateCoords) &&
+                if (!pathfinder.IsWalkableWithNavigationClearance(candidateCoords) &&
+                    !pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(candidateCoords, 2, out candidateCoords) &&
                     !pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(candidateCoords, 2, out candidateCoords))
                 {
                     continue;
@@ -435,12 +470,19 @@ namespace MOBA.Core.Simulation.AI
                     continue;
                 }
 
-                if (!pathfinder.TryGetPathLength(
+                int pathLength;
+                if (!pathfinder.TryGetPathLengthWithNavigationClearance(
                         start.x,
                         start.y,
                         candidateCoords.x,
                         candidateCoords.y,
-                        out int pathLength))
+                        out pathLength) &&
+                    !pathfinder.TryGetPathLength(
+                        start.x,
+                        start.y,
+                        candidateCoords.x,
+                        candidateCoords.y,
+                        out pathLength))
                 {
                     continue;
                 }
@@ -583,8 +625,241 @@ namespace MOBA.Core.Simulation.AI
 
         private void QueueMove(Vector3 direction)
         {
+            direction = ApplyLocalObstacleAvoidance(direction);
             TrackMoveCommand(direction);
             _commandSource?.QueueMove(direction, _currentDestinationHighPriority);
+        }
+
+        private Vector3 ApplyLocalObstacleAvoidance(Vector3 direction)
+        {
+            if (direction.sqrMagnitude <= 0.0001f)
+            {
+                _hasAvoidanceDirection = false;
+                return direction;
+            }
+
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return direction;
+
+            float magnitude = Mathf.Clamp01(direction.magnitude);
+            Vector3 desired = direction;
+            desired.y = 0f;
+            if (desired.sqrMagnitude <= 0.0001f)
+                return Vector3.zero;
+
+            desired.Normalize();
+            Vector3 pressure = GetObstacleAvoidancePressure(pathfinder);
+            bool hasPressure = pressure.sqrMagnitude > 0.0001f;
+            Vector3 pressureDirection = hasPressure ? pressure.normalized : Vector3.zero;
+            bool projectedWalkable = IsMoveProjectionWalkable(
+                pathfinder,
+                desired,
+                requireNavigationClearance: false);
+            bool movingIntoObstacle =
+                hasPressure &&
+                Vector3.Dot(desired, pressureDirection) < -0.15f;
+
+            if (projectedWalkable && !movingIntoObstacle)
+            {
+                _hasAvoidanceDirection = false;
+                return desired * magnitude;
+            }
+
+            if (_hasAvoidanceDirection &&
+                _clock.CurrentTick <= _avoidanceDirectionLockUntilTick &&
+                Vector3.Dot(_lastAvoidanceDirection, desired) > -0.4f &&
+                IsMoveProjectionWalkable(
+                    pathfinder,
+                    _lastAvoidanceDirection,
+                    requireNavigationClearance: false))
+            {
+                return _lastAvoidanceDirection * magnitude;
+            }
+
+            if (TrySelectAvoidanceDirection(
+                    pathfinder,
+                    desired,
+                    pressureDirection,
+                    out Vector3 adjusted))
+            {
+                _lastAvoidanceDirection = adjusted;
+                _avoidanceDirectionLockUntilTick = _clock.CurrentTick + AvoidanceDirectionLockTicks;
+                _hasAvoidanceDirection = true;
+                return adjusted * magnitude;
+            }
+
+            return projectedWalkable ? desired * magnitude : Vector3.zero;
+        }
+
+        private Vector3 GetObstacleAvoidancePressure(AStarSolver pathfinder)
+        {
+            Vector2Int center = pathfinder.GetGridCoords(_brawler.Position);
+            Vector3 pressure = Vector3.zero;
+
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    if (x == 0 && y == 0)
+                        continue;
+
+                    Vector2Int coords = new Vector2Int(center.x + x, center.y + y);
+                    if (pathfinder.IsInBounds(coords) && pathfinder.IsWalkable(coords))
+                        continue;
+
+                    Vector3 away = _brawler.Position - pathfinder.GetWorldPos(coords);
+                    away.y = 0f;
+                    if (away.sqrMagnitude <= 0.0001f)
+                        continue;
+
+                    float weight = 1f / Mathf.Max(0.12f, away.sqrMagnitude);
+                    pressure += away.normalized * weight;
+                }
+            }
+
+            return pressure;
+        }
+
+        private bool TrySelectAvoidanceDirection(
+            AStarSolver pathfinder,
+            Vector3 desired,
+            Vector3 pressureDirection,
+            out Vector3 adjusted)
+        {
+            adjusted = Vector3.zero;
+            bool found = false;
+            float bestScore = float.MinValue;
+            Vector3 side = new Vector3(desired.z, 0f, -desired.x);
+            if (pressureDirection.sqrMagnitude > 0.0001f &&
+                Vector3.Dot(side, pressureDirection) < 0f)
+            {
+                side = -side;
+            }
+
+            EvaluateAvoidanceCandidate(
+                pathfinder,
+                desired + pressureDirection * 0.90f,
+                desired,
+                pressureDirection,
+                ref found,
+                ref bestScore,
+                ref adjusted);
+            EvaluateAvoidanceCandidate(
+                pathfinder,
+                desired + side * 0.85f + pressureDirection * 0.35f,
+                desired,
+                pressureDirection,
+                ref found,
+                ref bestScore,
+                ref adjusted);
+            EvaluateAvoidanceCandidate(
+                pathfinder,
+                desired - side * 0.85f + pressureDirection * 0.35f,
+                desired,
+                pressureDirection,
+                ref found,
+                ref bestScore,
+                ref adjusted);
+            EvaluateAvoidanceCandidate(
+                pathfinder,
+                side + pressureDirection * 0.55f,
+                desired,
+                pressureDirection,
+                ref found,
+                ref bestScore,
+                ref adjusted);
+            EvaluateAvoidanceCandidate(
+                pathfinder,
+                -side + pressureDirection * 0.55f,
+                desired,
+                pressureDirection,
+                ref found,
+                ref bestScore,
+                ref adjusted);
+            EvaluateAvoidanceCandidate(
+                pathfinder,
+                pressureDirection,
+                desired,
+                pressureDirection,
+                ref found,
+                ref bestScore,
+                ref adjusted);
+
+            return found;
+        }
+
+        private void EvaluateAvoidanceCandidate(
+            AStarSolver pathfinder,
+            Vector3 candidate,
+            Vector3 desired,
+            Vector3 pressureDirection,
+            ref bool found,
+            ref float bestScore,
+            ref Vector3 adjusted)
+        {
+            candidate.y = 0f;
+            if (candidate.sqrMagnitude <= 0.0001f)
+                return;
+
+            candidate.Normalize();
+            if (!IsMoveProjectionWalkable(
+                    pathfinder,
+                    candidate,
+                    requireNavigationClearance: false))
+            {
+                return;
+            }
+
+            Vector3 destinationDirection = GetPlanarDelta(_destination);
+            if (destinationDirection.sqrMagnitude > 0.0001f)
+                destinationDirection.Normalize();
+
+            float score =
+                Vector3.Dot(candidate, desired) * 4f +
+                Vector3.Dot(candidate, destinationDirection) * 1.5f;
+
+            if (pressureDirection.sqrMagnitude > 0.0001f)
+                score += Vector3.Dot(candidate, pressureDirection) * 2f;
+
+            if (IsMoveProjectionWalkable(
+                    pathfinder,
+                    candidate,
+                    requireNavigationClearance: true))
+            {
+                score += 3f;
+            }
+
+            if (_hasAvoidanceDirection &&
+                _clock.CurrentTick <= _avoidanceDirectionLockUntilTick)
+            {
+                score += Vector3.Dot(candidate, _lastAvoidanceDirection) * 1.5f;
+            }
+
+            if (!found || score > bestScore)
+            {
+                found = true;
+                bestScore = score;
+                adjusted = candidate;
+            }
+        }
+
+        private bool IsMoveProjectionWalkable(
+            AStarSolver pathfinder,
+            Vector3 direction,
+            bool requireNavigationClearance)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.0001f)
+                return false;
+
+            direction.Normalize();
+            float lookahead = Mathf.Max(0.35f, pathfinder.CellSize * 0.75f);
+            Vector2Int coords = pathfinder.GetGridCoords(_brawler.Position + direction * lookahead);
+
+            return requireNavigationClearance
+                ? pathfinder.IsWalkableWithNavigationClearance(coords)
+                : pathfinder.IsWalkableWithBoundaryClearance(coords);
         }
 
         private void TrackMoveCommand(Vector3 direction)

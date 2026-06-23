@@ -119,6 +119,7 @@ namespace MOBA.Core.Simulation.AI
             CandidateScore fourth = default;
             int candidateCount = 0;
             int maxOffsetMagnitudeSq = maxOffsetMagnitude * maxOffsetMagnitude;
+            bool allowObstacleAdjacentDestination = AllowsObstacleAdjacentDestination(request);
 
             for (int x = -maxOffsetMagnitude; x <= maxOffsetMagnitude; x++)
             {
@@ -128,8 +129,13 @@ namespace MOBA.Core.Simulation.AI
                         continue;
 
                     Vector2Int coords = desiredCoords + new Vector2Int(x, y);
-                    if (!pathfinder.IsWalkableWithBoundaryClearance(coords))
+                    if (!IsCandidateWalkableForRequest(
+                            pathfinder,
+                            coords,
+                            allowObstacleAdjacentDestination))
+                    {
                         continue;
+                    }
 
                     candidateCount++;
                     Vector3 candidate = pathfinder.GetWorldPos(coords);
@@ -187,15 +193,25 @@ namespace MOBA.Core.Simulation.AI
             }
 
             Vector2Int fallbackCoords;
-            Vector3 bestDestination =
-                pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(
+            bool foundFallback = !allowObstacleAdjacentDestination &&
+                                 pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(
+                                     desiredCoords,
+                                     Mathf.Max(1, maxOffsetMagnitude),
+                                     out fallbackCoords);
+
+            if (!foundFallback)
+            {
+                foundFallback = pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(
                     desiredCoords,
                     Mathf.Max(1, maxOffsetMagnitude),
-                    out fallbackCoords)
-                    ? pathfinder.GetWorldPos(fallbackCoords)
-                    : pathfinder.GetNearestWalkableWorldPos(
-                        request.DesiredDestination,
-                        Mathf.Max(1, maxOffsetMagnitude));
+                    out fallbackCoords);
+            }
+
+            Vector3 bestDestination = foundFallback
+                ? pathfinder.GetWorldPos(fallbackCoords)
+                : pathfinder.GetNearestWalkableWorldPos(
+                    request.DesiredDestination,
+                    Mathf.Max(1, maxOffsetMagnitude));
 
             decision.ResolvedDestination = bestDestination;
             decision.Reason = "nearest_walkable_fallback";
@@ -227,6 +243,17 @@ namespace MOBA.Core.Simulation.AI
 
             int maxOffsetMagnitude = GetBudgetSafeSearchRadius(pathfinder, profile);
             Vector2Int desiredCoords = pathfinder.GetGridCoords(desiredDestination);
+
+            if (pathfinder.IsWalkableWithNavigationClearance(desiredCoords))
+                return pathfinder.GetWorldPos(desiredCoords);
+
+            if (pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(
+                    desiredCoords,
+                    maxOffsetMagnitude,
+                    out Vector2Int navigationClearCoords))
+            {
+                return pathfinder.GetWorldPos(navigationClearCoords);
+            }
 
             if (pathfinder.IsWalkableWithBoundaryClearance(desiredCoords))
                 return pathfinder.GetWorldPos(desiredCoords);
@@ -318,6 +345,23 @@ namespace MOBA.Core.Simulation.AI
                                 Mathf.Max(0.1f, pathfinder.CellSize)));
         }
 
+        private static bool IsCandidateWalkableForRequest(
+            AStarSolver pathfinder,
+            Vector2Int coords,
+            bool allowObstacleAdjacentDestination)
+        {
+            return allowObstacleAdjacentDestination
+                ? pathfinder.IsWalkableWithBoundaryClearance(coords)
+                : pathfinder.IsWalkableWithNavigationClearance(coords);
+        }
+
+        private static bool AllowsObstacleAdjacentDestination(in AIMapNavigationRequest request)
+        {
+            return request.PreferCoverPeek ||
+                   request.PreferLineOfSightCover ||
+                   request.PreferThrowerSafePosition;
+        }
+
         private static bool TrySelectReachableCandidate(
             BrawlerController self,
             AStarSolver pathfinder,
@@ -349,20 +393,29 @@ namespace MOBA.Core.Simulation.AI
             }
 
             pathValidationCount++;
-            if (!pathfinder.TryGetPathLength(
-                selfCoords.x,
-                selfCoords.y,
-                candidate.Coords.x,
-                candidate.Coords.y,
-                out int pathLength))
+            bool allowObstacleAdjacentDestination = AllowsObstacleAdjacentDestination(request);
+            int pathLength;
+            if ((!allowObstacleAdjacentDestination &&
+                 pathfinder.TryGetPathLengthWithNavigationClearance(
+                     selfCoords.x,
+                     selfCoords.y,
+                     candidate.Coords.x,
+                     candidate.Coords.y,
+                     out pathLength)) ||
+                pathfinder.TryGetPathLength(
+                    selfCoords.x,
+                    selfCoords.y,
+                    candidate.Coords.x,
+                    candidate.Coords.y,
+                    out pathLength))
             {
-                return false;
+                candidate.Score -= pathLength * Mathf.Max(0f, request.PathCostWeight);
+                candidate.Reason += allowObstacleAdjacentDestination ? "|path" : "|clear_path";
+                selected = candidate;
+                return true;
             }
 
-            candidate.Score -= pathLength * Mathf.Max(0f, request.PathCostWeight);
-            candidate.Reason += "|path";
-            selected = candidate;
-            return true;
+            return false;
         }
 
         private static bool RequiresPathValidation(AIMapRouteIntent intent)

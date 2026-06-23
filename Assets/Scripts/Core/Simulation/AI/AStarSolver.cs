@@ -142,6 +142,42 @@ namespace MOBA.Core.Simulation.AI
                    coords.y < _height - clearance;
         }
 
+        public bool IsWalkableWithNavigationClearance(
+            UnityEngine.Vector2Int coords,
+            int boundaryClearanceCells = 1,
+            int obstacleClearanceCells = 1)
+        {
+            return IsWalkableWithBoundaryClearance(coords, boundaryClearanceCells) &&
+                   HasObstacleClearance(coords, obstacleClearanceCells);
+        }
+
+        public bool HasObstacleClearance(
+            UnityEngine.Vector2Int coords,
+            int clearanceCells = 1)
+        {
+            if (!IsWalkable(coords))
+                return false;
+
+            int clearance = UnityEngine.Mathf.Max(0, clearanceCells);
+            if (clearance == 0)
+                return true;
+
+            for (int x = -clearance; x <= clearance; x++)
+            {
+                for (int y = -clearance; y <= clearance; y++)
+                {
+                    if (x == 0 && y == 0)
+                        continue;
+
+                    UnityEngine.Vector2Int neighbor = new UnityEngine.Vector2Int(coords.x + x, coords.y + y);
+                    if (!IsInBounds(neighbor) || !IsWalkable(neighbor))
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
         public bool IsBush(UnityEngine.Vector2Int coords)
         {
             return _mapData != null && _mapData.IsBush(coords);
@@ -268,6 +304,23 @@ namespace MOBA.Core.Simulation.AI
                 out result);
         }
 
+        public bool TryGetNearestWalkableCoordsWithNavigationClearance(
+            UnityEngine.Vector2Int center,
+            int searchRadius,
+            out UnityEngine.Vector2Int result,
+            int boundaryClearanceCells = 1,
+            int obstacleClearanceCells = 1)
+        {
+            return TryGetNearestWalkableCoords(
+                center,
+                searchRadius,
+                requireBoundaryClearance: true,
+                requireObstacleClearance: true,
+                out result,
+                boundaryClearanceCells,
+                obstacleClearanceCells);
+        }
+
         private bool TryGetNearestWalkableCoords(
             UnityEngine.Vector2Int center,
             int searchRadius,
@@ -275,7 +328,31 @@ namespace MOBA.Core.Simulation.AI
             out UnityEngine.Vector2Int result,
             int clearanceCells = 1)
         {
-            if (IsCandidateWalkable(center, requireBoundaryClearance, clearanceCells))
+            return TryGetNearestWalkableCoords(
+                center,
+                searchRadius,
+                requireBoundaryClearance,
+                requireObstacleClearance: false,
+                out result,
+                clearanceCells,
+                obstacleClearanceCells: 0);
+        }
+
+        private bool TryGetNearestWalkableCoords(
+            UnityEngine.Vector2Int center,
+            int searchRadius,
+            bool requireBoundaryClearance,
+            bool requireObstacleClearance,
+            out UnityEngine.Vector2Int result,
+            int boundaryClearanceCells = 1,
+            int obstacleClearanceCells = 1)
+        {
+            if (IsCandidateWalkable(
+                center,
+                requireBoundaryClearance,
+                requireObstacleClearance,
+                boundaryClearanceCells,
+                obstacleClearanceCells))
             {
                 result = center;
                 return true;
@@ -296,7 +373,12 @@ namespace MOBA.Core.Simulation.AI
                             continue;
 
                         UnityEngine.Vector2Int coords = new UnityEngine.Vector2Int(center.x + x, center.y + y);
-                        if (!IsCandidateWalkable(coords, requireBoundaryClearance, clearanceCells))
+                        if (!IsCandidateWalkable(
+                            coords,
+                            requireBoundaryClearance,
+                            requireObstacleClearance,
+                            boundaryClearanceCells,
+                            obstacleClearanceCells))
                             continue;
 
                         int dx = coords.x - center.x;
@@ -322,16 +404,51 @@ namespace MOBA.Core.Simulation.AI
         private bool IsCandidateWalkable(
             UnityEngine.Vector2Int coords,
             bool requireBoundaryClearance,
-            int clearanceCells)
+            bool requireObstacleClearance,
+            int boundaryClearanceCells,
+            int obstacleClearanceCells)
         {
-            return requireBoundaryClearance
-                ? IsWalkableWithBoundaryClearance(coords, clearanceCells)
-                : IsWalkable(coords);
+            if (requireBoundaryClearance)
+            {
+                if (!IsWalkableWithBoundaryClearance(coords, boundaryClearanceCells))
+                    return false;
+            }
+            else if (!IsWalkable(coords))
+            {
+                return false;
+            }
+
+            return !requireObstacleClearance ||
+                   HasObstacleClearance(coords, obstacleClearanceCells);
         }
 
         public List<PathNode> FindPath(int startX, int startY, int endX, int endY)
         {
-            PathNode endNode = FindEndNode(startX, startY, endX, endY);
+            PathNode endNode = FindEndNode(
+                startX,
+                startY,
+                endX,
+                endY,
+                requireNavigationClearance: false);
+            return endNode != null ? RetracePath(GetNode(startX, startY), endNode) : null;
+        }
+
+        public List<PathNode> FindPathWithNavigationClearance(
+            int startX,
+            int startY,
+            int endX,
+            int endY,
+            int boundaryClearanceCells = 1,
+            int obstacleClearanceCells = 1)
+        {
+            PathNode endNode = FindEndNode(
+                startX,
+                startY,
+                endX,
+                endY,
+                requireNavigationClearance: true,
+                boundaryClearanceCells,
+                obstacleClearanceCells);
             return endNode != null ? RetracePath(GetNode(startX, startY), endNode) : null;
         }
 
@@ -345,7 +462,12 @@ namespace MOBA.Core.Simulation.AI
             pathLength = 0;
 
             PathNode startNode = GetNode(startX, startY);
-            PathNode endNode = FindEndNode(startX, startY, endX, endY);
+            PathNode endNode = FindEndNode(
+                startX,
+                startY,
+                endX,
+                endY,
+                requireNavigationClearance: false);
             if (startNode == null || endNode == null)
                 return false;
 
@@ -353,14 +475,57 @@ namespace MOBA.Core.Simulation.AI
             return true;
         }
 
-        private PathNode FindEndNode(int startX, int startY, int endX, int endY)
+        public bool TryGetPathLengthWithNavigationClearance(
+            int startX,
+            int startY,
+            int endX,
+            int endY,
+            out int pathLength,
+            int boundaryClearanceCells = 1,
+            int obstacleClearanceCells = 1)
+        {
+            pathLength = 0;
+
+            PathNode startNode = GetNode(startX, startY);
+            PathNode endNode = FindEndNode(
+                startX,
+                startY,
+                endX,
+                endY,
+                requireNavigationClearance: true,
+                boundaryClearanceCells,
+                obstacleClearanceCells);
+            if (startNode == null || endNode == null)
+                return false;
+
+            pathLength = CountPathLength(startNode, endNode);
+            return true;
+        }
+
+        private PathNode FindEndNode(
+            int startX,
+            int startY,
+            int endX,
+            int endY,
+            bool requireNavigationClearance,
+            int boundaryClearanceCells = 1,
+            int obstacleClearanceCells = 1)
         {
             ResetPathState();
 
             PathNode startNode = GetNode(startX, startY);
             PathNode endNode = GetNode(endX, endY);
 
-            if (startNode == null || endNode == null || !startNode.IsWalkable || !endNode.IsWalkable)
+            if (!IsTraversalNodeValid(
+                    startNode,
+                    requireNavigationClearance,
+                    boundaryClearanceCells,
+                    obstacleClearanceCells) ||
+                !IsTraversalNodeValid(
+                    endNode,
+                    requireNavigationClearance,
+                    boundaryClearanceCells,
+                    obstacleClearanceCells))
             {
                 RecordPathQuery(false);
                 return null;
@@ -397,11 +562,24 @@ namespace MOBA.Core.Simulation.AI
                 _openList.RemoveAt(currentIndex);
                 _closedSet.Add(current);
 
-                GetNeighborsNonAlloc(current, _neighborBuffer);
+                GetNeighborsNonAlloc(
+                    current,
+                    _neighborBuffer,
+                    requireNavigationClearance,
+                    boundaryClearanceCells,
+                    obstacleClearanceCells);
                 for (int i = 0; i < _neighborBuffer.Count; i++)
                 {
                     PathNode neighbor = _neighborBuffer[i];
-                    if (!neighbor.IsWalkable || _closedSet.Contains(neighbor)) continue;
+                    if (!IsTraversalNodeValid(
+                            neighbor,
+                            requireNavigationClearance,
+                            boundaryClearanceCells,
+                            obstacleClearanceCells) ||
+                        _closedSet.Contains(neighbor))
+                    {
+                        continue;
+                    }
 
                     int newCostToNeighbor = current.GCost + GetDistance(current, neighbor);
                     bool alreadyOpen = _openList.Contains(neighbor);
@@ -427,7 +605,12 @@ namespace MOBA.Core.Simulation.AI
             return (distX > distY) ? 14 * distY + 10 * (distX - distY) : 14 * distX + 10 * (distY - distX);
         }
 
-        private void GetNeighborsNonAlloc(PathNode node, List<PathNode> results)
+        private void GetNeighborsNonAlloc(
+            PathNode node,
+            List<PathNode> results,
+            bool requireNavigationClearance,
+            int boundaryClearanceCells,
+            int obstacleClearanceCells)
         {
             results.Clear();
 
@@ -441,8 +624,19 @@ namespace MOBA.Core.Simulation.AI
                         PathNode horizontal = GetNode(node.X + x, node.Y);
                         PathNode vertical = GetNode(node.X, node.Y + y);
 
-                        if (horizontal == null || vertical == null || !horizontal.IsWalkable || !vertical.IsWalkable)
+                        if (!IsTraversalNodeValid(
+                                horizontal,
+                                requireNavigationClearance,
+                                boundaryClearanceCells,
+                                obstacleClearanceCells) ||
+                            !IsTraversalNodeValid(
+                                vertical,
+                                requireNavigationClearance,
+                                boundaryClearanceCells,
+                                obstacleClearanceCells))
+                        {
                             continue;
+                        }
                     }
 
                     PathNode n = GetNode(node.X + x, node.Y + y);
@@ -452,6 +646,22 @@ namespace MOBA.Core.Simulation.AI
         }
 
         private PathNode GetNode(int x, int y) => (x >= 0 && x < _width && y >= 0 && y < _height) ? _grid[x, y] : null;
+
+        private bool IsTraversalNodeValid(
+            PathNode node,
+            bool requireNavigationClearance,
+            int boundaryClearanceCells,
+            int obstacleClearanceCells)
+        {
+            if (node == null || !node.IsWalkable)
+                return false;
+
+            return !requireNavigationClearance ||
+                   IsWalkableWithNavigationClearance(
+                       new UnityEngine.Vector2Int(node.X, node.Y),
+                       boundaryClearanceCells,
+                       obstacleClearanceCells);
+        }
 
         private List<PathNode> RetracePath(PathNode start, PathNode end)
         {
