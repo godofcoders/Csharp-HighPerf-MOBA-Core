@@ -132,18 +132,11 @@ namespace MOBA.Core.Simulation.AI
             bool foundStart = true;
             bool foundEnd = true;
 
-            if (!SimulationClock.Pathfinder.IsWalkableWithNavigationClearance(start))
-            {
-                foundStart =
-                    SimulationClock.Pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(
-                        start,
-                        endpointRepairRadius,
-                        out start) ||
-                    SimulationClock.Pathfinder.TryGetNearestWalkableCoords(
-                        start,
-                        endpointRepairRadius,
-                        out start);
-            }
+            if (!SimulationClock.Pathfinder.IsWalkable(start))
+                foundStart = SimulationClock.Pathfinder.TryGetNearestWalkableCoords(
+                    start,
+                    endpointRepairRadius,
+                    out start);
 
             if (!SimulationClock.Pathfinder.IsWalkableWithNavigationClearance(end))
             {
@@ -435,8 +428,7 @@ namespace MOBA.Core.Simulation.AI
             AStarSolver pathfinder = SimulationClock.Pathfinder;
             Vector2Int start = pathfinder.GetGridCoords(_brawler.Position);
 
-            if (!pathfinder.IsWalkableWithNavigationClearance(start) &&
-                !pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(start, 2, out start) &&
+            if (!pathfinder.IsWalkable(start) &&
                 !pathfinder.TryGetNearestWalkableCoords(start, 2, out start))
             {
                 return false;
@@ -689,7 +681,8 @@ namespace MOBA.Core.Simulation.AI
                 return adjusted * magnitude;
             }
 
-            return projectedWalkable ? desired * magnitude : Vector3.zero;
+            _hasAvoidanceDirection = false;
+            return desired * magnitude;
         }
 
         private Vector3 GetObstacleAvoidancePressure(AStarSolver pathfinder)
