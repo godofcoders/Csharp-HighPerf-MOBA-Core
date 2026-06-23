@@ -96,6 +96,19 @@ namespace MOBA.Core.Infrastructure
         private bool _hasResolvedWorldCollisionMask;
         private int _resolvedWorldCollisionMask;
 
+        public bool TryGetWorldCollisionProbe(
+            out int collisionMask,
+            out float radius,
+            out float probeHeight,
+            out float skin)
+        {
+            collisionMask = ResolveWorldCollisionMask();
+            radius = Mathf.Max(0.01f, _worldCollisionRadius);
+            probeHeight = Mathf.Max(0f, _worldCollisionProbeHeight);
+            skin = Mathf.Max(0f, _worldCollisionSkin);
+            return collisionMask != 0;
+        }
+
         private int GetEntityId()
         {
             if (_entityId != 0)

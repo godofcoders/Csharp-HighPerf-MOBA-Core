@@ -9,6 +9,8 @@ namespace MOBA.Core.Simulation.AI
         private const int BoundaryClearanceCells = 1;
         private const int ObstacleClearanceCells = 1;
         private const uint AvoidanceDirectionLockTicks = 6;
+        private const float WorldAvoidanceMinLookahead = 0.75f;
+        private const float WorldAvoidanceMaxLookahead = 1.65f;
 
         private readonly BrawlerController _brawler;
         private readonly ISimulationClock _clock;
@@ -630,10 +632,6 @@ namespace MOBA.Core.Simulation.AI
                 return direction;
             }
 
-            AStarSolver pathfinder = SimulationClock.Pathfinder;
-            if (pathfinder == null)
-                return direction;
-
             float magnitude = Mathf.Clamp01(direction.magnitude);
             Vector3 desired = direction;
             desired.y = 0f;
@@ -641,6 +639,20 @@ namespace MOBA.Core.Simulation.AI
                 return Vector3.zero;
 
             desired.Normalize();
+
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (TryApplyWorldCollisionAvoidance(
+                    pathfinder,
+                    desired,
+                    magnitude,
+                    out Vector3 worldAdjusted))
+            {
+                return worldAdjusted;
+            }
+
+            if (pathfinder == null)
+                return desired * magnitude;
+
             Vector3 pressure = GetObstacleAvoidancePressure(pathfinder);
             bool hasPressure = pressure.sqrMagnitude > 0.0001f;
             Vector3 pressureDirection = hasPressure ? pressure.normalized : Vector3.zero;
@@ -685,8 +697,318 @@ namespace MOBA.Core.Simulation.AI
             return desired * magnitude;
         }
 
+        private bool TryApplyWorldCollisionAvoidance(
+            AStarSolver pathfinder,
+            Vector3 desired,
+            float magnitude,
+            out Vector3 adjusted)
+        {
+            adjusted = desired * magnitude;
+
+            if (!_brawler.TryGetWorldCollisionProbe(
+                    out int collisionMask,
+                    out float radius,
+                    out float probeHeight,
+                    out float skin))
+            {
+                return false;
+            }
+
+            float lookahead = GetWorldAvoidanceLookahead(pathfinder, radius, skin);
+            if (!TryWorldCollisionCast(
+                    desired,
+                    radius,
+                    probeHeight,
+                    skin,
+                    collisionMask,
+                    lookahead,
+                    out RaycastHit hit))
+            {
+                return false;
+            }
+
+            Vector3 pressure = hit.normal;
+            pressure.y = 0f;
+            if (pressure.sqrMagnitude <= 0.0001f)
+                pressure = GetObstacleAvoidancePressure(pathfinder);
+
+            if (pressure.sqrMagnitude <= 0.0001f)
+                pressure = -desired;
+
+            pressure.Normalize();
+
+            if (_hasAvoidanceDirection &&
+                _clock.CurrentTick <= _avoidanceDirectionLockUntilTick &&
+                Vector3.Dot(_lastAvoidanceDirection, desired) > -0.45f &&
+                !TryWorldCollisionCast(
+                    _lastAvoidanceDirection,
+                    radius,
+                    probeHeight,
+                    skin,
+                    collisionMask,
+                    lookahead * 0.80f,
+                    out _))
+            {
+                adjusted = _lastAvoidanceDirection * magnitude;
+                return true;
+            }
+
+            if (TrySelectWorldAvoidanceDirection(
+                    pathfinder,
+                    desired,
+                    pressure,
+                    hit.normal,
+                    radius,
+                    probeHeight,
+                    skin,
+                    collisionMask,
+                    lookahead,
+                    out Vector3 avoidanceDirection))
+            {
+                _lastAvoidanceDirection = avoidanceDirection;
+                _avoidanceDirectionLockUntilTick = _clock.CurrentTick + AvoidanceDirectionLockTicks;
+                _hasAvoidanceDirection = true;
+                adjusted = avoidanceDirection * magnitude;
+                return true;
+            }
+
+            Vector3 slide = Vector3.ProjectOnPlane(desired, hit.normal);
+            slide.y = 0f;
+            if (slide.sqrMagnitude > 0.0001f)
+            {
+                slide.Normalize();
+                adjusted = slide * magnitude;
+                return true;
+            }
+
+            adjusted = pressure * magnitude;
+            return true;
+        }
+
+        private float GetWorldAvoidanceLookahead(
+            AStarSolver pathfinder,
+            float radius,
+            float skin)
+        {
+            float cellLookahead = pathfinder != null
+                ? pathfinder.CellSize * 1.35f
+                : 1.15f;
+
+            return Mathf.Clamp(
+                Mathf.Max(cellLookahead, radius + skin + 0.35f),
+                WorldAvoidanceMinLookahead,
+                WorldAvoidanceMaxLookahead);
+        }
+
+        private bool TrySelectWorldAvoidanceDirection(
+            AStarSolver pathfinder,
+            Vector3 desired,
+            Vector3 pressure,
+            Vector3 hitNormal,
+            float radius,
+            float probeHeight,
+            float skin,
+            int collisionMask,
+            float lookahead,
+            out Vector3 selected)
+        {
+            selected = Vector3.zero;
+            bool found = false;
+            float bestScore = float.MinValue;
+
+            Vector3 slide = Vector3.ProjectOnPlane(desired, hitNormal);
+            slide.y = 0f;
+
+            Vector3 side = new Vector3(desired.z, 0f, -desired.x);
+            if (Vector3.Dot(side, pressure) < 0f)
+                side = -side;
+
+            EvaluateWorldAvoidanceCandidate(
+                pathfinder,
+                slide,
+                desired,
+                pressure,
+                radius,
+                probeHeight,
+                skin,
+                collisionMask,
+                lookahead,
+                ref found,
+                ref bestScore,
+                ref selected);
+            EvaluateWorldAvoidanceCandidate(
+                pathfinder,
+                desired + side * 0.95f + pressure * 0.45f,
+                desired,
+                pressure,
+                radius,
+                probeHeight,
+                skin,
+                collisionMask,
+                lookahead,
+                ref found,
+                ref bestScore,
+                ref selected);
+            EvaluateWorldAvoidanceCandidate(
+                pathfinder,
+                desired - side * 0.95f + pressure * 0.45f,
+                desired,
+                pressure,
+                radius,
+                probeHeight,
+                skin,
+                collisionMask,
+                lookahead,
+                ref found,
+                ref bestScore,
+                ref selected);
+            EvaluateWorldAvoidanceCandidate(
+                pathfinder,
+                side + pressure * 0.65f,
+                desired,
+                pressure,
+                radius,
+                probeHeight,
+                skin,
+                collisionMask,
+                lookahead,
+                ref found,
+                ref bestScore,
+                ref selected);
+            EvaluateWorldAvoidanceCandidate(
+                pathfinder,
+                -side + pressure * 0.65f,
+                desired,
+                pressure,
+                radius,
+                probeHeight,
+                skin,
+                collisionMask,
+                lookahead,
+                ref found,
+                ref bestScore,
+                ref selected);
+            EvaluateWorldAvoidanceCandidate(
+                pathfinder,
+                pressure,
+                desired,
+                pressure,
+                radius,
+                probeHeight,
+                skin,
+                collisionMask,
+                lookahead,
+                ref found,
+                ref bestScore,
+                ref selected);
+
+            return found;
+        }
+
+        private void EvaluateWorldAvoidanceCandidate(
+            AStarSolver pathfinder,
+            Vector3 candidate,
+            Vector3 desired,
+            Vector3 pressure,
+            float radius,
+            float probeHeight,
+            float skin,
+            int collisionMask,
+            float lookahead,
+            ref bool found,
+            ref float bestScore,
+            ref Vector3 selected)
+        {
+            candidate.y = 0f;
+            if (candidate.sqrMagnitude <= 0.0001f)
+                return;
+
+            candidate.Normalize();
+            if (TryWorldCollisionCast(
+                    candidate,
+                    radius,
+                    probeHeight,
+                    skin,
+                    collisionMask,
+                    lookahead * 0.85f,
+                    out _))
+            {
+                return;
+            }
+
+            if (pathfinder != null &&
+                !IsMoveProjectionWalkable(
+                    pathfinder,
+                    candidate,
+                    requireNavigationClearance: false))
+            {
+                return;
+            }
+
+            Vector3 destinationDirection = GetPlanarDelta(_destination);
+            if (destinationDirection.sqrMagnitude > 0.0001f)
+                destinationDirection.Normalize();
+
+            float score =
+                Vector3.Dot(candidate, desired) * 3.5f +
+                Vector3.Dot(candidate, destinationDirection) * 2f +
+                Vector3.Dot(candidate, pressure) * 2.5f;
+
+            if (pathfinder != null &&
+                IsMoveProjectionWalkable(
+                    pathfinder,
+                    candidate,
+                    requireNavigationClearance: true))
+            {
+                score += 2f;
+            }
+
+            if (_hasAvoidanceDirection &&
+                _clock.CurrentTick <= _avoidanceDirectionLockUntilTick)
+            {
+                score += Vector3.Dot(candidate, _lastAvoidanceDirection) * 1.5f;
+            }
+
+            if (!found || score > bestScore)
+            {
+                found = true;
+                bestScore = score;
+                selected = candidate;
+            }
+        }
+
+        private bool TryWorldCollisionCast(
+            Vector3 direction,
+            float radius,
+            float probeHeight,
+            float skin,
+            int collisionMask,
+            float distance,
+            out RaycastHit hit)
+        {
+            hit = default;
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.0001f)
+                return false;
+
+            direction.Normalize();
+            Vector3 origin = _brawler.Position + Vector3.up * probeHeight;
+            float castDistance = Mathf.Max(0.05f, distance + skin);
+            return Physics.SphereCast(
+                origin,
+                radius,
+                direction,
+                out hit,
+                castDistance,
+                collisionMask,
+                QueryTriggerInteraction.Ignore);
+        }
+
         private Vector3 GetObstacleAvoidancePressure(AStarSolver pathfinder)
         {
+            if (pathfinder == null)
+                return Vector3.zero;
+
             Vector2Int center = pathfinder.GetGridCoords(_brawler.Position);
             Vector3 pressure = Vector3.zero;
 
