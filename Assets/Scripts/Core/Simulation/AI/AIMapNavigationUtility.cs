@@ -192,7 +192,7 @@ namespace MOBA.Core.Simulation.AI
                 return bestCandidate.Destination;
             }
 
-            Vector2Int fallbackCoords;
+            Vector2Int fallbackCoords = desiredCoords;
             bool foundFallback = !allowObstacleAdjacentDestination &&
                                  pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(
                                      desiredCoords,
