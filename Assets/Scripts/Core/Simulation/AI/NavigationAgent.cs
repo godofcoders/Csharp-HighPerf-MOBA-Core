@@ -11,6 +11,7 @@ namespace MOBA.Core.Simulation.AI
         private const uint AvoidanceDirectionLockTicks = 6;
         private const float WorldAvoidanceMinLookahead = 0.75f;
         private const float WorldAvoidanceMaxLookahead = 1.65f;
+        private const int PathSteeringLookaheadNodes = 5;
 
         private readonly BrawlerController _brawler;
         private readonly ISimulationClock _clock;
@@ -313,23 +314,7 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
-            Vector3 nodeWorld = SimulationClock.Pathfinder.GetWorldPos(_path[_pathIndex].X, _path[_pathIndex].Y);
-            nodeWorld = FlattenToMovementPlane(nodeWorld);
-
-            if (GetPlanarDelta(nodeWorld).sqrMagnitude <= 0.25f)
-            {
-                _pathIndex++;
-
-                if (_pathIndex >= _path.Count)
-                {
-                    Vector3 finalDir = GetPlanarDelta(_destination);
-                    QueueMove(finalDir.sqrMagnitude > 0.0001f ? finalDir.normalized : Vector3.zero);
-                    return;
-                }
-
-                nodeWorld = SimulationClock.Pathfinder.GetWorldPos(_path[_pathIndex].X, _path[_pathIndex].Y);
-                nodeWorld = FlattenToMovementPlane(nodeWorld);
-            }
+            Vector3 nodeWorld = ResolvePathSteeringTarget();
 
             Vector3 dir = GetPlanarDelta(nodeWorld);
             QueueMove(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero);
@@ -505,6 +490,86 @@ namespace MOBA.Core.Simulation.AI
             _routeBlocked = false;
             _consecutiveStuckSamples = 0;
             return true;
+        }
+
+        private Vector3 ResolvePathSteeringTarget()
+        {
+            AdvanceReachedPathNodes();
+
+            if (_path == null || _pathIndex >= _path.Count)
+                return _destination;
+
+            int selectedIndex = _pathIndex;
+            Vector3 selectedWorld = GetPathNodeWorld(selectedIndex);
+
+            if (_brawler.TryGetWorldCollisionProbe(
+                    out int collisionMask,
+                    out float radius,
+                    out float probeHeight,
+                    out float skin))
+            {
+                int maxIndex = Mathf.Min(
+                    _path.Count - 1,
+                    _pathIndex + PathSteeringLookaheadNodes);
+
+                for (int i = _pathIndex; i <= maxIndex; i++)
+                {
+                    Vector3 candidateWorld = GetPathNodeWorld(i);
+                    Vector3 delta = GetPlanarDelta(candidateWorld);
+                    float distance = delta.magnitude;
+                    if (distance <= 0.05f)
+                    {
+                        selectedIndex = i;
+                        selectedWorld = candidateWorld;
+                        continue;
+                    }
+
+                    if (TryWorldCollisionCast(
+                            delta / distance,
+                            radius,
+                            probeHeight,
+                            skin,
+                            collisionMask,
+                            Mathf.Max(0.05f, distance - radius * 0.25f),
+                            out _))
+                    {
+                        continue;
+                    }
+
+                    selectedIndex = i;
+                    selectedWorld = candidateWorld;
+                }
+            }
+
+            if (selectedIndex > _pathIndex)
+                _pathIndex = selectedIndex;
+
+            return selectedWorld;
+        }
+
+        private void AdvanceReachedPathNodes()
+        {
+            if (_path == null)
+                return;
+
+            const float waypointReachDistanceSq = 0.25f;
+            while (_pathIndex < _path.Count)
+            {
+                Vector3 nodeWorld = GetPathNodeWorld(_pathIndex);
+                if (GetPlanarDelta(nodeWorld).sqrMagnitude > waypointReachDistanceSq)
+                    break;
+
+                _pathIndex++;
+            }
+        }
+
+        private Vector3 GetPathNodeWorld(int index)
+        {
+            if (_path == null || index < 0 || index >= _path.Count || SimulationClock.Pathfinder == null)
+                return _destination;
+
+            PathNode node = _path[index];
+            return FlattenToMovementPlane(SimulationClock.Pathfinder.GetWorldPos(node.X, node.Y));
         }
 
         private void UpdateStuckCheck()
@@ -736,6 +801,13 @@ namespace MOBA.Core.Simulation.AI
                 pressure = -desired;
 
             pressure.Normalize();
+            Vector3 routeDirection = GetPreferredClearPathDirection(
+                pathfinder,
+                radius,
+                probeHeight,
+                skin,
+                collisionMask,
+                lookahead);
 
             if (_hasAvoidanceDirection &&
                 _clock.CurrentTick <= _avoidanceDirectionLockUntilTick &&
@@ -756,6 +828,7 @@ namespace MOBA.Core.Simulation.AI
             if (TrySelectWorldAvoidanceDirection(
                     pathfinder,
                     desired,
+                    routeDirection,
                     pressure,
                     hit.normal,
                     radius,
@@ -800,9 +873,72 @@ namespace MOBA.Core.Simulation.AI
                 WorldAvoidanceMaxLookahead);
         }
 
+        private Vector3 GetPreferredClearPathDirection(
+            AStarSolver pathfinder,
+            float radius,
+            float probeHeight,
+            float skin,
+            int collisionMask,
+            float lookahead)
+        {
+            if (_path == null || _pathIndex >= _path.Count)
+                return GetNormalizedPlanarDelta(_destination);
+
+            Vector3 plannedDirection = Vector3.zero;
+            Vector3 clearDirection = Vector3.zero;
+            int maxIndex = Mathf.Min(
+                _path.Count - 1,
+                _pathIndex + PathSteeringLookaheadNodes);
+
+            for (int i = _pathIndex; i <= maxIndex; i++)
+            {
+                Vector3 nodeWorld = GetPathNodeWorld(i);
+                Vector3 delta = GetPlanarDelta(nodeWorld);
+                float distance = delta.magnitude;
+                if (distance <= 0.05f)
+                    continue;
+
+                Vector3 direction = delta / distance;
+                plannedDirection = direction;
+
+                if (TryWorldCollisionCast(
+                        direction,
+                        radius,
+                        probeHeight,
+                        skin,
+                        collisionMask,
+                        Mathf.Min(
+                            lookahead,
+                            Mathf.Max(0.05f, distance - radius * 0.25f)),
+                        out _))
+                {
+                    continue;
+                }
+
+                if (pathfinder != null &&
+                    !IsMoveProjectionWalkable(
+                        pathfinder,
+                        direction,
+                        requireNavigationClearance: false))
+                {
+                    continue;
+                }
+
+                clearDirection = direction;
+            }
+
+            if (clearDirection.sqrMagnitude > 0.0001f)
+                return clearDirection;
+
+            return plannedDirection.sqrMagnitude > 0.0001f
+                ? plannedDirection
+                : GetNormalizedPlanarDelta(_destination);
+        }
+
         private bool TrySelectWorldAvoidanceDirection(
             AStarSolver pathfinder,
             Vector3 desired,
+            Vector3 routeDirection,
             Vector3 pressure,
             Vector3 hitNormal,
             float radius,
@@ -820,13 +956,21 @@ namespace MOBA.Core.Simulation.AI
             slide.y = 0f;
 
             Vector3 side = new Vector3(desired.z, 0f, -desired.x);
-            if (Vector3.Dot(side, pressure) < 0f)
+            if (routeDirection.sqrMagnitude > 0.0001f)
+            {
+                if (Vector3.Dot(side, routeDirection) < 0f)
+                    side = -side;
+            }
+            else if (Vector3.Dot(side, pressure) < 0f)
+            {
                 side = -side;
+            }
 
             EvaluateWorldAvoidanceCandidate(
                 pathfinder,
                 slide,
                 desired,
+                routeDirection,
                 pressure,
                 radius,
                 probeHeight,
@@ -840,6 +984,7 @@ namespace MOBA.Core.Simulation.AI
                 pathfinder,
                 desired + side * 0.95f + pressure * 0.45f,
                 desired,
+                routeDirection,
                 pressure,
                 radius,
                 probeHeight,
@@ -853,6 +998,7 @@ namespace MOBA.Core.Simulation.AI
                 pathfinder,
                 desired - side * 0.95f + pressure * 0.45f,
                 desired,
+                routeDirection,
                 pressure,
                 radius,
                 probeHeight,
@@ -866,6 +1012,7 @@ namespace MOBA.Core.Simulation.AI
                 pathfinder,
                 side + pressure * 0.65f,
                 desired,
+                routeDirection,
                 pressure,
                 radius,
                 probeHeight,
@@ -879,6 +1026,7 @@ namespace MOBA.Core.Simulation.AI
                 pathfinder,
                 -side + pressure * 0.65f,
                 desired,
+                routeDirection,
                 pressure,
                 radius,
                 probeHeight,
@@ -892,6 +1040,7 @@ namespace MOBA.Core.Simulation.AI
                 pathfinder,
                 pressure,
                 desired,
+                routeDirection,
                 pressure,
                 radius,
                 probeHeight,
@@ -909,6 +1058,7 @@ namespace MOBA.Core.Simulation.AI
             AStarSolver pathfinder,
             Vector3 candidate,
             Vector3 desired,
+            Vector3 routeDirection,
             Vector3 pressure,
             float radius,
             float probeHeight,
@@ -945,13 +1095,15 @@ namespace MOBA.Core.Simulation.AI
                 return;
             }
 
-            Vector3 destinationDirection = GetPlanarDelta(_destination);
-            if (destinationDirection.sqrMagnitude > 0.0001f)
-                destinationDirection.Normalize();
+            if (routeDirection.sqrMagnitude <= 0.0001f)
+                routeDirection = GetPlanarDelta(_destination);
+
+            if (routeDirection.sqrMagnitude > 0.0001f)
+                routeDirection.Normalize();
 
             float score =
                 Vector3.Dot(candidate, desired) * 3.5f +
-                Vector3.Dot(candidate, destinationDirection) * 2f +
+                Vector3.Dot(candidate, routeDirection) * 3.25f +
                 Vector3.Dot(candidate, pressure) * 2.5f;
 
             if (pathfinder != null &&
@@ -1257,6 +1409,12 @@ namespace MOBA.Core.Simulation.AI
         private Vector3 GetPlanarDelta(Vector3 destination)
         {
             return GetPlanarDelta(destination, _brawler.Position);
+        }
+
+        private Vector3 GetNormalizedPlanarDelta(Vector3 destination)
+        {
+            Vector3 delta = GetPlanarDelta(destination);
+            return delta.sqrMagnitude > 0.0001f ? delta.normalized : Vector3.zero;
         }
 
         private static Vector3 GetPlanarDelta(Vector3 destination, Vector3 origin)
