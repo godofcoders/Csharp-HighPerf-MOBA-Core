@@ -44,6 +44,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastChaseDebug = "Chase=None";
         private string _lastGemPickupDebug = "GemPickup=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
+        private string _lastWinConditionDebug = "Win=None";
         private uint _lastLaneEvaluationTick;
         private bool _hasLaneEvaluation;
         private bool _lastCanHoldLane;
@@ -64,6 +65,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastChaseDebug => _lastChaseDebug;
         public string LastGemPickupDebug => _lastGemPickupDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
+        public string LastWinConditionDebug => _lastWinConditionDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -122,6 +124,7 @@ namespace MOBA.Core.Simulation.AI
                 macroState,
                 playbookState,
                 results);
+            ApplyWinConditionPressure(targetInfo, macroState, results);
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
             ApplyPlaybookCoordination(targetInfo, playbookState, results);
         }
@@ -359,6 +362,103 @@ namespace MOBA.Core.Simulation.AI
 
             if (!string.IsNullOrEmpty(deltaDebug))
                 _lastObjectiveIntentDebug = $"ObjIntent={deltaDebug}";
+        }
+
+        private void ApplyWinConditionPressure(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState,
+            List<AIActionScore> results)
+        {
+            _lastWinConditionDebug = "Win=None";
+
+            if (results == null || results.Count == 0)
+                return;
+
+            bool hasLiveTarget = targetInfo != null && targetInfo.HasLiveTarget;
+            int selfCarriedGems = _self != null && _self.State != null
+                ? _self.State.CarriedGemCount
+                : 0;
+            int targetCarriedGems = 0;
+            float targetHealthRatio = 1f;
+
+            if (hasLiveTarget &&
+                targetInfo.Target is BrawlerController targetBrawler &&
+                targetBrawler.State != null)
+            {
+                targetCarriedGems = targetBrawler.State.CarriedGemCount;
+                targetHealthRatio = Mathf.Clamp01(
+                    targetBrawler.State.CurrentHealth /
+                    Mathf.Max(1f, targetBrawler.State.MaxHealth.Value));
+            }
+
+            var context = new AIWinConditionActionContext(
+                macroState,
+                selfCarriedGems,
+                targetCarriedGems,
+                targetHealthRatio,
+                hasLiveTarget);
+
+            string deltaDebug = string.Empty;
+
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                AIWinConditionActionEvaluation evaluation =
+                    AIWinConditionUtility.EvaluateAction(
+                        actionScore.ActionType,
+                        context);
+
+                if (!evaluation.HasDelta)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    evaluation.Delta > 0f &&
+                    !CanCreateWinConditionScore(
+                        actionScore.ActionType,
+                        context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + evaluation.Delta);
+
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}_{evaluation.Reason}");
+            }
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastWinConditionDebug = $"Win={deltaDebug}";
+        }
+
+        private bool CanCreateWinConditionScore(
+            AIActionType actionType,
+            AIWinConditionActionContext context)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Search:
+                case AIActionType.Objective:
+                    return !context.HasLiveTarget;
+
+                case AIActionType.Retreat:
+                case AIActionType.Regroup:
+                    return context.MacroState.OwnTeamHasCountdown &&
+                           context.SelfCarriedGems > 0;
+
+                default:
+                    return false;
+            }
         }
 
         private float CalculatePlaybookDelta(
