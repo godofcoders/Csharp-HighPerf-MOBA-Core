@@ -7,6 +7,69 @@ namespace MOBA.Tests.EditMode
     public class AIWinConditionUtilityTests
     {
         [Test]
+        public void EvaluateTarget_EnemyCountdownCarrierBecomesCollapseTarget()
+        {
+            AIWinConditionTargetEvaluation evaluation =
+                AIWinConditionUtility.EvaluateTarget(
+                    new AIWinConditionTargetContext(
+                        GemGrabMacro(
+                            AIGameModeMacroCall.Reset,
+                            ownGems: 7,
+                            enemyGems: 10,
+                            enemyCountdown: true,
+                            timer: 2f),
+                        selfCarriedGems: 0,
+                        targetCarriedGems: 5,
+                        targetHealthRatio: 0.70f,
+                        distance: 6f,
+                        isCurrentTarget: false,
+                        isTeamFocusTarget: true,
+                        alliedFocusCount: 1));
+
+            Assert.IsTrue(evaluation.IsHighValueTarget);
+            Assert.IsTrue(evaluation.ShouldCollapse);
+            Assert.GreaterOrEqual(evaluation.ScoreDelta, 90f);
+            StringAssert.Contains("break_countdown", evaluation.Reason);
+        }
+
+        [Test]
+        public void EvaluateTarget_GemCarrierOutranksPlainLowHealthTarget()
+        {
+            AIGameModeMacroState macro = GemGrabMacro(
+                AIGameModeMacroCall.Push,
+                ownGems: 5,
+                enemyGems: 8);
+
+            AIWinConditionTargetEvaluation lowHealth =
+                AIWinConditionUtility.EvaluateTarget(
+                    new AIWinConditionTargetContext(
+                        macro,
+                        selfCarriedGems: 0,
+                        targetCarriedGems: 0,
+                        targetHealthRatio: 0.18f,
+                        distance: 5f,
+                        isCurrentTarget: false,
+                        isTeamFocusTarget: false,
+                        alliedFocusCount: 0));
+
+            AIWinConditionTargetEvaluation carrier =
+                AIWinConditionUtility.EvaluateTarget(
+                    new AIWinConditionTargetContext(
+                        macro,
+                        selfCarriedGems: 0,
+                        targetCarriedGems: 3,
+                        targetHealthRatio: 0.18f,
+                        distance: 5f,
+                        isCurrentTarget: false,
+                        isTeamFocusTarget: false,
+                        alliedFocusCount: 0));
+
+            Assert.IsTrue(lowHealth.IsHighValueTarget);
+            Assert.IsTrue(carrier.ShouldCollapse);
+            Assert.Greater(carrier.ScoreDelta, lowHealth.ScoreDelta + 30f);
+        }
+
+        [Test]
         public void EvaluateAction_OwnCountdownCarrierPrioritizesSafety()
         {
             var context = new AIWinConditionActionContext(

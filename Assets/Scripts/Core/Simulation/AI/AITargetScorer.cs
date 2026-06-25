@@ -13,6 +13,9 @@ namespace MOBA.Core.Simulation.AI
         private readonly List<ISpatialEntity> _clusterBuffer;
         private readonly uint _threatForgetTicks = 240;
         private AITeamCoordinator _teamCoordinator;
+        private bool _hasWinMacroCache;
+        private uint _lastWinMacroTick;
+        private AIGameModeMacroState _lastWinMacroState;
 
         private const float CarrierThreatRadius = 5.5f;
         private const float CarrierThreatCorridorWidth = 2.15f;
@@ -59,17 +62,24 @@ namespace MOBA.Core.Simulation.AI
 
             Vector3 delta = target.Position - _self.Position;
             float dist = delta.sqrMagnitude;
+            float distance = Mathf.Sqrt(dist);
             int targetEntityId = target.EntityID;
 
             float score = 0f;
+            bool isCurrentTarget =
+                memory.HasLiveTarget &&
+                SpatialEntityUtility.IsAlive(memory.Target) &&
+                memory.Target.EntityID == targetEntityId;
+            bool isTeamFocusTarget = false;
+            bool hasBrawlerTarget = false;
+            int targetCarriedGems = 0;
+            float targetHealthRatio = 1f;
 
             // 1. Distance matters
             score -= dist * Mathf.Max(0.01f, _profile.DistanceWeight);
 
             // 2. Prefer keeping current target a bit
-            if (memory.HasLiveTarget &&
-                SpatialEntityUtility.IsAlive(memory.Target) &&
-                memory.Target.EntityID == targetEntityId)
+            if (isCurrentTarget)
             {
                 score += _profile.CurrentTargetStickiness;
             }
@@ -77,11 +87,13 @@ namespace MOBA.Core.Simulation.AI
             // 3. Target health / status scoring
             if (target is BrawlerController targetBrawler && targetBrawler.State != null)
             {
+                hasBrawlerTarget = true;
+                targetCarriedGems = targetBrawler.State.CarriedGemCount;
                 float maxHealth = Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
-                float healthRatio = targetBrawler.State.CurrentHealth / maxHealth;
-                score += (1f - healthRatio) * _profile.LowHealthTargetBias;
+                targetHealthRatio = Mathf.Clamp01(targetBrawler.State.CurrentHealth / maxHealth);
+                score += (1f - targetHealthRatio) * _profile.LowHealthTargetBias;
 
-                if (healthRatio <= _profile.FinisherHealthThreshold)
+                if (targetHealthRatio <= _profile.FinisherHealthThreshold)
                 {
                     score += _profile.FinisherBonus;
                 }
@@ -117,7 +129,7 @@ namespace MOBA.Core.Simulation.AI
                     if (habit.PreferredTargetEntityId == _self.EntityID)
                         score += habit.TargetPreferenceConfidence * 22f;
 
-                    if (healthRatio <= _profile.FinisherHealthThreshold)
+                    if (targetHealthRatio <= _profile.FinisherHealthThreshold)
                         score += habit.LowHealthGreed * 16f;
 
                     if (habit.ObjectiveNeglect > 0.55f)
@@ -143,6 +155,7 @@ namespace MOBA.Core.Simulation.AI
                 SpatialEntityUtility.IsAlive(focusTarget) &&
                 focusTarget.EntityID == targetEntityId)
             {
+                isTeamFocusTarget = true;
                 score += _profile.FocusFireWeight;
             }
 
@@ -151,7 +164,28 @@ namespace MOBA.Core.Simulation.AI
             // the bot's previous focus report from an earlier tick.
             float overFocusPenalty = CalculateOverFocusedTargetPenalty(
                 targetEntityId,
-                out _);
+                out int alliedFocusCount);
+
+            if (hasBrawlerTarget)
+            {
+                AIWinConditionTargetEvaluation winEvaluation =
+                    AIWinConditionUtility.EvaluateTarget(
+                        new AIWinConditionTargetContext(
+                            ResolveWinMacroState(currentTick),
+                            _self.State != null ? _self.State.CarriedGemCount : 0,
+                            targetCarriedGems,
+                            targetHealthRatio,
+                            distance,
+                            isCurrentTarget,
+                            isTeamFocusTarget,
+                            alliedFocusCount));
+
+                if (winEvaluation.HasDelta)
+                    score += winEvaluation.ScoreDelta;
+
+                if (winEvaluation.ShouldCollapse)
+                    overFocusPenalty *= 0.25f;
+            }
 
             score -= overFocusPenalty;
 
@@ -163,6 +197,17 @@ namespace MOBA.Core.Simulation.AI
             score += ScoreByAbilityShape(target);
 
             return score;
+        }
+
+        private AIGameModeMacroState ResolveWinMacroState(uint currentTick)
+        {
+            if (_hasWinMacroCache && _lastWinMacroTick == currentTick)
+                return _lastWinMacroState;
+
+            _lastWinMacroState = AIGameModeMacroStrategy.ResolveCurrentMode(_self.Team);
+            _lastWinMacroTick = currentTick;
+            _hasWinMacroCache = true;
+            return _lastWinMacroState;
         }
 
         public float CalculateOverFocusedTargetPenalty(
