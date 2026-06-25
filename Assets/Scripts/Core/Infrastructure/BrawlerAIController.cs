@@ -186,8 +186,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastTeamRoleDebug : "RoleCoord=None";
         public string MacroDebug =>
             _utilityScorer != null
-                ? $"{_utilityScorer.LastMacroDebug} {_utilityScorer.LastObjectiveIntentDebug}"
-                : "Macro=None ObjIntent=None";
+                ? $"{_utilityScorer.LastMacroDebug} {_utilityScorer.LastObjectiveIntentDebug} {_utilityScorer.LastWinConditionDebug}"
+                : "Macro=None ObjIntent=None Win=None";
         public string PlaybookDebug =>
             _utilityScorer != null ? _utilityScorer.LastPlaybookDebug : "Playbook=None";
         public string ChaseDebug =>
