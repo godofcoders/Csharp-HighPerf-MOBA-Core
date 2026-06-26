@@ -18,6 +18,8 @@ namespace MOBA.Core.Simulation.AI
         {
             public BrawlerController FocusTarget;
             public uint FocusTargetTick;
+            public float FocusTargetUrgency;
+            public string FocusTargetReason;
 
             public Vector3 RegroupPoint;
             public uint RegroupTick;
@@ -48,9 +50,44 @@ namespace MOBA.Core.Simulation.AI
 
         public static void ReportFocusTarget(TeamType team, BrawlerController target, uint currentTick)
         {
+            ReportFocusTarget(team, target, currentTick, 1f, "sighted");
+        }
+
+        public static void ReportFocusTarget(
+            TeamType team,
+            BrawlerController target,
+            uint currentTick,
+            float urgency,
+            string reason)
+        {
+            if (!SpatialEntityUtility.IsAlive(target))
+                return;
+
             ref TeamData data = ref GetData(team);
+            float clampedUrgency = Mathf.Clamp(urgency, 0.10f, 8f);
+            string safeReason = string.IsNullOrEmpty(reason) ? "sighted" : reason;
+
+            if (SpatialEntityUtility.IsAlive(data.FocusTarget) &&
+                data.FocusTarget.EntityID != target.EntityID &&
+                currentTick - data.FocusTargetTick <= 18u &&
+                clampedUrgency < data.FocusTargetUrgency * 0.88f)
+            {
+                return;
+            }
+
+            if (SpatialEntityUtility.IsAlive(data.FocusTarget) &&
+                data.FocusTarget.EntityID == target.EntityID &&
+                currentTick - data.FocusTargetTick <= 24u)
+            {
+                clampedUrgency = Mathf.Min(
+                    8f,
+                    Mathf.Max(clampedUrgency, data.FocusTargetUrgency * 0.75f));
+            }
+
             data.FocusTarget = target;
             data.FocusTargetTick = currentTick;
+            data.FocusTargetUrgency = clampedUrgency;
+            data.FocusTargetReason = safeReason;
         }
 
         public static bool TryGetFocusTarget(TeamType team, uint currentTick, uint maxAgeTicks, out BrawlerController target)
@@ -67,6 +104,30 @@ namespace MOBA.Core.Simulation.AI
             }
 
             target = null;
+            return false;
+        }
+
+        public static bool TryGetFocusDirective(
+            TeamType team,
+            uint currentTick,
+            uint maxAgeTicks,
+            out BrawlerController target,
+            out float urgency,
+            out string reason)
+        {
+            ref TeamData data = ref GetData(team);
+
+            if (TryGetFocusTarget(team, currentTick, maxAgeTicks, out target))
+            {
+                urgency = Mathf.Max(0.1f, data.FocusTargetUrgency);
+                reason = string.IsNullOrEmpty(data.FocusTargetReason)
+                    ? "sighted"
+                    : data.FocusTargetReason;
+                return true;
+            }
+
+            urgency = 0f;
+            reason = "none";
             return false;
         }
 

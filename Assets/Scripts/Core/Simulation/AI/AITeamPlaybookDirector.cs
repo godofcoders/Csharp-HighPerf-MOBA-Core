@@ -63,6 +63,8 @@ namespace MOBA.Core.Simulation.AI
         public bool HasFocusTarget;
         public int FocusTargetEntityId;
         public Vector3 FocusTargetPosition;
+        public float FocusUrgency;
+        public string FocusReason;
 
         public bool HasEnemyHotspot;
         public Vector3 EnemyHotspotPosition;
@@ -178,6 +180,7 @@ namespace MOBA.Core.Simulation.AI
         private const float FlankEscortDistance = 1.70f;
         private const float FlankEscortSideOffset = 1.55f;
         private const float CarrierRefugeDistance = 2.45f;
+        private const float CollapseFocusUrgency = 2.35f;
 
         public static AITeamPlaybookState Resolve(AITeamPlaybookContext context)
         {
@@ -267,7 +270,17 @@ namespace MOBA.Core.Simulation.AI
             }
 
             if (context.HasFocusTarget &&
+                context.FocusUrgency >= CollapseFocusUrgency)
+            {
+                reason = string.IsNullOrEmpty(context.FocusReason)
+                    ? "collapse_focus"
+                    : $"collapse_focus:{context.FocusReason}";
+                return AITeamPlaybookCall.PinchPressure;
+            }
+
+            if (context.HasFocusTarget &&
                 (macroCall == AIGameModeMacroCall.Push ||
+                 context.FocusUrgency >= 1.60f ||
                  pressure >= 1.25f ||
                  context.ApproachAllies > 0 ||
                  context.RepositionAllies > 0))
@@ -641,7 +654,7 @@ namespace MOBA.Core.Simulation.AI
                     break;
 
                 case AITeamPlaybookCall.PinchPressure:
-                    urgency = 0.70f + pressure * 0.06f;
+                    urgency = 0.70f + pressure * 0.06f + context.FocusUrgency * 0.08f;
                     break;
 
                 case AITeamPlaybookCall.Push:

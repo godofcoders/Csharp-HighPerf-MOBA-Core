@@ -41,12 +41,24 @@ namespace MOBA.Core.Simulation.AI
 
             if (targetInfo.HasLiveTarget && targetInfo.Target is BrawlerController targetBrawler)
             {
-                AITeamBlackboard.ReportFocusTarget(_self.Team, targetBrawler, currentTick);
+                AIGameModeMacroState macroState =
+                    AIGameModeMacroStrategy.ResolveCurrentMode(_self.Team);
+                float focusUrgency = BuildFocusUrgency(
+                    targetBrawler,
+                    macroState,
+                    out string focusReason);
+
+                AITeamBlackboard.ReportFocusTarget(
+                    _self.Team,
+                    targetBrawler,
+                    currentTick,
+                    focusUrgency,
+                    focusReason);
                 AITeamBlackboard.ReportEnemyHotspot(
                     _self.Team,
                     targetBrawler.Position,
                     currentTick,
-                    1.25f);
+                    Mathf.Clamp(1.10f + focusUrgency * 0.25f, 1.25f, 3.50f));
             }
 
             if (_self.State.ThreatTracker != null)
@@ -149,6 +161,21 @@ namespace MOBA.Core.Simulation.AI
         public bool TryGetFocusTarget(uint currentTick, out BrawlerController target)
         {
             return AITeamBlackboard.TryGetFocusTarget(_self.Team, currentTick, FocusMemoryTicks, out target);
+        }
+
+        public bool TryGetFocusDirective(
+            uint currentTick,
+            out BrawlerController target,
+            out float urgency,
+            out string reason)
+        {
+            return AITeamBlackboard.TryGetFocusDirective(
+                _self.Team,
+                currentTick,
+                FocusMemoryTicks,
+                out target,
+                out urgency,
+                out reason);
         }
 
         public bool TryGetRegroupPoint(uint currentTick, out Vector3 point)
@@ -453,6 +480,21 @@ namespace MOBA.Core.Simulation.AI
             AITargetInfo targetInfo,
             uint currentTick)
         {
+            if (TryGetFocusDirective(
+                    currentTick,
+                    out BrawlerController directiveTarget,
+                    out float directiveUrgency,
+                    out string directiveReason) &&
+                SpatialEntityUtility.IsAlive(directiveTarget))
+            {
+                context.HasFocusTarget = true;
+                context.FocusTargetEntityId = directiveTarget.EntityID;
+                context.FocusTargetPosition = directiveTarget.Position;
+                context.FocusUrgency = directiveUrgency;
+                context.FocusReason = directiveReason;
+                return;
+            }
+
             if (targetInfo != null &&
                 targetInfo.HasLiveTarget &&
                 SpatialEntityUtility.TryGetEntityId(targetInfo.Target, out int targetId))
@@ -460,16 +502,68 @@ namespace MOBA.Core.Simulation.AI
                 context.HasFocusTarget = true;
                 context.FocusTargetEntityId = targetId;
                 context.FocusTargetPosition = targetInfo.Target.Position;
-                return;
+                context.FocusUrgency = 1f;
+                context.FocusReason = "local_target";
+            }
+        }
+
+        private float BuildFocusUrgency(
+            BrawlerController target,
+            AIGameModeMacroState macroState,
+            out string reason)
+        {
+            reason = "sighted";
+
+            if (!SpatialEntityUtility.IsAlive(target) || target.State == null)
+                return 0.5f;
+
+            float targetHealthRatio = target.State.CurrentHealth /
+                                      Mathf.Max(1f, target.State.MaxHealth.Value);
+            int targetCarriedGems = target.State.CarriedGemCount;
+            float distance = Vector3.Distance(_self.Position, target.Position);
+            int alliedFocus = GetTargetFocusCountExcludingSelf(target.EntityID);
+
+            AIWinConditionTargetEvaluation evaluation =
+                AIWinConditionUtility.EvaluateTarget(
+                    new AIWinConditionTargetContext(
+                        macroState,
+                        _self.State != null ? _self.State.CarriedGemCount : 0,
+                        targetCarriedGems,
+                        targetHealthRatio,
+                        distance,
+                        isCurrentTarget: true,
+                        isTeamFocusTarget: false,
+                        alliedFocus));
+
+            float urgency = 1f;
+            if (evaluation.HasDelta)
+            {
+                urgency += evaluation.ScoreDelta / 30f;
+                reason = evaluation.Reason;
             }
 
-            if (TryGetFocusTarget(currentTick, out BrawlerController focusTarget) &&
-                SpatialEntityUtility.IsAlive(focusTarget))
+            if (evaluation.ShouldCollapse)
             {
-                context.HasFocusTarget = true;
-                context.FocusTargetEntityId = focusTarget.EntityID;
-                context.FocusTargetPosition = focusTarget.Position;
+                urgency += 1.10f;
+                reason = string.IsNullOrEmpty(reason)
+                    ? "collapse"
+                    : $"collapse:{reason}";
             }
+
+            if (targetHealthRatio <= 0.25f)
+            {
+                urgency += 0.70f;
+                if (reason == "sighted")
+                    reason = "low_health";
+            }
+
+            if (targetCarriedGems > 0)
+                urgency += Mathf.Min(1.25f, targetCarriedGems * 0.18f);
+
+            if (alliedFocus > 0 && evaluation.ShouldCollapse)
+                urgency += Mathf.Min(0.80f, alliedFocus * 0.25f);
+
+            return Mathf.Clamp(urgency, 0.5f, 6f);
         }
 
         private void PopulatePositionSignalContext(

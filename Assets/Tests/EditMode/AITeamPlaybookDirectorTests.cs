@@ -285,6 +285,25 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void Resolve_CallsPinchPressure_WhenFocusUrgencyDemandsCollapse()
+        {
+            AITeamPlaybookContext context = BaseContext(104, AIGameModeMacroCall.Neutral);
+            context.HasFocusTarget = true;
+            context.FocusTargetEntityId = 901;
+            context.FocusTargetPosition = new Vector3(7f, 0f, 1f);
+            context.FocusUrgency = 2.75f;
+            context.FocusReason = "break_countdown";
+
+            AITeamPlaybookState state = AITeamPlaybookDirector.Resolve(context);
+
+            Assert.AreEqual(AITeamPlaybookCall.PinchPressure, state.Call);
+            Assert.AreEqual(901, state.FocusTargetEntityId);
+            Assert.IsTrue(state.HasPressurePoint);
+            Assert.IsTrue(state.Reason.Contains("collapse_focus"));
+            Assert.Greater(state.Urgency, 0.90f);
+        }
+
+        [Test]
         public void Resolve_CallsBaitAndCollapse_WhenSelfIsThreatenedAlly()
         {
             AITeamPlaybookContext context = BaseContext(105, AIGameModeMacroCall.Neutral);

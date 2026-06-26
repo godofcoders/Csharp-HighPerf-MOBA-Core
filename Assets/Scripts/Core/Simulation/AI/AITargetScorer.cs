@@ -151,12 +151,33 @@ namespace MOBA.Core.Simulation.AI
             }
 
             // 5. Team focus-fire bonus
-            if (AITeamBlackboard.TryGetFocusTarget(_self.Team, currentTick, 90, out var focusTarget) &&
+            float focusUrgency = 1f;
+            BrawlerController focusTarget;
+            bool hasFocusDirective;
+            if (_teamCoordinator != null)
+            {
+                hasFocusDirective = _teamCoordinator.TryGetFocusDirective(
+                    currentTick,
+                    out focusTarget,
+                    out focusUrgency,
+                    out _);
+            }
+            else
+            {
+                hasFocusDirective = AITeamBlackboard.TryGetFocusTarget(
+                    _self.Team,
+                    currentTick,
+                    90,
+                    out focusTarget);
+            }
+
+            if (hasFocusDirective &&
                 SpatialEntityUtility.IsAlive(focusTarget) &&
                 focusTarget.EntityID == targetEntityId)
             {
                 isTeamFocusTarget = true;
-                score += _profile.FocusFireWeight;
+                score += _profile.FocusFireWeight +
+                         Mathf.Clamp(focusUrgency * 4f, 0f, 18f);
             }
 
             // 6. Team anti-overfocus penalty.
