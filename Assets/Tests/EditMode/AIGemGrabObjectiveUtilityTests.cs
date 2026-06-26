@@ -102,6 +102,31 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void EvaluateCandidate_ValuesSwingPickupThatTakesGemLead()
+        {
+            AIGemPickupEvaluation evaluation = AIGemGrabObjectiveUtility.EvaluateCandidate(
+                _profile,
+                new AIGemPickupCandidateContext(
+                    0,
+                    4,
+                    5,
+                    10,
+                    1,
+                    2,
+                    5f,
+                    11f,
+                    1f,
+                    0.4f,
+                    false,
+                    false,
+                    AIGameModeMacroCall.Neutral,
+                    _profile.GemPickupMinimumScore));
+
+            Assert.IsTrue(evaluation.ShouldPickup);
+            Assert.IsTrue(evaluation.Reason.Contains("swing"));
+        }
+
+        [Test]
         public void EvaluateCandidate_AddsUrgentResetPressure_WhenEnemyCountdownIsLate()
         {
             AIGemPickupEvaluation evaluation = AIGemGrabObjectiveUtility.EvaluateCandidate(
@@ -126,6 +151,78 @@ namespace MOBA.Tests.EditMode
             Assert.IsTrue(evaluation.ShouldPickup);
             Assert.IsTrue(evaluation.IsDenyPickup);
             Assert.IsTrue(evaluation.Reason.Contains("urgent_reset"));
+        }
+
+        [Test]
+        public void EvaluateMineControl_EnemyCountdownBoostsObjectiveRetake()
+        {
+            AIGemMineControlEvaluation evaluation =
+                AIGemGrabObjectiveUtility.EvaluateMineControl(
+                    AIActionType.Objective,
+                    new AIGemMineControlContext(
+                        Macro(
+                            AIGameModeMacroCall.Reset,
+                            ownGems: 6,
+                            enemyGems: 10,
+                            enemyCountdown: true,
+                            timer: 2f),
+                        selfCarriedGems: 0,
+                        healthRatio: 1f,
+                        allyPressure: 0.5f,
+                        hasLiveTarget: false,
+                        hasGemPickup: false,
+                        shouldPickupGem: false,
+                        gemPickupScore: 0f));
+
+            Assert.Greater(evaluation.Delta, 30f);
+            Assert.AreEqual("reset_countdown_mine", evaluation.Reason);
+        }
+
+        [Test]
+        public void EvaluateMineControl_CarrierWithCountdownAvoidsMineGreed()
+        {
+            AIGemMineControlEvaluation evaluation =
+                AIGemGrabObjectiveUtility.EvaluateMineControl(
+                    AIActionType.Objective,
+                    new AIGemMineControlContext(
+                        Macro(
+                            AIGameModeMacroCall.Hold,
+                            ownGems: 10,
+                            enemyGems: 7,
+                            ownCountdown: true,
+                            timer: 5f),
+                        selfCarriedGems: 5,
+                        healthRatio: 0.7f,
+                        allyPressure: 0f,
+                        hasLiveTarget: false,
+                        hasGemPickup: true,
+                        shouldPickupGem: true,
+                        gemPickupScore: 80f));
+
+            Assert.Less(evaluation.Delta, 0f);
+            Assert.AreEqual("carrier_countdown_safety", evaluation.Reason);
+        }
+
+        private static AIGameModeMacroState Macro(
+            AIGameModeMacroCall call,
+            int ownGems,
+            int enemyGems,
+            bool ownCountdown = false,
+            bool enemyCountdown = false,
+            float timer = 0f)
+        {
+            return new AIGameModeMacroState(
+                call,
+                AIGameModeObjectivePhase.Contest,
+                ownGems,
+                enemyGems,
+                10,
+                timer,
+                90f,
+                ownGems > enemyGems,
+                enemyGems > ownGems,
+                ownCountdown,
+                enemyCountdown);
         }
     }
 }

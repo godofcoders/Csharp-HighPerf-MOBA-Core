@@ -1365,14 +1365,31 @@ namespace MOBA.Core.Simulation.AI
                 score += Mathf.Clamp(hotspotPressure * 4f, 4f, 14f);
             }
 
-            if (TryResolveGemPickupDecision(
+            AIGemPickupDecision gemDecision = AIGemPickupDecision.None("not_checked");
+            bool hasGemPickupDecision = TryResolveGemPickupDecision(
                     macroState,
                     currentTick,
-                    out AIGemPickupDecision gemDecision))
+                    out gemDecision);
+
+            if (hasGemPickupDecision)
             {
                 score += gemDecision.ShouldPickup
                     ? gemDecision.Score
                     : Mathf.Max(0f, gemDecision.Score * 0.20f);
+            }
+
+            AIGemMineControlEvaluation mineControl =
+                AIGemGrabObjectiveUtility.EvaluateMineControl(
+                    AIActionType.Search,
+                    BuildGemMineControlContext(
+                        macroState,
+                        hasLiveTarget: false,
+                        allyPressure: 0f,
+                        gemDecision));
+            if (mineControl.HasDelta)
+            {
+                score += mineControl.Delta;
+                _lastGemPickupDebug += $" Mine={mineControl.Reason}_{mineControl.Delta:+0.0;-0.0}";
             }
 
             if (CanHoldAssignedLane(currentTick, out _))
@@ -1593,6 +1610,25 @@ namespace MOBA.Core.Simulation.AI
                 _lastObjectiveScoreReason += $"|{objectiveMacroReason}_{objectiveMacroDelta:+0.0;-0.0}";
             }
 
+            TryResolveGemPickupDecision(
+                macroState,
+                currentTick,
+                out AIGemPickupDecision objectiveGemDecision);
+            AIGemMineControlEvaluation objectiveMineControl =
+                AIGemGrabObjectiveUtility.EvaluateMineControl(
+                    AIActionType.Objective,
+                    BuildGemMineControlContext(
+                        macroState,
+                        hasLiveTarget: false,
+                        allyPressure,
+                        objectiveGemDecision));
+            if (objectiveMineControl.HasDelta)
+            {
+                score += objectiveMineControl.Delta;
+                _lastObjectiveScoreReason +=
+                    $"|mine_{objectiveMineControl.Reason}_{objectiveMineControl.Delta:+0.0;-0.0}";
+            }
+
             float opponentObjectiveNeglect = AIOpponentModel.GetMaxObjectiveNeglect(
                 _self.Team,
                 currentTick,
@@ -1623,6 +1659,29 @@ namespace MOBA.Core.Simulation.AI
             _lastObjectiveFinalScore = finalScore.Score;
 
             return finalScore;
+        }
+
+        private AIGemMineControlContext BuildGemMineControlContext(
+            AIGameModeMacroState macroState,
+            bool hasLiveTarget,
+            float allyPressure,
+            AIGemPickupDecision gemDecision)
+        {
+            float healthRatio = _self != null && _self.State != null
+                ? _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value)
+                : 1f;
+
+            return new AIGemMineControlContext(
+                macroState,
+                _self != null && _self.State != null
+                    ? _self.State.CarriedGemCount
+                    : 0,
+                healthRatio,
+                allyPressure,
+                hasLiveTarget,
+                gemDecision.HasPickup,
+                gemDecision.ShouldPickup,
+                gemDecision.Score);
         }
 
         private AIActionScore ScoreRegroup(
