@@ -12,6 +12,7 @@ namespace MOBA.Core.Simulation.AI
         private const float WorldAvoidanceMinLookahead = 0.75f;
         private const float WorldAvoidanceMaxLookahead = 1.65f;
         private const int PathSteeringLookaheadNodes = 5;
+        private const float MoveDirectionBaseBlend = 0.52f;
 
         private readonly BrawlerController _brawler;
         private readonly ISimulationClock _clock;
@@ -46,6 +47,7 @@ namespace MOBA.Core.Simulation.AI
         private Vector3 _lastAvoidanceDirection;
         private uint _avoidanceDirectionLockUntilTick;
         private bool _hasAvoidanceDirection;
+        private AIMovementSmoothingState _movementSmoothingState;
 
         public Vector3 Position => _brawler.Position;
         public bool HasDestination => _hasDestination;
@@ -255,6 +257,7 @@ namespace MOBA.Core.Simulation.AI
             _consecutiveActiveZeroMoveTicks = 0;
             _consecutivePathBudgetDeferrals = 0;
             _hasAvoidanceDirection = false;
+            _movementSmoothingState = AIMovementSmoothingState.None;
             QueueMove(Vector3.zero);
         }
 
@@ -271,6 +274,7 @@ namespace MOBA.Core.Simulation.AI
             _consecutivePathBudgetDeferrals = 0;
             _lastQueuedMoveDirection = Vector3.zero;
             _hasAvoidanceDirection = false;
+            _movementSmoothingState = AIMovementSmoothingState.None;
         }
 
         public void Tick()
@@ -685,8 +689,75 @@ namespace MOBA.Core.Simulation.AI
         private void QueueMove(Vector3 direction)
         {
             direction = ApplyLocalObstacleAvoidance(direction);
+            direction = SmoothMoveCommand(direction);
             TrackMoveCommand(direction);
             _commandSource?.QueueMove(direction, _currentDestinationHighPriority);
+        }
+
+        private Vector3 SmoothMoveCommand(Vector3 direction)
+        {
+            AIMovementSmoothingResult result =
+                AIMovementSmoothingUtility.SmoothDirection(
+                    direction,
+                    _movementSmoothingState,
+                    MoveDirectionBaseBlend,
+                    _currentDestinationHighPriority,
+                    _hasAvoidanceDirection &&
+                    _clock.CurrentTick <= _avoidanceDirectionLockUntilTick);
+
+            if (!IsSmoothedMoveDirectionSafe(result.Direction))
+            {
+                Vector3 fallback = direction;
+                fallback.y = 0f;
+                _movementSmoothingState = fallback.sqrMagnitude > 0.0001f
+                    ? new AIMovementSmoothingState(true, fallback)
+                    : AIMovementSmoothingState.None;
+                return fallback;
+            }
+
+            _movementSmoothingState = result.State;
+            return result.Direction;
+        }
+
+        private bool IsSmoothedMoveDirectionSafe(Vector3 smoothedDirection)
+        {
+            smoothedDirection.y = 0f;
+            if (smoothedDirection.sqrMagnitude <= 0.0001f)
+                return true;
+
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder != null &&
+                !IsMoveProjectionWalkable(
+                    pathfinder,
+                    smoothedDirection,
+                    requireNavigationClearance: false))
+            {
+                return false;
+            }
+
+            if (!_brawler.TryGetWorldCollisionProbe(
+                    out int collisionMask,
+                    out float radius,
+                    out float probeHeight,
+                    out float skin))
+            {
+                return true;
+            }
+
+            float lookahead = GetWorldAvoidanceLookahead(pathfinder, radius, skin) * 0.65f;
+            if (!TryWorldCollisionCast(
+                    smoothedDirection,
+                    radius,
+                    probeHeight,
+                    skin,
+                    collisionMask,
+                    lookahead,
+                    out _))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private Vector3 ApplyLocalObstacleAvoidance(Vector3 direction)
