@@ -82,6 +82,43 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void GetSnapshot_PrefersAssignedLane_WhenRotationCandidatesAreEqual()
+        {
+            AITeamLaneOwnershipTracker tracker = new AITeamLaneOwnershipTracker();
+            tracker.ReportLane(31, AITeamLaneAssignment.Left, Vector3.zero, 100u);
+            tracker.ReportLane(34, AITeamLaneAssignment.Left, Vector3.zero, 100u);
+            tracker.ReportLane(37, AITeamLaneAssignment.Mid, Vector3.zero, 100u);
+            tracker.ReportLane(38, AITeamLaneAssignment.Right, Vector3.zero, 100u);
+
+            AITeamLaneOwnershipSnapshot pending = tracker.GetSnapshot(31, 101u, 30u);
+            AITeamLaneOwnershipSnapshot confirmed = tracker.GetSnapshot(31, 115u, 30u);
+
+            Assert.IsTrue(pending.RotationPending);
+            Assert.AreEqual(AITeamLaneAssignment.Left, pending.RecommendedLane);
+
+            Assert.IsTrue(confirmed.ShouldRotate);
+            Assert.AreEqual(AITeamLaneAssignment.Mid, confirmed.RecommendedLane);
+            Assert.AreEqual(AITeamLaneAssignment.Mid, confirmed.AssignedLane);
+        }
+
+        [Test]
+        public void GetSnapshot_PrefersEmptyMid_WhenAssignedLaneIsNotCandidate()
+        {
+            AITeamLaneOwnershipTracker tracker = new AITeamLaneOwnershipTracker();
+            tracker.ReportLane(33, AITeamLaneAssignment.Left, Vector3.zero, 100u);
+            tracker.ReportLane(36, AITeamLaneAssignment.Left, Vector3.zero, 100u);
+            tracker.ReportLane(39, AITeamLaneAssignment.Left, Vector3.zero, 100u);
+
+            AITeamLaneOwnershipSnapshot pending = tracker.GetSnapshot(36, 101u, 30u);
+            AITeamLaneOwnershipSnapshot confirmed = tracker.GetSnapshot(36, 115u, 30u);
+
+            Assert.IsTrue(pending.RotationPending);
+            Assert.IsTrue(confirmed.ShouldRotate);
+            Assert.AreEqual(AITeamLaneAssignment.Mid, confirmed.RecommendedLane);
+            Assert.AreEqual(AITeamLaneAssignment.Left, confirmed.AssignedLane);
+        }
+
+        [Test]
         public void GetSnapshot_PreservesPairedMidControl_WhenSoftlyOverOwned()
         {
             AITeamLaneOwnershipTracker tracker = new AITeamLaneOwnershipTracker();

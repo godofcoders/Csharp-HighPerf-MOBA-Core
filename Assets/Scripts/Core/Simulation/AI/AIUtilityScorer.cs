@@ -1392,10 +1392,13 @@ namespace MOBA.Core.Simulation.AI
                 _lastGemPickupDebug += $" Mine={mineControl.Reason}_{mineControl.Delta:+0.0;-0.0}";
             }
 
-            if (CanHoldAssignedLane(currentTick, out _))
+            float laneSearchBonus = GetLaneDisciplineScoreBonus(
+                currentTick,
+                _profile.LaneHoldSearchScore,
+                out _);
+            if (laneSearchBonus > 0.01f)
             {
-                score += _profile.LaneHoldSearchScore *
-                         Mathf.Max(0f, _profile.LaneDisciplineWeight);
+                score += laneSearchBonus;
             }
 
             score += GetMacroActionDelta(
@@ -1641,10 +1644,12 @@ namespace MOBA.Core.Simulation.AI
                 _lastObjectiveScoreReason += $"|opp_neglect_+{neglectBonus:0.0}";
             }
 
-            if (CanHoldAssignedLane(currentTick, out string laneReason))
+            float laneBonus = GetLaneDisciplineScoreBonus(
+                currentTick,
+                _profile.LaneHoldObjectiveBonus,
+                out string laneReason);
+            if (laneBonus > 0.01f)
             {
-                float laneBonus = _profile.LaneHoldObjectiveBonus *
-                                  Mathf.Max(0f, _profile.LaneDisciplineWeight);
                 score += laneBonus;
                 _lastObjectiveScoreReason += $"|lane_{laneBonus:+0.0;-0.0}_{laneReason}";
             }
@@ -1959,6 +1964,60 @@ namespace MOBA.Core.Simulation.AI
 
             reason = _lastLaneHoldReason;
             return _lastCanHoldLane;
+        }
+
+        private float GetLaneDisciplineScoreBonus(
+            uint currentTick,
+            float baseBonus,
+            out string reason)
+        {
+            reason = "lane_none";
+
+            if (!CanHoldAssignedLane(currentTick, out string laneReason))
+            {
+                reason = laneReason;
+                return 0f;
+            }
+
+            float laneWeight = Mathf.Max(0f, _profile.LaneDisciplineWeight);
+            if (laneWeight <= 0f || baseBonus <= 0f)
+            {
+                reason = laneReason;
+                return 0f;
+            }
+
+            float multiplier = 1f;
+            string stateReason = "hold";
+
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetLaneOwnership(
+                    currentTick,
+                    out AITeamLaneOwnershipSnapshot laneOwnership))
+            {
+                if (laneOwnership.AssignedLaneAbandoned)
+                {
+                    multiplier += 0.90f;
+                    stateReason = "recover";
+                }
+                else if (laneOwnership.ShouldRotate)
+                {
+                    multiplier += 1.10f;
+                    stateReason = "rotate";
+                }
+                else if (laneOwnership.RotationPending)
+                {
+                    multiplier += 0.35f;
+                    stateReason = "pending";
+                }
+                else if (laneOwnership.CurrentLaneOverOwned)
+                {
+                    multiplier *= 0.70f;
+                    stateReason = "overowned_hold";
+                }
+            }
+
+            reason = $"{stateReason}_{laneReason}";
+            return baseBonus * laneWeight * multiplier;
         }
 
         private float GetChaseDisciplineDelta(

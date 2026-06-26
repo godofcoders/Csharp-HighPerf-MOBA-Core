@@ -112,6 +112,7 @@ namespace MOBA.Core.Simulation.AI
             int[] counts = BuildVirtualCounts(botEntityId, currentLane);
             AITeamLaneAssignment underOwnedLane = SelectUnderOwnedLane(
                 botEntityId,
+                assignedLane,
                 currentLane,
                 counts);
             AITeamLaneAssignment overOwnedLane = SelectOverOwnedLane(counts);
@@ -382,6 +383,7 @@ namespace MOBA.Core.Simulation.AI
 
         private AITeamLaneAssignment SelectUnderOwnedLane(
             int botEntityId,
+            AITeamLaneAssignment assignedLane,
             AITeamLaneAssignment currentLane,
             int[] counts)
         {
@@ -391,7 +393,7 @@ namespace MOBA.Core.Simulation.AI
 
             AITeamLaneAssignment bestLane = AITeamLaneAssignment.None;
             int bestCount = int.MaxValue;
-            int bestStableScore = int.MaxValue;
+            int bestPriority = int.MaxValue;
 
             for (int i = 0; i < LaneCount; i++)
             {
@@ -399,13 +401,17 @@ namespace MOBA.Core.Simulation.AI
                 if (lane == currentLane || counts[i] >= currentCount)
                     continue;
 
-                int stableScore = GetStableLaneScore(botEntityId, lane);
+                int priority = GetRotationLanePriority(
+                    botEntityId,
+                    assignedLane,
+                    lane,
+                    counts[i]);
                 if (counts[i] < bestCount ||
-                    (counts[i] == bestCount && stableScore < bestStableScore))
+                    (counts[i] == bestCount && priority < bestPriority))
                 {
                     bestLane = lane;
                     bestCount = counts[i];
-                    bestStableScore = stableScore;
+                    bestPriority = priority;
                 }
             }
 
@@ -486,6 +492,24 @@ namespace MOBA.Core.Simulation.AI
                 int value = botEntityId * 397 ^ (int)lane * 101;
                 return value & 0x7fffffff;
             }
+        }
+
+        private static int GetRotationLanePriority(
+            int botEntityId,
+            AITeamLaneAssignment assignedLane,
+            AITeamLaneAssignment candidateLane,
+            int candidateCount)
+        {
+            int priority = candidateCount * 1000;
+
+            if (candidateLane == assignedLane)
+                priority -= 240;
+
+            if (candidateLane == AITeamLaneAssignment.Mid)
+                priority -= candidateCount <= 0 ? 120 : 40;
+
+            priority += GetStableLaneScore(botEntityId, candidateLane) % 100;
+            return priority;
         }
 
         private static bool TryGetLaneIndex(
