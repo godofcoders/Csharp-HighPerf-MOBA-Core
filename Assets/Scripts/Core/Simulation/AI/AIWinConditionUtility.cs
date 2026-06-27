@@ -104,6 +104,9 @@ namespace MOBA.Core.Simulation.AI
     {
         private const float MaxTargetDelta = 95f;
         private const float MaxActionDelta = 34f;
+        private const float CloseConfirmDistance = 4.50f;
+        private const float ReliablePressureDistance = 7.00f;
+        private const float LongCollapseDistance = 11.00f;
 
         public static AIWinConditionTargetEvaluation EvaluateTarget(
             AIWinConditionTargetContext context)
@@ -156,6 +159,12 @@ namespace MOBA.Core.Simulation.AI
 
                     break;
             }
+
+            ApplyDistanceReliability(
+                context,
+                ref score,
+                ref shouldCollapse,
+                ref reason);
 
             if (context.IsTeamFocusTarget && isHighValue)
             {
@@ -256,6 +265,22 @@ namespace MOBA.Core.Simulation.AI
                 reason = AppendReason(reason, "swing_target");
             }
 
+            int enemyLead = context.MacroState.EnemyGems - context.MacroState.OwnGems;
+            if (enemyLead > 0 &&
+                context.TargetCarriedGems >= enemyLead)
+            {
+                score += 14f;
+                shouldCollapse = true;
+                reason = AppendReason(reason, "lead_swing_target");
+            }
+
+            if (context.TargetCarriedGems >= Mathf.CeilToInt(gemsToWin * 0.50f))
+            {
+                score += 8f;
+                shouldCollapse = true;
+                reason = AppendReason(reason, "primary_carrier");
+            }
+
             if (context.TargetHealthRatio <= 0.35f)
             {
                 score += context.TargetHealthRatio <= 0.20f ? 18f : 12f;
@@ -292,6 +317,13 @@ namespace MOBA.Core.Simulation.AI
                              context.MacroState.Call == AIGameModeMacroCall.Push;
             score += context.TargetHealthRatio <= 0.28f ? 22f : 12f;
 
+            if (context.TargetHealthRatio <= 0.28f &&
+                context.Distance <= ReliablePressureDistance)
+            {
+                score += 10f;
+                reason = AppendReason(reason, "confirm_window");
+            }
+
             if (context.MacroState.Call == AIGameModeMacroCall.Push)
             {
                 score += 10f;
@@ -304,7 +336,66 @@ namespace MOBA.Core.Simulation.AI
                 reason = AppendReason(reason, "safe_trade");
             }
 
+            if (context.MacroState.IsBehind)
+            {
+                score += 8f;
+                reason = AppendReason(reason, "comeback_pick");
+            }
+
+            if (context.AlliedFocusCount > 0 && shouldCollapse)
+            {
+                score += Mathf.Min(10f, context.AlliedFocusCount * 5f);
+                reason = AppendReason(reason, "collapse_ready");
+            }
+
             reason = AppendReason(reason, "knockout_pick");
+        }
+
+        private static void ApplyDistanceReliability(
+            AIWinConditionTargetContext context,
+            ref float score,
+            ref bool shouldCollapse,
+            ref string reason)
+        {
+            if (score <= 0.01f)
+                return;
+
+            bool hasFinishWindow = context.TargetHealthRatio <= 0.35f;
+            bool carriesObjectiveValue = context.TargetCarriedGems > 0;
+
+            if (context.Distance <= CloseConfirmDistance)
+            {
+                score += hasFinishWindow ? 12f : 6f;
+                reason = AppendReason(reason, "close_confirm");
+
+                if (hasFinishWindow)
+                    shouldCollapse = true;
+
+                return;
+            }
+
+            if (context.Distance <= ReliablePressureDistance &&
+                (hasFinishWindow || carriesObjectiveValue))
+            {
+                score += 5f;
+                reason = AppendReason(reason, "reachable_target");
+                return;
+            }
+
+            if (context.Distance < LongCollapseDistance ||
+                context.MacroState.EnemyTeamHasCountdown)
+            {
+                return;
+            }
+
+            score -= Mathf.Min(16f, 4f + (context.Distance - LongCollapseDistance) * 2.5f);
+            reason = AppendReason(reason, "far_target");
+
+            if (!hasFinishWindow &&
+                context.AlliedFocusCount <= 0)
+            {
+                shouldCollapse = false;
+            }
         }
 
         private static AIWinConditionActionEvaluation EvaluateGemGrabAction(
