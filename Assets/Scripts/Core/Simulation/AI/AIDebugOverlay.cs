@@ -76,6 +76,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"AI Match Review: {snapshot.MatchTelemetryReviewDebug}");
             GUILayout.Label($"AI Match Trend: {snapshot.MatchTelemetryTrendDebug}");
             GUILayout.Label($"AI Bot Outlier: {snapshot.BotTelemetryOutlierDebug}");
+            GUILayout.Label($"AI Readiness: {snapshot.AIReadinessDebug}");
 
             GUILayout.Space(8);
             GUILayout.Label("Flags:");
@@ -159,6 +160,7 @@ namespace MOBA.Core.Simulation.AI
                     $"AIMatchReview={snapshot.MatchTelemetryReviewDebug} | " +
                     $"AIMatchTrend={snapshot.MatchTelemetryTrendDebug} | " +
                     $"AIBotOutlier={snapshot.BotTelemetryOutlierDebug} | " +
+                    $"AIReadiness={snapshot.AIReadinessDebug} | " +
                     $"Statuses={string.Join(", ", snapshot.ActiveStatuses)}");
             }
         }

@@ -58,6 +58,7 @@ namespace MOBA.Core.Simulation.AI
         public string MatchTelemetryReviewDebug;
         public string MatchTelemetryTrendDebug;
         public string BotTelemetryOutlierDebug;
+        public string AIReadinessDebug;
 
         public void ClearLists()
         {

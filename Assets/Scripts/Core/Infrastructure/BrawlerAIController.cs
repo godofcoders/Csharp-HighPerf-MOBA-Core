@@ -630,16 +630,25 @@ $"Map={LastMapRouteDebug}";
                             _profile.MaxPathTouchedNodesPerTick));
                 _debugSnapshot.MatchTelemetryReviewDebug =
                     matchReview.GetDebugSummary();
+                AIMatchTelemetryTrendSnapshot matchTrend =
+                    AIMatchTelemetryTrendTracker.Record(matchReview);
                 _debugSnapshot.MatchTelemetryTrendDebug =
-                    AIMatchTelemetryTrendTracker.Record(matchReview).GetDebugSummary();
+                    matchTrend.GetDebugSummary();
                 _debugSnapshot.BotTelemetryOutlierDebug =
                     AIBotTelemetryOutlierReview.Build(currentTick).GetDebugSummary();
+                _debugSnapshot.AIReadinessDebug =
+                    AIReadinessReview.Evaluate(
+                        currentTick,
+                        matchReview,
+                        matchTrend,
+                        AIValidationGauntlet.LastResult).GetDebugSummary();
             }
             else
             {
                 _debugSnapshot.MatchTelemetryReviewDebug = "MatchReview=disabled";
                 _debugSnapshot.MatchTelemetryTrendDebug = "MatchTrend=disabled";
                 _debugSnapshot.BotTelemetryOutlierDebug = "BotOutlier=disabled";
+                _debugSnapshot.AIReadinessDebug = "AIReady=disabled";
             }
             _debugSnapshot.MacroDebug = MacroDebug;
             _debugSnapshot.PlaybookDebug = PlaybookDebug;
