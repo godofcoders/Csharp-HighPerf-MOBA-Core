@@ -247,9 +247,9 @@ namespace MOBA.Core.Infrastructure
 
             if (brawlBall != null && (mm == null || mm.CurrentState != MatchState.Ended))
             {
-                int target = Mathf.Max(1, brawlBall.GoalsToWin);
-                SetText(_blueGemTmp, _blueGemLegacy, $"{brawlBall.BlueGoals}/{target}");
-                SetText(_redGemTmp, _redGemLegacy, $"{brawlBall.RedGoals}/{target}");
+                int goalTarget = Mathf.Max(1, brawlBall.GoalsToWin);
+                SetText(_blueGemTmp, _blueGemLegacy, $"{brawlBall.BlueGoals}/{goalTarget}");
+                SetText(_redGemTmp, _redGemLegacy, $"{brawlBall.RedGoals}/{goalTarget}");
                 SetText(_matchTimerTmp, _matchTimerLegacy, brawlBall.BallCarrier != null ? "BALL" : "LOOSE");
 
                 SetActive(_blueLeaderHighlight, brawlBall.BlueGoals > brawlBall.RedGoals);
@@ -267,9 +267,9 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            int target = Mathf.Max(1, gg.GemsToWin);
-            SetText(_blueGemTmp, _blueGemLegacy, $"{gg.BlueTeamGems}/{target}");
-            SetText(_redGemTmp, _redGemLegacy, $"{gg.RedTeamGems}/{target}");
+            int gemTarget = Mathf.Max(1, gg.GemsToWin);
+            SetText(_blueGemTmp, _blueGemLegacy, $"{gg.BlueTeamGems}/{gemTarget}");
+            SetText(_redGemTmp, _redGemLegacy, $"{gg.RedTeamGems}/{gemTarget}");
             SetText(
                 _matchTimerTmp,
                 _matchTimerLegacy,
