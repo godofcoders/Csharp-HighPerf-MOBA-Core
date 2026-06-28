@@ -604,6 +604,9 @@ namespace MOBA.Core.Infrastructure
                     break;
 
                 case BrawlerCommandType.MainAttack:
+                    if (TryKickBrawlBall(cmd.Direction, false, cmd.Tick))
+                        break;
+
                     TryUseMainAttack(cmd.Direction, cmd.TargetPoint, cmd.HasTargetPoint, out _);
                     break;
 
@@ -612,6 +615,9 @@ namespace MOBA.Core.Infrastructure
                     break;
 
                 case BrawlerCommandType.Super:
+                    if (TryKickBrawlBall(cmd.Direction, true, cmd.Tick))
+                        break;
+
                     TryUseSuper(cmd.Direction, cmd.TargetPoint, cmd.HasTargetPoint, out _);
                     break;
 
@@ -619,6 +625,45 @@ namespace MOBA.Core.Infrastructure
                     TryActivateHypercharge(out _);
                     break;
             }
+        }
+
+        private bool TryKickBrawlBall(Vector3 direction, bool isSuperKick, uint currentTick)
+        {
+            if (State == null || State.IsDead || !State.CanUseActionInput(currentTick))
+                return false;
+
+            BrawlBallMode mode = BrawlBallMode.Instance;
+            if (mode == null || !mode.CanKickBall(this))
+                return false;
+
+            Vector3 kickDirection = direction;
+            kickDirection.y = 0f;
+            if (kickDirection.sqrMagnitude <= 0.001f)
+                kickDirection = transform.forward;
+
+            kickDirection.y = 0f;
+            if (kickDirection.sqrMagnitude <= 0.001f)
+                return false;
+
+            kickDirection.Normalize();
+
+            if (isSuperKick)
+            {
+                if (!State.CanUseSuper(currentTick))
+                    return false;
+
+                if (!State.TryConsumeActionCost(BrawlerActionRequestType.Super))
+                    return false;
+
+                State.StartCooldownForAction(BrawlerActionRequestType.Super, currentTick);
+            }
+
+            if (!mode.TryKickBall(this, kickDirection, isSuperKick, currentTick))
+                return false;
+
+            ApplyActionFacing(kickDirection, null, currentTick);
+            State.LastAttackTick = currentTick;
+            return true;
         }
 
         private void ProcessMovement(uint currentTick)

@@ -97,6 +97,16 @@ MonoBehaviour:
   _carrierForwardOffset: 0.72
   _carrierHeightOffset: 0.32
   _dropForwardOffset: 0.72
+  _normalKickSpeed: 13
+  _normalKickRange: 8
+  _superKickSpeed: 18
+  _superKickRange: 11.5
+  _pickupLockoutSeconds: 0.16
+  _collisionRadius: 0.32
+  _collisionHeightOffset: 0.35
+  _worldCollisionMask:
+    serializedVersion: 2
+    m_Bits: 0
   _useRuntimeVisual: 1
   _visualRoot: {fileID: 0}
   _ballColor: {r: 1, g: 0.82, b: 0.12, a: 1}

@@ -113,10 +113,37 @@ namespace MOBA.Core.Simulation
                 ClearBallCarrier();
         }
 
+        public bool CanKickBall(BrawlerController carrier)
+        {
+            return _ball != null &&
+                   BallCarrier == carrier &&
+                   _ball.Carrier == carrier;
+        }
+
+        public bool TryKickBall(
+            BrawlerController carrier,
+            Vector3 direction,
+            bool isSuperKick,
+            uint currentTick)
+        {
+            return CanKickBall(carrier) &&
+                   _ball.KickFromCarrier(carrier, direction, isSuperKick, currentTick);
+        }
+
         internal void NotifyBallPickedUp(BrawlerController carrier, Vector3 position)
         {
             SetBallCarrierState(carrier);
             BrawlBallEventBus.RaiseBallPickedUp(carrier, position);
+        }
+
+        internal void NotifyBallKicked(
+            BrawlerController kicker,
+            Vector3 position,
+            Vector3 direction,
+            bool isSuperKick)
+        {
+            SetBallCarrierState(null);
+            BrawlBallEventBus.RaiseBallKicked(kicker, position, direction, isSuperKick);
         }
 
         internal void NotifyBallDropped(Vector3 position)

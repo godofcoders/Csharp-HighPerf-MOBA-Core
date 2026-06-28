@@ -23,6 +23,16 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0f)] private float _carrierHeightOffset = 0.32f;
         [SerializeField, Min(0f)] private float _dropForwardOffset = 0.72f;
 
+        [Header("Kicking")]
+        [SerializeField, Min(0.5f)] private float _normalKickSpeed = 13f;
+        [SerializeField, Min(0.5f)] private float _normalKickRange = 8f;
+        [SerializeField, Min(0.5f)] private float _superKickSpeed = 18f;
+        [SerializeField, Min(0.5f)] private float _superKickRange = 11.5f;
+        [SerializeField, Min(0f)] private float _pickupLockoutSeconds = 0.16f;
+        [SerializeField, Min(0.01f)] private float _collisionRadius = 0.32f;
+        [SerializeField, Min(0f)] private float _collisionHeightOffset = 0.35f;
+        [SerializeField] private LayerMask _worldCollisionMask;
+
         [Header("Presentation")]
         [SerializeField] private bool _useRuntimeVisual = true;
         [SerializeField] private Transform _visualRoot;
@@ -35,11 +45,17 @@ namespace MOBA.Core.Simulation
         private bool _hasSpawnPosition;
         private MeshRenderer _runtimeRenderer;
         private MaterialPropertyBlock _propertyBlock;
+        private Vector3 _looseVelocity;
+        private float _remainingTravelDistance;
+        private uint _pickupUnlockTick;
+        private bool _hasResolvedWorldCollisionMask;
+        private int _resolvedWorldCollisionMask;
 
         protected override TickPhase Phase => TickPhase.PostTick;
 
         public BrawlerController Carrier => IsValidCarrier(_carrier) ? _carrier : null;
         public bool IsCarried => Carrier != null;
+        public bool IsMovingLoose => _carrier == null && _looseVelocity.sqrMagnitude > 0.001f;
         public float PickupRadius => _pickupRadius;
         public Vector3 CurrentPosition => transform.position;
 
@@ -79,6 +95,11 @@ namespace MOBA.Core.Simulation
                 return;
             }
 
+            MoveLooseBall();
+
+            if (currentTick < _pickupUnlockTick)
+                return;
+
             TryPickupNearest();
         }
 
@@ -88,6 +109,8 @@ namespace MOBA.Core.Simulation
                 return false;
 
             _carrier = carrier;
+            StopLooseMotion();
+            ClearPickupLockout();
             UpdateCarriedTransform(carrier);
 
             if (_mode != null)
@@ -114,6 +137,8 @@ namespace MOBA.Core.Simulation
         public void DropAt(Vector3 position)
         {
             _carrier = null;
+            StopLooseMotion();
+            ClearPickupLockout();
             SetLoosePosition(position);
 
             if (_mode != null)
@@ -125,6 +150,8 @@ namespace MOBA.Core.Simulation
         public void ResetToSpawn()
         {
             _carrier = null;
+            StopLooseMotion();
+            ClearPickupLockout();
             SetLoosePosition(_spawnPosition);
 
             if (_mode != null)
@@ -142,13 +169,122 @@ namespace MOBA.Core.Simulation
             }
 
             _carrier = carrier;
+            StopLooseMotion();
+            ClearPickupLockout();
             UpdateCarriedTransform(carrier);
         }
 
         public void ClearCarrierFromMode()
         {
             _carrier = null;
+            StopLooseMotion();
+            ClearPickupLockout();
             SetLoosePosition(transform.position);
+        }
+
+        public bool KickFromCarrier(
+            BrawlerController kicker,
+            Vector3 direction,
+            bool isSuperKick,
+            uint currentTick)
+        {
+            if (!IsValidCarrier(kicker) || _carrier != kicker)
+                return false;
+
+            direction = ResolveKickDirection(kicker, direction);
+            if (direction.sqrMagnitude <= 0.001f)
+                return false;
+
+            _carrier = null;
+            SetLoosePosition(ResolveDropPosition(kicker));
+
+            float speed = isSuperKick ? _superKickSpeed : _normalKickSpeed;
+            float range = isSuperKick ? _superKickRange : _normalKickRange;
+
+            _looseVelocity = direction * Mathf.Max(0.5f, speed);
+            _remainingTravelDistance = Mathf.Max(0.5f, range);
+            _pickupUnlockTick = currentTick + SimulationClock.SecondsToTicks(_pickupLockoutSeconds);
+
+            if (_mode != null)
+                _mode.NotifyBallKicked(kicker, transform.position, direction, isSuperKick);
+            else
+                BrawlBallEventBus.RaiseBallKicked(kicker, transform.position, direction, isSuperKick);
+
+            return true;
+        }
+
+        private void MoveLooseBall()
+        {
+            if (_looseVelocity.sqrMagnitude <= 0.001f || _remainingTravelDistance <= 0.001f)
+            {
+                StopLooseMotion();
+                return;
+            }
+
+            float speed = _looseVelocity.magnitude;
+            if (speed <= 0.001f)
+            {
+                StopLooseMotion();
+                return;
+            }
+
+            Vector3 direction = _looseVelocity / speed;
+            float distance = Mathf.Min(speed * SimulationClock.TickDeltaTime, _remainingTravelDistance);
+            if (distance <= 0.001f)
+            {
+                StopLooseMotion();
+                return;
+            }
+
+            Vector3 previousPosition = transform.position;
+            Vector3 movement = direction * distance;
+            if (TryResolveWorldCollision(previousPosition, movement, out Vector3 resolvedPosition))
+            {
+                SetLoosePosition(resolvedPosition);
+                StopLooseMotion();
+                return;
+            }
+
+            SetLoosePosition(previousPosition + movement);
+            _remainingTravelDistance -= distance;
+
+            if (_remainingTravelDistance <= 0.001f)
+                StopLooseMotion();
+        }
+
+        private bool TryResolveWorldCollision(
+            Vector3 previousPosition,
+            Vector3 movement,
+            out Vector3 resolvedPosition)
+        {
+            resolvedPosition = previousPosition + movement;
+
+            int collisionMask = ResolveWorldCollisionMask();
+            if (collisionMask == 0)
+                return false;
+
+            float distance = movement.magnitude;
+            if (distance <= 0.001f)
+                return false;
+
+            Vector3 direction = movement / distance;
+            Vector3 castOrigin = previousPosition + Vector3.up * Mathf.Max(0f, _collisionHeightOffset);
+            float radius = Mathf.Max(0.01f, _collisionRadius);
+
+            if (!Physics.SphereCast(
+                    castOrigin,
+                    radius,
+                    direction,
+                    out RaycastHit hit,
+                    distance,
+                    collisionMask,
+                    QueryTriggerInteraction.Ignore))
+            {
+                return false;
+            }
+
+            resolvedPosition = previousPosition + direction * Mathf.Max(0f, hit.distance - 0.02f);
+            return true;
         }
 
         private void TryPickupNearest()
@@ -232,12 +368,35 @@ namespace MOBA.Core.Simulation
             return position;
         }
 
+        private Vector3 ResolveKickDirection(BrawlerController kicker, Vector3 direction)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.001f && SpatialEntityUtility.IsAlive(kicker))
+                direction = kicker.transform.forward;
+
+            direction.y = 0f;
+            return direction.sqrMagnitude > 0.001f
+                ? direction.normalized
+                : Vector3.zero;
+        }
+
         private void SetLoosePosition(Vector3 position)
         {
             if (_hasSpawnPosition)
                 position.y = _spawnPosition.y;
 
             transform.position = position;
+        }
+
+        private void StopLooseMotion()
+        {
+            _looseVelocity = Vector3.zero;
+            _remainingTravelDistance = 0f;
+        }
+
+        private void ClearPickupLockout()
+        {
+            _pickupUnlockTick = 0u;
         }
 
         private void CaptureSpawnPosition()
@@ -257,6 +416,28 @@ namespace MOBA.Core.Simulation
             _mode = GetComponentInParent<BrawlBallMode>();
             if (_mode == null)
                 _mode = BrawlBallMode.Instance;
+        }
+
+        private int ResolveWorldCollisionMask()
+        {
+            if (_worldCollisionMask.value != 0)
+                return _worldCollisionMask.value;
+
+            if (_hasResolvedWorldCollisionMask)
+                return _resolvedWorldCollisionMask;
+
+            _hasResolvedWorldCollisionMask = true;
+
+            MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
+            if (mapGenerator != null && mapGenerator.ObstacleLayer.value != 0)
+            {
+                _resolvedWorldCollisionMask = mapGenerator.ObstacleLayer.value;
+                return _resolvedWorldCollisionMask;
+            }
+
+            int obstacleLayer = LayerMask.NameToLayer("Obstacles");
+            _resolvedWorldCollisionMask = obstacleLayer >= 0 ? 1 << obstacleLayer : 0;
+            return _resolvedWorldCollisionMask;
         }
 
         private void EnsureRuntimeVisual()
