@@ -17,13 +17,18 @@ namespace MOBA.Core.Simulation
         [SerializeField] private Transform _ballTransform;
         [SerializeField] private BrawlerController _ballCarrier;
 
+        private BrawlBallController _ball;
+
         public int BlueGoals { get; private set; }
         public int RedGoals { get; private set; }
         public int GoalsToWin => _goalsToWin;
-        public BrawlerController BallCarrier => _ballCarrier;
-        public Vector3 BallPosition => _ballCarrier != null
-            ? _ballCarrier.Position
-            : (_ballTransform != null ? _ballTransform.position : Vector3.zero);
+        public BrawlerController BallCarrier => IsValidCarrier(_ballCarrier) ? _ballCarrier : null;
+        public BrawlBallController Ball => _ball;
+        public Vector3 BallPosition => BallCarrier != null
+            ? BallCarrier.Position
+            : (_ball != null
+                ? _ball.CurrentPosition
+                : (_ballTransform != null ? _ballTransform.position : Vector3.zero));
 
         public GameModeId ModeId => GameModeId.BrawlBall;
 
@@ -64,12 +69,66 @@ namespace MOBA.Core.Simulation
 
         public void SetBallCarrier(BrawlerController carrier)
         {
-            _ballCarrier = carrier;
+            if (_ball != null)
+                _ball.AssignCarrierFromMode(carrier);
+
+            SetBallCarrierState(carrier);
         }
 
         public void ClearBallCarrier()
         {
-            _ballCarrier = null;
+            if (_ball != null)
+                _ball.ClearCarrierFromMode();
+
+            SetBallCarrierState(null);
+        }
+
+        public void RegisterBall(BrawlBallController ball)
+        {
+            if (ball == null)
+                return;
+
+            _ball = ball;
+            _ballTransform = ball.transform;
+
+            if (BallCarrier != null)
+                _ball.AssignCarrierFromMode(BallCarrier);
+        }
+
+        public void UnregisterBall(BrawlBallController ball)
+        {
+            if (_ball != ball)
+                return;
+
+            _ball = null;
+            if (_ballTransform == ball.transform)
+                _ballTransform = null;
+        }
+
+        public void ResetBall()
+        {
+            if (_ball != null)
+                _ball.ResetToSpawn();
+            else
+                ClearBallCarrier();
+        }
+
+        internal void NotifyBallPickedUp(BrawlerController carrier, Vector3 position)
+        {
+            SetBallCarrierState(carrier);
+            BrawlBallEventBus.RaiseBallPickedUp(carrier, position);
+        }
+
+        internal void NotifyBallDropped(Vector3 position)
+        {
+            SetBallCarrierState(null);
+            BrawlBallEventBus.RaiseBallDropped(position);
+        }
+
+        internal void NotifyBallReset(Vector3 position)
+        {
+            SetBallCarrierState(null);
+            BrawlBallEventBus.RaiseBallReset(position);
         }
 
         public void RecordGoal(TeamType scoringTeam)
@@ -81,7 +140,7 @@ namespace MOBA.Core.Simulation
             else
                 return;
 
-            _ballCarrier = null;
+            ResetBall();
 
             if (GetTeamGoals(scoringTeam) >= _goalsToWin)
                 MatchManager.Instance?.AddScore(scoringTeam, 10);
@@ -107,8 +166,9 @@ namespace MOBA.Core.Simulation
                 return false;
 
             TeamType enemyTeam = team == TeamType.Blue ? TeamType.Red : TeamType.Blue;
-            bool ownHasBall = _ballCarrier != null && _ballCarrier.Team == team;
-            bool enemyHasBall = _ballCarrier != null && _ballCarrier.Team == enemyTeam;
+            BrawlerController carrier = BallCarrier;
+            bool ownHasBall = carrier != null && carrier.Team == team;
+            bool enemyHasBall = carrier != null && carrier.Team == enemyTeam;
 
             state = AIGameModeMacroStrategy.ResolveBrawlBall(
                 GetTeamGoals(team),
@@ -129,14 +189,15 @@ namespace MOBA.Core.Simulation
             objective = default;
 
             if (team == TeamType.Neutral ||
-                (_ballCarrier == null && _ballTransform == null))
+                (BallCarrier == null && _ball == null && _ballTransform == null))
             {
                 return false;
             }
 
             TeamType enemyTeam = team == TeamType.Blue ? TeamType.Red : TeamType.Blue;
-            bool ownHasBall = _ballCarrier != null && _ballCarrier.Team == team;
-            bool enemyHasBall = _ballCarrier != null && _ballCarrier.Team == enemyTeam;
+            BrawlerController carrier = BallCarrier;
+            bool ownHasBall = carrier != null && carrier.Team == team;
+            bool enemyHasBall = carrier != null && carrier.Team == enemyTeam;
 
             int friendlyPresence = ownHasBall ? 1 : 0;
             int enemyPresence = enemyHasBall ? 1 : 0;
@@ -166,6 +227,26 @@ namespace MOBA.Core.Simulation
                 friendlyPresence,
                 enemyPresence);
             return true;
+        }
+
+        private void SetBallCarrierState(BrawlerController carrier)
+        {
+            if (!IsValidCarrier(carrier))
+                carrier = null;
+
+            if (_ballCarrier == carrier)
+                return;
+
+            _ballCarrier = carrier;
+            BrawlBallEventBus.RaiseCarrierChanged(_ballCarrier);
+        }
+
+        private static bool IsValidCarrier(BrawlerController carrier)
+        {
+            return SpatialEntityUtility.IsAlive(carrier) &&
+                   carrier.State != null &&
+                   !carrier.State.IsDead &&
+                   carrier.gameObject.activeInHierarchy;
         }
     }
 }
