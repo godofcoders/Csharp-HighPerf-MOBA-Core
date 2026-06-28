@@ -271,7 +271,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 60
+  field of view: 48
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -297,13 +297,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.5, y: 0, z: 0, w: 0.8660254}
-  m_LocalPosition: {x: 0, y: 190, z: -99}
+  m_LocalRotation: {x: 0.48476854, y: 0, z: 0, w: 0.8746428}
+  m_LocalPosition: {x: 0, y: 16, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 60, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 58, y: 0, z: 0}
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -361,9 +361,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _target: {fileID: 0}
-  _offset: {x: 0, y: 10, z: -5}
-  _positionSmoothTime: 0.05
-  _deadZoneHalfExtents: {x: 0.5, y: 0.5}
+  _offset: {x: 0, y: 16, z: -10}
+  _fieldOfView: 48
+  _forcePerspective: 1
+  _positionSmoothTime: 0.14
+  _deadZoneHalfExtents: {x: 0.85, y: 0.75}
   _clampToBounds: 0
   _boundsCenterXZ: {x: 0, y: 0}
   _boundsHalfExtentsXZ: {x: 20, y: 20}

@@ -101,8 +101,86 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
+            bool swappedTeamOrientation = NormalizeTeamSpawnOrientation(blue, red);
+
             sm.SetSpawnPoints(blue, red, solo);
-            Debug.Log($"[MapLoader] Map '{ResolveLoadedMapName()}' loaded with {blue.Count} Blue + {red.Count} Red + {solo.Count} Solo spawn points.");
+            Debug.Log($"[MapLoader] Map '{ResolveLoadedMapName()}' loaded with {blue.Count} Blue + {red.Count} Red + {solo.Count} Solo spawn points. Orientation={(swappedTeamOrientation ? "normalized" : "authored")}");
+        }
+
+        public static bool NormalizeTeamSpawnOrientation(
+            List<Transform> blue,
+            List<Transform> red)
+        {
+            bool swapped = false;
+
+            if (blue != null &&
+                red != null &&
+                blue.Count > 0 &&
+                red.Count > 0 &&
+                GetAverageZ(blue) > GetAverageZ(red))
+            {
+                SwapListContents(blue, red);
+                swapped = true;
+            }
+
+            SortByHorizontalLane(blue);
+            SortByHorizontalLane(red);
+            return swapped;
+        }
+
+        private static void SwapListContents(
+            List<Transform> first,
+            List<Transform> second)
+        {
+            List<Transform> temp = new List<Transform>(first);
+            first.Clear();
+            first.AddRange(second);
+            second.Clear();
+            second.AddRange(temp);
+        }
+
+        private static float GetAverageZ(List<Transform> points)
+        {
+            if (points == null || points.Count == 0)
+                return 0f;
+
+            float total = 0f;
+            int count = 0;
+            for (int i = 0; i < points.Count; i++)
+            {
+                Transform point = points[i];
+                if (point == null)
+                    continue;
+
+                total += point.position.z;
+                count++;
+            }
+
+            return count > 0 ? total / count : 0f;
+        }
+
+        private static void SortByHorizontalLane(List<Transform> points)
+        {
+            if (points == null || points.Count <= 1)
+                return;
+
+            points.Sort(CompareSpawnPointLane);
+        }
+
+        private static int CompareSpawnPointLane(Transform a, Transform b)
+        {
+            if (a == null && b == null)
+                return 0;
+            if (a == null)
+                return 1;
+            if (b == null)
+                return -1;
+
+            int x = a.position.x.CompareTo(b.position.x);
+            if (x != 0)
+                return x;
+
+            return a.position.z.CompareTo(b.position.z);
         }
 
         private string ResolveLoadedMapName()

@@ -25,24 +25,30 @@ namespace MOBA.Core.Infrastructure
         public static CameraController Instance { get; private set; }
 
         [SerializeField] private Transform _target;
-        [SerializeField] private Vector3 _offset = new Vector3(0, 10, -5);
+        [SerializeField] private Vector3 _offset = new Vector3(0, 16, -10);
 
-        // Bumped from 0.05f → 0.15f. 0.05 tracks every micro-movement and
+        [Header("Brawl-Style Framing")]
+        [Tooltip("Perspective FOV used by the match camera. Lower than Unity's default 60 so brawlers stay readable while the larger offset shows more lane context.")]
+        [SerializeField] private float _fieldOfView = 48f;
+        [Tooltip("Keep the match camera perspective-driven instead of orthographic so projectiles, cover, and brawler height retain depth cues.")]
+        [SerializeField] private bool _forcePerspective = true;
+
+        // Bumped from 0.05f to 0.14f. 0.05 tracks every micro-movement and
         // produces visible jitter, especially when the target moves on a
         // FixedUpdate/Rigidbody pulse and the camera reads in LateUpdate
         // (camera sees the same position for several frames, then jumps).
-        // 0.15 is enough to absorb sub-frame desync without feeling laggy.
+        // 0.14 is enough to absorb sub-frame desync without feeling laggy.
         // Designer can tune lower per-scene; this is the safe default.
         //
-        // Upstream tip: if jitter persists at 0.15, set
+        // Upstream tip: if jitter persists at 0.14, set
         // Rigidbody.Interpolation = Interpolate on the brawler in the
         // inspector — that's Unity's built-in fix for physics-vs-render
         // desync.
-        [SerializeField] private float _positionSmoothTime = 0.15f;
+        [SerializeField] private float _positionSmoothTime = 0.14f;
 
         [Header("Dead Zone")]
         [Tooltip("Half-extents of the dead zone box on the XZ plane (world units). Target moves within this box before the camera re-engages follow.")]
-        [SerializeField] private Vector2 _deadZoneHalfExtents = new Vector2(0.5f, 0.5f);
+        [SerializeField] private Vector2 _deadZoneHalfExtents = new Vector2(0.85f, 0.75f);
 
         [Header("Bounds")]
         [Tooltip("If true, the camera anchor is clamped to a designer-set XZ rectangle so the camera never frames outside the map.")]
@@ -70,6 +76,7 @@ namespace MOBA.Core.Infrastructure
         // jitter into rotational jitter.
         private Quaternion _fixedRotation;
         private bool _rotationCached;
+        private Camera _camera;
 
         private void Awake()
         {
@@ -79,6 +86,8 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
             Instance = this;
+
+            ApplyCameraFraming();
         }
 
         private void OnDestroy()
@@ -210,6 +219,20 @@ namespace MOBA.Core.Infrastructure
         {
             _target = target;
             _anchorInitialized = false;
+        }
+
+        private void ApplyCameraFraming()
+        {
+            if (_camera == null)
+                _camera = GetComponent<Camera>();
+
+            if (_camera == null)
+                return;
+
+            if (_forcePerspective)
+                _camera.orthographic = false;
+
+            _camera.fieldOfView = Mathf.Clamp(_fieldOfView, 35f, 65f);
         }
     }
 }
