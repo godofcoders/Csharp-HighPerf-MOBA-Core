@@ -9,6 +9,7 @@ namespace MOBA.Core.Simulation
     /// pickup, carrier following, invalid-carrier drops, and center resets;
     /// BrawlBallMode owns score and objective state.
     /// </summary>
+    [DefaultExecutionOrder(50)]
     public sealed class BrawlBallController : SimulationEntity
     {
         private static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -84,6 +85,16 @@ namespace MOBA.Core.Simulation
             base.OnDisable();
         }
 
+        private void LateUpdate()
+        {
+            BrawlerController carrier = Carrier;
+            if (carrier == null)
+                return;
+
+            if (TryResolveCarrierPose(carrier, usePresentationTarget: true, out Vector3 position))
+                transform.position = position;
+        }
+
         public override void Tick(uint currentTick)
         {
             if (_carrier != null)
@@ -125,6 +136,7 @@ namespace MOBA.Core.Simulation
             StopLooseMotion();
             ClearPickupLockout();
             UpdateCarriedTransform(carrier);
+            ResetVisualRotation();
 
             if (_mode != null)
             {
@@ -174,6 +186,20 @@ namespace MOBA.Core.Simulation
                 BrawlBallEventBus.RaiseBallReset(transform.position);
         }
 
+        public void OverrideSpawnPosition(Vector3 spawnPosition, bool resetIfLoose)
+        {
+            _spawnPosition = spawnPosition;
+            _hasSpawnPosition = true;
+
+            if (resetIfLoose && _carrier == null)
+            {
+                StopLooseMotion();
+                ClearPickupLockout();
+                SetLoosePosition(_spawnPosition);
+                ResetVisualRotation();
+            }
+        }
+
         public void AssignCarrierFromMode(BrawlerController carrier)
         {
             if (!IsValidCarrier(carrier))
@@ -186,6 +212,7 @@ namespace MOBA.Core.Simulation
             StopLooseMotion();
             ClearPickupLockout();
             UpdateCarriedTransform(carrier);
+            ResetVisualRotation();
         }
 
         public void ClearCarrierFromMode()
@@ -342,26 +369,33 @@ namespace MOBA.Core.Simulation
 
         private void UpdateCarriedTransform(BrawlerController carrier)
         {
-            if (!TryResolveCarrierPose(carrier, out Vector3 position))
+            if (!TryResolveCarrierPose(carrier, usePresentationTarget: false, out Vector3 position))
                 return;
 
             transform.position = position;
         }
 
-        private bool TryResolveCarrierPose(BrawlerController carrier, out Vector3 position)
+        private bool TryResolveCarrierPose(
+            BrawlerController carrier,
+            bool usePresentationTarget,
+            out Vector3 position)
         {
             position = transform.position;
             if (!IsValidCarrier(carrier))
                 return false;
 
-            Vector3 forward = carrier.transform.forward;
+            Transform followTarget = usePresentationTarget && carrier.PresentationFollowTarget != null
+                ? carrier.PresentationFollowTarget
+                : carrier.transform;
+
+            Vector3 forward = followTarget.forward;
             forward.y = 0f;
             if (forward.sqrMagnitude <= 0.0001f)
                 forward = Vector3.forward;
             else
                 forward.Normalize();
 
-            position = carrier.Position +
+            position = followTarget.position +
                        forward * _carrierForwardOffset +
                        Vector3.up * _carrierHeightOffset;
             return true;

@@ -16,6 +16,12 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(1f)] private float _regulationDurationSeconds = 120f;
         [SerializeField, Min(1f)] private float _overtimeDurationSeconds = 60f;
 
+        [Header("Map Placement")]
+        [SerializeField] private bool _autoPlaceGoalsFromMap = true;
+        [SerializeField] private bool _autoPlaceBallAtMapCenter = true;
+        [SerializeField, Min(0f)] private float _goalEdgeInset = 1.1f;
+        [SerializeField, Min(0f)] private float _goalGroundOffset = 0.04f;
+
         [Header("Ball State")]
         [SerializeField] private Transform _ballTransform;
         [SerializeField] private BrawlerController _ballCarrier;
@@ -90,6 +96,11 @@ namespace MOBA.Core.Simulation
 
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
+        }
+
+        private void Start()
+        {
+            PlaceModeObjectsFromMap();
         }
 
         private void Update()
@@ -454,6 +465,108 @@ namespace MOBA.Core.Simulation
             _isOvertime = false;
             _matchResolved = false;
             _resolvedWinner = TeamType.Neutral;
+        }
+
+        private void PlaceModeObjectsFromMap()
+        {
+            if (!_autoPlaceGoalsFromMap && !_autoPlaceBallAtMapCenter)
+                return;
+
+            if (!TryResolveMapBounds(out Bounds bounds))
+                return;
+
+            Vector3 arenaCenter = bounds.center;
+
+            if (_autoPlaceBallAtMapCenter && _ball != null)
+            {
+                Vector3 ballSpawn = new Vector3(
+                    arenaCenter.x,
+                    _ball.CurrentPosition.y,
+                    arenaCenter.z);
+                _ball.OverrideSpawnPosition(ballSpawn, BallCarrier == null);
+            }
+
+            if (_autoPlaceGoalsFromMap)
+                PlaceGoalsOnMapEdges(bounds);
+        }
+
+        private void PlaceGoalsOnMapEdges(Bounds bounds)
+        {
+            Vector3 arenaCenter = bounds.center;
+            float inset = Mathf.Max(0f, _goalEdgeInset);
+            float groundOffset = Mathf.Max(0f, _goalGroundOffset);
+
+            for (int i = _goals.Count - 1; i >= 0; i--)
+            {
+                BrawlBallGoalController goal = _goals[i];
+                if (goal == null)
+                {
+                    _goals.RemoveAt(i);
+                    continue;
+                }
+
+                if (!IsScoringTeam(goal.ScoringTeam))
+                    continue;
+
+                float z = goal.ScoringTeam == TeamType.Blue
+                    ? bounds.max.z - inset
+                    : bounds.min.z + inset;
+
+                Vector3 position = goal.transform.position;
+                position.x = arenaCenter.x;
+                position.y = Mathf.Max(position.y, groundOffset);
+                position.z = z;
+
+                goal.transform.position = position;
+                goal.AlignMouthToward(arenaCenter);
+            }
+        }
+
+        private static bool TryResolveMapBounds(out Bounds bounds)
+        {
+            MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
+            if (mapGenerator != null)
+            {
+                float cellSize = Mathf.Max(0.1f, mapGenerator.CellSize);
+                float width = Mathf.Max(1, mapGenerator.Width) * cellSize;
+                float height = Mathf.Max(1, mapGenerator.Height) * cellSize;
+                bounds = new Bounds(
+                    mapGenerator.transform.position,
+                    new Vector3(width, 0f, height));
+                return true;
+            }
+
+            SpawnPointMarker[] markers = FindObjectsOfType<SpawnPointMarker>(false);
+            if (markers == null || markers.Length == 0)
+            {
+                bounds = default;
+                return false;
+            }
+
+            bool hasBounds = false;
+            bounds = default;
+            for (int i = 0; i < markers.Length; i++)
+            {
+                SpawnPointMarker marker = markers[i];
+                if (marker == null)
+                    continue;
+
+                if (!hasBounds)
+                {
+                    bounds = new Bounds(marker.transform.position, Vector3.zero);
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(marker.transform.position);
+                }
+            }
+
+            if (!hasBounds)
+                return false;
+
+            bounds.Expand(new Vector3(6f, 0f, 8f));
+            return true;
         }
 
         private static bool IsValidCarrier(BrawlerController carrier)

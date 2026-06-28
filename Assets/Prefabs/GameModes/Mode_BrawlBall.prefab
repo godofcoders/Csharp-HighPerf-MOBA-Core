@@ -50,6 +50,10 @@ MonoBehaviour:
   _goalsToWin: 2
   _regulationDurationSeconds: 120
   _overtimeDurationSeconds: 60
+  _autoPlaceGoalsFromMap: 1
+  _autoPlaceBallAtMapCenter: 1
+  _goalEdgeInset: 1.1
+  _goalGroundOffset: 0.04
   _ballTransform: {fileID: 8653147290831442101}
   _ballCarrier: {fileID: 0}
   _goalScoreLockoutSeconds: 0.35
@@ -165,12 +169,12 @@ MonoBehaviour:
   _scoringTeam: 0
   _zoneSize: {x: 4.8, y: 1, z: 1.35}
   _useRuntimeVisual: 1
-  _visualColor: {r: 0.18, g: 0.46, b: 1, a: 0.55}
-  _visualHeight: 0.08
+  _visualColor: {r: 0.18, g: 0.46, b: 1, a: 0.75}
+  _visualHeight: 0.12
   _useRuntimeFrameVisual: 1
   _frameColor: {r: 0.18, g: 0.46, b: 1, a: 0.95}
-  _frameHeight: 1.25
-  _frameThickness: 0.16
+  _frameHeight: 1.75
+  _frameThickness: 0.22
 --- !u!1 &8653147290831442300
 GameObject:
   m_ObjectHideFlags: 0
@@ -219,9 +223,9 @@ MonoBehaviour:
   _scoringTeam: 1
   _zoneSize: {x: 4.8, y: 1, z: 1.35}
   _useRuntimeVisual: 1
-  _visualColor: {r: 1, g: 0.22, b: 0.28, a: 0.55}
-  _visualHeight: 0.08
+  _visualColor: {r: 1, g: 0.22, b: 0.28, a: 0.75}
+  _visualHeight: 0.12
   _useRuntimeFrameVisual: 1
   _frameColor: {r: 1, g: 0.22, b: 0.28, a: 0.95}
-  _frameHeight: 1.25
-  _frameThickness: 0.16
+  _frameHeight: 1.75
+  _frameThickness: 0.22

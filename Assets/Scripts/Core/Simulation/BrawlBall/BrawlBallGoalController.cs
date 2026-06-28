@@ -35,6 +35,7 @@ namespace MOBA.Core.Simulation
         private MaterialPropertyBlock _propertyBlock;
 
         public TeamType ScoringTeam => _scoringTeam;
+        public Vector3 ZoneSize => SanitizeZoneSize();
 
         private void Awake()
         {
@@ -72,6 +73,16 @@ namespace MOBA.Core.Simulation
             _zoneSize = zoneSize;
             RefreshRuntimeVisual();
             RefreshRuntimeFrameVisual();
+        }
+
+        public void AlignMouthToward(Vector3 worldTarget)
+        {
+            Vector3 toTarget = worldTarget - transform.position;
+            toTarget.y = 0f;
+            if (toTarget.sqrMagnitude <= 0.0001f)
+                return;
+
+            transform.rotation = Quaternion.LookRotation(-toTarget.normalized);
         }
 
         private void ResolveMode()
