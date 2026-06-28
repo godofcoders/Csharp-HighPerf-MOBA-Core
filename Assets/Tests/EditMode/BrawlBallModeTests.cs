@@ -104,6 +104,44 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(0, mode.RedGoals);
         }
 
+        [Test]
+        public void AdvanceClockForDebug_StartsOvertime_WhenRegulationEndsTied()
+        {
+            BrawlBallMode mode = CreateMode();
+
+            mode.AdvanceClockForDebug(mode.RegulationDurationSeconds + 0.1f);
+
+            Assert.IsTrue(mode.IsOvertime);
+            Assert.IsFalse(mode.IsMatchResolved);
+            Assert.Greater(mode.OvertimeRemainingSeconds, 0f);
+        }
+
+        [Test]
+        public void AdvanceClockForDebug_ResolvesLeader_WhenRegulationEndsUntied()
+        {
+            BrawlBallMode mode = CreateMode();
+            mode.SetScoreForDebug(1, 0);
+
+            mode.AdvanceClockForDebug(mode.RegulationDurationSeconds + 0.1f);
+
+            Assert.IsFalse(mode.IsOvertime);
+            Assert.IsTrue(mode.IsMatchResolved);
+            Assert.AreEqual(TeamType.Blue, mode.ResolvedWinner);
+        }
+
+        [Test]
+        public void AdvanceClockForDebug_ResolvesDraw_WhenOvertimeExpiresWithoutGoal()
+        {
+            BrawlBallMode mode = CreateMode();
+
+            mode.AdvanceClockForDebug(mode.RegulationDurationSeconds + 0.1f);
+            mode.AdvanceClockForDebug(mode.OvertimeDurationSeconds + 0.1f);
+
+            Assert.IsTrue(mode.IsMatchResolved);
+            Assert.IsTrue(mode.IsDrawResolved);
+            Assert.AreEqual(TeamType.Neutral, mode.ResolvedWinner);
+        }
+
         private BrawlBallMode CreateMode()
         {
             _modeObject = new GameObject("BrawlBallMode_Test");

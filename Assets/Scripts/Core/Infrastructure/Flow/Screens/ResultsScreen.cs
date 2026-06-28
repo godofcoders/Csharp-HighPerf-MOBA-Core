@@ -36,7 +36,7 @@ namespace MOBA.Core.Infrastructure
         {
             string winnerStr = MatchResultBoard.WinnerKnown
                 ? $"{MatchResultBoard.Winner} wins!"
-                : "Match Over";
+                : (MatchResultBoard.Draw ? "Draw" : "Match Over");
             string scoreStr = $"Blue {MatchResultBoard.BlueScore} — Red {MatchResultBoard.RedScore}";
 
             if (_winnerTextTmp != null) _winnerTextTmp.text = winnerStr;
@@ -81,6 +81,7 @@ namespace MOBA.Core.Infrastructure
     public static class MatchResultBoard
     {
         public static bool WinnerKnown;
+        public static bool Draw;
         public static TeamType Winner;
         public static int BlueScore;
         public static int RedScore;
@@ -92,7 +93,8 @@ namespace MOBA.Core.Infrastructure
 
         public static void Capture(TeamType winner, int blue, int red)
         {
-            WinnerKnown = true;
+            WinnerKnown = winner != TeamType.Neutral;
+            Draw = winner == TeamType.Neutral;
             Winner = winner;
             BlueScore = blue;
             RedScore = red;
@@ -109,6 +111,7 @@ namespace MOBA.Core.Infrastructure
         public static void Reset()
         {
             WinnerKnown = false;
+            Draw = false;
             Winner = TeamType.Blue;
             BlueScore = 0;
             RedScore = 0;

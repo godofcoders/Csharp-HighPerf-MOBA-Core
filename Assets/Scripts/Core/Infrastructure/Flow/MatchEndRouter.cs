@@ -21,7 +21,7 @@ namespace MOBA.Core.Infrastructure
         [Min(0f)]
         [SerializeField] private float _delayBeforeResultsSeconds = 1.5f;
 
-        private TeamType _capturedWinner = TeamType.Blue;
+        private TeamType _capturedWinner = TeamType.Neutral;
         private bool _routed;
 
         private void OnEnable()
@@ -67,7 +67,11 @@ namespace MOBA.Core.Infrastructure
                 blue = BrawlBallMode.Instance.BlueGoals;
                 red = BrawlBallMode.Instance.RedGoals;
                 if (MatchManager.Instance == null || !MatchManager.Instance.WinnerKnown)
-                    _capturedWinner = blue >= red ? TeamType.Blue : TeamType.Red;
+                {
+                    _capturedWinner = BrawlBallMode.Instance.IsMatchResolved
+                        ? BrawlBallMode.Instance.ResolvedWinner
+                        : ResolveWinnerFromScore(blue, red);
+                }
             }
             else if (GemGrabMode.Instance != null)
             {
@@ -93,6 +97,17 @@ namespace MOBA.Core.Infrastructure
             }
 
             Invoke(nameof(GoToResults), _delayBeforeResultsSeconds);
+        }
+
+        private static TeamType ResolveWinnerFromScore(int blue, int red)
+        {
+            if (blue > red)
+                return TeamType.Blue;
+
+            if (red > blue)
+                return TeamType.Red;
+
+            return TeamType.Neutral;
         }
 
         private void GoToResults()

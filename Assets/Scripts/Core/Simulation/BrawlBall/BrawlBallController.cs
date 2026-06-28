@@ -37,6 +37,7 @@ namespace MOBA.Core.Simulation
         [SerializeField] private bool _useRuntimeVisual = true;
         [SerializeField] private Transform _visualRoot;
         [SerializeField] private Color _ballColor = new Color(1f, 0.82f, 0.12f, 1f);
+        [SerializeField] private Color _stripeColor = new Color(0.16f, 0.12f, 0.04f, 1f);
         [SerializeField, Min(0.1f)] private float _visualDiameter = 0.72f;
 
         private readonly List<ISpatialEntity> _pickupCandidates = new List<ISpatialEntity>(16);
@@ -44,6 +45,7 @@ namespace MOBA.Core.Simulation
         private Vector3 _spawnPosition;
         private bool _hasSpawnPosition;
         private MeshRenderer _runtimeRenderer;
+        private MeshRenderer _runtimeStripeRenderer;
         private MaterialPropertyBlock _propertyBlock;
         private Vector3 _looseVelocity;
         private float _remainingTravelDistance;
@@ -164,6 +166,7 @@ namespace MOBA.Core.Simulation
             StopLooseMotion();
             ClearPickupLockout();
             SetLoosePosition(_spawnPosition);
+            ResetVisualRotation();
 
             if (_mode != null)
                 _mode.NotifyBallReset(transform.position);
@@ -252,11 +255,13 @@ namespace MOBA.Core.Simulation
             if (TryResolveWorldCollision(previousPosition, movement, out Vector3 resolvedPosition))
             {
                 SetLoosePosition(resolvedPosition);
+                RollVisual(direction, Vector3.Distance(previousPosition, resolvedPosition));
                 StopLooseMotion();
                 return;
             }
 
             SetLoosePosition(previousPosition + movement);
+            RollVisual(direction, distance);
             _remainingTravelDistance -= distance;
 
             if (_remainingTravelDistance <= 0.001f)
@@ -405,6 +410,31 @@ namespace MOBA.Core.Simulation
             _remainingTravelDistance = 0f;
         }
 
+        private void RollVisual(Vector3 direction, float distance)
+        {
+            if (_visualRoot == null || distance <= 0.0001f)
+                return;
+
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.0001f)
+                return;
+
+            direction.Normalize();
+            Vector3 rollAxis = Vector3.Cross(Vector3.up, direction);
+            if (rollAxis.sqrMagnitude <= 0.0001f)
+                return;
+
+            float radius = Mathf.Max(0.05f, _visualDiameter * 0.5f);
+            float degrees = (distance / radius) * Mathf.Rad2Deg;
+            _visualRoot.Rotate(rollAxis.normalized, degrees, Space.World);
+        }
+
+        private void ResetVisualRotation()
+        {
+            if (_visualRoot != null)
+                _visualRoot.localRotation = Quaternion.identity;
+        }
+
         private void ClearPickupLockout()
         {
             _pickupUnlockTick = 0u;
@@ -456,10 +486,18 @@ namespace MOBA.Core.Simulation
             if (!_useRuntimeVisual || _visualRoot != null)
                 return;
 
+            GameObject root = new GameObject("BallVisualRoot");
+            root.layer = gameObject.layer;
+            root.transform.SetParent(transform, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+            _visualRoot = root.transform;
+
             GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            visual.name = "BallVisual";
+            visual.name = "BallSphere";
             visual.layer = gameObject.layer;
-            visual.transform.SetParent(transform, false);
+            visual.transform.SetParent(_visualRoot, false);
             visual.transform.localPosition = Vector3.zero;
             visual.transform.localRotation = Quaternion.identity;
             visual.transform.localScale = Vector3.one * _visualDiameter;
@@ -473,23 +511,53 @@ namespace MOBA.Core.Simulation
                     DestroyImmediate(visualCollider);
             }
 
-            _visualRoot = visual.transform;
             _runtimeRenderer = visual.GetComponent<MeshRenderer>();
+
+            GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            stripe.name = "BallStripe";
+            stripe.layer = gameObject.layer;
+            stripe.transform.SetParent(_visualRoot, false);
+            stripe.transform.localPosition = Vector3.up * (_visualDiameter * 0.51f);
+            stripe.transform.localRotation = Quaternion.identity;
+            stripe.transform.localScale = new Vector3(
+                _visualDiameter * 0.16f,
+                _visualDiameter * 0.035f,
+                _visualDiameter * 0.82f);
+
+            Collider stripeCollider = stripe.GetComponent<Collider>();
+            if (stripeCollider != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(stripeCollider);
+                else
+                    DestroyImmediate(stripeCollider);
+            }
+
+            _runtimeStripeRenderer = stripe.GetComponent<MeshRenderer>();
             ApplyRuntimeColor();
         }
 
         private void ApplyRuntimeColor()
         {
-            if (_runtimeRenderer == null)
+            if (_runtimeRenderer == null && _runtimeStripeRenderer == null)
                 return;
 
             if (_propertyBlock == null)
                 _propertyBlock = new MaterialPropertyBlock();
 
-            _runtimeRenderer.GetPropertyBlock(_propertyBlock);
-            _propertyBlock.SetColor(ColorId, _ballColor);
-            _propertyBlock.SetColor(BaseColorId, _ballColor);
-            _runtimeRenderer.SetPropertyBlock(_propertyBlock);
+            ApplyRendererColor(_runtimeRenderer, _ballColor);
+            ApplyRendererColor(_runtimeStripeRenderer, _stripeColor);
+        }
+
+        private void ApplyRendererColor(Renderer renderer, Color color)
+        {
+            if (renderer == null)
+                return;
+
+            renderer.GetPropertyBlock(_propertyBlock);
+            _propertyBlock.SetColor(ColorId, color);
+            _propertyBlock.SetColor(BaseColorId, color);
+            renderer.SetPropertyBlock(_propertyBlock);
         }
 
         private static bool IsValidCarrier(BrawlerController carrier)

@@ -96,14 +96,19 @@ namespace MOBA.Core.Infrastructure
             int blueGoals,
             int redGoals,
             int goalsToWin,
-            TeamType carrierTeam)
+            TeamType carrierTeam,
+            bool isOvertime,
+            float phaseRemainingSeconds)
         {
             int target = Mathf.Max(1, goalsToWin);
             string possession = carrierTeam == TeamType.Blue || carrierTeam == TeamType.Red
                 ? $"  {carrierTeam} ball"
                 : "  Loose ball";
+            string phase = isOvertime
+                ? $"  Overtime {FormatClock(phaseRemainingSeconds)} next goal wins"
+                : $"  Time {FormatClock(phaseRemainingSeconds)}";
 
-            return $"Goals  Blue {blueGoals}/{target}  Red {redGoals}/{target}{possession}";
+            return $"Goals  Blue {blueGoals}/{target}  Red {redGoals}/{target}{phase}{possession}";
         }
 
         public static string FormatClock(float seconds)

@@ -48,6 +48,8 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier:
   _goalsToWin: 2
+  _regulationDurationSeconds: 120
+  _overtimeDurationSeconds: 60
   _ballTransform: {fileID: 8653147290831442101}
   _ballCarrier: {fileID: 0}
   _goalScoreLockoutSeconds: 0.35
@@ -113,6 +115,7 @@ MonoBehaviour:
   _useRuntimeVisual: 1
   _visualRoot: {fileID: 0}
   _ballColor: {r: 1, g: 0.82, b: 0.12, a: 1}
+  _stripeColor: {r: 0.16, g: 0.12, b: 0.04, a: 1}
   _visualDiameter: 0.72
 --- !u!1 &8653147290831442200
 GameObject:
@@ -164,6 +167,10 @@ MonoBehaviour:
   _useRuntimeVisual: 1
   _visualColor: {r: 0.18, g: 0.46, b: 1, a: 0.55}
   _visualHeight: 0.08
+  _useRuntimeFrameVisual: 1
+  _frameColor: {r: 0.18, g: 0.46, b: 1, a: 0.95}
+  _frameHeight: 1.25
+  _frameThickness: 0.16
 --- !u!1 &8653147290831442300
 GameObject:
   m_ObjectHideFlags: 0
@@ -214,3 +221,7 @@ MonoBehaviour:
   _useRuntimeVisual: 1
   _visualColor: {r: 1, g: 0.22, b: 0.28, a: 0.55}
   _visualHeight: 0.08
+  _useRuntimeFrameVisual: 1
+  _frameColor: {r: 1, g: 0.22, b: 0.28, a: 0.95}
+  _frameHeight: 1.25
+  _frameThickness: 0.16

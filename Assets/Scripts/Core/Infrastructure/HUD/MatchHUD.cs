@@ -166,7 +166,9 @@ namespace MOBA.Core.Infrastructure
                     brawlBall.BlueGoals,
                     brawlBall.RedGoals,
                     brawlBall.GoalsToWin,
-                    brawlBall.BallCarrier != null ? brawlBall.BallCarrier.Team : TeamType.Neutral);
+                    brawlBall.BallCarrier != null ? brawlBall.BallCarrier.Team : TeamType.Neutral,
+                    brawlBall.IsOvertime,
+                    brawlBall.PhaseRemainingSeconds);
 
             GemGrabMode gg = GemGrabMode.Instance;
             if (gg == null)
@@ -250,7 +252,12 @@ namespace MOBA.Core.Infrastructure
                 int goalTarget = Mathf.Max(1, brawlBall.GoalsToWin);
                 SetText(_blueGemTmp, _blueGemLegacy, $"{brawlBall.BlueGoals}/{goalTarget}");
                 SetText(_redGemTmp, _redGemLegacy, $"{brawlBall.RedGoals}/{goalTarget}");
-                SetText(_matchTimerTmp, _matchTimerLegacy, brawlBall.BallCarrier != null ? "BALL" : "LOOSE");
+                SetText(
+                    _matchTimerTmp,
+                    _matchTimerLegacy,
+                    brawlBall.IsOvertime
+                        ? $"OT {MatchHUDFormatter.FormatClock(brawlBall.OvertimeRemainingSeconds)}"
+                        : MatchHUDFormatter.FormatClock(brawlBall.RegulationRemainingSeconds));
 
                 SetActive(_blueLeaderHighlight, brawlBall.BlueGoals > brawlBall.RedGoals);
                 SetActive(_redLeaderHighlight, brawlBall.RedGoals > brawlBall.BlueGoals);

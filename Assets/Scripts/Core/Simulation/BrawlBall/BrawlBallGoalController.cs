@@ -20,9 +20,18 @@ namespace MOBA.Core.Simulation
         [SerializeField] private bool _useRuntimeVisual = true;
         [SerializeField] private Color _visualColor = new Color(0.18f, 0.46f, 1f, 0.55f);
         [SerializeField, Min(0.01f)] private float _visualHeight = 0.08f;
+        [SerializeField] private bool _useRuntimeFrameVisual = true;
+        [SerializeField] private Color _frameColor = new Color(0.18f, 0.46f, 1f, 0.95f);
+        [SerializeField, Min(0.1f)] private float _frameHeight = 1.25f;
+        [SerializeField, Min(0.02f)] private float _frameThickness = 0.16f;
 
         private Transform _visualRoot;
         private MeshRenderer _visualRenderer;
+        private Transform _frameRoot;
+        private MeshRenderer _leftPostRenderer;
+        private MeshRenderer _rightPostRenderer;
+        private MeshRenderer _crossbarRenderer;
+        private MeshRenderer _mouthLineRenderer;
         private MaterialPropertyBlock _propertyBlock;
 
         public TeamType ScoringTeam => _scoringTeam;
@@ -31,6 +40,7 @@ namespace MOBA.Core.Simulation
         {
             ResolveMode();
             EnsureRuntimeVisual();
+            EnsureRuntimeFrameVisual();
         }
 
         private void OnEnable()
@@ -61,6 +71,7 @@ namespace MOBA.Core.Simulation
             _scoringTeam = scoringTeam;
             _zoneSize = zoneSize;
             RefreshRuntimeVisual();
+            RefreshRuntimeFrameVisual();
         }
 
         private void ResolveMode()
@@ -129,6 +140,105 @@ namespace MOBA.Core.Simulation
             _propertyBlock.SetColor(ColorId, _visualColor);
             _propertyBlock.SetColor(BaseColorId, _visualColor);
             _visualRenderer.SetPropertyBlock(_propertyBlock);
+        }
+
+        private void EnsureRuntimeFrameVisual()
+        {
+            if (!_useRuntimeFrameVisual || _frameRoot != null)
+                return;
+
+            GameObject root = new GameObject("GoalFrameVisual");
+            root.layer = gameObject.layer;
+            root.transform.SetParent(transform, false);
+            _frameRoot = root.transform;
+
+            _leftPostRenderer = CreateFramePrimitive("LeftPost", _frameRoot);
+            _rightPostRenderer = CreateFramePrimitive("RightPost", _frameRoot);
+            _crossbarRenderer = CreateFramePrimitive("Crossbar", _frameRoot);
+            _mouthLineRenderer = CreateFramePrimitive("MouthLine", _frameRoot);
+
+            RefreshRuntimeFrameVisual();
+        }
+
+        private void RefreshRuntimeFrameVisual()
+        {
+            if (_frameRoot == null)
+                return;
+
+            Vector3 size = SanitizeZoneSize();
+            float halfWidth = size.x * 0.5f;
+            float halfDepth = size.z * 0.5f;
+            float thickness = Mathf.Max(0.02f, _frameThickness);
+            float height = Mathf.Max(thickness, _frameHeight);
+
+            SetFramePart(
+                _leftPostRenderer,
+                new Vector3(-halfWidth, height * 0.5f, 0f),
+                new Vector3(thickness, height, thickness));
+
+            SetFramePart(
+                _rightPostRenderer,
+                new Vector3(halfWidth, height * 0.5f, 0f),
+                new Vector3(thickness, height, thickness));
+
+            SetFramePart(
+                _crossbarRenderer,
+                new Vector3(0f, height, 0f),
+                new Vector3((halfWidth * 2f) + thickness, thickness, thickness));
+
+            SetFramePart(
+                _mouthLineRenderer,
+                new Vector3(0f, thickness * 0.5f, -halfDepth),
+                new Vector3((halfWidth * 2f) + thickness, thickness, thickness));
+
+            ApplyRendererColor(_leftPostRenderer, _frameColor);
+            ApplyRendererColor(_rightPostRenderer, _frameColor);
+            ApplyRendererColor(_crossbarRenderer, _frameColor);
+            ApplyRendererColor(_mouthLineRenderer, _frameColor);
+        }
+
+        private MeshRenderer CreateFramePrimitive(string objectName, Transform parent)
+        {
+            GameObject primitive = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            primitive.name = objectName;
+            primitive.layer = gameObject.layer;
+            primitive.transform.SetParent(parent, false);
+
+            Collider primitiveCollider = primitive.GetComponent<Collider>();
+            if (primitiveCollider != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(primitiveCollider);
+                else
+                    DestroyImmediate(primitiveCollider);
+            }
+
+            return primitive.GetComponent<MeshRenderer>();
+        }
+
+        private static void SetFramePart(MeshRenderer renderer, Vector3 localPosition, Vector3 localScale)
+        {
+            if (renderer == null)
+                return;
+
+            Transform part = renderer.transform;
+            part.localPosition = localPosition;
+            part.localRotation = Quaternion.identity;
+            part.localScale = localScale;
+        }
+
+        private void ApplyRendererColor(Renderer renderer, Color color)
+        {
+            if (renderer == null)
+                return;
+
+            if (_propertyBlock == null)
+                _propertyBlock = new MaterialPropertyBlock();
+
+            renderer.GetPropertyBlock(_propertyBlock);
+            _propertyBlock.SetColor(ColorId, color);
+            _propertyBlock.SetColor(BaseColorId, color);
+            renderer.SetPropertyBlock(_propertyBlock);
         }
     }
 }
