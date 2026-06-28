@@ -57,6 +57,7 @@ namespace MOBA.Core.Simulation
         public bool IsCarried => Carrier != null;
         public bool IsMovingLoose => _carrier == null && _looseVelocity.sqrMagnitude > 0.001f;
         public float PickupRadius => _pickupRadius;
+        public float CollisionRadius => _collisionRadius;
         public Vector3 CurrentPosition => transform.position;
 
         protected override void Awake()
@@ -92,15 +93,25 @@ namespace MOBA.Core.Simulation
                 }
 
                 UpdateCarriedTransform(_carrier);
+                TryScoreGoal(currentTick);
                 return;
             }
 
             MoveLooseBall();
 
+            if (TryScoreGoal(currentTick))
+                return;
+
             if (currentTick < _pickupUnlockTick)
                 return;
 
             TryPickupNearest();
+        }
+
+        private bool TryScoreGoal(uint currentTick)
+        {
+            return _mode != null &&
+                   _mode.TryScoreGoalAt(transform.position, currentTick, out _);
         }
 
         public bool TryPickupBy(BrawlerController carrier)

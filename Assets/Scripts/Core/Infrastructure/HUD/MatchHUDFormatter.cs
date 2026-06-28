@@ -92,6 +92,20 @@ namespace MOBA.Core.Infrastructure
             return $"R{Mathf.Max(1, currentRound)} alive {blueAlive}/{blueTeamSize} - {redAlive}/{redTeamSize}";
         }
 
+        public static string FormatActiveBrawlBallStatus(
+            int blueGoals,
+            int redGoals,
+            int goalsToWin,
+            TeamType carrierTeam)
+        {
+            int target = Mathf.Max(1, goalsToWin);
+            string possession = carrierTeam == TeamType.Blue || carrierTeam == TeamType.Red
+                ? $"  {carrierTeam} ball"
+                : "  Loose ball";
+
+            return $"Goals  Blue {blueGoals}/{target}  Red {redGoals}/{target}{possession}";
+        }
+
         public static string FormatClock(float seconds)
         {
             float clamped = Mathf.Max(0f, seconds);

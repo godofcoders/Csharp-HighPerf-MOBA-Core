@@ -14,6 +14,7 @@ namespace MOBA.Core.Simulation
         public static Action<BrawlerController, Vector3> OnBallPickedUp;
         public static Action<BrawlerController> OnBallCarrierChanged;
         public static Action<BrawlerController, Vector3, Vector3, bool> OnBallKicked;
+        public static Action<TeamType, int, int> OnGoalScored;
         public static Action<Vector3> OnBallDropped;
         public static Action<Vector3> OnBallReset;
 
@@ -34,6 +35,11 @@ namespace MOBA.Core.Simulation
             bool isSuperKick)
         {
             OnBallKicked?.Invoke(kicker, position, direction, isSuperKick);
+        }
+
+        public static void RaiseGoalScored(TeamType scoringTeam, int blueGoals, int redGoals)
+        {
+            OnGoalScored?.Invoke(scoringTeam, blueGoals, redGoals);
         }
 
         public static void RaiseBallDropped(Vector3 position)

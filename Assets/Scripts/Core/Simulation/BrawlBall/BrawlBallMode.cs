@@ -1,5 +1,6 @@
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace MOBA.Core.Simulation
@@ -16,12 +17,16 @@ namespace MOBA.Core.Simulation
         [Header("Ball State")]
         [SerializeField] private Transform _ballTransform;
         [SerializeField] private BrawlerController _ballCarrier;
+        [SerializeField, Min(0f)] private float _goalScoreLockoutSeconds = 0.35f;
 
+        private readonly List<BrawlBallGoalController> _goals = new List<BrawlBallGoalController>(2);
         private BrawlBallController _ball;
+        private uint _goalScoreUnlockTick;
 
         public int BlueGoals { get; private set; }
         public int RedGoals { get; private set; }
         public int GoalsToWin => _goalsToWin;
+        public int RegisteredGoalCount => _goals.Count;
         public BrawlerController BallCarrier => IsValidCarrier(_ballCarrier) ? _ballCarrier : null;
         public BrawlBallController Ball => _ball;
         public Vector3 BallPosition => BallCarrier != null
@@ -105,12 +110,59 @@ namespace MOBA.Core.Simulation
                 _ballTransform = null;
         }
 
+        public void RegisterGoal(BrawlBallGoalController goal)
+        {
+            if (goal == null || _goals.Contains(goal))
+                return;
+
+            _goals.Add(goal);
+        }
+
+        public void UnregisterGoal(BrawlBallGoalController goal)
+        {
+            _goals.Remove(goal);
+        }
+
         public void ResetBall()
         {
             if (_ball != null)
                 _ball.ResetToSpawn();
             else
                 ClearBallCarrier();
+        }
+
+        public bool TryScoreGoalAt(Vector3 ballPosition, uint currentTick, out TeamType scoringTeam)
+        {
+            scoringTeam = TeamType.Neutral;
+
+            if (!CanResolveGoal(currentTick))
+                return false;
+
+            float ballRadius = _ball != null ? _ball.CollisionRadius : 0f;
+
+            for (int i = _goals.Count - 1; i >= 0; i--)
+            {
+                BrawlBallGoalController goal = _goals[i];
+                if (goal == null)
+                {
+                    _goals.RemoveAt(i);
+                    continue;
+                }
+
+                if (!IsScoringTeam(goal.ScoringTeam) ||
+                    !goal.ContainsBall(ballPosition, ballRadius))
+                {
+                    continue;
+                }
+
+                scoringTeam = goal.ScoringTeam;
+                _goalScoreUnlockTick = currentTick +
+                    SimulationClock.SecondsToTicks(_goalScoreLockoutSeconds);
+                RecordGoal(scoringTeam);
+                return true;
+            }
+
+            return false;
         }
 
         public bool CanKickBall(BrawlerController carrier)
@@ -168,6 +220,7 @@ namespace MOBA.Core.Simulation
                 return;
 
             ResetBall();
+            BrawlBallEventBus.RaiseGoalScored(scoringTeam, BlueGoals, RedGoals);
 
             if (GetTeamGoals(scoringTeam) >= _goalsToWin)
                 MatchManager.Instance?.AddScore(scoringTeam, 10);
@@ -268,12 +321,27 @@ namespace MOBA.Core.Simulation
             BrawlBallEventBus.RaiseCarrierChanged(_ballCarrier);
         }
 
+        private bool CanResolveGoal(uint currentTick)
+        {
+            if (currentTick < _goalScoreUnlockTick)
+                return false;
+
+            MatchManager matchManager = MatchManager.Instance;
+            return matchManager == null ||
+                   matchManager.CurrentState == MatchState.Active;
+        }
+
         private static bool IsValidCarrier(BrawlerController carrier)
         {
             return SpatialEntityUtility.IsAlive(carrier) &&
                    carrier.State != null &&
                    !carrier.State.IsDead &&
                    carrier.gameObject.activeInHierarchy;
+        }
+
+        private static bool IsScoringTeam(TeamType team)
+        {
+            return team == TeamType.Blue || team == TeamType.Red;
         }
     }
 }

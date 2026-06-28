@@ -160,6 +160,14 @@ namespace MOBA.Core.Infrastructure
             if (knockout != null)
                 return ComposeKnockoutStatus(knockout);
 
+            BrawlBallMode brawlBall = BrawlBallMode.Instance;
+            if (brawlBall != null)
+                return $"{ResolveModeMapPrefix()} | " + MatchHUDFormatter.FormatActiveBrawlBallStatus(
+                    brawlBall.BlueGoals,
+                    brawlBall.RedGoals,
+                    brawlBall.GoalsToWin,
+                    brawlBall.BallCarrier != null ? brawlBall.BallCarrier.Team : TeamType.Neutral);
+
             GemGrabMode gg = GemGrabMode.Instance;
             if (gg == null)
                 return $"{ResolveModeMapPrefix()} | Match active";
@@ -217,6 +225,7 @@ namespace MOBA.Core.Infrastructure
 
             MatchManager mm = MatchManager.Instance;
             KnockoutMode knockout = KnockoutMode.Instance;
+            BrawlBallMode brawlBall = BrawlBallMode.Instance;
             GemGrabMode gg = GemGrabMode.Instance;
             bool active = mm != null && mm.CurrentState == MatchState.Active;
 
@@ -233,6 +242,18 @@ namespace MOBA.Core.Infrastructure
 
                 SetActive(_blueLeaderHighlight, blueEliminated < redEliminated);
                 SetActive(_redLeaderHighlight, redEliminated < blueEliminated);
+                return;
+            }
+
+            if (brawlBall != null && (mm == null || mm.CurrentState != MatchState.Ended))
+            {
+                int target = Mathf.Max(1, brawlBall.GoalsToWin);
+                SetText(_blueGemTmp, _blueGemLegacy, $"{brawlBall.BlueGoals}/{target}");
+                SetText(_redGemTmp, _redGemLegacy, $"{brawlBall.RedGoals}/{target}");
+                SetText(_matchTimerTmp, _matchTimerLegacy, brawlBall.BallCarrier != null ? "BALL" : "LOOSE");
+
+                SetActive(_blueLeaderHighlight, brawlBall.BlueGoals > brawlBall.RedGoals);
+                SetActive(_redLeaderHighlight, brawlBall.RedGoals > brawlBall.BlueGoals);
                 return;
             }
 

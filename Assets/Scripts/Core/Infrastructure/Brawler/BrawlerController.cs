@@ -1616,7 +1616,7 @@ namespace MOBA.Core.Infrastructure
         {
             TeamType enemyTeam = TeamRelationshipUtility.GetPrimaryEnemyTeam(_team);
             if (enemyTeam != TeamType.Neutral &&
-                SceneSelection.SelectedMode != GameModeId.SoloShowdown &&
+                ShouldAwardGenericDeathScore() &&
                 MatchManager.Instance != null)
             {
                 MatchManager.Instance.AddScore(enemyTeam, 1);
@@ -1627,6 +1627,22 @@ namespace MOBA.Core.Infrastructure
             SimulationClock.Grid?.Remove(this, _lastKnownPosition);
 
             SpawnManager.Instance?.RequestRespawn(this, _team);
+        }
+
+        private static bool ShouldAwardGenericDeathScore()
+        {
+            switch (SceneSelection.SelectedMode)
+            {
+                case GameModeId.BrawlBall:
+                case GameModeId.GemGrab:
+                case GameModeId.HotZone:
+                case GameModeId.Knockout:
+                case GameModeId.SoloShowdown:
+                    return false;
+
+                default:
+                    return true;
+            }
         }
 
         public void Respawn(Vector3 position)

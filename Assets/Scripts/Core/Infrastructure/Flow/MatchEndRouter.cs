@@ -8,10 +8,9 @@ namespace MOBA.Core.Infrastructure
     /// and, on the Active→Ended transition, captures the final scores into
     /// MatchResultBoard and loads the Results scene.
     ///
-    /// Score capture asks the GemGrabMode singleton for current team gem
-    /// totals (since that's what the player's been competing over). If
-    /// GemGrabMode isn't in the scene, scores fall back to 0 and the
-    /// winner is whoever MatchManager named.
+    /// Score capture asks the active mode singleton for its mode-specific
+    /// score totals. If no supported mode is in the scene, scores fall
+    /// back to MatchManager and the winner is whoever MatchManager named.
     ///
     /// Brief delay before transition (default 1.5s) so the "Match Over"
     /// state is briefly visible / audible before the scene swap.
@@ -60,6 +59,13 @@ namespace MOBA.Core.Infrastructure
             {
                 blue = KnockoutMode.Instance.BlueRoundsWon;
                 red = KnockoutMode.Instance.RedRoundsWon;
+                if (MatchManager.Instance == null || !MatchManager.Instance.WinnerKnown)
+                    _capturedWinner = blue >= red ? TeamType.Blue : TeamType.Red;
+            }
+            else if (BrawlBallMode.Instance != null)
+            {
+                blue = BrawlBallMode.Instance.BlueGoals;
+                red = BrawlBallMode.Instance.RedGoals;
                 if (MatchManager.Instance == null || !MatchManager.Instance.WinnerKnown)
                     _capturedWinner = blue >= red ? TeamType.Blue : TeamType.Red;
             }
