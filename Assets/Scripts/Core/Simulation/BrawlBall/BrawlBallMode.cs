@@ -19,7 +19,8 @@ namespace MOBA.Core.Simulation
         [Header("Map Placement")]
         [SerializeField] private bool _autoPlaceGoalsFromMap = true;
         [SerializeField] private bool _autoPlaceBallAtMapCenter = true;
-        [SerializeField, Min(0f)] private float _goalEdgeInset = 1.1f;
+        [SerializeField, Min(0f)] private float _goalEdgeInset = 0.15f;
+        [SerializeField, Min(0f)] private float _goalBehindSpawnOffset = 0.15f;
         [SerializeField, Min(0f)] private float _goalGroundOffset = 0.04f;
 
         [Header("Ball State")]
@@ -41,6 +42,36 @@ namespace MOBA.Core.Simulation
         private const float GoalPlacementProbeHeight = 1.4f;
         private const float GoalPlacementFallbackBoundsPaddingX = 6f;
         private const float GoalPlacementFallbackBoundsPaddingZ = 8f;
+
+        private struct TeamSpawnLane
+        {
+            public int Count;
+            public float SumX;
+            public float SumZ;
+            public float MinZ;
+            public float MaxZ;
+
+            public float AverageX => Count > 0 ? SumX / Count : 0f;
+            public float AverageZ => Count > 0 ? SumZ / Count : 0f;
+
+            public void Add(Vector3 position)
+            {
+                if (Count == 0)
+                {
+                    MinZ = position.z;
+                    MaxZ = position.z;
+                }
+                else
+                {
+                    MinZ = Mathf.Min(MinZ, position.z);
+                    MaxZ = Mathf.Max(MaxZ, position.z);
+                }
+
+                SumX += position.x;
+                SumZ += position.z;
+                Count++;
+            }
+        }
 
         public int BlueGoals { get; private set; }
         public int RedGoals { get; private set; }
@@ -501,6 +532,9 @@ namespace MOBA.Core.Simulation
             float groundOffset = Mathf.Max(0f, _goalGroundOffset);
             int obstacleMask = ResolveObstacleMask();
             float scanStep = ResolveGoalPlacementScanStep();
+            bool hasSpawnLanes = TryResolveNormalizedTeamSpawnLanes(
+                out TeamSpawnLane blueSpawnLane,
+                out TeamSpawnLane redSpawnLane);
 
             for (int i = _goals.Count - 1; i >= 0; i--)
             {
@@ -514,12 +548,21 @@ namespace MOBA.Core.Simulation
                 if (!IsScoringTeam(goal.ScoringTeam))
                     continue;
 
+                bool hasDefendingSpawnLane = TryResolveDefendingSpawnLane(
+                    goal.ScoringTeam,
+                    hasSpawnLanes,
+                    blueSpawnLane,
+                    redSpawnLane,
+                    out TeamSpawnLane defendingSpawnLane);
+
                 Vector3 position = ResolveGoalEdgePosition(
                     goal,
                     bounds,
                     groundOffset,
                     obstacleMask,
-                    scanStep);
+                    scanStep,
+                    hasDefendingSpawnLane,
+                    defendingSpawnLane);
 
                 goal.transform.position = position;
                 goal.AlignMouthToward(arenaCenter);
@@ -531,22 +574,38 @@ namespace MOBA.Core.Simulation
             Bounds bounds,
             float groundOffset,
             int obstacleMask,
-            float scanStep)
+            float scanStep,
+            bool hasDefendingSpawnLane,
+            TeamSpawnLane defendingSpawnLane)
         {
             Vector3 zoneSize = goal.ZoneSize;
             Vector3 arenaCenter = bounds.center;
-            bool blueScoresHere = goal.ScoringTeam == TeamType.Blue;
             float halfDepth = zoneSize.z * 0.5f;
-            float centerInset = Mathf.Max(_goalEdgeInset, halfDepth + GoalPlacementClearance);
-            float startZ = blueScoresHere
-                ? bounds.max.z - centerInset
-                : bounds.min.z + centerInset;
-            float directionToCenter = blueScoresHere ? -1f : 1f;
+            float outwardSign = ResolveGoalOutwardSign(goal, arenaCenter, hasDefendingSpawnLane, defendingSpawnLane);
+            float edgeInset = Mathf.Min(Mathf.Max(0f, _goalEdgeInset), halfDepth);
+            float edgeCenterZ = outwardSign > 0f
+                ? bounds.max.z + halfDepth - edgeInset
+                : bounds.min.z - halfDepth + edgeInset;
+            float startZ = edgeCenterZ;
+            float spawnExtremeZ = outwardSign > 0f
+                ? defendingSpawnLane.MaxZ
+                : defendingSpawnLane.MinZ;
+
+            if (hasDefendingSpawnLane)
+            {
+                float behindSpawnZ = spawnExtremeZ +
+                    outwardSign * (halfDepth + Mathf.Max(_goalBehindSpawnOffset, GoalPlacementClearance));
+                startZ = outwardSign > 0f
+                    ? Mathf.Max(edgeCenterZ, behindSpawnZ)
+                    : Mathf.Min(edgeCenterZ, behindSpawnZ);
+            }
+
+            float directionToCenter = -outwardSign;
             float maxScanDistance = Mathf.Abs(startZ - arenaCenter.z);
             int steps = Mathf.Max(1, Mathf.CeilToInt(maxScanDistance / Mathf.Max(0.05f, scanStep)));
 
             Vector3 best = new Vector3(
-                arenaCenter.x,
+                ResolveGoalCenterX(bounds, zoneSize, arenaCenter.x, hasDefendingSpawnLane, defendingSpawnLane),
                 Mathf.Max(goal.transform.position.y, groundOffset),
                 startZ);
 
@@ -554,8 +613,14 @@ namespace MOBA.Core.Simulation
             {
                 Vector3 candidate = best;
                 candidate.z = startZ + directionToCenter * scanStep * i;
-                if (!ContainsBoundsXZ(bounds, candidate))
+                if (!ContainsGoalSearchBoundsXZ(bounds, candidate, zoneSize))
                     continue;
+
+                if (hasDefendingSpawnLane &&
+                    !IsGoalBehindSpawnLine(candidate.z, halfDepth, outwardSign, spawnExtremeZ))
+                {
+                    break;
+                }
 
                 Quaternion rotation = ResolveGoalRotation(candidate, arenaCenter);
                 if (IsGoalFootprintClear(candidate, rotation, zoneSize, obstacleMask))
@@ -565,12 +630,56 @@ namespace MOBA.Core.Simulation
             return best;
         }
 
-        private static bool ContainsBoundsXZ(Bounds bounds, Vector3 position)
+        private static float ResolveGoalOutwardSign(
+            BrawlBallGoalController goal,
+            Vector3 arenaCenter,
+            bool hasDefendingSpawnLane,
+            TeamSpawnLane defendingSpawnLane)
         {
+            if (hasDefendingSpawnLane)
+                return defendingSpawnLane.AverageZ >= arenaCenter.z ? 1f : -1f;
+
+            return goal.ScoringTeam == TeamType.Blue ? 1f : -1f;
+        }
+
+        private static float ResolveGoalCenterX(
+            Bounds bounds,
+            Vector3 zoneSize,
+            float fallbackX,
+            bool hasDefendingSpawnLane,
+            TeamSpawnLane defendingSpawnLane)
+        {
+            float desiredX = hasDefendingSpawnLane ? defendingSpawnLane.AverageX : fallbackX;
+            float halfWidth = zoneSize.x * 0.5f;
+            if (bounds.size.x <= zoneSize.x)
+                return fallbackX;
+
+            return Mathf.Clamp(desiredX, bounds.min.x + halfWidth, bounds.max.x - halfWidth);
+        }
+
+        private bool ContainsGoalSearchBoundsXZ(Bounds bounds, Vector3 position, Vector3 zoneSize)
+        {
+            float halfWidth = zoneSize.x * 0.5f;
+            float zPadding = zoneSize.z + Mathf.Max(_goalEdgeInset, _goalBehindSpawnOffset) + GoalPlacementClearance;
             return position.x >= bounds.min.x &&
                    position.x <= bounds.max.x &&
-                   position.z >= bounds.min.z &&
-                   position.z <= bounds.max.z;
+                   position.x - halfWidth >= bounds.min.x - GoalPlacementClearance &&
+                   position.x + halfWidth <= bounds.max.x + GoalPlacementClearance &&
+                   position.z >= bounds.min.z - zPadding &&
+                   position.z <= bounds.max.z + zPadding;
+        }
+
+        private bool IsGoalBehindSpawnLine(
+            float goalCenterZ,
+            float halfDepth,
+            float outwardSign,
+            float spawnExtremeZ)
+        {
+            float innerGoalEdgeZ = goalCenterZ - outwardSign * halfDepth;
+            float requiredOffset = Mathf.Max(_goalBehindSpawnOffset, GoalPlacementClearance);
+            return outwardSign > 0f
+                ? innerGoalEdgeZ >= spawnExtremeZ + requiredOffset
+                : innerGoalEdgeZ <= spawnExtremeZ - requiredOffset;
         }
 
         private static Quaternion ResolveGoalRotation(Vector3 position, Vector3 worldTarget)
@@ -783,6 +892,71 @@ namespace MOBA.Core.Simulation
                 0f,
                 GoalPlacementFallbackBoundsPaddingZ));
             return true;
+        }
+
+        private static bool TryResolveNormalizedTeamSpawnLanes(
+            out TeamSpawnLane blueSpawnLane,
+            out TeamSpawnLane redSpawnLane)
+        {
+            blueSpawnLane = default;
+            redSpawnLane = default;
+
+            SpawnPointMarker[] markers = FindObjectsOfType<SpawnPointMarker>(false);
+            if (markers == null || markers.Length == 0)
+                return false;
+
+            for (int i = 0; i < markers.Length; i++)
+            {
+                SpawnPointMarker marker = markers[i];
+                if (marker == null)
+                    continue;
+
+                if (marker.Team == TeamType.Blue)
+                    blueSpawnLane.Add(marker.transform.position);
+                else if (marker.Team == TeamType.Red)
+                    redSpawnLane.Add(marker.transform.position);
+            }
+
+            if (blueSpawnLane.Count == 0 || redSpawnLane.Count == 0)
+                return false;
+
+            // Mirrors MapLoader.NormalizeTeamSpawnOrientation: blue plays from
+            // the lower side, red from the upper side, even if a prefab's raw
+            // markers were authored the other way around.
+            if (blueSpawnLane.AverageZ > redSpawnLane.AverageZ)
+            {
+                TeamSpawnLane authoredBlue = blueSpawnLane;
+                blueSpawnLane = redSpawnLane;
+                redSpawnLane = authoredBlue;
+            }
+
+            return true;
+        }
+
+        private static bool TryResolveDefendingSpawnLane(
+            TeamType scoringTeam,
+            bool hasSpawnLanes,
+            TeamSpawnLane blueSpawnLane,
+            TeamSpawnLane redSpawnLane,
+            out TeamSpawnLane defendingSpawnLane)
+        {
+            defendingSpawnLane = default;
+            if (!hasSpawnLanes)
+                return false;
+
+            if (scoringTeam == TeamType.Blue)
+            {
+                defendingSpawnLane = redSpawnLane;
+                return defendingSpawnLane.Count > 0;
+            }
+
+            if (scoringTeam == TeamType.Red)
+            {
+                defendingSpawnLane = blueSpawnLane;
+                return defendingSpawnLane.Count > 0;
+            }
+
+            return false;
         }
 
         private static bool TryResolveGeneratorBounds(out Bounds bounds)
