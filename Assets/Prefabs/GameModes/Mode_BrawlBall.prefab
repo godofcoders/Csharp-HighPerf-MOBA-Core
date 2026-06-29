@@ -52,7 +52,7 @@ MonoBehaviour:
   _overtimeDurationSeconds: 60
   _autoPlaceGoalsFromMap: 1
   _autoPlaceBallAtMapCenter: 1
-  _goalEdgeInset: 1.1
+  _goalEdgeInset: 0.85
   _goalGroundOffset: 0.04
   _ballTransform: {fileID: 8653147290831442101}
   _ballCarrier: {fileID: 0}

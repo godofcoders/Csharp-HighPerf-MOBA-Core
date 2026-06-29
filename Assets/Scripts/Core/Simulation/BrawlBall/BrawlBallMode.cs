@@ -37,6 +37,11 @@ namespace MOBA.Core.Simulation
         private bool _matchResolved;
         private TeamType _resolvedWinner = TeamType.Neutral;
 
+        private const float GoalPlacementClearance = 0.12f;
+        private const float GoalPlacementProbeHeight = 1.4f;
+        private const float GoalPlacementFallbackBoundsPaddingX = 6f;
+        private const float GoalPlacementFallbackBoundsPaddingZ = 8f;
+
         public int BlueGoals { get; private set; }
         public int RedGoals { get; private set; }
         public int GoalsToWin => _goalsToWin;
@@ -472,7 +477,7 @@ namespace MOBA.Core.Simulation
             if (!_autoPlaceGoalsFromMap && !_autoPlaceBallAtMapCenter)
                 return;
 
-            if (!TryResolveMapBounds(out Bounds bounds))
+            if (!TryResolvePlayableMapBounds(out Bounds bounds))
                 return;
 
             Vector3 arenaCenter = bounds.center;
@@ -493,8 +498,9 @@ namespace MOBA.Core.Simulation
         private void PlaceGoalsOnMapEdges(Bounds bounds)
         {
             Vector3 arenaCenter = bounds.center;
-            float inset = Mathf.Max(0f, _goalEdgeInset);
             float groundOffset = Mathf.Max(0f, _goalGroundOffset);
+            int obstacleMask = ResolveObstacleMask();
+            float scanStep = ResolveGoalPlacementScanStep();
 
             for (int i = _goals.Count - 1; i >= 0; i--)
             {
@@ -508,34 +514,241 @@ namespace MOBA.Core.Simulation
                 if (!IsScoringTeam(goal.ScoringTeam))
                     continue;
 
-                float z = goal.ScoringTeam == TeamType.Blue
-                    ? bounds.max.z - inset
-                    : bounds.min.z + inset;
-
-                Vector3 position = goal.transform.position;
-                position.x = arenaCenter.x;
-                position.y = Mathf.Max(position.y, groundOffset);
-                position.z = z;
+                Vector3 position = ResolveGoalEdgePosition(
+                    goal,
+                    bounds,
+                    groundOffset,
+                    obstacleMask,
+                    scanStep);
 
                 goal.transform.position = position;
                 goal.AlignMouthToward(arenaCenter);
             }
         }
 
-        private static bool TryResolveMapBounds(out Bounds bounds)
+        private Vector3 ResolveGoalEdgePosition(
+            BrawlBallGoalController goal,
+            Bounds bounds,
+            float groundOffset,
+            int obstacleMask,
+            float scanStep)
+        {
+            Vector3 zoneSize = goal.ZoneSize;
+            Vector3 arenaCenter = bounds.center;
+            bool blueScoresHere = goal.ScoringTeam == TeamType.Blue;
+            float halfDepth = zoneSize.z * 0.5f;
+            float centerInset = Mathf.Max(_goalEdgeInset, halfDepth + GoalPlacementClearance);
+            float startZ = blueScoresHere
+                ? bounds.max.z - centerInset
+                : bounds.min.z + centerInset;
+            float directionToCenter = blueScoresHere ? -1f : 1f;
+            float maxScanDistance = Mathf.Abs(startZ - arenaCenter.z);
+            int steps = Mathf.Max(1, Mathf.CeilToInt(maxScanDistance / Mathf.Max(0.05f, scanStep)));
+
+            Vector3 best = new Vector3(
+                arenaCenter.x,
+                Mathf.Max(goal.transform.position.y, groundOffset),
+                startZ);
+
+            for (int i = 0; i <= steps; i++)
+            {
+                Vector3 candidate = best;
+                candidate.z = startZ + directionToCenter * scanStep * i;
+                if (!ContainsBoundsXZ(bounds, candidate))
+                    continue;
+
+                Quaternion rotation = ResolveGoalRotation(candidate, arenaCenter);
+                if (IsGoalFootprintClear(candidate, rotation, zoneSize, obstacleMask))
+                    return candidate;
+            }
+
+            return best;
+        }
+
+        private static bool ContainsBoundsXZ(Bounds bounds, Vector3 position)
+        {
+            return position.x >= bounds.min.x &&
+                   position.x <= bounds.max.x &&
+                   position.z >= bounds.min.z &&
+                   position.z <= bounds.max.z;
+        }
+
+        private static Quaternion ResolveGoalRotation(Vector3 position, Vector3 worldTarget)
+        {
+            Vector3 toTarget = worldTarget - position;
+            toTarget.y = 0f;
+            if (toTarget.sqrMagnitude <= 0.0001f)
+                return Quaternion.identity;
+
+            return Quaternion.LookRotation(-toTarget.normalized);
+        }
+
+        private static bool IsGoalFootprintClear(
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 zoneSize,
+            int obstacleMask)
+        {
+            if (obstacleMask == 0)
+                return true;
+
+            Vector3 halfExtents = new Vector3(
+                zoneSize.x * 0.5f + GoalPlacementClearance,
+                GoalPlacementProbeHeight * 0.5f,
+                zoneSize.z * 0.5f + GoalPlacementClearance);
+            Vector3 center = position + Vector3.up * halfExtents.y;
+
+            return !Physics.CheckBox(
+                center,
+                halfExtents,
+                rotation,
+                obstacleMask,
+                QueryTriggerInteraction.Ignore);
+        }
+
+        private static int ResolveObstacleMask()
         {
             MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
-            if (mapGenerator != null)
+            if (mapGenerator != null && mapGenerator.ObstacleLayer.value != 0)
+                return mapGenerator.ObstacleLayer.value;
+
+            int obstacleLayer = LayerMask.NameToLayer("Obstacles");
+            return obstacleLayer >= 0 ? 1 << obstacleLayer : 0;
+        }
+
+        private static float ResolveGoalPlacementScanStep()
+        {
+            MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
+            return mapGenerator != null
+                ? Mathf.Max(0.15f, mapGenerator.CellSize * 0.25f)
+                : 0.25f;
+        }
+
+        private static bool TryResolvePlayableMapBounds(out Bounds bounds)
+        {
+            bool hasGroundBounds = TryResolveSpawnedMapGroundBounds(out Bounds groundBounds);
+            bool hasGeneratorBounds = TryResolveGeneratorBounds(out Bounds generatorBounds);
+
+            if (hasGroundBounds && hasGeneratorBounds &&
+                TryIntersectBoundsXZ(groundBounds, generatorBounds, out bounds))
             {
-                float cellSize = Mathf.Max(0.1f, mapGenerator.CellSize);
-                float width = Mathf.Max(1, mapGenerator.Width) * cellSize;
-                float height = Mathf.Max(1, mapGenerator.Height) * cellSize;
-                bounds = new Bounds(
-                    mapGenerator.transform.position,
-                    new Vector3(width, 0f, height));
                 return true;
             }
 
+            if (hasGroundBounds)
+            {
+                bounds = groundBounds;
+                return true;
+            }
+
+            if (TryResolveSpawnPointBounds(out bounds))
+                return true;
+
+            if (hasGeneratorBounds)
+            {
+                bounds = generatorBounds;
+                return true;
+            }
+
+            bounds = default;
+            return false;
+        }
+
+        private static bool TryIntersectBoundsXZ(Bounds first, Bounds second, out Bounds intersection)
+        {
+            float minX = Mathf.Max(first.min.x, second.min.x);
+            float maxX = Mathf.Min(first.max.x, second.max.x);
+            float minZ = Mathf.Max(first.min.z, second.min.z);
+            float maxZ = Mathf.Min(first.max.z, second.max.z);
+
+            if (maxX <= minX || maxZ <= minZ)
+            {
+                intersection = default;
+                return false;
+            }
+
+            Vector3 center = new Vector3(
+                (minX + maxX) * 0.5f,
+                first.center.y,
+                (minZ + maxZ) * 0.5f);
+            Vector3 size = new Vector3(
+                maxX - minX,
+                0f,
+                maxZ - minZ);
+            intersection = new Bounds(center, size);
+            return true;
+        }
+
+        private static bool TryResolveSpawnedMapGroundBounds(out Bounds bounds)
+        {
+            bounds = default;
+
+            MapLoader mapLoader = FindObjectOfType<MapLoader>();
+            GameObject spawnedMap = mapLoader != null ? mapLoader.SpawnedMapInstance : null;
+            if (spawnedMap == null)
+                return false;
+
+            int obstacleMask = ResolveObstacleMask();
+            int excludedDecorationMask = obstacleMask | ResolveLayerMask("Bushes") | ResolveLayerMask("Bush");
+            Collider[] colliders = spawnedMap.GetComponentsInChildren<Collider>(false);
+            bool found = false;
+
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider collider = colliders[i];
+                if (collider == null ||
+                    collider.isTrigger ||
+                    (excludedDecorationMask & (1 << collider.gameObject.layer)) != 0)
+                {
+                    continue;
+                }
+
+                if (!found)
+                {
+                    bounds = collider.bounds;
+                    found = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(collider.bounds);
+                }
+            }
+
+            if (found)
+                return true;
+
+            Renderer[] renderers = spawnedMap.GetComponentsInChildren<Renderer>(false);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null ||
+                    (excludedDecorationMask & (1 << renderer.gameObject.layer)) != 0)
+                {
+                    continue;
+                }
+
+                if (!found)
+                {
+                    bounds = renderer.bounds;
+                    found = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            return found;
+        }
+
+        private static int ResolveLayerMask(string layerName)
+        {
+            int layer = LayerMask.NameToLayer(layerName);
+            return layer >= 0 ? 1 << layer : 0;
+        }
+
+        private static bool TryResolveSpawnPointBounds(out Bounds bounds)
+        {
             SpawnPointMarker[] markers = FindObjectsOfType<SpawnPointMarker>(false);
             if (markers == null || markers.Length == 0)
             {
@@ -565,8 +778,29 @@ namespace MOBA.Core.Simulation
             if (!hasBounds)
                 return false;
 
-            bounds.Expand(new Vector3(6f, 0f, 8f));
+            bounds.Expand(new Vector3(
+                GoalPlacementFallbackBoundsPaddingX,
+                0f,
+                GoalPlacementFallbackBoundsPaddingZ));
             return true;
+        }
+
+        private static bool TryResolveGeneratorBounds(out Bounds bounds)
+        {
+            MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
+            if (mapGenerator != null)
+            {
+                float cellSize = Mathf.Max(0.1f, mapGenerator.CellSize);
+                float width = Mathf.Max(1, mapGenerator.Width) * cellSize;
+                float height = Mathf.Max(1, mapGenerator.Height) * cellSize;
+                bounds = new Bounds(
+                    mapGenerator.transform.position,
+                    new Vector3(width, 0f, height));
+                return true;
+            }
+
+            bounds = default;
+            return false;
         }
 
         private static bool IsValidCarrier(BrawlerController carrier)
