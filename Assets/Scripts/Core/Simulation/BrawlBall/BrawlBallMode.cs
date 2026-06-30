@@ -15,6 +15,7 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(1)] private int _goalsToWin = 2;
         [SerializeField, Min(1f)] private float _regulationDurationSeconds = 120f;
         [SerializeField, Min(1f)] private float _overtimeDurationSeconds = 60f;
+        [SerializeField] private bool _resetBrawlersAfterNonFinalGoal = true;
 
         [Header("Map Placement")]
         [SerializeField] private bool _autoPlaceGoalsFromMap = true;
@@ -316,11 +317,18 @@ namespace MOBA.Core.Simulation
             else
                 return;
 
+            bool endsMatch = _isOvertime || GetTeamGoals(scoringTeam) >= _goalsToWin;
+
             ResetBall();
             BrawlBallEventBus.RaiseGoalScored(scoringTeam, BlueGoals, RedGoals);
 
-            if (_isOvertime || GetTeamGoals(scoringTeam) >= _goalsToWin)
+            if (endsMatch)
+            {
                 ResolveMatch(scoringTeam);
+                return;
+            }
+
+            ResetBrawlersForNextRound();
         }
 
         public int GetTeamGoals(TeamType team)
@@ -501,6 +509,36 @@ namespace MOBA.Core.Simulation
             _isOvertime = false;
             _matchResolved = false;
             _resolvedWinner = TeamType.Neutral;
+        }
+
+        private void ResetBrawlersForNextRound()
+        {
+            if (!_resetBrawlersAfterNonFinalGoal || SpawnManager.Instance == null)
+                return;
+
+            BrawlerController[] brawlers = FindObjectsOfType<BrawlerController>(true);
+            if (brawlers == null || brawlers.Length == 0)
+                return;
+
+            int blueOrdinal = 0;
+            int redOrdinal = 0;
+            for (int i = 0; i < brawlers.Length; i++)
+            {
+                BrawlerController brawler = brawlers[i];
+                if (brawler == null)
+                    continue;
+
+                if (brawler.Team == TeamType.Blue)
+                {
+                    SpawnManager.Instance.ForceRespawn(brawler, brawler.Team, blueOrdinal);
+                    blueOrdinal++;
+                }
+                else if (brawler.Team == TeamType.Red)
+                {
+                    SpawnManager.Instance.ForceRespawn(brawler, brawler.Team, redOrdinal);
+                    redOrdinal++;
+                }
+            }
         }
 
         private void PlaceModeObjectsFromMap()

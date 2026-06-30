@@ -22,6 +22,9 @@ namespace MOBA.Core.Infrastructure
         public float RespawnDelaySeconds => _respawnDelay;
         [SerializeField] private CameraController _mainCameraController;
 
+        private readonly Dictionary<BrawlerController, Coroutine> _pendingRespawns =
+            new Dictionary<BrawlerController, Coroutine>();
+
         /// <summary>
         /// Replace the spawn-point lists at runtime. Called by MapLoader
         /// after it instantiates a map prefab and discovers
@@ -65,7 +68,12 @@ namespace MOBA.Core.Infrastructure
         public void RequestRespawn(BrawlerController brawler, TeamType team)
         {
             if (!AllowAutoRespawn) return;
-            StartCoroutine(RespawnRoutine(brawler, team));
+
+            if (brawler == null)
+                return;
+
+            CancelPendingRespawn(brawler);
+            _pendingRespawns[brawler] = StartCoroutine(RespawnRoutine(brawler, team));
         }
 
         /// <summary>Force-respawn a brawler at one of their team's spawn
@@ -73,8 +81,12 @@ namespace MOBA.Core.Infrastructure
         /// at round start.</summary>
         public void ForceRespawn(BrawlerController brawler, TeamType team)
         {
+            if (brawler == null) return;
+
+            CancelPendingRespawn(brawler);
+
             var list = ResolveSpawnListForTeam(team);
-            if (list == null || list.Count == 0 || brawler == null) return;
+            if (list == null || list.Count == 0) return;
             Transform pt = list[0];
             brawler.gameObject.SetActive(true);
             brawler.Respawn(pt.position);
@@ -82,8 +94,12 @@ namespace MOBA.Core.Infrastructure
 
         public void ForceRespawn(BrawlerController brawler, TeamType team, int teamOrdinal)
         {
+            if (brawler == null) return;
+
+            CancelPendingRespawn(brawler);
+
             var list = ResolveSpawnListForTeam(team);
-            if (list == null || list.Count == 0 || brawler == null) return;
+            if (list == null || list.Count == 0) return;
 
             int index = Mathf.Max(0, teamOrdinal) % list.Count;
             Transform pt = list[index];
@@ -96,6 +112,10 @@ namespace MOBA.Core.Infrastructure
         private IEnumerator RespawnRoutine(BrawlerController brawler, TeamType team)
         {
             yield return new WaitForSeconds(_respawnDelay);
+            if (brawler == null)
+                yield break;
+
+            _pendingRespawns.Remove(brawler);
 
             var spawnList = ResolveSpawnListForTeam(team);
 
@@ -105,6 +125,22 @@ namespace MOBA.Core.Infrastructure
                 Transform spawnPoint = spawnList[0];
                 brawler.Respawn(spawnPoint.position);
             }
+        }
+
+        private void CancelPendingRespawn(BrawlerController brawler)
+        {
+            if (brawler == null)
+                return;
+
+            if (!_pendingRespawns.TryGetValue(brawler, out Coroutine routine) ||
+                routine == null)
+            {
+                _pendingRespawns.Remove(brawler);
+                return;
+            }
+
+            StopCoroutine(routine);
+            _pendingRespawns.Remove(brawler);
         }
 
         public void PrepareMatch(List<MatchParticipant> roster)
