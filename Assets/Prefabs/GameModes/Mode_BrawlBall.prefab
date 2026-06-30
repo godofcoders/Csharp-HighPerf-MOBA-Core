@@ -119,9 +119,10 @@ MonoBehaviour:
     m_Bits: 0
   _useRuntimeVisual: 1
   _visualRoot: {fileID: 0}
-  _ballColor: {r: 1, g: 0.82, b: 0.12, a: 1}
-  _stripeColor: {r: 0.16, g: 0.12, b: 0.04, a: 1}
+  _ballColor: {r: 0.96, g: 0.94, b: 0.86, a: 1}
+  _panelColor: {r: 0.04, g: 0.04, b: 0.04, a: 1}
   _visualDiameter: 0.72
+  _panelDiameter: 0.2
 --- !u!1 &8653147290831442200
 GameObject:
   m_ObjectHideFlags: 0

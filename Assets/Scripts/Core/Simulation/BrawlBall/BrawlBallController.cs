@@ -37,16 +37,17 @@ namespace MOBA.Core.Simulation
         [Header("Presentation")]
         [SerializeField] private bool _useRuntimeVisual = true;
         [SerializeField] private Transform _visualRoot;
-        [SerializeField] private Color _ballColor = new Color(1f, 0.82f, 0.12f, 1f);
-        [SerializeField] private Color _stripeColor = new Color(0.16f, 0.12f, 0.04f, 1f);
+        [SerializeField] private Color _ballColor = new Color(0.96f, 0.94f, 0.86f, 1f);
+        [SerializeField] private Color _panelColor = new Color(0.04f, 0.04f, 0.04f, 1f);
         [SerializeField, Min(0.1f)] private float _visualDiameter = 0.72f;
+        [SerializeField, Min(0.02f)] private float _panelDiameter = 0.2f;
 
         private readonly List<ISpatialEntity> _pickupCandidates = new List<ISpatialEntity>(16);
+        private readonly List<MeshRenderer> _runtimePanelRenderers = new List<MeshRenderer>(8);
         private BrawlerController _carrier;
         private Vector3 _spawnPosition;
         private bool _hasSpawnPosition;
         private MeshRenderer _runtimeRenderer;
-        private MeshRenderer _runtimeStripeRenderer;
         private MaterialPropertyBlock _propertyBlock;
         private Vector3 _looseVelocity;
         private float _remainingTravelDistance;
@@ -547,40 +548,66 @@ namespace MOBA.Core.Simulation
 
             _runtimeRenderer = visual.GetComponent<MeshRenderer>();
 
-            GameObject stripe = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            stripe.name = "BallStripe";
-            stripe.layer = gameObject.layer;
-            stripe.transform.SetParent(_visualRoot, false);
-            stripe.transform.localPosition = Vector3.up * (_visualDiameter * 0.51f);
-            stripe.transform.localRotation = Quaternion.identity;
-            stripe.transform.localScale = new Vector3(
-                _visualDiameter * 0.16f,
-                _visualDiameter * 0.035f,
-                _visualDiameter * 0.82f);
-
-            Collider stripeCollider = stripe.GetComponent<Collider>();
-            if (stripeCollider != null)
-            {
-                if (Application.isPlaying)
-                    Destroy(stripeCollider);
-                else
-                    DestroyImmediate(stripeCollider);
-            }
-
-            _runtimeStripeRenderer = stripe.GetComponent<MeshRenderer>();
+            CreateFootballPanels();
             ApplyRuntimeColor();
+        }
+
+        private void CreateFootballPanels()
+        {
+            _runtimePanelRenderers.Clear();
+
+            Vector3[] normals =
+            {
+                Vector3.up,
+                new Vector3(0.78f, 0.18f, 0.58f).normalized,
+                new Vector3(-0.78f, 0.18f, 0.58f).normalized,
+                new Vector3(0.78f, 0.18f, -0.58f).normalized,
+                new Vector3(-0.78f, 0.18f, -0.58f).normalized,
+                new Vector3(0f, -0.35f, 1f).normalized,
+                new Vector3(0f, -0.35f, -1f).normalized
+            };
+
+            float radius = Mathf.Max(0.05f, _visualDiameter * 0.5f);
+            float panelDiameter = Mathf.Max(0.02f, _panelDiameter);
+            float panelThickness = Mathf.Max(0.006f, _visualDiameter * 0.035f);
+
+            for (int i = 0; i < normals.Length; i++)
+            {
+                Vector3 normal = normals[i];
+                GameObject panel = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                panel.name = "FootballPanel";
+                panel.layer = gameObject.layer;
+                panel.transform.SetParent(_visualRoot, false);
+                panel.transform.localPosition = normal * (radius + panelThickness * 0.5f);
+                panel.transform.localRotation = Quaternion.FromToRotation(Vector3.up, normal);
+                panel.transform.localScale = new Vector3(panelDiameter, panelThickness, panelDiameter);
+
+                Collider panelCollider = panel.GetComponent<Collider>();
+                if (panelCollider != null)
+                {
+                    if (Application.isPlaying)
+                        Destroy(panelCollider);
+                    else
+                        DestroyImmediate(panelCollider);
+                }
+
+                MeshRenderer renderer = panel.GetComponent<MeshRenderer>();
+                if (renderer != null)
+                    _runtimePanelRenderers.Add(renderer);
+            }
         }
 
         private void ApplyRuntimeColor()
         {
-            if (_runtimeRenderer == null && _runtimeStripeRenderer == null)
+            if (_runtimeRenderer == null && _runtimePanelRenderers.Count == 0)
                 return;
 
             if (_propertyBlock == null)
                 _propertyBlock = new MaterialPropertyBlock();
 
             ApplyRendererColor(_runtimeRenderer, _ballColor);
-            ApplyRendererColor(_runtimeStripeRenderer, _stripeColor);
+            for (int i = 0; i < _runtimePanelRenderers.Count; i++)
+                ApplyRendererColor(_runtimePanelRenderers[i], _panelColor);
         }
 
         private void ApplyRendererColor(Renderer renderer, Color color)
