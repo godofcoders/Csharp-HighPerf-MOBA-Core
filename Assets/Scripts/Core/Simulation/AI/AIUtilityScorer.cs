@@ -1483,14 +1483,6 @@ namespace MOBA.Core.Simulation.AI
             _lastObjectiveFinalScore = 0f;
             _lastObjectiveScoreReason = "not_evaluated";
 
-            // Combat always overrides objective movement.
-            // Objective is a map-control fallback, not a replacement for fighting.
-            if (targetInfo.HasLiveTarget)
-            {
-                _lastObjectiveScoreReason = "combat_target_exists";
-                return new AIActionScore(AIActionType.Objective, 0f);
-            }
-
             if (_objectiveMemory == null ||
                 !_objectiveMemory.TryGetBestObjective(
                     _self.Position,
@@ -1499,6 +1491,20 @@ namespace MOBA.Core.Simulation.AI
                     out AIObjectiveCandidate objective))
             {
                 _lastObjectiveScoreReason = "no_objectives";
+                return new AIActionScore(AIActionType.Objective, 0f);
+            }
+
+            bool isBrawlBallObjective =
+                macroState.Mode == GameModeId.BrawlBall &&
+                objective.IsRuntime &&
+                objective.ObjectiveType == AIObjectiveType.Ball;
+
+            // Combat usually owns the moment, but Brawl Ball is possession-led:
+            // a visible enemy should not make bots forget the loose ball,
+            // friendly carrier, or enemy carrier.
+            if (targetInfo.HasLiveTarget && !isBrawlBallObjective)
+            {
+                _lastObjectiveScoreReason = "combat_target_exists";
                 return new AIActionScore(AIActionType.Objective, 0f);
             }
 
@@ -1515,6 +1521,17 @@ namespace MOBA.Core.Simulation.AI
 
             if (objective.IsRuntime)
                 _lastObjectiveScoreReason += "|runtime";
+
+            if (isBrawlBallObjective)
+            {
+                float ballDelta = macroState.Call == AIGameModeMacroCall.Reset
+                    ? 54f
+                    : macroState.Call == AIGameModeMacroCall.Push
+                        ? 48f
+                        : 60f;
+                score += ballDelta;
+                _lastObjectiveScoreReason += $"|ball_focus_+{ballDelta:0.0}";
+            }
 
             float weightDelta = Mathf.Clamp((objective.Weight - 50f) * 0.15f, -10f, 18f);
             if (Mathf.Abs(weightDelta) > 0.01f)
@@ -1565,6 +1582,8 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Max(4.5f, objectiveRadius + 1.5f));
 
             float crowdingPenalty = allyPressure * GetObjectiveCrowdingPenalty();
+            if (isBrawlBallObjective)
+                crowdingPenalty *= 0.35f;
 
             _lastObjectiveAllyPressure = allyPressure;
             _lastObjectiveCrowdingPenalty = crowdingPenalty;

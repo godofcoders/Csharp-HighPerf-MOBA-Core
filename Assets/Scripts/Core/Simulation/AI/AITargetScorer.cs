@@ -22,6 +22,9 @@ namespace MOBA.Core.Simulation.AI
         private const float CarrierThreatProximityBonus = 24f;
         private const float CarrierThreatCorridorBonus = 16f;
         private const float CarrierThreatMaxBonus = 42f;
+        private const float BrawlBallCarrierBaseBonus = 92f;
+        private const float BrawlBallCarrierNearBonus = 34f;
+        private const float BrawlBallCarrierPressureRadius = 13f;
 
         public AITargetScorer(BrawlerController self, BrawlerAIProfile profile, int initialCapacity = 16)
         {
@@ -72,6 +75,7 @@ namespace MOBA.Core.Simulation.AI
                 memory.Target.EntityID == targetEntityId;
             bool isTeamFocusTarget = false;
             bool hasBrawlerTarget = false;
+            bool isEnemyBrawlBallCarrier = false;
             int targetCarriedGems = 0;
             float targetHealthRatio = 1f;
 
@@ -92,6 +96,7 @@ namespace MOBA.Core.Simulation.AI
                 float maxHealth = Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
                 targetHealthRatio = Mathf.Clamp01(targetBrawler.State.CurrentHealth / maxHealth);
                 score += (1f - targetHealthRatio) * _profile.LowHealthTargetBias;
+                isEnemyBrawlBallCarrier = IsEnemyBrawlBallCarrier(targetBrawler);
 
                 if (targetHealthRatio <= _profile.FinisherHealthThreshold)
                 {
@@ -187,6 +192,16 @@ namespace MOBA.Core.Simulation.AI
                 targetEntityId,
                 out int alliedFocusCount);
 
+            if (isEnemyBrawlBallCarrier)
+            {
+                float proximityBonus =
+                    (1f - Mathf.Clamp01(distance / BrawlBallCarrierPressureRadius)) *
+                    BrawlBallCarrierNearBonus;
+                score += BrawlBallCarrierBaseBonus + proximityBonus;
+                overFocusPenalty *= 0.15f;
+                isTeamFocusTarget = true;
+            }
+
             if (hasBrawlerTarget)
             {
                 AIWinConditionTargetEvaluation winEvaluation =
@@ -218,6 +233,15 @@ namespace MOBA.Core.Simulation.AI
             score += ScoreByAbilityShape(target);
 
             return score;
+        }
+
+        private bool IsEnemyBrawlBallCarrier(BrawlerController targetBrawler)
+        {
+            BrawlBallMode mode = BrawlBallMode.Instance;
+            return mode != null &&
+                   mode.BallCarrier == targetBrawler &&
+                   _self != null &&
+                   targetBrawler.Team != _self.Team;
         }
 
         private AIGameModeMacroState ResolveWinMacroState(uint currentTick)

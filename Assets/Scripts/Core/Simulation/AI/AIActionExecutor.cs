@@ -124,6 +124,17 @@ namespace MOBA.Core.Simulation.AI
         {
             _currentExecuteTick = currentTick;
 
+            if (TryExecuteBrawlBallIntent(
+                    actionType,
+                    targetInfo,
+                    currentTick,
+                    attackRange,
+                    idealRange,
+                    superRange))
+            {
+                return;
+            }
+
             switch (actionType)
             {
                 case AIActionType.Approach:
@@ -545,6 +556,298 @@ namespace MOBA.Core.Simulation.AI
         private string FormatVector(Vector3 value)
         {
             return $"({value.x:0.0},{value.y:0.0},{value.z:0.0})";
+        }
+
+        private bool TryExecuteBrawlBallIntent(
+            AIActionType actionType,
+            AITargetInfo targetInfo,
+            uint currentTick,
+            float attackRange,
+            float idealRange,
+            float superRange)
+        {
+            BrawlBallMode mode = BrawlBallMode.Instance;
+            if (mode == null || mode.IsMatchResolved)
+                return false;
+
+            if (mode.CanKickBall(_brawler))
+            {
+                RunBrawlBallCarrierIntent(mode, currentTick);
+                return true;
+            }
+
+            if (ShouldPreserveEmergencyBrawlBallAction(actionType))
+                return false;
+
+            BrawlerController carrier = mode.BallCarrier;
+            if (SpatialEntityUtility.IsAlive(carrier))
+            {
+                if (carrier.Team != _brawler.Team)
+                {
+                    RunBrawlBallEnemyCarrierIntent(
+                        carrier,
+                        currentTick,
+                        attackRange,
+                        idealRange,
+                        superRange);
+                    return true;
+                }
+
+                RunBrawlBallFriendlyCarrierSupportIntent(
+                    mode,
+                    carrier,
+                    targetInfo,
+                    currentTick,
+                    attackRange,
+                    idealRange,
+                    superRange);
+                return true;
+            }
+
+            if (actionType == AIActionType.UseSuper)
+                return false;
+
+            RunBrawlBallLooseBallIntent(
+                mode,
+                targetInfo,
+                currentTick,
+                attackRange,
+                superRange);
+            return true;
+        }
+
+        private bool ShouldPreserveEmergencyBrawlBallAction(AIActionType actionType)
+        {
+            if (actionType == AIActionType.Evade &&
+                _dangerMemory != null &&
+                _dangerMemory.HasDanger)
+            {
+                return true;
+            }
+
+            if (actionType != AIActionType.Retreat)
+                return false;
+
+            return GetSelfHealthRatio() <= 0.22f;
+        }
+
+        private void RunBrawlBallCarrierIntent(
+            BrawlBallMode mode,
+            uint currentTick)
+        {
+            Vector3 goalPosition = mode.TryGetScoringGoalPosition(
+                    _brawler.Team,
+                    out Vector3 scoringGoal)
+                ? scoringGoal
+                : mode.BallPosition;
+
+            Vector3 toGoal = Flatten(goalPosition - _brawler.Position);
+            if (toGoal.sqrMagnitude <= 0.001f)
+                toGoal = Flatten(_brawler.transform.forward);
+
+            float distanceToGoal = toGoal.magnitude;
+            Vector3 kickDirection = toGoal.sqrMagnitude > 0.001f
+                ? toGoal.normalized
+                : Vector3.forward;
+
+            BrawlBallController ball = mode.Ball;
+            float normalKickRange = ball != null ? ball.NormalKickRange : 8f;
+            float superKickRange = ball != null ? ball.SuperKickRange : normalKickRange * 1.4f;
+            float ballRadius = ball != null ? ball.CollisionRadius : 0.32f;
+            bool hasKickLane = HasBrawlBallKickLane(goalPosition, ballRadius);
+            bool canMainKick =
+                distanceToGoal <= Mathf.Max(0.5f, normalKickRange - 0.2f) &&
+                hasKickLane;
+            bool canSuperKick =
+                _brawler.State != null &&
+                _brawler.State.SuperCharge.IsReady &&
+                distanceToGoal <= Mathf.Max(normalKickRange, superKickRange - 0.2f) &&
+                distanceToGoal > normalKickRange * 0.85f &&
+                hasKickLane;
+
+            if (canSuperKick)
+            {
+                _commandSource.QueueSuper(kickDirection, goalPosition, true);
+            }
+            else if (canMainKick)
+            {
+                _commandSource.QueueMainAttack(kickDirection, goalPosition, true);
+            }
+
+            RequestMapAwareDestination(
+                goalPosition,
+                0.7f,
+                AIMapRouteIntent.Objective);
+
+            _lastTacticalMovementIntent = AITacticalMovementIntent.CloseGap;
+            _lastTacticalTargetPosition = goalPosition;
+            _lastTacticalTargetDistance = distanceToGoal;
+            _lastTacticalPreferredRange = 0f;
+            _lastTacticalTooCloseDistance = 0f;
+            _lastTacticalMoveReason = hasKickLane
+                ? "brawl_ball_score"
+                : "brawl_ball_score_no_lane";
+        }
+
+        private void RunBrawlBallEnemyCarrierIntent(
+            BrawlerController carrier,
+            uint currentTick,
+            float attackRange,
+            float idealRange,
+            float superRange)
+        {
+            _abilityDecider.TryUseMainAttack(carrier, currentTick, attackRange);
+            _abilityDecider.TryUseGadget(carrier, currentTick);
+            _superDecider.TryUseSuper(carrier, currentTick, superRange);
+
+            float preferredRange = Mathf.Min(
+                GetTacticalPreferredRange(idealRange),
+                Mathf.Max(1.25f, attackRange * 0.45f));
+
+            RequestMapAwareDestination(
+                carrier.Position,
+                0.75f,
+                AIMapRouteIntent.CombatAdvance,
+                true,
+                carrier.Position,
+                preferredRange);
+
+            _lastTacticalMovementIntent = AITacticalMovementIntent.CloseGap;
+            _lastTacticalTargetPosition = carrier.Position;
+            _lastTacticalTargetDistance = Vector3.Distance(_brawler.Position, carrier.Position);
+            _lastTacticalPreferredRange = preferredRange;
+            _lastTacticalTooCloseDistance = _profile.GetTooCloseDistance(idealRange);
+            _lastTacticalMoveReason = "brawl_ball_enemy_carrier";
+        }
+
+        private void RunBrawlBallFriendlyCarrierSupportIntent(
+            BrawlBallMode mode,
+            BrawlerController carrier,
+            AITargetInfo targetInfo,
+            uint currentTick,
+            float attackRange,
+            float idealRange,
+            float superRange)
+        {
+            TryPressureBrawlBallThreat(
+                targetInfo,
+                carrier.Position,
+                currentTick,
+                attackRange,
+                superRange);
+
+            Vector3 supportPoint = carrier.Position;
+            if (mode.TryGetScoringGoalPosition(_brawler.Team, out Vector3 goalPosition))
+            {
+                supportPoint = Vector3.Lerp(carrier.Position, goalPosition, 0.35f);
+            }
+
+            float preferredRange = Mathf.Max(1.5f, GetTacticalPreferredRange(idealRange));
+            RequestMapAwareDestination(
+                supportPoint,
+                1.15f,
+                AIMapRouteIntent.Peel,
+                true,
+                carrier.Position,
+                preferredRange);
+
+            _lastTacticalMovementIntent = AITacticalMovementIntent.Regroup;
+            _lastTacticalTargetPosition = carrier.Position;
+            _lastTacticalTargetDistance = Vector3.Distance(_brawler.Position, carrier.Position);
+            _lastTacticalPreferredRange = preferredRange;
+            _lastTacticalTooCloseDistance = _profile.GetTooCloseDistance(idealRange);
+            _lastTacticalMoveReason = "brawl_ball_support_carrier";
+        }
+
+        private void RunBrawlBallLooseBallIntent(
+            BrawlBallMode mode,
+            AITargetInfo targetInfo,
+            uint currentTick,
+            float attackRange,
+            float superRange)
+        {
+            Vector3 ballPosition = mode.BallPosition;
+            TryPressureBrawlBallThreat(
+                targetInfo,
+                ballPosition,
+                currentTick,
+                attackRange,
+                superRange);
+
+            float arrivalDistance = mode.Ball != null
+                ? Mathf.Max(0.35f, mode.Ball.PickupRadius * 0.65f)
+                : 0.55f;
+
+            RequestMapAwareDestination(
+                ballPosition,
+                arrivalDistance,
+                AIMapRouteIntent.Objective);
+
+            _lastTacticalMovementIntent = AITacticalMovementIntent.CloseGap;
+            _lastTacticalTargetPosition = ballPosition;
+            _lastTacticalTargetDistance = Vector3.Distance(_brawler.Position, ballPosition);
+            _lastTacticalPreferredRange = 0f;
+            _lastTacticalTooCloseDistance = 0f;
+            _lastTacticalMoveReason = "brawl_ball_loose_ball";
+        }
+
+        private void TryPressureBrawlBallThreat(
+            AITargetInfo targetInfo,
+            Vector3 focusPosition,
+            uint currentTick,
+            float attackRange,
+            float superRange)
+        {
+            if (targetInfo == null ||
+                !targetInfo.HasLiveTarget ||
+                !SpatialEntityUtility.IsAlive(targetInfo.Target))
+            {
+                return;
+            }
+
+            float targetDistance = Vector3.Distance(_brawler.Position, targetInfo.Target.Position);
+            float focusDistance = Vector3.Distance(focusPosition, targetInfo.Target.Position);
+            if (targetDistance > attackRange * 1.1f && focusDistance > 4.5f)
+                return;
+
+            _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
+            _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
+        }
+
+        private bool HasBrawlBallKickLane(Vector3 goalPosition, float ballRadius)
+        {
+            if (SimulationClock.Pathfinder == null)
+                return true;
+
+            Vector3 toGoal = Flatten(goalPosition - _brawler.Position);
+            float distance = toGoal.magnitude;
+            float checkDistance = distance - Mathf.Max(0.75f, ballRadius * 2f);
+            if (checkDistance <= 0.1f)
+                return true;
+
+            AimLineTraceResult trace = AimLineOfSightUtility.Trace(
+                SimulationClock.Pathfinder,
+                _brawler.Position,
+                toGoal,
+                checkDistance,
+                Mathf.Max(0.18f, ballRadius));
+
+            return !trace.IsBlocked;
+        }
+
+        private float GetSelfHealthRatio()
+        {
+            if (_brawler == null || _brawler.State == null)
+                return 1f;
+
+            return _brawler.State.CurrentHealth /
+                   Mathf.Max(1f, _brawler.State.MaxHealth.Value);
+        }
+
+        private static Vector3 Flatten(Vector3 value)
+        {
+            value.y = 0f;
+            return value;
         }
 
         private void RunObjective(

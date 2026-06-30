@@ -62,6 +62,8 @@ namespace MOBA.Core.Simulation
         public bool IsMovingLoose => _carrier == null && _looseVelocity.sqrMagnitude > 0.001f;
         public float PickupRadius => _pickupRadius;
         public float CollisionRadius => _collisionRadius;
+        public float NormalKickRange => _normalKickRange;
+        public float SuperKickRange => _superKickRange;
         public Vector3 CurrentPosition => transform.position;
 
         protected override void Awake()

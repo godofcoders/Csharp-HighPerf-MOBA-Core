@@ -342,6 +342,32 @@ namespace MOBA.Core.Simulation
             return 0;
         }
 
+        public bool TryGetScoringGoalPosition(TeamType scoringTeam, out Vector3 position)
+        {
+            position = default;
+
+            if (!IsScoringTeam(scoringTeam))
+                return false;
+
+            for (int i = _goals.Count - 1; i >= 0; i--)
+            {
+                BrawlBallGoalController goal = _goals[i];
+                if (goal == null)
+                {
+                    _goals.RemoveAt(i);
+                    continue;
+                }
+
+                if (goal.ScoringTeam != scoringTeam)
+                    continue;
+
+                position = goal.transform.position;
+                return true;
+            }
+
+            return false;
+        }
+
         public bool TryResolveMacroState(
             TeamType team,
             out AIGameModeMacroState state)
@@ -395,18 +421,36 @@ namespace MOBA.Core.Simulation
                     friendlyPresence,
                     enemyPresence);
 
-            float weight = 84f;
+            Vector3 objectivePosition = BallPosition;
+            string objectiveName = "LooseBall";
+            float radius = 2.35f;
+            float weight = 132f;
+
             if (enemyHasBall)
-                weight += 18f;
-            else if (!ownHasBall)
-                weight += 10f;
+            {
+                objectivePosition = carrier.Position;
+                objectiveName = "EnemyBallCarrier";
+                radius = 3.1f;
+                weight = 160f;
+            }
+            else if (ownHasBall)
+            {
+                objectivePosition = carrier.Position;
+                objectiveName = "OwnBallCarrier";
+                radius = 3.35f;
+                weight = 118f;
+            }
+            else
+            {
+                weight = 150f;
+            }
 
             objective = new AIObjectiveCandidate(
                 AIObjectiveType.Ball,
-                BallPosition,
+                objectivePosition,
                 weight,
-                2.75f,
-                "RuntimeBall",
+                radius,
+                objectiveName,
                 true,
                 controlState,
                 friendlyPresence,
