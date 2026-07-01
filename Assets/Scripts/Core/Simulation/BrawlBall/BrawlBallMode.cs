@@ -726,7 +726,7 @@ namespace MOBA.Core.Simulation
             int steps = Mathf.Max(1, Mathf.CeilToInt(maxScanDistance / Mathf.Max(0.05f, scanStep)));
 
             Vector3 best = new Vector3(
-                ResolveGoalCenterX(bounds, zoneSize, arenaCenter.x, hasDefendingSpawnLane, defendingSpawnLane),
+                ResolveGoalCenterX(bounds, zoneSize, arenaCenter.x),
                 Mathf.Max(goal.transform.position.y, groundOffset),
                 startZ);
 
@@ -766,11 +766,12 @@ namespace MOBA.Core.Simulation
         private static float ResolveGoalCenterX(
             Bounds bounds,
             Vector3 zoneSize,
-            float fallbackX,
-            bool hasDefendingSpawnLane,
-            TeamSpawnLane defendingSpawnLane)
+            float fallbackX)
         {
-            float desiredX = hasDefendingSpawnLane ? defendingSpawnLane.AverageX : fallbackX;
+            // Brawl Ball goals belong to the map's central scoring lane. Spawn
+            // markers can be lane-offset for team spread and should not pull the
+            // goal mouth toward blocker-side pockets.
+            float desiredX = fallbackX;
             float halfWidth = zoneSize.x * 0.5f;
             if (bounds.size.x <= zoneSize.x)
                 return fallbackX;

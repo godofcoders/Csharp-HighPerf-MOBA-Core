@@ -684,14 +684,14 @@ namespace MOBA.Core.Simulation.AI
             bool hasReachedShootingPocket = distanceToApproach <= 1.25f;
             bool canMainKick =
                 distanceToGoal <= Mathf.Max(0.5f, normalKickRange - 0.2f) &&
-                (hasKickLane || hasReachedShootingPocket);
+                hasKickLane;
             bool canSuperKick =
                 _brawler.State != null &&
                 _brawler.State.SuperCharge.IsReady &&
                 _brawler.State.CanUseSuper(currentTick) &&
                 distanceToGoal <= Mathf.Max(normalKickRange, superKickRange - 0.2f) &&
                 distanceToGoal > normalKickRange * 0.85f &&
-                (hasKickLane || hasReachedShootingPocket);
+                hasKickLane;
             bool shouldReleaseStalledBall =
                 !canSuperKick &&
                 !canMainKick &&
@@ -1023,6 +1023,7 @@ namespace MOBA.Core.Simulation.AI
             Vector3 best = fallbackApproach;
             float bestScore = float.MinValue;
             bool found = false;
+            bool foundClearLane = false;
 
             for (int d = 0; d < distances.Length; d++)
             {
@@ -1069,7 +1070,24 @@ namespace MOBA.Core.Simulation.AI
 
                     float score = 0f;
                     if (laneClear)
+                    {
+                        if (!foundClearLane)
+                        {
+                            found = false;
+                            bestScore = float.MinValue;
+                            foundClearLane = true;
+                        }
+
                         score += 90f;
+                    }
+                    else if (foundClearLane)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        score -= 45f;
+                    }
 
                     if (hasNavigationClearance)
                         score += 18f;
