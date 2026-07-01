@@ -682,6 +682,15 @@ namespace MOBA.Core.Simulation.AI
                 distanceToGoal <= Mathf.Max(normalKickRange, superKickRange - 0.2f) &&
                 distanceToGoal > normalKickRange * 0.85f &&
                 (hasKickLane || hasReachedShootingPocket);
+            bool shouldReleaseStalledBall =
+                !canSuperKick &&
+                !canMainKick &&
+                ShouldReleaseStalledBrawlBall(
+                    hasKickLane,
+                    hasReachedShootingPocket,
+                    distanceToGoal,
+                    normalKickRange,
+                    superKickRange);
 
             if (canSuperKick)
             {
@@ -691,11 +700,21 @@ namespace MOBA.Core.Simulation.AI
             {
                 _commandSource.QueueMainAttack(kickDirection, goalPosition, true);
             }
+            else if (shouldReleaseStalledBall)
+            {
+                Vector3 releaseDirection = hasKickLane
+                    ? kickDirection
+                    : ResolveBrawlBallOutletDirection(
+                        kickDirection,
+                        normalKickRange,
+                        ballRadius);
+                _commandSource.QueueMainAttack(
+                    releaseDirection,
+                    _brawler.Position + releaseDirection * normalKickRange,
+                    true);
+            }
 
-            RequestMapAwareDestination(
-                approachPosition,
-                0.65f,
-                AIMapRouteIntent.Objective);
+            RequestDirectBrawlBallScoringDestination(approachPosition);
 
             _lastTacticalMovementIntent = AITacticalMovementIntent.CloseGap;
             _lastTacticalTargetPosition = approachPosition;
@@ -706,9 +725,108 @@ namespace MOBA.Core.Simulation.AI
                 ? "brawl_ball_super_kick"
                 : canMainKick
                     ? "brawl_ball_kick"
-                    : hasKickLane
-                        ? "brawl_ball_score_pocket"
-                        : "brawl_ball_score_lane_blocked";
+                    : shouldReleaseStalledBall
+                        ? "brawl_ball_forced_release"
+                        : hasKickLane
+                            ? "brawl_ball_score_pocket"
+                            : "brawl_ball_score_lane_blocked";
+        }
+
+        private void RequestDirectBrawlBallScoringDestination(Vector3 approachPosition)
+        {
+            ResetTacticalStop("brawl_ball_score_destination");
+            _hasMapRouteCache = false;
+            _lastRawMapDestination = approachPosition;
+            _lastResolvedMapDestination = approachPosition;
+            _lastMapRequestIntent = AIMapRouteIntent.Objective;
+            _lastMapRequestHadThreatPosition = false;
+            _lastMapRouteDebug =
+                $"Route={AIMapRouteIntent.Objective} " +
+                $"Raw={FormatVector(approachPosition)} " +
+                $"Resolved={FormatVector(approachPosition)} " +
+                $"Score=0.0 Reason=brawl_ball_direct";
+
+            _navAgent.RequestDestination(
+                approachPosition,
+                0.65f,
+                highPriority: true);
+        }
+
+        private bool ShouldReleaseStalledBrawlBall(
+            bool hasKickLane,
+            bool hasReachedShootingPocket,
+            float distanceToGoal,
+            float normalKickRange,
+            float superKickRange)
+        {
+            if (hasReachedShootingPocket)
+                return true;
+
+            if (hasKickLane && distanceToGoal <= superKickRange + 1.5f)
+                return true;
+
+            if (_navAgent.IsRouteBlocked ||
+                _navAgent.ConsecutiveRouteFailures > 0)
+            {
+                return true;
+            }
+
+            if (_navAgent.ConsecutiveActiveZeroMoveTicks >= 18)
+                return distanceToGoal <= superKickRange + normalKickRange;
+
+            return false;
+        }
+
+        private Vector3 ResolveBrawlBallOutletDirection(
+            Vector3 preferredDirection,
+            float range,
+            float ballRadius)
+        {
+            preferredDirection = Flatten(preferredDirection);
+            if (preferredDirection.sqrMagnitude <= 0.001f)
+                preferredDirection = Flatten(_brawler.transform.forward);
+
+            if (preferredDirection.sqrMagnitude <= 0.001f)
+                preferredDirection = Vector3.forward;
+
+            preferredDirection.Normalize();
+            if (IsBrawlBallReleaseDirectionClear(preferredDirection, range, ballRadius))
+                return preferredDirection;
+
+            float sideBias = (_brawler.EntityID & 1) == 0 ? 1f : -1f;
+            float[] angles = { 25f, -25f, 45f, -45f, 70f, -70f, 95f, -95f };
+            for (int i = 0; i < angles.Length; i++)
+            {
+                float angle = angles[i] * sideBias;
+                Vector3 candidate = Quaternion.AngleAxis(angle, Vector3.up) * preferredDirection;
+                candidate = Flatten(candidate);
+                if (candidate.sqrMagnitude <= 0.001f)
+                    continue;
+
+                candidate.Normalize();
+                if (IsBrawlBallReleaseDirectionClear(candidate, range, ballRadius))
+                    return candidate;
+            }
+
+            return preferredDirection;
+        }
+
+        private bool IsBrawlBallReleaseDirectionClear(
+            Vector3 direction,
+            float range,
+            float ballRadius)
+        {
+            if (SimulationClock.Pathfinder == null)
+                return true;
+
+            AimLineTraceResult trace = AimLineOfSightUtility.Trace(
+                SimulationClock.Pathfinder,
+                _brawler.Position,
+                direction,
+                Mathf.Max(0.5f, range * 0.65f),
+                Mathf.Max(0.18f, ballRadius));
+
+            return !trace.IsBlocked;
         }
 
         private void RunBrawlBallEnemyCarrierIntent(
