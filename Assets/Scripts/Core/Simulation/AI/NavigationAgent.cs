@@ -218,7 +218,7 @@ namespace MOBA.Core.Simulation.AI
                     _consecutivePathBudgetDeferrals = 0;
                 }
 
-                _routeBlocked = false;
+                _routeBlocked = !canKeepExistingPath;
                 _nextRepathTick = _clock.CurrentTick + GetBudgetDeferredPathTicks();
                 return;
             }
@@ -311,9 +311,19 @@ namespace MOBA.Core.Simulation.AI
             {
                 Vector3 directDir = GetPlanarDelta(_destination);
                 if (directDir.sqrMagnitude > 0.0001f)
+                {
+                    if (ShouldWaitForPathBeforeDirectMove(directDir))
+                    {
+                        QueueMove(Vector3.zero);
+                        return;
+                    }
+
                     QueueMove(directDir.normalized);
+                }
                 else
+                {
                     QueueMove(Vector3.zero);
+                }
 
                 return;
             }
@@ -322,6 +332,33 @@ namespace MOBA.Core.Simulation.AI
 
             Vector3 dir = GetPlanarDelta(nodeWorld);
             QueueMove(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero);
+        }
+
+        private bool ShouldWaitForPathBeforeDirectMove(Vector3 directDir)
+        {
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return false;
+
+            float distance = directDir.magnitude;
+            if (distance <= Mathf.Max(_arrivalDistance * 1.25f, 0.5f))
+                return false;
+
+            float probeRadius = 0.35f;
+            if (_brawler.TryGetWorldCollisionProbe(
+                    out _,
+                    out float radius,
+                    out _,
+                    out float skin))
+            {
+                probeRadius = Mathf.Max(probeRadius, radius + skin);
+            }
+
+            return AimLineOfSightUtility.IsSegmentBlocked(
+                pathfinder,
+                _brawler.Position,
+                _destination,
+                probeRadius);
         }
 
         public bool TryGetFailureSignal(
