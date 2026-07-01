@@ -78,6 +78,10 @@ namespace MOBA.Core.Simulation.AI
         private float _lastMapRequestPreferredThreatDistance;
         private bool _lastMapRequestHadThreatPosition;
         private bool _hasMapRouteCache;
+        private bool _hasBrawlBallApproachCache;
+        private Vector3 _cachedBrawlBallApproach;
+        private Vector3 _cachedBrawlBallMouth;
+        private uint _nextBrawlBallApproachRefreshTick;
         private uint _currentExecuteTick;
 
         public float LastTacticalTargetDistance => _lastTacticalTargetDistance;
@@ -660,15 +664,21 @@ namespace MOBA.Core.Simulation.AI
             float superKickRange = ball != null ? ball.SuperKickRange : normalKickRange * 1.4f;
             float ballRadius = ball != null ? ball.CollisionRadius : 0.32f;
             float approachDistance = Mathf.Clamp(normalKickRange * 0.28f, 1.1f, 2.6f);
-            Vector3 approachPosition = mode.TryGetScoringGoalApproachPosition(
+            Vector3 fallbackApproach = mode.TryGetScoringGoalApproachPosition(
                     _brawler.Team,
                     approachDistance,
                     out Vector3 resolvedApproach)
                 ? resolvedApproach
                 : goalMouthPosition;
-            bool hasKickLane = HasBrawlBallKickLane(
+            Vector3 approachPosition = ResolveBrawlBallScoringApproach(
+                goalPosition,
                 goalMouthPosition,
-                approachPosition,
+                fallbackApproach,
+                normalKickRange,
+                ballRadius);
+            bool hasKickLane = IsBrawlBallLaneClear(
+                _brawler.Position,
+                goalMouthPosition,
                 ballRadius);
             float distanceToApproach = Vector3.Distance(_brawler.Position, approachPosition);
             bool hasReachedShootingPocket = distanceToApproach <= 1.25f;
@@ -962,23 +972,144 @@ namespace MOBA.Core.Simulation.AI
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
         }
 
-        private bool HasBrawlBallKickLane(
+        private Vector3 ResolveBrawlBallScoringApproach(
+            Vector3 goalPosition,
+            Vector3 goalMouthPosition,
+            Vector3 fallbackApproach,
+            float normalKickRange,
+            float ballRadius)
+        {
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return fallbackApproach;
+
+            if (_hasBrawlBallApproachCache &&
+                _currentExecuteTick < _nextBrawlBallApproachRefreshTick &&
+                (goalMouthPosition - _cachedBrawlBallMouth).sqrMagnitude <= 0.25f)
+            {
+                return _cachedBrawlBallApproach;
+            }
+
+            Vector2Int startCoords = pathfinder.GetGridCoords(_brawler.Position);
+            if (!pathfinder.IsWalkable(startCoords) &&
+                !pathfinder.TryGetNearestWalkableCoords(startCoords, 3, out startCoords))
+            {
+                return fallbackApproach;
+            }
+
+            Vector3 fieldDirection = Flatten(goalMouthPosition - goalPosition);
+            if (fieldDirection.sqrMagnitude <= 0.001f)
+                fieldDirection = Flatten(fallbackApproach - goalMouthPosition);
+
+            if (fieldDirection.sqrMagnitude <= 0.001f)
+                fieldDirection = Flatten(goalMouthPosition - _brawler.Position);
+
+            if (fieldDirection.sqrMagnitude <= 0.001f)
+                return fallbackApproach;
+
+            fieldDirection.Normalize();
+
+            Vector3 lateral = new Vector3(fieldDirection.z, 0f, -fieldDirection.x);
+            if (lateral.sqrMagnitude <= 0.001f)
+                lateral = Vector3.right;
+            else
+                lateral.Normalize();
+
+            float baseDistance = Mathf.Clamp(normalKickRange * 0.28f, 1.1f, 2.6f);
+            float wideDistance = Mathf.Clamp(normalKickRange * 0.45f, 2.2f, 4.2f);
+            float[] distances = { baseDistance, wideDistance, Mathf.Max(1.0f, baseDistance * 0.65f) };
+            float[] offsets = { 0f, 1.25f, -1.25f, 2.5f, -2.5f, 3.75f, -3.75f };
+
+            Vector3 best = fallbackApproach;
+            float bestScore = float.MinValue;
+            bool found = false;
+
+            for (int d = 0; d < distances.Length; d++)
+            {
+                for (int o = 0; o < offsets.Length; o++)
+                {
+                    Vector3 candidate =
+                        goalMouthPosition +
+                        fieldDirection * distances[d] +
+                        lateral * offsets[o];
+
+                    Vector2Int candidateCoords = pathfinder.GetGridCoords(candidate);
+                    bool hasNavigationClearance =
+                        pathfinder.IsWalkableWithNavigationClearance(candidateCoords);
+                    if (!hasNavigationClearance &&
+                        !pathfinder.IsWalkableWithBoundaryClearance(candidateCoords))
+                    {
+                        continue;
+                    }
+
+                    bool hasClearancePath =
+                        pathfinder.TryGetPathLengthWithNavigationClearance(
+                            startCoords.x,
+                            startCoords.y,
+                            candidateCoords.x,
+                            candidateCoords.y,
+                            out int pathLength);
+
+                    if (!hasClearancePath &&
+                        !pathfinder.TryGetPathLength(
+                            startCoords.x,
+                            startCoords.y,
+                            candidateCoords.x,
+                            candidateCoords.y,
+                            out pathLength))
+                    {
+                        continue;
+                    }
+
+                    Vector3 candidateWorld = pathfinder.GetWorldPos(candidateCoords);
+                    bool laneClear = IsBrawlBallLaneClear(
+                        candidateWorld,
+                        goalMouthPosition,
+                        ballRadius);
+
+                    float score = 0f;
+                    if (laneClear)
+                        score += 90f;
+
+                    if (hasNavigationClearance)
+                        score += 18f;
+
+                    if (hasClearancePath)
+                        score += 12f;
+
+                    if (pathfinder.IsNearObstacle(candidateCoords))
+                        score -= 28f;
+
+                    score -= pathLength * 0.75f;
+                    score -= Mathf.Abs(offsets[o]) * 2.5f;
+                    score -= Mathf.Abs(distances[d] - baseDistance) * 1.5f;
+
+                    if (!found || score > bestScore)
+                    {
+                        found = true;
+                        bestScore = score;
+                        best = candidateWorld;
+                    }
+                }
+            }
+
+            Vector3 resolved = found ? best : fallbackApproach;
+            _hasBrawlBallApproachCache = true;
+            _cachedBrawlBallApproach = resolved;
+            _cachedBrawlBallMouth = goalMouthPosition;
+            _nextBrawlBallApproachRefreshTick = _currentExecuteTick + 8u;
+            return resolved;
+        }
+
+        private bool IsBrawlBallLaneClear(
+            Vector3 origin,
             Vector3 laneTarget,
-            Vector3 fallbackPocket,
             float ballRadius)
         {
             if (SimulationClock.Pathfinder == null)
                 return true;
 
-            Vector3 target = laneTarget;
-            Vector2Int targetCoords = SimulationClock.Pathfinder.GetGridCoords(target);
-            if (!SimulationClock.Pathfinder.IsInBounds(targetCoords) ||
-                !SimulationClock.Pathfinder.IsWalkable(targetCoords))
-            {
-                target = fallbackPocket;
-            }
-
-            Vector3 toTarget = Flatten(target - _brawler.Position);
+            Vector3 toTarget = Flatten(laneTarget - origin);
             float distance = toTarget.magnitude;
             float checkDistance = distance - Mathf.Max(0.75f, ballRadius * 2f);
             if (checkDistance <= 0.1f)
@@ -986,7 +1117,7 @@ namespace MOBA.Core.Simulation.AI
 
             AimLineTraceResult trace = AimLineOfSightUtility.Trace(
                 SimulationClock.Pathfinder,
-                _brawler.Position,
+                origin,
                 toTarget,
                 checkDistance,
                 Mathf.Max(0.18f, ballRadius));
