@@ -344,7 +344,46 @@ namespace MOBA.Core.Simulation
 
         public bool TryGetScoringGoalPosition(TeamType scoringTeam, out Vector3 position)
         {
+            if (TryGetScoringGoal(scoringTeam, out BrawlBallGoalController goal))
+            {
+                position = goal.CenterPosition;
+                return true;
+            }
+
             position = default;
+            return false;
+        }
+
+        public bool TryGetScoringGoalMouthPosition(TeamType scoringTeam, out Vector3 position)
+        {
+            if (TryGetScoringGoal(scoringTeam, out BrawlBallGoalController goal))
+            {
+                position = goal.MouthPosition;
+                return true;
+            }
+
+            position = default;
+            return false;
+        }
+
+        public bool TryGetScoringGoalApproachPosition(
+            TeamType scoringTeam,
+            float distanceFromMouth,
+            out Vector3 position)
+        {
+            if (TryGetScoringGoal(scoringTeam, out BrawlBallGoalController goal))
+            {
+                position = goal.GetApproachPosition(distanceFromMouth);
+                return true;
+            }
+
+            position = default;
+            return false;
+        }
+
+        private bool TryGetScoringGoal(TeamType scoringTeam, out BrawlBallGoalController scoringGoal)
+        {
+            scoringGoal = null;
 
             if (!IsScoringTeam(scoringTeam))
                 return false;
@@ -361,7 +400,7 @@ namespace MOBA.Core.Simulation
                 if (goal.ScoringTeam != scoringTeam)
                     continue;
 
-                position = goal.transform.position;
+                scoringGoal = goal;
                 return true;
             }
 

@@ -640,6 +640,11 @@ namespace MOBA.Core.Simulation.AI
                     out Vector3 scoringGoal)
                 ? scoringGoal
                 : mode.BallPosition;
+            Vector3 goalMouthPosition = mode.TryGetScoringGoalMouthPosition(
+                    _brawler.Team,
+                    out Vector3 scoringMouth)
+                ? scoringMouth
+                : goalPosition;
 
             Vector3 toGoal = Flatten(goalPosition - _brawler.Position);
             if (toGoal.sqrMagnitude <= 0.001f)
@@ -654,16 +659,29 @@ namespace MOBA.Core.Simulation.AI
             float normalKickRange = ball != null ? ball.NormalKickRange : 8f;
             float superKickRange = ball != null ? ball.SuperKickRange : normalKickRange * 1.4f;
             float ballRadius = ball != null ? ball.CollisionRadius : 0.32f;
-            bool hasKickLane = HasBrawlBallKickLane(goalPosition, ballRadius);
+            float approachDistance = Mathf.Clamp(normalKickRange * 0.28f, 1.1f, 2.6f);
+            Vector3 approachPosition = mode.TryGetScoringGoalApproachPosition(
+                    _brawler.Team,
+                    approachDistance,
+                    out Vector3 resolvedApproach)
+                ? resolvedApproach
+                : goalMouthPosition;
+            bool hasKickLane = HasBrawlBallKickLane(
+                goalMouthPosition,
+                approachPosition,
+                ballRadius);
+            float distanceToApproach = Vector3.Distance(_brawler.Position, approachPosition);
+            bool hasReachedShootingPocket = distanceToApproach <= 1.25f;
             bool canMainKick =
                 distanceToGoal <= Mathf.Max(0.5f, normalKickRange - 0.2f) &&
-                hasKickLane;
+                (hasKickLane || hasReachedShootingPocket);
             bool canSuperKick =
                 _brawler.State != null &&
                 _brawler.State.SuperCharge.IsReady &&
+                _brawler.State.CanUseSuper(currentTick) &&
                 distanceToGoal <= Mathf.Max(normalKickRange, superKickRange - 0.2f) &&
                 distanceToGoal > normalKickRange * 0.85f &&
-                hasKickLane;
+                (hasKickLane || hasReachedShootingPocket);
 
             if (canSuperKick)
             {
@@ -675,18 +693,22 @@ namespace MOBA.Core.Simulation.AI
             }
 
             RequestMapAwareDestination(
-                goalPosition,
-                0.7f,
+                approachPosition,
+                0.65f,
                 AIMapRouteIntent.Objective);
 
             _lastTacticalMovementIntent = AITacticalMovementIntent.CloseGap;
-            _lastTacticalTargetPosition = goalPosition;
+            _lastTacticalTargetPosition = approachPosition;
             _lastTacticalTargetDistance = distanceToGoal;
             _lastTacticalPreferredRange = 0f;
             _lastTacticalTooCloseDistance = 0f;
-            _lastTacticalMoveReason = hasKickLane
-                ? "brawl_ball_score"
-                : "brawl_ball_score_no_lane";
+            _lastTacticalMoveReason = canSuperKick
+                ? "brawl_ball_super_kick"
+                : canMainKick
+                    ? "brawl_ball_kick"
+                    : hasKickLane
+                        ? "brawl_ball_score_pocket"
+                        : "brawl_ball_score_lane_blocked";
         }
 
         private void RunBrawlBallEnemyCarrierIntent(
@@ -737,9 +759,17 @@ namespace MOBA.Core.Simulation.AI
                 superRange);
 
             Vector3 supportPoint = carrier.Position;
-            if (mode.TryGetScoringGoalPosition(_brawler.Team, out Vector3 goalPosition))
+            if (mode.TryGetScoringGoalMouthPosition(_brawler.Team, out Vector3 goalPosition))
             {
-                supportPoint = Vector3.Lerp(carrier.Position, goalPosition, 0.35f);
+                supportPoint = Vector3.Lerp(carrier.Position, goalPosition, 0.45f);
+                Vector3 lane = Flatten(goalPosition - carrier.Position);
+                if (lane.sqrMagnitude > 0.001f)
+                {
+                    lane.Normalize();
+                    Vector3 lateral = new Vector3(lane.z, 0f, -lane.x);
+                    float side = (_brawler.EntityID & 1) == 0 ? 1f : -1f;
+                    supportPoint += lateral * side * 1.35f;
+                }
             }
 
             float preferredRange = Mathf.Max(1.5f, GetTacticalPreferredRange(idealRange));
@@ -814,13 +844,24 @@ namespace MOBA.Core.Simulation.AI
             _superDecider.TryUseSuper(targetInfo.Target, currentTick, superRange);
         }
 
-        private bool HasBrawlBallKickLane(Vector3 goalPosition, float ballRadius)
+        private bool HasBrawlBallKickLane(
+            Vector3 laneTarget,
+            Vector3 fallbackPocket,
+            float ballRadius)
         {
             if (SimulationClock.Pathfinder == null)
                 return true;
 
-            Vector3 toGoal = Flatten(goalPosition - _brawler.Position);
-            float distance = toGoal.magnitude;
+            Vector3 target = laneTarget;
+            Vector2Int targetCoords = SimulationClock.Pathfinder.GetGridCoords(target);
+            if (!SimulationClock.Pathfinder.IsInBounds(targetCoords) ||
+                !SimulationClock.Pathfinder.IsWalkable(targetCoords))
+            {
+                target = fallbackPocket;
+            }
+
+            Vector3 toTarget = Flatten(target - _brawler.Position);
+            float distance = toTarget.magnitude;
             float checkDistance = distance - Mathf.Max(0.75f, ballRadius * 2f);
             if (checkDistance <= 0.1f)
                 return true;
@@ -828,7 +869,7 @@ namespace MOBA.Core.Simulation.AI
             AimLineTraceResult trace = AimLineOfSightUtility.Trace(
                 SimulationClock.Pathfinder,
                 _brawler.Position,
-                toGoal,
+                toTarget,
                 checkDistance,
                 Mathf.Max(0.18f, ballRadius));
 

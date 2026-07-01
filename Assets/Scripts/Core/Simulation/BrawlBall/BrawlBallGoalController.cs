@@ -36,6 +36,20 @@ namespace MOBA.Core.Simulation
 
         public TeamType ScoringTeam => _scoringTeam;
         public Vector3 ZoneSize => SanitizeZoneSize();
+        public Vector3 CenterPosition => transform.position;
+        public Vector3 MouthPosition =>
+            transform.TransformPoint(new Vector3(0f, 0f, -ZoneSize.z * 0.5f));
+        public Vector3 FieldDirection
+        {
+            get
+            {
+                Vector3 direction = transform.TransformDirection(Vector3.back);
+                direction.y = 0f;
+                return direction.sqrMagnitude > 0.001f
+                    ? direction.normalized
+                    : Vector3.back;
+            }
+        }
 
         private void Awake()
         {
@@ -83,6 +97,11 @@ namespace MOBA.Core.Simulation
                 return;
 
             transform.rotation = Quaternion.LookRotation(-toTarget.normalized);
+        }
+
+        public Vector3 GetApproachPosition(float distanceFromMouth)
+        {
+            return MouthPosition + FieldDirection * Mathf.Max(0f, distanceFromMouth);
         }
 
         private void ResolveMode()
