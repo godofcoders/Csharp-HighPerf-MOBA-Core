@@ -858,14 +858,6 @@ namespace MOBA.Core.Simulation
         private static bool TryResolvePlayableMapBounds(out Bounds bounds)
         {
             bool hasGroundBounds = TryResolveSpawnedMapGroundBounds(out Bounds groundBounds);
-            bool hasGeneratorBounds = TryResolveGeneratorBounds(out Bounds generatorBounds);
-
-            if (hasGroundBounds && hasGeneratorBounds &&
-                TryIntersectBoundsXZ(groundBounds, generatorBounds, out bounds))
-            {
-                return true;
-            }
-
             if (hasGroundBounds)
             {
                 bounds = groundBounds;
@@ -875,6 +867,7 @@ namespace MOBA.Core.Simulation
             if (TryResolveSpawnPointBounds(out bounds))
                 return true;
 
+            bool hasGeneratorBounds = TryResolveGeneratorBounds(out Bounds generatorBounds);
             if (hasGeneratorBounds)
             {
                 bounds = generatorBounds;
@@ -883,31 +876,6 @@ namespace MOBA.Core.Simulation
 
             bounds = default;
             return false;
-        }
-
-        private static bool TryIntersectBoundsXZ(Bounds first, Bounds second, out Bounds intersection)
-        {
-            float minX = Mathf.Max(first.min.x, second.min.x);
-            float maxX = Mathf.Min(first.max.x, second.max.x);
-            float minZ = Mathf.Max(first.min.z, second.min.z);
-            float maxZ = Mathf.Min(first.max.z, second.max.z);
-
-            if (maxX <= minX || maxZ <= minZ)
-            {
-                intersection = default;
-                return false;
-            }
-
-            Vector3 center = new Vector3(
-                (minX + maxX) * 0.5f,
-                first.center.y,
-                (minZ + maxZ) * 0.5f);
-            Vector3 size = new Vector3(
-                maxX - minX,
-                0f,
-                maxZ - minZ);
-            intersection = new Bounds(center, size);
-            return true;
         }
 
         private static bool TryResolveSpawnedMapGroundBounds(out Bounds bounds)
