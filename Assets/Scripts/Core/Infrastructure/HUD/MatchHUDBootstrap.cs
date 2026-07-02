@@ -50,6 +50,7 @@ namespace MOBA.Core.Infrastructure
             return Object.FindObjectOfType<MatchHUDBootstrap>() != null ||
                    Object.FindObjectOfType<MatchHUD>() != null ||
                    Object.FindObjectOfType<MatchCountdownOverlay>() != null ||
+                   Object.FindObjectOfType<GemGrabCountdownOverlay>() != null ||
                    Object.FindObjectOfType<CombatLogHUD>() != null ||
                    Object.FindObjectOfType<DeathOverlay>() != null;
         }
@@ -89,6 +90,7 @@ namespace MOBA.Core.Infrastructure
             CreatePlayerResourceHUD(canvasTransform);
             CreateCombatFeed(canvasTransform);
             CreateCountdownOverlay(canvasTransform);
+            CreateGemGrabCountdownOverlay(canvasTransform);
             CreateDeathOverlay(canvasTransform);
 
             SetLayerRecursively(canvasGo, LayerMask.NameToLayer("UI"));
@@ -669,6 +671,40 @@ namespace MOBA.Core.Infrastructure
                 FontStyle.Bold);
 
             MatchCountdownOverlay countdown = controller.AddComponent<MatchCountdownOverlay>();
+            countdown.BindOverlay(root, null, countdownText);
+        }
+
+        private static void CreateGemGrabCountdownOverlay(Transform parent)
+        {
+            GameObject controller = CreateController(parent, "GemGrabCountdownOverlayController");
+            GameObject root = CreateRectPanel(
+                parent,
+                "GemGrabCountdownOverlay",
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0f, -150f),
+                new Vector2(760f, 86f),
+                new Color(0f, 0f, 0f, 0.34f));
+
+            Text countdownText = CreateText(
+                root.transform,
+                "GemGrabCountdownText",
+                string.Empty,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                48,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                FontStyle.Bold);
+
+            countdownText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            countdownText.verticalOverflow = VerticalWrapMode.Truncate;
+
+            GemGrabCountdownOverlay countdown = controller.AddComponent<GemGrabCountdownOverlay>();
             countdown.BindOverlay(root, null, countdownText);
         }
 
