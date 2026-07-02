@@ -262,6 +262,7 @@ namespace MOBA.Core.Simulation
 
         private void StartNextRound()
         {
+            DeployableMatchCleanup.DespawnAllActiveDeployables();
             CurrentRound++;
             _roundEnding = false;
             if (SpawnManager.Instance == null) return;

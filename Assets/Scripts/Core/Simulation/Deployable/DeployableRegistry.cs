@@ -10,6 +10,7 @@ namespace MOBA.Core.Simulation
         void Unregister(DeployableController controller);
         DeployableController GetActiveOwnedDeployable(BrawlerController owner, DeployableDefinition definition);
         bool TryGetMostWoundedOwnedDeployable(BrawlerController owner, out DeployableController deployable);
+        void DespawnAll();
     }
 
     public sealed class DeployableRegistry : IDeployableRegistry
@@ -118,6 +119,57 @@ namespace MOBA.Core.Simulation
                 _byOwner.Remove(owner.EntityID);
 
             return deployable != null;
+        }
+
+        public void DespawnAll()
+        {
+            if (_byOwner.Count == 0)
+                return;
+
+            List<DeployableController> snapshot = new List<DeployableController>(8);
+            foreach (KeyValuePair<int, List<DeployableController>> entry in _byOwner)
+            {
+                List<DeployableController> list = entry.Value;
+                if (list == null)
+                    continue;
+
+                for (int i = 0; i < list.Count; i++)
+                {
+                    DeployableController controller = list[i];
+                    if (controller != null)
+                        snapshot.Add(controller);
+                }
+            }
+
+            _byOwner.Clear();
+
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                DeployableController controller = snapshot[i];
+                if (controller != null)
+                    controller.Despawn();
+            }
+        }
+    }
+
+    public static class DeployableMatchCleanup
+    {
+        public static void DespawnAllActiveDeployables()
+        {
+            if (ServiceProvider.TryGet<IDeployableRegistry>(out var registry))
+                registry?.DespawnAll();
+
+            DeployableController[] sceneDeployables =
+                UnityEngine.Object.FindObjectsOfType<DeployableController>(true);
+            if (sceneDeployables == null)
+                return;
+
+            for (int i = 0; i < sceneDeployables.Length; i++)
+            {
+                DeployableController deployable = sceneDeployables[i];
+                if (deployable != null)
+                    deployable.Despawn();
+            }
         }
     }
 }

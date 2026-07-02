@@ -320,6 +320,7 @@ namespace MOBA.Core.Simulation
             bool endsMatch = _isOvertime || GetTeamGoals(scoringTeam) >= _goalsToWin;
 
             ResetBall();
+            DeployableMatchCleanup.DespawnAllActiveDeployables();
             BrawlBallEventBus.RaiseGoalScored(scoringTeam, BlueGoals, RedGoals);
 
             if (endsMatch)

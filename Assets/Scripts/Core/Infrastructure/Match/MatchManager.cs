@@ -64,6 +64,7 @@ namespace MOBA.Core.Infrastructure
 
         public void StartMatchFlow()
         {
+            DeployableMatchCleanup.DespawnAllActiveDeployables();
             _winner = TeamType.Neutral;
             _winnerKnown = false;
             _countdownStartTime = Time.time;
