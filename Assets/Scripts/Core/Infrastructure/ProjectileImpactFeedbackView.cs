@@ -9,6 +9,12 @@ namespace MOBA.Core.Infrastructure
     {
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int MainTexId = Shader.PropertyToID("_MainTex");
+        private static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+        private static readonly int SurfaceId = Shader.PropertyToID("_Surface");
+        private static readonly int BlendId = Shader.PropertyToID("_Blend");
+        private static readonly int AlphaClipId = Shader.PropertyToID("_AlphaClip");
+        private static readonly int CullId = Shader.PropertyToID("_Cull");
 
         [Header("Pool")]
         [Min(4)]
@@ -28,6 +34,13 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _verticalScale = 0.025f;
         [SerializeField] private float _startScaleMultiplier = 0.16f;
         [SerializeField] private float _endScaleMultiplier = 0.42f;
+        [SerializeField] private float _texturedScaleMultiplier = 2.1f;
+
+        [Header("Texture Resources")]
+        [SerializeField] private bool _useTexturedImpactSprites = true;
+        [SerializeField] private string _impactPulseTextureResource = "VFX/Particles/circle_03";
+        [SerializeField] private string _impactSparkTextureResource = "VFX/Particles/spark_03";
+        [SerializeField] private string _expiredPulseTextureResource = "VFX/Particles/smoke_03";
 
         [Header("Spark")]
         [SerializeField] private bool _spawnImpactSpark = true;
@@ -46,12 +59,17 @@ namespace MOBA.Core.Infrastructure
         private readonly List<PulseInstance> _pool = new List<PulseInstance>(48);
         private readonly List<SparkInstance> _sparkPool = new List<SparkInstance>(48);
         private MaterialPropertyBlock _propertyBlock;
-        private Material _pulseMaterial;
+        private Material _impactPulseMaterial;
+        private Material _expiredPulseMaterial;
+        private Material _impactSparkMaterial;
+        private Camera _cachedCamera;
 
         private void Awake()
         {
             EnsurePropertyBlock();
-            _pulseMaterial = CreatePulseMaterial();
+            _impactPulseMaterial = CreateImpactMaterial(_impactPulseTextureResource, "Projectile Impact Pulse");
+            _expiredPulseMaterial = CreateImpactMaterial(_expiredPulseTextureResource, "Projectile Expired Smoke");
+            _impactSparkMaterial = CreateImpactMaterial(_impactSparkTextureResource, "Projectile Impact Spark");
             PrewarmPool();
         }
 
@@ -67,13 +85,9 @@ namespace MOBA.Core.Infrastructure
 
         private void OnDestroy()
         {
-            if (_pulseMaterial == null)
-                return;
-
-            if (Application.isPlaying)
-                Destroy(_pulseMaterial);
-            else
-                DestroyImmediate(_pulseMaterial);
+            DestroyMaterial(_impactPulseMaterial);
+            DestroyMaterial(_expiredPulseMaterial);
+            DestroyMaterial(_impactSparkMaterial);
         }
 
         private void Update()
@@ -131,7 +145,8 @@ namespace MOBA.Core.Infrastructure
                         evt.Position,
                         ResolveRadius(evt.Value) * impactScale,
                         impactColor,
-                        _impactDurationSeconds * durationScale);
+                        _impactDurationSeconds * durationScale,
+                        _impactPulseMaterial);
                     SpawnSpark(
                         evt.Position,
                         evt.Direction,
@@ -141,7 +156,12 @@ namespace MOBA.Core.Infrastructure
                     break;
 
                 case CombatPresentationEventType.ProjectileExpired:
-                    SpawnPulse(evt.Position, ResolveRadius(evt.Value) * 0.72f, _expiredColor, _expiredDurationSeconds);
+                    SpawnPulse(
+                        evt.Position,
+                        ResolveRadius(evt.Value) * 0.72f,
+                        _expiredColor,
+                        _expiredDurationSeconds,
+                        _expiredPulseMaterial);
                     break;
             }
         }
@@ -156,7 +176,7 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
-        private void SpawnPulse(Vector3 position, float radius, Color color, float durationSeconds)
+        private void SpawnPulse(Vector3 position, float radius, Color color, float durationSeconds, Material material)
         {
             PulseInstance pulse = GetPulseInstance();
             if (pulse == null)
@@ -165,11 +185,17 @@ namespace MOBA.Core.Infrastructure
             position.y += 0.08f;
 
             pulse.Transform.position = position;
-            pulse.Transform.rotation = Quaternion.identity;
+            pulse.Transform.rotation = pulse.IsTextured
+                ? Quaternion.Euler(90f, 0f, 0f) * Quaternion.Euler(0f, 0f, Random.Range(0f, 360f))
+                : Quaternion.identity;
             pulse.Radius = Mathf.Max(0.05f, radius);
             pulse.Color = color;
             pulse.DurationSeconds = Mathf.Max(0.05f, durationSeconds);
             pulse.ElapsedSeconds = 0f;
+
+            if (pulse.Renderer != null && material != null && pulse.Renderer.sharedMaterial != material)
+                pulse.Renderer.sharedMaterial = material;
+
             pulse.SetActive(true);
             ApplyPulseVisual(pulse, 0f);
         }
@@ -197,7 +223,9 @@ namespace MOBA.Core.Infrastructure
             position.y += Mathf.Max(0f, _sparkHeightOffset);
 
             spark.Transform.position = position;
-            spark.Transform.rotation = Quaternion.LookRotation(direction, Vector3.up);
+            spark.Transform.rotation = spark.IsTextured
+                ? ResolveBillboardRotation(position) * Quaternion.Euler(0f, 0f, Random.Range(-14f, 14f))
+                : Quaternion.LookRotation(direction, Vector3.up);
             spark.Length = Mathf.Max(0.04f, _sparkLength * scaleMultiplier);
             spark.Width = Mathf.Max(0.01f, _sparkWidth * Mathf.Lerp(1f, scaleMultiplier, 0.75f));
             spark.Color = color;
@@ -243,7 +271,8 @@ namespace MOBA.Core.Infrastructure
 
         private PulseInstance CreatePulseInstance()
         {
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            bool useTextured = ShouldUseTexturedMaterial(_impactPulseMaterial);
+            GameObject go = GameObject.CreatePrimitive(useTextured ? PrimitiveType.Quad : PrimitiveType.Cylinder);
             go.name = "ProjectileImpactPulse";
             go.transform.SetParent(transform, false);
             go.transform.localScale = Vector3.zero;
@@ -255,21 +284,22 @@ namespace MOBA.Core.Infrastructure
             Renderer renderer = go.GetComponent<Renderer>();
             if (renderer != null)
             {
-                if (_pulseMaterial != null)
-                    renderer.sharedMaterial = _pulseMaterial;
+                if (_impactPulseMaterial != null)
+                    renderer.sharedMaterial = _impactPulseMaterial;
 
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
             }
 
-            PulseInstance pulse = new PulseInstance(go, renderer);
+            PulseInstance pulse = new PulseInstance(go, renderer, useTextured);
             pulse.SetActive(false);
             return pulse;
         }
 
         private SparkInstance CreateSparkInstance()
         {
-            GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            bool useTextured = ShouldUseTexturedMaterial(_impactSparkMaterial);
+            GameObject go = GameObject.CreatePrimitive(useTextured ? PrimitiveType.Quad : PrimitiveType.Cube);
             go.name = "ProjectileImpactSpark";
             go.transform.SetParent(transform, false);
             go.transform.localScale = Vector3.zero;
@@ -281,14 +311,14 @@ namespace MOBA.Core.Infrastructure
             Renderer renderer = go.GetComponent<Renderer>();
             if (renderer != null)
             {
-                if (_pulseMaterial != null)
-                    renderer.sharedMaterial = _pulseMaterial;
+                if (_impactSparkMaterial != null)
+                    renderer.sharedMaterial = _impactSparkMaterial;
 
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
             }
 
-            SparkInstance spark = new SparkInstance(go, renderer);
+            SparkInstance spark = new SparkInstance(go, renderer, useTextured);
             spark.SetActive(false);
             return spark;
         }
@@ -321,10 +351,11 @@ namespace MOBA.Core.Infrastructure
             return 1f - inverse * inverse * inverse;
         }
 
-        private static Material CreatePulseMaterial()
+        private Material CreateImpactMaterial(string textureResource, string materialName)
         {
             Shader shader =
                 Shader.Find("Universal Render Pipeline/Unlit") ??
+                Shader.Find("Unlit/Transparent") ??
                 Shader.Find("Unlit/Color") ??
                 Shader.Find("Sprites/Default") ??
                 Shader.Find("Standard");
@@ -332,16 +363,85 @@ namespace MOBA.Core.Infrastructure
             if (shader == null)
                 return null;
 
-            Material material = new Material(shader);
+            Material material = new Material(shader)
+            {
+                name = materialName,
+                enableInstancing = true
+            };
+
             material.color = new Color(1f, 0.42f, 0.06f, 0.86f);
+            Texture2D texture = LoadTexture(textureResource);
+            if (texture != null)
+            {
+                material.mainTexture = texture;
+
+                if (material.HasProperty(MainTexId))
+                    material.SetTexture(MainTexId, texture);
+
+                if (material.HasProperty(BaseMapId))
+                    material.SetTexture(BaseMapId, texture);
+            }
+
+            material.SetOverrideTag("RenderType", "Transparent");
+            SetMaterialFloatIfPresent(material, SurfaceId, 1f);
+            SetMaterialFloatIfPresent(material, BlendId, 0f);
+            SetMaterialFloatIfPresent(material, AlphaClipId, 0f);
+            SetMaterialFloatIfPresent(material, CullId, (float)CullMode.Off);
             material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
             material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
             material.SetInt("_ZWrite", 0);
+            material.SetInt("_Cull", (int)CullMode.Off);
             material.DisableKeyword("_ALPHATEST_ON");
             material.EnableKeyword("_ALPHABLEND_ON");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
             material.renderQueue = (int)RenderQueue.Transparent;
             return material;
+        }
+
+        private static void SetMaterialFloatIfPresent(Material material, int propertyId, float value)
+        {
+            if (material != null && material.HasProperty(propertyId))
+                material.SetFloat(propertyId, value);
+        }
+
+        private Texture2D LoadTexture(string resourcePath)
+        {
+            if (!_useTexturedImpactSprites || string.IsNullOrWhiteSpace(resourcePath))
+                return null;
+
+            return Resources.Load<Texture2D>(resourcePath);
+        }
+
+        private bool ShouldUseTexturedMaterial(Material material)
+        {
+            return _useTexturedImpactSprites && material != null && material.mainTexture != null;
+        }
+
+        private static void DestroyMaterial(Material material)
+        {
+            if (material == null)
+                return;
+
+            if (Application.isPlaying)
+                Destroy(material);
+            else
+                DestroyImmediate(material);
+        }
+
+        private Quaternion ResolveBillboardRotation(Vector3 position)
+        {
+            if (_cachedCamera == null)
+                _cachedCamera = Camera.main;
+
+            if (_cachedCamera == null)
+                return Quaternion.identity;
+
+            Vector3 toCamera = _cachedCamera.transform.position - position;
+            if (toCamera.sqrMagnitude <= 0.001f)
+                return Quaternion.identity;
+
+            return Quaternion.LookRotation(toCamera.normalized, Vector3.up);
         }
 
         private void ApplyPulseVisual(PulseInstance pulse, float normalizedTime)
@@ -355,7 +455,15 @@ namespace MOBA.Core.Infrastructure
                 pulse.Radius * _endScaleMultiplier,
                 EaseOutCubic(t));
 
-            pulse.Transform.localScale = new Vector3(scale, _verticalScale, scale);
+            if (pulse.IsTextured)
+            {
+                float texturedScale = scale * Mathf.Max(0.1f, _texturedScaleMultiplier);
+                pulse.Transform.localScale = new Vector3(texturedScale, texturedScale, 1f);
+            }
+            else
+            {
+                pulse.Transform.localScale = new Vector3(scale, _verticalScale, scale);
+            }
 
             if (pulse.Renderer == null)
                 return;
@@ -375,7 +483,9 @@ namespace MOBA.Core.Infrastructure
             float length = Mathf.Lerp(spark.Length, spark.Length * 0.38f, ease);
             float width = Mathf.Lerp(spark.Width, spark.Width * 0.18f, ease);
 
-            spark.Transform.localScale = new Vector3(width, width, length);
+            spark.Transform.localScale = spark.IsTextured
+                ? new Vector3(length, length, 1f)
+                : new Vector3(width, width, length);
 
             if (spark.Renderer == null)
                 return;
@@ -408,6 +518,7 @@ namespace MOBA.Core.Infrastructure
             public readonly GameObject GameObject;
             public readonly Transform Transform;
             public readonly Renderer Renderer;
+            public readonly bool IsTextured;
 
             public bool IsActive;
             public float ElapsedSeconds;
@@ -415,11 +526,12 @@ namespace MOBA.Core.Infrastructure
             public float Radius;
             public Color Color;
 
-            public PulseInstance(GameObject gameObject, Renderer renderer)
+            public PulseInstance(GameObject gameObject, Renderer renderer, bool isTextured)
             {
                 GameObject = gameObject;
                 Transform = gameObject.transform;
                 Renderer = renderer;
+                IsTextured = isTextured;
             }
 
             public void SetActive(bool active)
@@ -436,6 +548,7 @@ namespace MOBA.Core.Infrastructure
             public readonly GameObject GameObject;
             public readonly Transform Transform;
             public readonly Renderer Renderer;
+            public readonly bool IsTextured;
 
             public bool IsActive;
             public float ElapsedSeconds;
@@ -444,11 +557,12 @@ namespace MOBA.Core.Infrastructure
             public float Width;
             public Color Color;
 
-            public SparkInstance(GameObject gameObject, Renderer renderer)
+            public SparkInstance(GameObject gameObject, Renderer renderer, bool isTextured)
             {
                 GameObject = gameObject;
                 Transform = gameObject.transform;
                 Renderer = renderer;
+                IsTextured = isTextured;
             }
 
             public void SetActive(bool active)
