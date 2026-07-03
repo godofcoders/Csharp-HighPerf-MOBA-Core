@@ -60,8 +60,8 @@ namespace MOBA.Core.Infrastructure
             bool isHypercharged = false)
         {
             _currentProfile = profile;
-            _currentStyle = ResolveStyle(profile, isSuper);
-            _powerVisualScale = ResolvePowerVisualScale(isSuper, isHypercharged);
+            _currentStyle = ResolveStyle(profile, isSuper, isHypercharged);
+            _powerVisualScale = ResolvePowerVisualScale(profile, isSuper, isHypercharged);
             _spinEulerPerSecond = Vector3.zero;
             _useSpin = false;
 
@@ -429,7 +429,8 @@ namespace MOBA.Core.Infrastructure
 
         private static ProjectileVisualStyle ResolveStyle(
             ProjectilePresentationProfile profile,
-            bool isSuper)
+            bool isSuper,
+            bool isHypercharged)
         {
             string profileName = profile != null && !string.IsNullOrEmpty(profile.name)
                 ? profile.name.ToLowerInvariant()
@@ -511,6 +512,25 @@ namespace MOBA.Core.Infrastructure
 
             if (profileName.Contains("colt"))
             {
+                if (isHypercharged)
+                {
+                    Color core = new Color(1f, 0.70f, 0.16f, 1f);
+                    Color wrap = new Color(0.24f, 0.05f, 0.48f, 0.82f);
+                    return new ProjectileVisualStyle(
+                        core,
+                        wrap,
+                        wrap,
+                        wrap,
+                        0.36f,
+                        0.86f,
+                        0.72f,
+                        46f,
+                        0.075f,
+                        0.12f,
+                        0.34f,
+                        0.036f);
+                }
+
                 Color core = isSuper
                     ? new Color(1f, 0.46f, 0.08f, 1f)
                     : new Color(1f, 0.82f, 0.22f, 1f);
@@ -522,14 +542,14 @@ namespace MOBA.Core.Infrastructure
                     glow,
                     glow,
                     glow,
-                    isSuper ? 0.42f : 0.24f,
-                    isSuper ? 1.04f : 0.90f,
-                    isSuper ? 0.82f : 0.62f,
-                    isSuper ? 48f : 28f,
-                    isSuper ? 0.095f : 0.060f,
-                    isSuper ? 0.13f : 0.09f,
-                    isSuper ? 0.44f : 0.24f,
-                    isSuper ? 0.045f : 0.028f);
+                    isSuper ? 0.30f : 0.24f,
+                    isSuper ? 0.88f : 0.82f,
+                    isSuper ? 0.68f : 0.58f,
+                    isSuper ? 34f : 24f,
+                    isSuper ? 0.070f : 0.055f,
+                    isSuper ? 0.10f : 0.08f,
+                    isSuper ? 0.30f : 0.20f,
+                    isSuper ? 0.034f : 0.026f);
             }
 
             return new ProjectileVisualStyle(
@@ -547,8 +567,23 @@ namespace MOBA.Core.Infrastructure
                 0.04f);
         }
 
-        private static float ResolvePowerVisualScale(bool isSuper, bool isHypercharged)
+        private static float ResolvePowerVisualScale(
+            ProjectilePresentationProfile profile,
+            bool isSuper,
+            bool isHypercharged)
         {
+            string profileName = profile != null && !string.IsNullOrEmpty(profile.name)
+                ? profile.name.ToLowerInvariant()
+                : string.Empty;
+
+            if (profileName.Contains("colt"))
+            {
+                if (isHypercharged)
+                    return 1.16f;
+
+                return isSuper ? 1.08f : 1f;
+            }
+
             if (isHypercharged)
                 return 1.85f;
 

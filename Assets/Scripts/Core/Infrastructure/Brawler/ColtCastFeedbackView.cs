@@ -49,7 +49,7 @@ namespace MOBA.Core.Infrastructure
         [Header("Colors")]
         [SerializeField] private Color _mainColor = new Color(1f, 0.74f, 0.14f, 0.92f);
         [SerializeField] private Color _superColor = new Color(1f, 0.30f, 0.02f, 0.96f);
-        [SerializeField] private Color _hyperColor = new Color(0.18f, 0.92f, 1f, 0.98f);
+        [SerializeField] private Color _hyperColor = new Color(0.24f, 0.05f, 0.48f, 0.98f);
 
         private readonly List<FlashInstance> _flashPool = new List<FlashInstance>(96);
         private readonly List<ScheduledBurst> _scheduledBursts = new List<ScheduledBurst>(32);

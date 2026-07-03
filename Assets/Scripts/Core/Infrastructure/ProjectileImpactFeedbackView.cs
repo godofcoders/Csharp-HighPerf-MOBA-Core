@@ -53,7 +53,7 @@ namespace MOBA.Core.Infrastructure
         [Header("Colors")]
         [SerializeField] private Color _impactColor = new Color(1f, 0.56f, 0.10f, 0.90f);
         [SerializeField] private Color _superImpactColor = new Color(1f, 0.30f, 0.04f, 0.92f);
-        [SerializeField] private Color _hyperImpactColor = new Color(0.18f, 0.92f, 1f, 0.96f);
+        [SerializeField] private Color _hyperImpactColor = new Color(0.24f, 0.05f, 0.48f, 0.96f);
         [SerializeField] private Color _expiredColor = new Color(0.42f, 0.46f, 0.50f, 0.20f);
 
         private readonly List<PulseInstance> _pool = new List<PulseInstance>(48);
