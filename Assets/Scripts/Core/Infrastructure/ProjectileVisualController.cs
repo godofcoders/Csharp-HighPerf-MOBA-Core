@@ -509,24 +509,24 @@ namespace MOBA.Core.Infrastructure
             if (profileName.Contains("colt"))
             {
                 Color core = isSuper
-                    ? new Color(1f, 0.22f, 0.86f, 1f)
-                    : new Color(1f, 0.78f, 0.20f, 1f);
+                    ? new Color(1f, 0.24f, 0.92f, 1f)
+                    : new Color(1f, 0.82f, 0.22f, 1f);
                 Color glow = isSuper
-                    ? new Color(1f, 0.30f, 0.92f, 0.64f)
-                    : new Color(1f, 0.38f, 0.08f, 0.58f);
+                    ? new Color(1f, 0.28f, 0.96f, 0.68f)
+                    : new Color(1f, 0.46f, 0.08f, 0.62f);
                 return new ProjectileVisualStyle(
                     core,
                     glow,
                     glow,
                     glow,
-                    isSuper ? 0.34f : 0.22f,
-                    isSuper ? 1.32f : 1.12f,
-                    isSuper ? 1.22f : 1.05f,
-                    isSuper ? 48f : 32f,
-                    isSuper ? 0.13f : 0.095f,
-                    0.18f,
-                    isSuper ? 0.42f : 0.30f,
-                    0.045f);
+                    isSuper ? 0.46f : 0.28f,
+                    isSuper ? 1.18f : 0.96f,
+                    isSuper ? 0.96f : 0.78f,
+                    isSuper ? 68f : 42f,
+                    isSuper ? 0.12f : 0.075f,
+                    isSuper ? 0.15f : 0.11f,
+                    isSuper ? 0.58f : 0.36f,
+                    isSuper ? 0.055f : 0.035f);
             }
 
             return new ProjectileVisualStyle(
