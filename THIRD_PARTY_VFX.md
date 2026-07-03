@@ -4,6 +4,7 @@
 
 - Files:
   - `Assets/Resources/VFX/Particles/circle_03.png`
+  - `Assets/Resources/VFX/Particles/flare_01.png`
   - `Assets/Resources/VFX/Particles/muzzle_03.png`
   - `Assets/Resources/VFX/Particles/smoke_03.png`
   - `Assets/Resources/VFX/Particles/spark_03.png`

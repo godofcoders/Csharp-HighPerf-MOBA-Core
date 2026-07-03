@@ -27,29 +27,29 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private int _maxScheduledBursts = 32;
 
         [Header("Texture Resource")]
-        [SerializeField] private string _muzzleTextureResource = "VFX/Particles/muzzle_03";
+        [SerializeField] private string _muzzleTextureResource = "VFX/Particles/flare_01";
 
         [Header("Placement")]
-        [SerializeField] private float _forwardOffset = 0.18f;
-        [SerializeField] private float _heightOffset = 0.18f;
+        [SerializeField] private float _forwardOffset = 0.28f;
+        [SerializeField] private float _heightOffset = 0.20f;
 
         [Header("Timing")]
-        [SerializeField] private float _mainDurationSeconds = 0.075f;
-        [SerializeField] private float _superDurationSeconds = 0.105f;
-        [SerializeField] private float _hyperDurationSeconds = 0.12f;
+        [SerializeField] private float _mainDurationSeconds = 0.050f;
+        [SerializeField] private float _superDurationSeconds = 0.070f;
+        [SerializeField] private float _hyperDurationSeconds = 0.080f;
 
         [Header("Scale")]
-        [SerializeField] private float _mainStartScale = 0.32f;
-        [SerializeField] private float _mainEndScale = 0.52f;
-        [SerializeField] private float _superStartScale = 0.48f;
-        [SerializeField] private float _superEndScale = 0.78f;
-        [SerializeField] private float _hyperStartScale = 0.58f;
-        [SerializeField] private float _hyperEndScale = 0.96f;
+        [SerializeField] private float _mainStartScale = 0.20f;
+        [SerializeField] private float _mainEndScale = 0.34f;
+        [SerializeField] private float _superStartScale = 0.34f;
+        [SerializeField] private float _superEndScale = 0.54f;
+        [SerializeField] private float _hyperStartScale = 0.40f;
+        [SerializeField] private float _hyperEndScale = 0.66f;
 
         [Header("Colors")]
-        [SerializeField] private Color _mainColor = new Color(1f, 0.72f, 0.16f, 0.92f);
-        [SerializeField] private Color _superColor = new Color(1f, 0.34f, 0.06f, 0.96f);
-        [SerializeField] private Color _hyperColor = new Color(1f, 0.26f, 0.94f, 0.98f);
+        [SerializeField] private Color _mainColor = new Color(1f, 0.74f, 0.14f, 0.92f);
+        [SerializeField] private Color _superColor = new Color(1f, 0.30f, 0.02f, 0.96f);
+        [SerializeField] private Color _hyperColor = new Color(0.18f, 0.92f, 1f, 0.98f);
 
         private readonly List<FlashInstance> _flashPool = new List<FlashInstance>(96);
         private readonly List<ScheduledBurst> _scheduledBursts = new List<ScheduledBurst>(32);

@@ -25,4 +25,4 @@ MonoBehaviour:
   TrailStartWidth: 0.17
   TrailEndWidth: 0.018
   TrailColor: {r: 1, g: 0.74, b: 0.18, a: 0.82}
-  SuperTrailColor: {r: 1, g: 0.34, b: 0.92, a: 0.86}
+  SuperTrailColor: {r: 1, g: 0.34, b: 0.06, a: 0.86}
