@@ -188,7 +188,7 @@ namespace MOBA.Core.Infrastructure
             Vector3 position = ResolveMuzzlePosition(burst, shotIndex);
             flash.Transform.position = position;
             flash.Transform.rotation = ResolveBillboardRotation(position) *
-                                       Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+                                       Quaternion.Euler(0f, 0f, UnityEngine.Random.Range(0f, 360f));
 
             ResolveFlashStyle(
                 burst.IsSuper,
