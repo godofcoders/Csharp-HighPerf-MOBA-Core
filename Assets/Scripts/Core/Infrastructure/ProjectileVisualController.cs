@@ -455,25 +455,44 @@ namespace MOBA.Core.Infrastructure
 
             if (profileName.Contains("byron"))
             {
+                if (isHypercharged)
+                {
+                    Color hyperCore = new Color(0.18f, 1f, 0.70f, 1f);
+                    Color hyperGlow = new Color(0.36f, 0.08f, 0.82f, 0.72f);
+                    return new ProjectileVisualStyle(
+                        hyperCore,
+                        hyperGlow,
+                        hyperGlow,
+                        hyperCore,
+                        0.42f,
+                        0.92f,
+                        0.78f,
+                        56f,
+                        0.090f,
+                        0.13f,
+                        0.42f,
+                        0.042f);
+                }
+
                 Color core = isSuper
-                    ? new Color(0.72f, 0.18f, 1f, 1f)
-                    : new Color(0.16f, 1f, 0.76f, 1f);
+                    ? new Color(0.34f, 0.12f, 0.86f, 1f)
+                    : new Color(0.12f, 1f, 0.72f, 1f);
                 Color glow = isSuper
-                    ? new Color(0.92f, 0.28f, 1f, 0.60f)
-                    : new Color(0.20f, 1f, 0.86f, 0.55f);
+                    ? new Color(0.12f, 1f, 0.72f, 0.54f)
+                    : new Color(0.18f, 1f, 0.82f, 0.48f);
                 return new ProjectileVisualStyle(
                     core,
                     glow,
                     glow,
                     glow,
-                    isSuper ? 0.32f : 0.22f,
-                    isSuper ? 1.35f : 1.10f,
-                    isSuper ? 1.28f : 1.12f,
-                    isSuper ? 46f : 30f,
-                    isSuper ? 0.14f : 0.10f,
-                    0.15f,
-                    isSuper ? 0.48f : 0.32f,
-                    0.045f);
+                    isSuper ? 0.34f : 0.20f,
+                    isSuper ? 0.92f : 0.78f,
+                    isSuper ? 0.82f : 0.64f,
+                    isSuper ? 42f : 24f,
+                    isSuper ? 0.090f : 0.055f,
+                    isSuper ? 0.12f : 0.08f,
+                    isSuper ? 0.34f : 0.20f,
+                    isSuper ? 0.040f : 0.026f);
             }
 
             if (profileName.Contains("jesse") || profileName.Contains("jessie"))
