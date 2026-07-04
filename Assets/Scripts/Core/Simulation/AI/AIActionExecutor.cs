@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Definitions;
@@ -16,8 +17,16 @@ namespace MOBA.Core.Simulation.AI
         private readonly AIDangerMemory _dangerMemory;
         private readonly AISpacingUtility _spacingUtility;
         private readonly AICommandSource _commandSource;
+        private readonly List<BrawlerController> _brawlBallBrawlerBuffer =
+            new List<BrawlerController>(8);
         private readonly AIObjectiveSlotCommitment _objectiveSlotCommitment =
             new AIObjectiveSlotCommitment();
+
+        private const float BrawlBallMinimumPassDistance = 2.0f;
+        private const float BrawlBallAllyPassRangePadding = 0.75f;
+        private const float BrawlBallBaitPassMaxHealthRatio = 0.36f;
+        private const float BrawlBallBaitCollapseRadius = 5.25f;
+        private const float BrawlBallBaitOwnGoalSafetyPadding = 1.25f;
 
         private uint _nextFallbackWanderTick;
         private Vector3 _fallbackWanderPoint;
@@ -83,6 +92,14 @@ namespace MOBA.Core.Simulation.AI
         private Vector3 _cachedBrawlBallMouth;
         private uint _nextBrawlBallApproachRefreshTick;
         private uint _currentExecuteTick;
+
+        private struct BrawlBallPassDecision
+        {
+            public Vector3 Direction;
+            public Vector3 TargetPoint;
+            public float Score;
+            public string Reason;
+        }
 
         public float LastTacticalTargetDistance => _lastTacticalTargetDistance;
         public float LastTacticalPreferredRange => _lastTacticalPreferredRange;
@@ -701,6 +718,18 @@ namespace MOBA.Core.Simulation.AI
                     distanceToGoal,
                     normalKickRange,
                     superKickRange);
+            BrawlBallPassDecision passDecision = default;
+            bool hasPassDecision =
+                !canSuperKick &&
+                !canMainKick &&
+                TryFindBrawlBallPassDecision(
+                    mode,
+                    goalMouthPosition,
+                    normalKickRange,
+                    ballRadius,
+                    shouldReleaseStalledBall,
+                    hasKickLane,
+                    out passDecision);
 
             if (canSuperKick)
             {
@@ -709,6 +738,13 @@ namespace MOBA.Core.Simulation.AI
             else if (canMainKick)
             {
                 _commandSource.QueueMainAttack(kickDirection, goalPosition, true);
+            }
+            else if (hasPassDecision)
+            {
+                _commandSource.QueueMainAttack(
+                    passDecision.Direction,
+                    passDecision.TargetPoint,
+                    true);
             }
             else if (shouldReleaseStalledBall)
             {
@@ -735,11 +771,13 @@ namespace MOBA.Core.Simulation.AI
                 ? "brawl_ball_super_kick"
                 : canMainKick
                     ? "brawl_ball_kick"
-                    : shouldReleaseStalledBall
-                        ? "brawl_ball_forced_release"
-                        : hasKickLane
-                            ? "brawl_ball_score_pocket"
-                            : "brawl_ball_score_lane_blocked";
+                    : hasPassDecision
+                        ? passDecision.Reason
+                        : shouldReleaseStalledBall
+                            ? "brawl_ball_forced_release"
+                            : hasKickLane
+                                ? "brawl_ball_score_pocket"
+                                : "brawl_ball_score_lane_blocked";
         }
 
         private void RequestDirectBrawlBallScoringDestination(Vector3 approachPosition)
@@ -760,6 +798,315 @@ namespace MOBA.Core.Simulation.AI
                 approachPosition,
                 0.65f,
                 highPriority: true);
+        }
+
+        private bool TryFindBrawlBallPassDecision(
+            BrawlBallMode mode,
+            Vector3 goalMouthPosition,
+            float normalKickRange,
+            float ballRadius,
+            bool carrierIsStalled,
+            bool carrierHasGoalLane,
+            out BrawlBallPassDecision decision)
+        {
+            decision = default;
+
+            if (mode == null || normalKickRange <= BrawlBallMinimumPassDistance)
+                return false;
+
+            CombatRegistry.GetBrawlersNonAlloc(_brawlBallBrawlerBuffer);
+
+            bool hasAllyPass = TryFindBrawlBallAllyPass(
+                goalMouthPosition,
+                normalKickRange,
+                ballRadius,
+                carrierIsStalled,
+                carrierHasGoalLane,
+                out BrawlBallPassDecision allyDecision);
+
+            bool hasBaitPass = TryFindBrawlBallBaitPass(
+                mode,
+                normalKickRange,
+                ballRadius,
+                carrierIsStalled,
+                out BrawlBallPassDecision baitDecision);
+
+            if (hasAllyPass && (!hasBaitPass || allyDecision.Score >= baitDecision.Score))
+            {
+                decision = allyDecision;
+                return true;
+            }
+
+            if (hasBaitPass)
+            {
+                decision = baitDecision;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryFindBrawlBallAllyPass(
+            Vector3 goalMouthPosition,
+            float normalKickRange,
+            float ballRadius,
+            bool carrierIsStalled,
+            bool carrierHasGoalLane,
+            out BrawlBallPassDecision decision)
+        {
+            decision = default;
+
+            Vector3 carrierPosition = _brawler.Position;
+            float carrierGoalDistance = PlanarDistance(carrierPosition, goalMouthPosition);
+            int enemiesNearCarrier = CountBrawlBallNearbyBrawlers(
+                carrierPosition,
+                _brawler.Team,
+                4.35f,
+                countEnemies: true);
+
+            bool carrierUnderPressure = carrierIsStalled || enemiesNearCarrier >= 1;
+            float bestScore = float.MinValue;
+            bool found = false;
+
+            for (int i = 0; i < _brawlBallBrawlerBuffer.Count; i++)
+            {
+                BrawlerController receiver = _brawlBallBrawlerBuffer[i];
+                if (!IsValidBrawlBallReceiver(receiver) ||
+                    !TeamRelationshipUtility.AreAllies(receiver.Team, _brawler.Team))
+                {
+                    continue;
+                }
+
+                Vector3 receiverPosition = receiver.Position;
+                float passDistance = PlanarDistance(carrierPosition, receiverPosition);
+                if (passDistance < BrawlBallMinimumPassDistance ||
+                    passDistance > normalKickRange + BrawlBallAllyPassRangePadding)
+                {
+                    continue;
+                }
+
+                if (!IsBrawlBallLaneClear(carrierPosition, receiverPosition, ballRadius))
+                    continue;
+
+                float receiverGoalDistance = PlanarDistance(receiverPosition, goalMouthPosition);
+                float forwardProgress = carrierGoalDistance - receiverGoalDistance;
+                bool receiverHasGoalLane =
+                    IsBrawlBallLaneClear(receiverPosition, goalMouthPosition, ballRadius);
+                bool receiverCanShoot =
+                    receiverHasGoalLane &&
+                    receiverGoalDistance <= normalKickRange + 0.85f;
+
+                if (!receiverCanShoot &&
+                    forwardProgress < 0.75f &&
+                    !carrierUnderPressure)
+                {
+                    continue;
+                }
+
+                int enemiesNearReceiver = CountBrawlBallNearbyBrawlers(
+                    receiverPosition,
+                    _brawler.Team,
+                    3.6f,
+                    countEnemies: true);
+                float receiverHealthRatio = GetBrawlerHealthRatio(receiver);
+                if (receiverHealthRatio <= 0.24f && enemiesNearReceiver > 0)
+                    continue;
+
+                float score =
+                    Mathf.Max(0f, forwardProgress) * 8.5f +
+                    (receiverCanShoot ? 86f : 0f) +
+                    (receiverHasGoalLane ? 26f : 0f) +
+                    (carrierUnderPressure ? 24f : 0f) +
+                    enemiesNearCarrier * 9f +
+                    receiverHealthRatio * 10f -
+                    enemiesNearReceiver * 18f -
+                    passDistance * 1.25f;
+
+                if (!carrierHasGoalLane && receiverHasGoalLane)
+                    score += 24f;
+
+                if (forwardProgress < -0.25f)
+                    score += carrierUnderPressure ? -10f : -32f;
+
+                if (!found || score > bestScore)
+                {
+                    Vector3 direction = Flatten(receiverPosition - carrierPosition);
+                    if (direction.sqrMagnitude <= 0.001f)
+                        continue;
+
+                    direction.Normalize();
+                    found = true;
+                    bestScore = score;
+                    decision = new BrawlBallPassDecision
+                    {
+                        Direction = direction,
+                        TargetPoint = receiverPosition,
+                        Score = score,
+                        Reason = receiverCanShoot
+                            ? "brawl_ball_assist_pass"
+                            : "brawl_ball_outlet_pass"
+                    };
+                }
+            }
+
+            return found && bestScore >= 48f;
+        }
+
+        private bool TryFindBrawlBallBaitPass(
+            BrawlBallMode mode,
+            float normalKickRange,
+            float ballRadius,
+            bool carrierIsStalled,
+            out BrawlBallPassDecision decision)
+        {
+            decision = default;
+
+            if (!carrierIsStalled || GetSelfHealthRatio() <= 0.28f)
+                return false;
+
+            TeamType enemyTeam = TeamRelationshipUtility.GetPrimaryEnemyTeam(_brawler.Team);
+            if (enemyTeam == TeamType.Neutral)
+                return false;
+
+            Vector3 enemyScoringGoal = _brawler.Position;
+            bool hasEnemyScoringGoal =
+                mode.TryGetScoringGoalMouthPosition(enemyTeam, out enemyScoringGoal);
+
+            Vector3 carrierPosition = _brawler.Position;
+            float bestScore = float.MinValue;
+            bool found = false;
+
+            for (int i = 0; i < _brawlBallBrawlerBuffer.Count; i++)
+            {
+                BrawlerController enemy = _brawlBallBrawlerBuffer[i];
+                if (!IsValidBrawlBallReceiver(enemy) ||
+                    !TeamRelationshipUtility.AreEnemies(enemy.Team, _brawler.Team))
+                {
+                    continue;
+                }
+
+                float enemyHealthRatio = GetBrawlerHealthRatio(enemy);
+                if (enemyHealthRatio > BrawlBallBaitPassMaxHealthRatio)
+                    continue;
+
+                Vector3 enemyPosition = enemy.Position;
+                float passDistance = PlanarDistance(carrierPosition, enemyPosition);
+                if (passDistance < BrawlBallMinimumPassDistance + 0.35f ||
+                    passDistance > normalKickRange - 0.25f)
+                {
+                    continue;
+                }
+
+                if (!IsBrawlBallLaneClear(carrierPosition, enemyPosition, ballRadius))
+                    continue;
+
+                if (hasEnemyScoringGoal)
+                {
+                    float enemyGoalThreatDistance = PlanarDistance(
+                        enemyPosition,
+                        enemyScoringGoal);
+                    if (enemyGoalThreatDistance <= normalKickRange + BrawlBallBaitOwnGoalSafetyPadding)
+                        continue;
+                }
+
+                int alliesCollapsing = CountBrawlBallNearbyBrawlers(
+                    enemyPosition,
+                    _brawler.Team,
+                    BrawlBallBaitCollapseRadius,
+                    countEnemies: false);
+                if (alliesCollapsing < 1)
+                    continue;
+
+                int enemySupport = CountBrawlBallNearbyBrawlers(
+                    enemyPosition,
+                    _brawler.Team,
+                    4.25f,
+                    countEnemies: true) - 1;
+
+                float score =
+                    (1f - enemyHealthRatio) * 96f +
+                    alliesCollapsing * 20f +
+                    (carrierIsStalled ? 22f : 0f) -
+                    Mathf.Max(0, enemySupport) * 14f -
+                    passDistance * 1.1f;
+
+                if (!found || score > bestScore)
+                {
+                    Vector3 direction = Flatten(enemyPosition - carrierPosition);
+                    if (direction.sqrMagnitude <= 0.001f)
+                        continue;
+
+                    direction.Normalize();
+                    found = true;
+                    bestScore = score;
+                    decision = new BrawlBallPassDecision
+                    {
+                        Direction = direction,
+                        TargetPoint = enemyPosition,
+                        Score = score,
+                        Reason = "brawl_ball_bait_pass"
+                    };
+                }
+            }
+
+            return found && bestScore >= 78f;
+        }
+
+        private bool IsValidBrawlBallReceiver(BrawlerController brawler)
+        {
+            return brawler != null &&
+                   brawler != _brawler &&
+                   brawler.State != null &&
+                   !brawler.State.IsDead;
+        }
+
+        private int CountBrawlBallNearbyBrawlers(
+            Vector3 position,
+            TeamType referenceTeam,
+            float radius,
+            bool countEnemies)
+        {
+            float radiusSq = radius * radius;
+            int count = 0;
+
+            for (int i = 0; i < _brawlBallBrawlerBuffer.Count; i++)
+            {
+                BrawlerController candidate = _brawlBallBrawlerBuffer[i];
+                if (candidate == null ||
+                    candidate == _brawler ||
+                    candidate.State == null ||
+                    candidate.State.IsDead)
+                {
+                    continue;
+                }
+
+                bool isMatch = countEnemies
+                    ? TeamRelationshipUtility.AreEnemies(candidate.Team, referenceTeam)
+                    : TeamRelationshipUtility.AreAllies(candidate.Team, referenceTeam);
+                if (!isMatch)
+                    continue;
+
+                Vector3 offset = Flatten(candidate.Position - position);
+                if (offset.sqrMagnitude <= radiusSq)
+                    count++;
+            }
+
+            return count;
+        }
+
+        private float GetBrawlerHealthRatio(BrawlerController brawler)
+        {
+            if (brawler == null || brawler.State == null)
+                return 1f;
+
+            return Mathf.Clamp01(
+                brawler.State.CurrentHealth /
+                Mathf.Max(1f, brawler.State.MaxHealth.Value));
+        }
+
+        private float PlanarDistance(Vector3 a, Vector3 b)
+        {
+            return Flatten(a - b).magnitude;
         }
 
         private bool ShouldReleaseStalledBrawlBall(
