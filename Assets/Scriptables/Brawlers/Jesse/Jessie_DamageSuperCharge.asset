@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Jessie_DamageSuperCharge
   m_EditorClassIdentifier:
   SourceName: Jessie Damage Dealt
-  Description: Jessie charges super from landing shock bolts. At 300 dmg per hit (chain shock can hit up to 3 targets), 0.00045 per damage gives ~7–8 landed hits to fill — chain potential rewards positioning.
+  Description: Jessie charges super from landing shock bolts. At 1200 dmg per direct hit, 0.00012 per damage keeps her super near the same landed-hit cadence while chain value still rewards positioning.
   Enabled: 1
-  ChargePerDamage: 0.00045
+  ChargePerDamage: 0.00012
   MainAttackOnly: 0

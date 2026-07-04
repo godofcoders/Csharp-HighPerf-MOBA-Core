@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Byron_DamageSuperCharge
   m_EditorClassIdentifier:
   SourceName: Byron Damage Dealt
-  Description: Byron charges super from landing poison darts. At 500 dmg per hit on a slow cadence, 0.00035 per damage gives ~6 landed hits to fill — rewarding careful, accurate play.
+  Description: Byron charges super from landing poison darts. At 1100 dmg per hit on a careful cadence, 0.00015 per damage gives about 6 landed hits to fill.
   Enabled: 1
-  ChargePerDamage: 0.00035
+  ChargePerDamage: 0.00015
   MainAttackOnly: 0

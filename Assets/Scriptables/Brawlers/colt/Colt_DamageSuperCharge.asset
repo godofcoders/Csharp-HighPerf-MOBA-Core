@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Colt_DamageSuperCharge
   m_EditorClassIdentifier:
   SourceName: Colt Damage Dealt
-  Description: Colt charges super by landing main-attack bullets. At 500 dmg per hit and a fast attack cadence, 0.00020 per damage gives ~10 landed hits to fill — matching the "fast shooter, many hits" feel.
+  Description: Colt charges super by landing main-attack bullets. At 200 dmg per bullet and a fast attack cadence, 0.00009 per damage keeps the many-hit shooter feel without overfeeding super.
   Enabled: 1
-  ChargePerDamage: 0.00020
+  ChargePerDamage: 0.00009
   MainAttackOnly: 0

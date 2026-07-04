@@ -36,7 +36,7 @@ MonoBehaviour:
   AimAssistDistanceBias: 1
   AimAssistIdealRange: 8
   AimAssistPlacementDistance: 3
-  Damage: 320
+  Damage: 1200
   Range: 9
   Speed: 18
   BounceCount: 3

@@ -1,5 +1,6 @@
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
+using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
@@ -39,6 +40,7 @@ namespace MOBA.Core.Simulation
             if (ctx.Attacker != null && ctx.Attacker.State != null)
             {
                 float outgoingLifesteal = ctx.Attacker.State.OutgoingDamageModifiers.GetLifestealPercent();
+                workingDamage = ApplyAttackerDamageStatScale(ctx.Attacker, workingDamage);
                 workingDamage = ApplyOutgoingDamage(ctx.Attacker, workingDamage);
 
                 if (targetBrawler != null && targetBrawler.State != null)
@@ -158,6 +160,24 @@ namespace MOBA.Core.Simulation
             float dummyShield = 0f;
             result = attacker.State.OutgoingDamageModifiers.ApplyIncoming(result, ref dummyShield);
             return result;
+        }
+
+        private float ApplyAttackerDamageStatScale(BrawlerController attacker, float damage)
+        {
+            if (attacker == null ||
+                attacker.State == null ||
+                attacker.Definition == null ||
+                damage <= 0f)
+            {
+                return damage;
+            }
+
+            float authoredBaseDamage = Mathf.Max(1f, attacker.Definition.BaseDamage);
+            float runtimeDamage = Mathf.Max(0f, attacker.State.Damage.Value);
+            if (runtimeDamage <= 0f)
+                return damage;
+
+            return damage * (runtimeDamage / authoredBaseDamage);
         }
 
     }
