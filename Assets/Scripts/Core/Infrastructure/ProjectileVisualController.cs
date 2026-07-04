@@ -479,35 +479,35 @@ namespace MOBA.Core.Infrastructure
             if (profileName.Contains("jesse") || profileName.Contains("jessie"))
             {
                 return new ProjectileVisualStyle(
-                    new Color(0.18f, 0.82f, 1f, 1f),
-                    new Color(1f, 0.96f, 0.16f, 0.62f),
-                    new Color(0.28f, 0.88f, 1f, 0.86f),
-                    new Color(1f, 0.98f, 0.22f, 0.70f),
-                    0.26f,
-                    1.24f,
-                    1.22f,
-                    42f,
-                    0.115f,
-                    0.18f,
-                    0.38f,
-                    0.050f);
+                    new Color(0.10f, 0.94f, 1f, 1f),
+                    new Color(1f, 0.92f, 0.12f, 0.58f),
+                    new Color(0.16f, 0.90f, 1f, 0.78f),
+                    new Color(1f, 0.96f, 0.18f, 0.64f),
+                    0.28f,
+                    0.92f,
+                    0.76f,
+                    34f,
+                    0.080f,
+                    0.11f,
+                    0.28f,
+                    0.034f);
             }
 
             if (profileName.Contains("scrappy"))
             {
                 return new ProjectileVisualStyle(
-                    new Color(1f, 0.58f, 0.12f, 1f),
-                    new Color(0.18f, 0.86f, 1f, 0.62f),
-                    new Color(1f, 0.62f, 0.16f, 0.88f),
-                    new Color(0.25f, 0.92f, 1f, 0.72f),
-                    0.30f,
-                    1.28f,
-                    1.35f,
-                    44f,
-                    0.13f,
-                    0.20f,
-                    0.42f,
-                    0.055f);
+                    new Color(1f, 0.64f, 0.10f, 1f),
+                    new Color(0.18f, 0.88f, 1f, 0.54f),
+                    new Color(0.22f, 0.84f, 1f, 0.78f),
+                    new Color(1f, 0.70f, 0.16f, 0.62f),
+                    0.24f,
+                    0.86f,
+                    0.70f,
+                    30f,
+                    0.070f,
+                    0.10f,
+                    0.26f,
+                    0.030f);
             }
 
             if (profileName.Contains("colt"))
