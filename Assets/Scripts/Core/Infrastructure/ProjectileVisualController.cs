@@ -514,13 +514,13 @@ namespace MOBA.Core.Infrastructure
             {
                 if (isHypercharged)
                 {
-                    Color core = new Color(1f, 0.70f, 0.16f, 1f);
-                    Color wrap = new Color(0.24f, 0.05f, 0.48f, 0.82f);
+                    Color hyperCore = new Color(1f, 0.70f, 0.16f, 1f);
+                    Color hyperWrap = new Color(0.24f, 0.05f, 0.48f, 0.82f);
                     return new ProjectileVisualStyle(
-                        core,
-                        wrap,
-                        wrap,
-                        wrap,
+                        hyperCore,
+                        hyperWrap,
+                        hyperWrap,
+                        hyperWrap,
                         0.36f,
                         0.86f,
                         0.72f,
