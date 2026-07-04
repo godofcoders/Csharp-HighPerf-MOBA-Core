@@ -427,9 +427,25 @@ namespace MOBA.Core.Simulation
             string key = ResolveHazardKey();
             if (key.Contains("barley") || key.Contains("puddle"))
             {
-                core = new Color(0.52f, 0.12f, 0.86f, 0.52f);
-                edge = new Color(0.72f, 1f, 0.18f, 0.42f);
-                bubble = new Color(1f, 0.82f, 0.22f, 0.82f);
+                if (_isHypercharged)
+                {
+                    core = new Color(0.48f, 0.08f, 0.84f, 0.50f);
+                    edge = new Color(0.72f, 1f, 0.18f, 0.44f);
+                    bubble = new Color(0.84f, 1f, 0.18f, 0.82f);
+                    return;
+                }
+
+                if (_isSuper)
+                {
+                    core = new Color(0.62f, 0.16f, 0.92f, 0.46f);
+                    edge = new Color(1f, 0.70f, 0.18f, 0.36f);
+                    bubble = new Color(0.92f, 1f, 0.20f, 0.78f);
+                    return;
+                }
+
+                core = new Color(1f, 0.40f, 0.08f, 0.38f);
+                edge = new Color(1f, 0.78f, 0.14f, 0.34f);
+                bubble = new Color(1f, 0.62f, 0.18f, 0.72f);
                 return;
             }
 

@@ -438,19 +438,38 @@ namespace MOBA.Core.Infrastructure
 
             if (profileName.Contains("barley"))
             {
+                if (isHypercharged)
+                {
+                    Color hyperCore = new Color(0.76f, 0.22f, 1f, 1f);
+                    Color fizz = new Color(0.72f, 1f, 0.16f, 0.64f);
+                    return new ProjectileVisualStyle(
+                        hyperCore,
+                        fizz,
+                        new Color(0.62f, 0.20f, 1f, 0.78f),
+                        fizz,
+                        0.32f,
+                        0.90f,
+                        0.76f,
+                        44f,
+                        0.085f,
+                        0.13f,
+                        0.34f,
+                        0.040f);
+                }
+
                 return new ProjectileVisualStyle(
-                    new Color(0.66f, 0.22f, 1f, 1f),
-                    new Color(0.90f, 0.58f, 1f, 0.58f),
-                    new Color(0.58f, 0.20f, 1f, 0.82f),
-                    new Color(0.90f, 0.45f, 1f, 0.62f),
-                    0.24f,
-                    1.18f,
-                    1.22f,
-                    34f,
-                    0.12f,
-                    0.16f,
-                    0.36f,
-                    0.045f);
+                    isSuper ? new Color(0.62f, 0.20f, 1f, 1f) : new Color(1f, 0.56f, 0.08f, 1f),
+                    isSuper ? new Color(0.72f, 1f, 0.16f, 0.54f) : new Color(1f, 0.78f, 0.12f, 0.48f),
+                    isSuper ? new Color(0.62f, 0.20f, 1f, 0.74f) : new Color(1f, 0.54f, 0.08f, 0.72f),
+                    isSuper ? new Color(0.72f, 1f, 0.16f, 0.58f) : new Color(1f, 0.76f, 0.14f, 0.54f),
+                    isSuper ? 0.28f : 0.22f,
+                    isSuper ? 0.86f : 0.78f,
+                    isSuper ? 0.72f : 0.64f,
+                    isSuper ? 36f : 24f,
+                    isSuper ? 0.075f : 0.060f,
+                    isSuper ? 0.12f : 0.09f,
+                    isSuper ? 0.30f : 0.20f,
+                    isSuper ? 0.036f : 0.026f);
             }
 
             if (profileName.Contains("byron"))
@@ -601,6 +620,14 @@ namespace MOBA.Core.Infrastructure
                     return 1.16f;
 
                 return isSuper ? 1.08f : 1f;
+            }
+
+            if (profileName.Contains("barley"))
+            {
+                if (isHypercharged)
+                    return 1.28f;
+
+                return isSuper ? 1.14f : 1f;
             }
 
             if (isHypercharged)
