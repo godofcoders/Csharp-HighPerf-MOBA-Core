@@ -800,6 +800,28 @@ namespace MOBA.Core.Simulation.AI
                 highPriority: true);
         }
 
+        private void RequestDirectBrawlBallBallDestination(
+            Vector3 ballPosition,
+            float arrivalDistance)
+        {
+            ResetTacticalStop("brawl_ball_loose_ball_destination");
+            _hasMapRouteCache = false;
+            _lastRawMapDestination = ballPosition;
+            _lastResolvedMapDestination = ballPosition;
+            _lastMapRequestIntent = AIMapRouteIntent.Objective;
+            _lastMapRequestHadThreatPosition = false;
+            _lastMapRouteDebug =
+                $"Route={AIMapRouteIntent.Objective} " +
+                $"Raw={FormatVector(ballPosition)} " +
+                $"Resolved={FormatVector(ballPosition)} " +
+                $"Score=0.0 Reason=brawl_ball_direct_ball";
+
+            _navAgent.RequestDestination(
+                ballPosition,
+                arrivalDistance,
+                highPriority: true);
+        }
+
         private bool TryFindBrawlBallPassDecision(
             BrawlBallMode mode,
             Vector3 goalMouthPosition,
@@ -1283,10 +1305,9 @@ namespace MOBA.Core.Simulation.AI
                 ? Mathf.Max(0.35f, mode.Ball.PickupRadius * 0.65f)
                 : 0.55f;
 
-            RequestMapAwareDestination(
+            RequestDirectBrawlBallBallDestination(
                 ballPosition,
-                arrivalDistance,
-                AIMapRouteIntent.Objective);
+                arrivalDistance);
 
             _lastTacticalMovementIntent = AITacticalMovementIntent.CloseGap;
             _lastTacticalTargetPosition = ballPosition;
