@@ -207,6 +207,7 @@ namespace MOBA.Core.Infrastructure
             State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
 
             ResolveAndApplyCurrentBuild();
+            State.ResetHealthToMax();
 
             _lastTickPosition = transform.position;
             _lastKnownPosition = transform.position;
@@ -1663,6 +1664,7 @@ namespace MOBA.Core.Infrastructure
             State.RuntimeKit.SetMainAttack(_definition.MainAttack, _mainAttack);
             State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
             ResolveAndApplyCurrentBuild();
+            State.ResetHealthToMax();
 
             State.SetEquippedHypercharge(_equippedHypercharge ?? _definition.Hypercharge);
             State.RefreshGadgetChargesFromRuntimeKit();

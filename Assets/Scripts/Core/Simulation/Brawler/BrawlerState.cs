@@ -251,6 +251,14 @@ namespace MOBA.Core.Simulation
             RefreshPassiveLoadout(preserveHealthRatio);
         }
 
+        public void ResetHealthToMax()
+        {
+            Stats.ResetHealthToMax();
+            IsHealthRegenerating = false;
+            LastHealthRegenAmount = 0f;
+            OnHealthChanged?.Invoke(CurrentHealth);
+        }
+
         public void SetPassiveLoadout(IEnumerable<PassiveDefinition> definitions, bool preserveHealthRatio = true)
         {
             // Coordinator brackets the swap with health measurement so the
