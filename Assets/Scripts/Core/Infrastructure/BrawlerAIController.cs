@@ -278,14 +278,7 @@ _actionExecutor != null
         {
             if (!CanRunAI())
             {
-                _actionCommitment?.Reset();
-                _humanization?.Reset();
-                _idleHesitation?.Reset();
-                _teamCoordinator?.ClearTargetFocusCount();
-                _teamCoordinator?.ClearActionIntent();
-                _teamCoordinator?.ClearLaneOwnership();
-
-                _commandSource?.ClearQueuedCommands();
+                ResetTransientAIState();
 
                 if (_profile != null && _profile.LogDecisionTicks && currentTick % 30 == 0)
                     Debug.Log($"[AI-{(_brawler != null ? _brawler.name : "?")}] CanRunAI=false brain={_brainInitialized} brawlerNull={_brawler == null} stateNull={(_brawler == null ? "?" : (_brawler.State == null).ToString())} dead={(_brawler == null || _brawler.State == null ? "?" : _brawler.State.IsDead.ToString())} gridNull={SimulationClock.Grid == null}");
@@ -809,7 +802,28 @@ $"Map={LastMapRouteDebug}";
                    _brawler != null &&
                    _brawler.State != null &&
                    !_brawler.State.IsDead &&
+                   IsMatchActiveForAI() &&
                    SimulationClock.Grid != null;
+        }
+
+        private static bool IsMatchActiveForAI()
+        {
+            MatchManager matchManager = MatchManager.Instance;
+            return matchManager == null || matchManager.CurrentState == MatchState.Active;
+        }
+
+        private void ResetTransientAIState()
+        {
+            _actionCommitment?.Reset();
+            _humanization?.Reset();
+            _idleHesitation?.Reset();
+            _targetInfo?.Clear();
+            _teamCoordinator?.ClearTargetFocusCount();
+            _teamCoordinator?.ClearActionIntent();
+            _teamCoordinator?.ClearLaneOwnership();
+            _navAgent?.ClearDestinationForFallback();
+            _failureRecovery?.Reset();
+            _commandSource?.ClearQueuedCommands();
         }
 
         private void ScheduleNextSense(uint currentTick)

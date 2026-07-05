@@ -24,6 +24,23 @@ namespace MOBA.Core.Simulation.AI
         public AbilitySlotType LastSuppressedSlot => _lastSuppressedSlot;
         public uint LastSuppressedUntilTick => _lastSuppressedUntilTick;
 
+        public void Reset()
+        {
+            for (int i = 0; i < AbilitySlotCount; i++)
+            {
+                _failedCastCounts[i] = 0;
+                _lastFailedCastTicks[i] = 0u;
+                _abilitySuppressedUntilTicks[i] = 0u;
+            }
+
+            _nextNavigationRecoveryTick = 0u;
+            _lastRecoveryTick = 0u;
+            _lastRecoveryReason = AIFailureRecoveryReason.None;
+            _navigationRecoveryCount = 0;
+            _lastSuppressedSlot = AbilitySlotType.MainAttack;
+            _lastSuppressedUntilTick = 0u;
+        }
+
         public bool TryCreateNavigationRecovery(
             AIFailureRecoverySignal signal,
             BrawlerAIProfile profile,
