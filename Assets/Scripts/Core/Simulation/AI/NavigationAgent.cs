@@ -8,11 +8,12 @@ namespace MOBA.Core.Simulation.AI
     {
         private const int BoundaryClearanceCells = 1;
         private const int ObstacleClearanceCells = 1;
-        private const uint AvoidanceDirectionLockTicks = 6;
+        private const uint AvoidanceDirectionLockTicks = 14;
         private const float WorldAvoidanceMinLookahead = 0.75f;
         private const float WorldAvoidanceMaxLookahead = 1.65f;
         private const int PathSteeringLookaheadNodes = 5;
         private const float MoveDirectionBaseBlend = 0.52f;
+        private const float AvoidanceStickinessWeight = 0.68f;
 
         private readonly BrawlerController _brawler;
         private readonly ISimulationClock _clock;
@@ -921,6 +922,16 @@ namespace MOBA.Core.Simulation.AI
                 hasPressure &&
                 Vector3.Dot(desired, pressureDirection) < -0.15f;
 
+            if (hasPressure &&
+                TryContinueLockedAvoidance(
+                    pathfinder,
+                    desired,
+                    magnitude,
+                    out Vector3 lockedAdjusted))
+            {
+                return lockedAdjusted;
+            }
+
             if (projectedWalkable && !movingIntoObstacle)
             {
                 _hasAvoidanceDirection = false;
@@ -952,6 +963,66 @@ namespace MOBA.Core.Simulation.AI
 
             _hasAvoidanceDirection = false;
             return desired * magnitude;
+        }
+
+        private bool TryContinueLockedAvoidance(
+            AStarSolver pathfinder,
+            Vector3 desired,
+            float magnitude,
+            out Vector3 adjusted)
+        {
+            adjusted = desired * magnitude;
+
+            if (!_hasAvoidanceDirection ||
+                _clock.CurrentTick > _avoidanceDirectionLockUntilTick ||
+                _lastAvoidanceDirection.sqrMagnitude <= 0.0001f ||
+                Vector3.Dot(_lastAvoidanceDirection, desired) <= -0.20f)
+            {
+                return false;
+            }
+
+            Vector3 blended = Vector3.Lerp(
+                desired,
+                _lastAvoidanceDirection,
+                AvoidanceStickinessWeight);
+            blended.y = 0f;
+            if (blended.sqrMagnitude <= 0.0001f)
+                return false;
+
+            blended.Normalize();
+
+            if (pathfinder != null &&
+                !IsMoveProjectionWalkable(
+                    pathfinder,
+                    blended,
+                    requireNavigationClearance: false))
+            {
+                return false;
+            }
+
+            if (_brawler.TryGetWorldCollisionProbe(
+                    out int collisionMask,
+                    out float radius,
+                    out float probeHeight,
+                    out float skin))
+            {
+                float lookahead =
+                    GetWorldAvoidanceLookahead(pathfinder, radius, skin) * 0.65f;
+                if (TryWorldCollisionCast(
+                        blended,
+                        radius,
+                        probeHeight,
+                        skin,
+                        collisionMask,
+                        lookahead,
+                        out _))
+                {
+                    return false;
+                }
+            }
+
+            adjusted = blended * magnitude;
+            return true;
         }
 
         private bool TryApplyWorldCollisionAvoidance(
