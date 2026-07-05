@@ -202,6 +202,12 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
+            if (IsHiddenFromLocalObserver(state))
+            {
+                SetVisible(false);
+                return;
+            }
+
             float maxHealth = Mathf.Max(1f, state.MaxHealth.Value);
             float ratio = Mathf.Clamp01(state.CurrentHealth / maxHealth);
 
@@ -263,6 +269,12 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
+            if (IsHiddenFromLocalObserver(state))
+            {
+                SetVisible(false);
+                return;
+            }
+
             float maxHealth = Mathf.Max(1f, state.MaxHealth.Value);
             float ratio = Mathf.Clamp01(state.CurrentHealth / maxHealth);
 
@@ -276,6 +288,18 @@ namespace MOBA.Core.Infrastructure
             _hasDisplayedHealthRatio = true;
             SetVisible(true);
             ApplyHealthVisuals(state, ratio, ratio);
+        }
+
+        private bool IsHiddenFromLocalObserver(BrawlerState state)
+        {
+            if (_brawlerController == null ||
+                state == null ||
+                !BrawlerController.TryGetLocalObserverTeam(out TeamType observerTeam))
+            {
+                return false;
+            }
+
+            return state.IsHiddenTo(observerTeam);
         }
 
         private void ApplyHealthVisuals(

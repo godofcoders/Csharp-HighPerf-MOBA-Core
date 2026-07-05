@@ -60,6 +60,7 @@ namespace MOBA.Core.Infrastructure
             Transform parent = _mapRoot != null ? _mapRoot : transform;
             SpawnedMapInstance = Instantiate(prefab, parent);
             SpawnedMapInstance.name = prefab.name;
+            BushPatchPresentation.InstallUnder(SpawnedMapInstance);
 
             HandSpawnPointsToSpawnManager();
         }

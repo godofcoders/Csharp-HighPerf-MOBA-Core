@@ -83,6 +83,7 @@ namespace MOBA.Core.Infrastructure
         public float CollisionRadius => 0.5f;
         public int EntityID => GetEntityId();
         public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
+        public GameObject VisualModel => _visualModel;
         public Vector3 PlanarVelocity => _planarVelocity;
         public bool DebugReadySuperAndHyperchargeForPlayer => _debugReadySuperAndHyperchargeForPlayer;
 
