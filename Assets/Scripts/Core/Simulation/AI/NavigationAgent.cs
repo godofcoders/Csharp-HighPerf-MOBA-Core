@@ -536,6 +536,7 @@ namespace MOBA.Core.Simulation.AI
         private Vector3 ResolvePathSteeringTarget()
         {
             AdvanceReachedPathNodes();
+            AdvanceRegressiveOpeningPathNodes();
 
             if (_path == null || _pathIndex >= _path.Count)
                 return _destination;
@@ -602,6 +603,89 @@ namespace MOBA.Core.Simulation.AI
 
                 _pathIndex++;
             }
+        }
+
+        private void AdvanceRegressiveOpeningPathNodes()
+        {
+            if (_path == null || _pathIndex >= _path.Count - 1 || SimulationClock.Pathfinder == null)
+                return;
+
+            Vector3 destinationDelta = GetPlanarDelta(_destination);
+            if (destinationDelta.sqrMagnitude <= 0.0001f)
+                return;
+
+            Vector3 destinationDirection = destinationDelta.normalized;
+            float currentDestinationDistanceSq = destinationDelta.sqrMagnitude;
+            int maxIndex = Mathf.Min(
+                _path.Count - 1,
+                _pathIndex + PathSteeringLookaheadNodes);
+            int selectedIndex = _pathIndex;
+
+            for (int i = _pathIndex; i <= maxIndex; i++)
+            {
+                Vector3 candidateWorld = GetPathNodeWorld(i);
+                Vector3 candidateDelta = GetPlanarDelta(candidateWorld);
+                if (candidateDelta.sqrMagnitude <= 0.0025f)
+                {
+                    selectedIndex = i;
+                    continue;
+                }
+
+                Vector3 candidateDirection = candidateDelta.normalized;
+                float progressDot = Vector3.Dot(candidateDirection, destinationDirection);
+                if (progressDot < -0.05f)
+                    continue;
+
+                Vector3 candidateToDestination = _destination - candidateWorld;
+                candidateToDestination.y = 0f;
+                if (candidateToDestination.sqrMagnitude + 0.05f >= currentDestinationDistanceSq)
+                    continue;
+
+                if (!IsPathSteeringSegmentClear(candidateWorld))
+                    continue;
+
+                selectedIndex = i;
+            }
+
+            if (selectedIndex > _pathIndex)
+                _pathIndex = selectedIndex;
+        }
+
+        private bool IsPathSteeringSegmentClear(Vector3 candidateWorld)
+        {
+            Vector3 delta = GetPlanarDelta(candidateWorld);
+            float distance = delta.magnitude;
+            if (distance <= 0.05f)
+                return true;
+
+            float probeRadius = 0.24f;
+            if (_brawler.TryGetWorldCollisionProbe(
+                    out int collisionMask,
+                    out float radius,
+                    out float probeHeight,
+                    out float skin))
+            {
+                probeRadius = Mathf.Max(probeRadius, radius);
+                if (TryWorldCollisionCast(
+                        delta / distance,
+                        radius,
+                        probeHeight,
+                        skin,
+                        collisionMask,
+                        Mathf.Max(0.05f, distance - radius * 0.25f),
+                        out _))
+                {
+                    return false;
+                }
+            }
+
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            return pathfinder == null ||
+                   !AimLineOfSightUtility.IsSegmentBlocked(
+                       pathfinder,
+                       _brawler.Position,
+                       candidateWorld,
+                       probeRadius);
         }
 
         private Vector3 GetPathNodeWorld(int index)

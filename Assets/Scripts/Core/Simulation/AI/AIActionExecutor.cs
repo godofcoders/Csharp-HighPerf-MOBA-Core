@@ -27,6 +27,9 @@ namespace MOBA.Core.Simulation.AI
         private const float BrawlBallBaitPassMaxHealthRatio = 0.36f;
         private const float BrawlBallBaitCollapseRadius = 5.25f;
         private const float BrawlBallBaitOwnGoalSafetyPadding = 1.25f;
+        private const float BrawlBallLooseBallSprintDistance = 4.25f;
+        private const float BrawlBallLooseBallSelfDefenseRadius = 2.25f;
+        private const float BrawlBallLooseBallContestRadius = 2.35f;
 
         private uint _nextFallbackWanderTick;
         private Vector3 _fallbackWanderPoint;
@@ -1294,12 +1297,15 @@ namespace MOBA.Core.Simulation.AI
             float superRange)
         {
             Vector3 ballPosition = mode.BallPosition;
-            TryPressureBrawlBallThreat(
-                targetInfo,
-                ballPosition,
-                currentTick,
-                attackRange,
-                superRange);
+            if (ShouldPressureLooseBrawlBallThreat(targetInfo, ballPosition, attackRange))
+            {
+                TryPressureBrawlBallThreat(
+                    targetInfo,
+                    ballPosition,
+                    currentTick,
+                    attackRange,
+                    superRange);
+            }
 
             float arrivalDistance = mode.Ball != null
                 ? Mathf.Max(0.35f, mode.Ball.PickupRadius * 0.65f)
@@ -1315,6 +1321,41 @@ namespace MOBA.Core.Simulation.AI
             _lastTacticalPreferredRange = 0f;
             _lastTacticalTooCloseDistance = 0f;
             _lastTacticalMoveReason = "brawl_ball_loose_ball";
+        }
+
+        private bool ShouldPressureLooseBrawlBallThreat(
+            AITargetInfo targetInfo,
+            Vector3 ballPosition,
+            float attackRange)
+        {
+            if (targetInfo == null ||
+                !targetInfo.HasLiveTarget ||
+                !SpatialEntityUtility.IsAlive(targetInfo.Target))
+            {
+                return false;
+            }
+
+            Vector3 selfPosition = _brawler.Position;
+            Vector3 targetPosition = targetInfo.Target.Position;
+            float distanceToBall = PlanarDistance(selfPosition, ballPosition);
+            float distanceToTarget = PlanarDistance(selfPosition, targetPosition);
+
+            if (distanceToTarget <= Mathf.Min(attackRange, BrawlBallLooseBallSelfDefenseRadius))
+                return true;
+
+            if (distanceToBall > BrawlBallLooseBallSprintDistance)
+                return false;
+
+            if (PlanarDistance(targetPosition, ballPosition) <= BrawlBallLooseBallContestRadius)
+                return true;
+
+            Vector3 toBall = Flatten(ballPosition - selfPosition);
+            Vector3 toTarget = Flatten(targetPosition - selfPosition);
+            if (toBall.sqrMagnitude <= 0.001f || toTarget.sqrMagnitude <= 0.001f)
+                return false;
+
+            float laneDot = Vector3.Dot(toBall.normalized, toTarget.normalized);
+            return distanceToTarget <= attackRange * 0.95f && laneDot >= 0.65f;
         }
 
         private void TryPressureBrawlBallThreat(
