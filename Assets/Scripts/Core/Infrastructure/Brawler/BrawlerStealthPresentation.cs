@@ -10,6 +10,9 @@ namespace MOBA.Core.Infrastructure
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         [SerializeField] private BrawlerController _brawler;
+        [SerializeField] private Color _hiddenAllyTint = new Color(0.72f, 1f, 0.82f, 1f);
+        [SerializeField] private float _hiddenAllyAlpha = 0.56f;
+        [SerializeField] private float _hiddenAllyTintStrength = 0.38f;
         [SerializeField] private float _hiddenEnemyAlpha = 0f;
         [SerializeField] private float _fadeSpeed = 8.5f;
 
@@ -92,7 +95,10 @@ namespace MOBA.Core.Infrastructure
 
             if (sameTeam)
             {
-                SetTargetVisibility(1f, Color.white, 0f);
+                SetTargetVisibility(
+                    Mathf.Clamp01(_hiddenAllyAlpha),
+                    _hiddenAllyTint,
+                    Mathf.Clamp01(_hiddenAllyTintStrength));
                 return;
             }
 

@@ -185,6 +185,8 @@ namespace MOBA.Core.Infrastructure
             float halfZ = Mathf.Max(0.05f, bounds.extents.z * 0.98f);
             float minHeight = Mathf.Max(0.28f, bounds.size.y * 0.34f);
             float maxHeight = Mathf.Max(minHeight + 0.02f, bounds.size.y * 0.62f);
+            AddBaseFill(bounds, baseY, halfX, halfZ);
+            AddTriangularTuftField(bounds, baseY, halfX, halfZ, ref seed);
             AddEdgeBand(bounds, baseY, halfX, halfZ, ref seed);
 
             for (int i = 0; i < tuftCount; i++)
@@ -216,6 +218,90 @@ namespace MOBA.Core.Infrastructure
             mesh.RecalculateBounds();
             mesh.RecalculateNormals();
             return mesh;
+        }
+
+        private void AddBaseFill(Bounds bounds, float baseY, float halfX, float halfZ)
+        {
+            int start = _vertices.Count;
+            float y = baseY + 0.006f;
+            _vertices.Add(new Vector3(bounds.center.x - halfX, y, bounds.center.z - halfZ));
+            _vertices.Add(new Vector3(bounds.center.x + halfX, y, bounds.center.z - halfZ));
+            _vertices.Add(new Vector3(bounds.center.x - halfX, y, bounds.center.z + halfZ));
+            _vertices.Add(new Vector3(bounds.center.x + halfX, y, bounds.center.z + halfZ));
+
+            _uvs.Add(new Vector2(0f, 0f));
+            _uvs.Add(new Vector2(1f, 0f));
+            _uvs.Add(new Vector2(0f, 1f));
+            _uvs.Add(new Vector2(1f, 1f));
+
+            List<int> triangles = _triangles[0];
+            triangles.Add(start);
+            triangles.Add(start + 2);
+            triangles.Add(start + 1);
+            triangles.Add(start + 1);
+            triangles.Add(start + 2);
+            triangles.Add(start + 3);
+        }
+
+        private void AddTriangularTuftField(
+            Bounds bounds,
+            float baseY,
+            float halfX,
+            float halfZ,
+            ref int seed)
+        {
+            float cell = 0.18f;
+            int columns = Mathf.Clamp(Mathf.CeilToInt((halfX * 2f) / cell), 4, 28);
+            int rows = Mathf.Clamp(Mathf.CeilToInt((halfZ * 2f) / cell), 4, 28);
+            float stepX = (halfX * 2f) / columns;
+            float stepZ = (halfZ * 2f) / rows;
+
+            for (int z = 0; z < rows; z++)
+            {
+                float rowZ = bounds.center.z - halfZ + stepZ * (z + 0.5f);
+                float stagger = (z & 1) == 0 ? 0f : stepX * 0.5f;
+
+                for (int x = 0; x < columns; x++)
+                {
+                    float rowX = bounds.center.x - halfX + stepX * (x + 0.5f) + stagger;
+                    if (rowX > bounds.center.x + halfX)
+                        rowX -= halfX * 2f;
+
+                    float jitterX = Mathf.Lerp(-stepX * 0.16f, stepX * 0.16f, Next01(ref seed));
+                    float jitterZ = Mathf.Lerp(-stepZ * 0.12f, stepZ * 0.12f, Next01(ref seed));
+                    int materialIndex = Next01(ref seed) > 0.58f ? 2 : 1;
+                    AddTopDownTuft(
+                        new Vector3(rowX + jitterX, baseY + 0.014f + z * 0.0006f, rowZ + jitterZ),
+                        stepX * Mathf.Lerp(0.82f, 1.12f, Next01(ref seed)),
+                        stepZ * Mathf.Lerp(0.92f, 1.22f, Next01(ref seed)),
+                        (z & 1) == 0 ? 1f : -1f,
+                        materialIndex);
+                }
+            }
+        }
+
+        private void AddTopDownTuft(
+            Vector3 center,
+            float width,
+            float height,
+            float direction,
+            int materialIndex)
+        {
+            int start = _vertices.Count;
+            float halfWidth = width * 0.5f;
+            float halfHeight = height * 0.5f;
+            _vertices.Add(new Vector3(center.x - halfWidth, center.y, center.z - halfHeight * direction));
+            _vertices.Add(new Vector3(center.x + halfWidth, center.y, center.z - halfHeight * direction));
+            _vertices.Add(new Vector3(center.x, center.y, center.z + halfHeight * direction));
+
+            _uvs.Add(new Vector2(0f, 0f));
+            _uvs.Add(new Vector2(1f, 0f));
+            _uvs.Add(new Vector2(0.5f, 1f));
+
+            List<int> triangles = _triangles[Mathf.Clamp(materialIndex, 0, _triangles.Length - 1)];
+            triangles.Add(start);
+            triangles.Add(start + 2);
+            triangles.Add(start + 1);
         }
 
         private void AddEdgeBand(
