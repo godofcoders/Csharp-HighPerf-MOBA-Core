@@ -11,12 +11,12 @@ namespace MOBA.Core.Infrastructure
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        [SerializeField] private int _minBladeCount = 24;
-        [SerializeField] private int _maxBladeCount = 56;
-        [SerializeField] private float _bladeDensity = 46f;
-        [SerializeField] private Color _darkGrass = new Color(0.08f, 0.46f, 0.12f, 1f);
-        [SerializeField] private Color _midGrass = new Color(0.15f, 0.68f, 0.16f, 1f);
-        [SerializeField] private Color _lightGrass = new Color(0.36f, 0.88f, 0.18f, 1f);
+        [SerializeField] private int _minTuftCount = 96;
+        [SerializeField] private int _maxTuftCount = 220;
+        [SerializeField] private float _tuftDensity = 145f;
+        [SerializeField] private Color _darkGrass = new Color(0.05f, 0.36f, 0.10f, 1f);
+        [SerializeField] private Color _midGrass = new Color(0.08f, 0.58f, 0.14f, 1f);
+        [SerializeField] private Color _lightGrass = new Color(0.20f, 0.78f, 0.18f, 1f);
 
         private readonly List<Vector3> _vertices = new List<Vector3>(512);
         private readonly List<Vector2> _uvs = new List<Vector2>(512);
@@ -175,32 +175,34 @@ namespace MOBA.Core.Infrastructure
 
             int seed = CalculateSeed();
             float footprintArea = Mathf.Max(0.1f, bounds.size.x * bounds.size.z);
-            int bladeCount = Mathf.Clamp(
-                Mathf.RoundToInt(footprintArea * Mathf.Max(1f, _bladeDensity)),
-                Mathf.Max(8, _minBladeCount),
-                Mathf.Max(_minBladeCount, _maxBladeCount));
+            int tuftCount = Mathf.Clamp(
+                Mathf.RoundToInt(footprintArea * Mathf.Max(1f, _tuftDensity)),
+                Mathf.Max(16, _minTuftCount),
+                Mathf.Max(_minTuftCount, _maxTuftCount));
 
             float baseY = bounds.center.y - bounds.extents.y + 0.018f;
-            float halfX = Mathf.Max(0.05f, bounds.extents.x * 0.92f);
-            float halfZ = Mathf.Max(0.05f, bounds.extents.z * 0.92f);
-            float minHeight = Mathf.Max(0.22f, bounds.size.y * 0.32f);
-            float maxHeight = Mathf.Max(minHeight + 0.02f, bounds.size.y * 0.54f);
+            float halfX = Mathf.Max(0.05f, bounds.extents.x * 0.98f);
+            float halfZ = Mathf.Max(0.05f, bounds.extents.z * 0.98f);
+            float minHeight = Mathf.Max(0.28f, bounds.size.y * 0.34f);
+            float maxHeight = Mathf.Max(minHeight + 0.02f, bounds.size.y * 0.62f);
+            AddEdgeBand(bounds, baseY, halfX, halfZ, ref seed);
 
-            for (int i = 0; i < bladeCount; i++)
+            for (int i = 0; i < tuftCount; i++)
             {
                 float x = bounds.center.x + Mathf.Lerp(-halfX, halfX, Next01(ref seed));
                 float z = bounds.center.z + Mathf.Lerp(-halfZ, halfZ, Next01(ref seed));
                 float angle = Next01(ref seed) * Mathf.PI;
                 float height = Mathf.Lerp(minHeight, maxHeight, Next01(ref seed));
-                float width = Mathf.Lerp(0.04f, 0.08f, Next01(ref seed));
+                float width = Mathf.Lerp(0.06f, 0.14f, Next01(ref seed));
+                float spread = Mathf.Lerp(0.08f, 0.18f, Next01(ref seed));
                 int materialIndex = Mathf.Clamp(Mathf.FloorToInt(Next01(ref seed) * _triangles.Length), 0, _triangles.Length - 1);
 
-                AddBlade(
+                AddTuft(
                     new Vector3(x, baseY, z),
                     angle,
                     width,
                     height,
-                    Mathf.Lerp(-0.035f, 0.035f, Next01(ref seed)),
+                    spread,
                     materialIndex);
             }
 
@@ -216,28 +218,79 @@ namespace MOBA.Core.Infrastructure
             return mesh;
         }
 
-        private void AddBlade(
+        private void AddEdgeBand(
+            Bounds bounds,
+            float baseY,
+            float halfX,
+            float halfZ,
+            ref int seed)
+        {
+            int edgeTuftsPerSide = Mathf.Clamp(
+                Mathf.RoundToInt((halfX + halfZ) * 10f),
+                10,
+                34);
+
+            for (int i = 0; i < edgeTuftsPerSide; i++)
+            {
+                float t = edgeTuftsPerSide <= 1 ? 0.5f : i / (float)(edgeTuftsPerSide - 1);
+                AddEdgeTuft(new Vector3(bounds.center.x + Mathf.Lerp(-halfX, halfX, t), baseY, bounds.center.z - halfZ), 0f, ref seed);
+                AddEdgeTuft(new Vector3(bounds.center.x + Mathf.Lerp(-halfX, halfX, t), baseY, bounds.center.z + halfZ), Mathf.PI, ref seed);
+                AddEdgeTuft(new Vector3(bounds.center.x - halfX, baseY, bounds.center.z + Mathf.Lerp(-halfZ, halfZ, t)), Mathf.PI * 0.5f, ref seed);
+                AddEdgeTuft(new Vector3(bounds.center.x + halfX, baseY, bounds.center.z + Mathf.Lerp(-halfZ, halfZ, t)), -Mathf.PI * 0.5f, ref seed);
+            }
+        }
+
+        private void AddEdgeTuft(Vector3 basePosition, float inwardAngle, ref int seed)
+        {
+            float angle = inwardAngle + Mathf.Lerp(-0.45f, 0.45f, Next01(ref seed));
+            int materialIndex = Mathf.Clamp(Mathf.FloorToInt(Next01(ref seed) * _triangles.Length), 0, _triangles.Length - 1);
+            AddTuft(
+                basePosition,
+                angle,
+                Mathf.Lerp(0.08f, 0.15f, Next01(ref seed)),
+                Mathf.Lerp(0.34f, 0.58f, Next01(ref seed)),
+                Mathf.Lerp(0.12f, 0.22f, Next01(ref seed)),
+                materialIndex);
+        }
+
+        private void AddTuft(
             Vector3 basePosition,
             float angle,
             float width,
             float height,
-            float lean,
+            float spread,
+            int materialIndex)
+        {
+            AddGrassCard(basePosition, angle, width, height, spread, materialIndex);
+            AddGrassCard(basePosition, angle + Mathf.PI * 0.52f, width * 0.86f, height * 0.92f, spread * 0.84f, materialIndex);
+            AddGrassCard(basePosition, angle - Mathf.PI * 0.48f, width * 0.78f, height * 0.82f, spread * 0.74f, materialIndex);
+        }
+
+        private void AddGrassCard(
+            Vector3 basePosition,
+            float angle,
+            float width,
+            float height,
+            float spread,
             int materialIndex)
         {
             int start = _vertices.Count;
-            Vector3 right = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * (width * 0.5f);
-            Vector3 leanOffset = new Vector3(Mathf.Cos(angle + Mathf.PI * 0.5f), 0f, Mathf.Sin(angle + Mathf.PI * 0.5f)) * lean;
-            Vector3 top = basePosition + Vector3.up * height + leanOffset;
+            Vector3 forward = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+            Vector3 right = new Vector3(-forward.z, 0f, forward.x) * (width * 0.5f);
+            Vector3 top = basePosition + Vector3.up * height + forward * spread;
+            Vector3 mid = basePosition + Vector3.up * (height * 0.58f) + forward * (spread * 0.52f);
 
             _vertices.Add(basePosition - right);
             _vertices.Add(basePosition + right);
-            _vertices.Add(top - right * 0.32f);
-            _vertices.Add(top + right * 0.32f);
+            _vertices.Add(mid - right * 0.82f);
+            _vertices.Add(mid + right * 0.82f);
+            _vertices.Add(top);
 
             _uvs.Add(new Vector2(0f, 0f));
             _uvs.Add(new Vector2(1f, 0f));
-            _uvs.Add(new Vector2(0f, 1f));
-            _uvs.Add(new Vector2(1f, 1f));
+            _uvs.Add(new Vector2(0f, 0.58f));
+            _uvs.Add(new Vector2(1f, 0.58f));
+            _uvs.Add(new Vector2(0.5f, 1f));
 
             List<int> triangles = _triangles[Mathf.Clamp(materialIndex, 0, _triangles.Length - 1)];
             triangles.Add(start);
@@ -246,12 +299,19 @@ namespace MOBA.Core.Infrastructure
             triangles.Add(start + 1);
             triangles.Add(start + 2);
             triangles.Add(start + 3);
+            triangles.Add(start + 2);
+            triangles.Add(start + 4);
+            triangles.Add(start + 3);
+
             triangles.Add(start + 1);
             triangles.Add(start + 2);
             triangles.Add(start);
             triangles.Add(start + 3);
             triangles.Add(start + 2);
             triangles.Add(start + 1);
+            triangles.Add(start + 3);
+            triangles.Add(start + 4);
+            triangles.Add(start + 2);
         }
 
         private Material[] CreateGrassMaterials()
