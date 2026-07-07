@@ -12,9 +12,9 @@ namespace MOBA.Core.Infrastructure
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         [SerializeField] private float _tuftCellSize = 0.16f;
-        [SerializeField] private Color _darkGrass = new Color(0.03f, 0.33f, 0.08f, 1f);
-        [SerializeField] private Color _midGrass = new Color(0.08f, 0.56f, 0.11f, 1f);
-        [SerializeField] private Color _lightGrass = new Color(0.24f, 0.78f, 0.15f, 1f);
+        [SerializeField] private Color _darkGrass = new Color(0.03f, 0.33f, 0.08f, 0.68f);
+        [SerializeField] private Color _midGrass = new Color(0.08f, 0.56f, 0.11f, 0.74f);
+        [SerializeField] private Color _lightGrass = new Color(0.24f, 0.78f, 0.15f, 0.78f);
 
         private readonly List<Vector3> _vertices = new List<Vector3>(512);
         private readonly List<Vector2> _uvs = new List<Vector2>(512);
@@ -172,7 +172,7 @@ namespace MOBA.Core.Infrastructure
                 _triangles[i].Clear();
 
             int seed = CalculateSeed();
-            float surfaceY = bounds.center.y + bounds.extents.y + 0.012f;
+            float surfaceY = ResolveGroundVisualY(bounds);
             float halfX = Mathf.Max(0.05f, bounds.extents.x * 0.98f);
             float halfZ = Mathf.Max(0.05f, bounds.extents.z * 0.98f);
             AddBaseFill(bounds, surfaceY, halfX, halfZ);
@@ -188,6 +188,13 @@ namespace MOBA.Core.Infrastructure
             mesh.RecalculateBounds();
             mesh.RecalculateNormals();
             return mesh;
+        }
+
+        private static float ResolveGroundVisualY(Bounds bounds)
+        {
+            float lowerEdge = bounds.center.y - bounds.extents.y;
+            float lift = Mathf.Clamp(bounds.size.y * 0.12f, 0.06f, 0.16f);
+            return lowerEdge + lift;
         }
 
         private void AddBaseFill(Bounds bounds, float surfaceY, float halfX, float halfZ)
@@ -307,21 +314,34 @@ namespace MOBA.Core.Infrastructure
 
             Material material = new Material(shader);
             material.name = materialName;
-            material.SetOverrideTag("RenderType", "Opaque");
+            material.SetOverrideTag("RenderType", "Transparent");
 
             if (material.HasProperty("_Surface"))
-                material.SetFloat("_Surface", 0f);
+                material.SetFloat("_Surface", 1f);
 
             if (material.HasProperty("_Mode"))
-                material.SetFloat("_Mode", 0f);
+                material.SetFloat("_Mode", 3f);
+
+            if (material.HasProperty("_Blend"))
+                material.SetFloat("_Blend", 0f);
+
+            if (material.HasProperty("_SrcBlend"))
+                material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+
+            if (material.HasProperty("_DstBlend"))
+                material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
 
             if (material.HasProperty("_ZWrite"))
-                material.SetInt("_ZWrite", 1);
+                material.SetInt("_ZWrite", 0);
 
             if (material.HasProperty("_Cull"))
                 material.SetInt("_Cull", (int)CullMode.Off);
 
-            material.renderQueue = (int)RenderQueue.Geometry;
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.renderQueue = (int)RenderQueue.Transparent;
             WriteMaterialColor(material, color);
 
             if (material.HasProperty("_Smoothness"))
