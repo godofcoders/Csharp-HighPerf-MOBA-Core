@@ -172,11 +172,11 @@ namespace MOBA.Core.Infrastructure
                 _triangles[i].Clear();
 
             int seed = CalculateSeed();
-            float baseY = bounds.center.y - bounds.extents.y + 0.018f;
+            float surfaceY = bounds.center.y + bounds.extents.y + 0.012f;
             float halfX = Mathf.Max(0.05f, bounds.extents.x * 0.98f);
             float halfZ = Mathf.Max(0.05f, bounds.extents.z * 0.98f);
-            AddBaseFill(bounds, baseY, halfX, halfZ);
-            AddTriangularTuftField(bounds, baseY, halfX, halfZ, ref seed);
+            AddBaseFill(bounds, surfaceY, halfX, halfZ);
+            AddTriangularTuftField(bounds, surfaceY, halfX, halfZ, ref seed);
 
             Mesh mesh = new Mesh();
             mesh.SetVertices(_vertices);
@@ -190,10 +190,10 @@ namespace MOBA.Core.Infrastructure
             return mesh;
         }
 
-        private void AddBaseFill(Bounds bounds, float baseY, float halfX, float halfZ)
+        private void AddBaseFill(Bounds bounds, float surfaceY, float halfX, float halfZ)
         {
             int start = _vertices.Count;
-            float y = baseY + 0.006f;
+            float y = surfaceY;
             _vertices.Add(new Vector3(bounds.center.x - halfX, y, bounds.center.z - halfZ));
             _vertices.Add(new Vector3(bounds.center.x + halfX, y, bounds.center.z - halfZ));
             _vertices.Add(new Vector3(bounds.center.x - halfX, y, bounds.center.z + halfZ));
@@ -215,7 +215,7 @@ namespace MOBA.Core.Infrastructure
 
         private void AddTriangularTuftField(
             Bounds bounds,
-            float baseY,
+            float surfaceY,
             float halfX,
             float halfZ,
             ref int seed)
@@ -243,7 +243,7 @@ namespace MOBA.Core.Infrastructure
                     float jitterZ = Mathf.Lerp(-stepZ * 0.05f, stepZ * 0.05f, Next01(ref seed));
                     Vector3 center = new Vector3(
                         Mathf.Clamp(rowX + jitterX, visualMinX + stepX * 0.22f, visualMaxX - stepX * 0.22f),
-                        baseY + 0.014f + z * 0.0007f,
+                        surfaceY + 0.008f + z * 0.0007f,
                         rowZ + jitterZ);
                     float width = stepX * Mathf.Lerp(0.92f, 1.18f, Next01(ref seed));
                     float height = stepZ * Mathf.Lerp(1.08f, 1.36f, Next01(ref seed));
@@ -307,9 +307,21 @@ namespace MOBA.Core.Infrastructure
 
             Material material = new Material(shader);
             material.name = materialName;
+            material.SetOverrideTag("RenderType", "Opaque");
+
+            if (material.HasProperty("_Surface"))
+                material.SetFloat("_Surface", 0f);
+
+            if (material.HasProperty("_Mode"))
+                material.SetFloat("_Mode", 0f);
+
+            if (material.HasProperty("_ZWrite"))
+                material.SetInt("_ZWrite", 1);
+
             if (material.HasProperty("_Cull"))
                 material.SetInt("_Cull", (int)CullMode.Off);
 
+            material.renderQueue = (int)RenderQueue.Geometry;
             WriteMaterialColor(material, color);
 
             if (material.HasProperty("_Smoothness"))
