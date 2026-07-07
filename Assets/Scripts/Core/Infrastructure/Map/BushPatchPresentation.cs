@@ -12,9 +12,13 @@ namespace MOBA.Core.Infrastructure
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         [SerializeField] private float _tuftCellSize = 0.16f;
-        [SerializeField] private Color _darkGrass = new Color(0.03f, 0.33f, 0.08f, 0.68f);
-        [SerializeField] private Color _midGrass = new Color(0.08f, 0.56f, 0.11f, 0.74f);
-        [SerializeField] private Color _lightGrass = new Color(0.24f, 0.78f, 0.15f, 0.78f);
+        [SerializeField] private Color _darkGrass = new Color(0.03f, 0.30f, 0.07f, 0.42f);
+        [SerializeField] private Color _midGrass = new Color(0.07f, 0.52f, 0.11f, 0.70f);
+        [SerializeField] private Color _lightGrass = new Color(0.22f, 0.76f, 0.14f, 0.76f);
+        [SerializeField] private float _billboardHeight = 0.36f;
+        [SerializeField] private float _billboardWidthScale = 1.08f;
+        [SerializeField] private float _swayAmplitude = 0.026f;
+        [SerializeField] private float _swaySpeed = 1.85f;
 
         private readonly List<Vector3> _vertices = new List<Vector3>(512);
         private readonly List<Vector2> _uvs = new List<Vector2>(512);
@@ -30,6 +34,9 @@ namespace MOBA.Core.Infrastructure
         private GameObject _visualRoot;
         private Mesh _mesh;
         private Material[] _materials;
+        private Vector3[] _baseVertices;
+        private Vector3[] _animatedVertices;
+        private float[] _swayWeights;
 
         public static void InstallUnder(GameObject root)
         {
@@ -69,6 +76,9 @@ namespace MOBA.Core.Infrastructure
         {
             RestoreSourceRenderers();
             DestroyGeneratedObject(_mesh);
+            _baseVertices = null;
+            _animatedVertices = null;
+            _swayWeights = null;
 
             if (_materials == null)
                 return;
@@ -103,6 +113,11 @@ namespace MOBA.Core.Infrastructure
 
             _materials = CreateGrassMaterials();
             meshRenderer.sharedMaterials = _materials;
+        }
+
+        private void LateUpdate()
+        {
+            AnimateGrassSway();
         }
 
         private void HideSourceRenderers()
@@ -187,7 +202,58 @@ namespace MOBA.Core.Infrastructure
 
             mesh.RecalculateBounds();
             mesh.RecalculateNormals();
+            mesh.MarkDynamic();
+            CacheSwayVertices(mesh);
             return mesh;
+        }
+
+        private void CacheSwayVertices(Mesh mesh)
+        {
+            _baseVertices = mesh.vertices;
+            _animatedVertices = new Vector3[_baseVertices.Length];
+            _swayWeights = new float[_baseVertices.Length];
+            float minY = float.MaxValue;
+
+            for (int i = 0; i < _baseVertices.Length; i++)
+                minY = Mathf.Min(minY, _baseVertices[i].y);
+
+            for (int i = 0; i < _baseVertices.Length; i++)
+            {
+                _animatedVertices[i] = _baseVertices[i];
+                _swayWeights[i] = Mathf.Clamp01((_baseVertices[i].y - minY) / Mathf.Max(0.0001f, _billboardHeight));
+            }
+        }
+
+        private void AnimateGrassSway()
+        {
+            if (_mesh == null ||
+                _baseVertices == null ||
+                _animatedVertices == null ||
+                _swayWeights == null ||
+                _baseVertices.Length != _animatedVertices.Length)
+            {
+                return;
+            }
+
+            float time = Time.time * Mathf.Max(0.01f, _swaySpeed);
+            float amplitude = Mathf.Max(0f, _swayAmplitude);
+            Vector3 windDirection = new Vector3(0.72f, 0f, 0.42f).normalized;
+
+            for (int i = 0; i < _baseVertices.Length; i++)
+            {
+                Vector3 vertex = _baseVertices[i];
+                float weight = _swayWeights[i];
+                if (weight > 0.001f)
+                {
+                    float wave = Mathf.Sin(time + vertex.x * 1.7f + vertex.z * 2.3f);
+                    vertex += windDirection * (wave * amplitude * weight);
+                }
+
+                _animatedVertices[i] = vertex;
+            }
+
+            _mesh.vertices = _animatedVertices;
+            _mesh.RecalculateBounds();
         }
 
         private static float ResolveGroundVisualY(Bounds bounds)
@@ -256,39 +322,81 @@ namespace MOBA.Core.Infrastructure
                     float height = stepZ * Mathf.Lerp(1.08f, 1.36f, Next01(ref seed));
                     float direction = (z & 1) == 0 ? 1f : -1f;
 
-                    AddTopDownTuft(center, width, height, direction, 1);
-                    AddTopDownTuft(
-                        center + new Vector3(0f, 0.001f, -height * 0.18f * direction),
-                        width * 0.62f,
-                        height * 0.72f,
+                    AddBillboardTuftCluster(center, width, height, direction, z, 1);
+                    AddBillboardTuftCluster(
+                        center + new Vector3(0f, 0.002f, -height * 0.18f * direction),
+                        width * 0.66f,
+                        height * 0.76f,
                         direction,
+                        z + 3,
                         2);
                 }
             }
         }
 
-        private void AddTopDownTuft(
+        private void AddBillboardTuftCluster(
+            Vector3 center,
+            float width,
+            float footprintHeight,
+            float direction,
+            int rowIndex,
+            int materialIndex)
+        {
+            float height = Mathf.Max(0.12f, _billboardHeight) *
+                Mathf.Lerp(0.86f, 1.18f, Mathf.PingPong(rowIndex * 0.37f, 1f));
+            float scaledWidth = width * Mathf.Max(0.2f, _billboardWidthScale);
+            float scaledDepth = footprintHeight * 0.78f;
+            AddBillboardTuft(center, scaledWidth, height, Vector3.right, materialIndex);
+            AddBillboardTuft(center, scaledDepth, height * 0.92f, Vector3.forward, materialIndex);
+        }
+
+        private void AddBillboardTuft(
             Vector3 center,
             float width,
             float height,
-            float direction,
+            Vector3 axis,
             int materialIndex)
         {
             int start = _vertices.Count;
-            float halfWidth = width * 0.5f;
-            float halfHeight = height * 0.5f;
-            _vertices.Add(new Vector3(center.x - halfWidth, center.y, center.z - halfHeight * direction));
-            _vertices.Add(new Vector3(center.x + halfWidth, center.y, center.z - halfHeight * direction));
-            _vertices.Add(new Vector3(center.x, center.y, center.z + halfHeight * direction));
+            Vector3 right = axis.normalized * (width * 0.5f);
+            Vector3 bottomLeft = center - right;
+            Vector3 bottomRight = center + right;
+            Vector3 midLeft = bottomLeft + Vector3.up * (height * 0.55f);
+            Vector3 midRight = bottomRight + Vector3.up * (height * 0.55f);
+            Vector3 top = center + Vector3.up * height;
+
+            _vertices.Add(bottomLeft);
+            _vertices.Add(bottomRight);
+            _vertices.Add(midLeft);
+            _vertices.Add(midRight);
+            _vertices.Add(top);
 
             _uvs.Add(new Vector2(0f, 0f));
             _uvs.Add(new Vector2(1f, 0f));
+            _uvs.Add(new Vector2(0f, 0.55f));
+            _uvs.Add(new Vector2(1f, 0.55f));
             _uvs.Add(new Vector2(0.5f, 1f));
 
             List<int> triangles = _triangles[Mathf.Clamp(materialIndex, 0, _triangles.Length - 1)];
             triangles.Add(start);
             triangles.Add(start + 2);
             triangles.Add(start + 1);
+            triangles.Add(start + 1);
+            triangles.Add(start + 2);
+            triangles.Add(start + 3);
+            triangles.Add(start + 2);
+            triangles.Add(start + 4);
+            triangles.Add(start + 3);
+
+            triangles.Add(start + 1);
+            triangles.Add(start + 2);
+            triangles.Add(start);
+            triangles.Add(start + 3);
+            triangles.Add(start + 2);
+            triangles.Add(start + 1);
+            triangles.Add(start + 3);
+            triangles.Add(start + 4);
+            triangles.Add(start + 2);
         }
 
         private Material[] CreateGrassMaterials()
