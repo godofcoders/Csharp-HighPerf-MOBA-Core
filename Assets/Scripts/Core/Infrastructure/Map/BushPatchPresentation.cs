@@ -12,9 +12,9 @@ namespace MOBA.Core.Infrastructure
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
         [SerializeField] private float _tuftCellSize = 0.16f;
-        [SerializeField] private Color _darkGrass = new Color(0.03f, 0.30f, 0.07f, 0.42f);
-        [SerializeField] private Color _midGrass = new Color(0.07f, 0.52f, 0.11f, 0.70f);
-        [SerializeField] private Color _lightGrass = new Color(0.22f, 0.76f, 0.14f, 0.76f);
+        [SerializeField] private Color _darkGrass = new Color(0.42f, 0.29f, 0.10f, 0.42f);
+        [SerializeField] private Color _midGrass = new Color(0.74f, 0.52f, 0.18f, 0.70f);
+        [SerializeField] private Color _lightGrass = new Color(0.98f, 0.78f, 0.32f, 0.78f);
         [SerializeField] private float _billboardHeight = 0.36f;
         [SerializeField] private float _billboardWidthScale = 1.08f;
         [SerializeField] private float _swayAmplitude = 0.026f;

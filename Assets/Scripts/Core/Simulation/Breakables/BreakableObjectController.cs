@@ -341,7 +341,7 @@ namespace MOBA.Core.Simulation
             if (healthPercent <= Mathf.Clamp01(_definition.CriticalHealthPercent))
                 ApplyColor(_definition.CriticalTint);
             else
-                ClearColor();
+                ApplyColor(_definition.BaseTint);
         }
 
         private void ApplyColor(Color color)

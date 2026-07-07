@@ -26,9 +26,10 @@ namespace MOBA.Core.Simulation
         public GameObject DestroyedVisualPrefab;
 
         [Header("Presentation")]
+        public Color BaseTint = new Color(0.68f, 0.50f, 0.30f, 1f);
         public Color HitFlashColor = new Color(1f, 0.74f, 0.22f, 1f);
         public float HitFlashSeconds = 0.08f;
-        public Color CriticalTint = new Color(0.46f, 0.46f, 0.46f, 1f);
+        public Color CriticalTint = new Color(0.43f, 0.31f, 0.19f, 1f);
         [Range(0f, 1f)]
         public float CriticalHealthPercent = 0.35f;
 
