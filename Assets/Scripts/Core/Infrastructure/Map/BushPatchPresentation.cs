@@ -11,12 +11,10 @@ namespace MOBA.Core.Infrastructure
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
 
-        [SerializeField] private int _minTuftCount = 96;
-        [SerializeField] private int _maxTuftCount = 220;
-        [SerializeField] private float _tuftDensity = 145f;
-        [SerializeField] private Color _darkGrass = new Color(0.05f, 0.36f, 0.10f, 1f);
-        [SerializeField] private Color _midGrass = new Color(0.08f, 0.58f, 0.14f, 1f);
-        [SerializeField] private Color _lightGrass = new Color(0.20f, 0.78f, 0.18f, 1f);
+        [SerializeField] private float _tuftCellSize = 0.16f;
+        [SerializeField] private Color _darkGrass = new Color(0.03f, 0.33f, 0.08f, 1f);
+        [SerializeField] private Color _midGrass = new Color(0.08f, 0.56f, 0.11f, 1f);
+        [SerializeField] private Color _lightGrass = new Color(0.24f, 0.78f, 0.15f, 1f);
 
         private readonly List<Vector3> _vertices = new List<Vector3>(512);
         private readonly List<Vector2> _uvs = new List<Vector2>(512);
@@ -174,39 +172,11 @@ namespace MOBA.Core.Infrastructure
                 _triangles[i].Clear();
 
             int seed = CalculateSeed();
-            float footprintArea = Mathf.Max(0.1f, bounds.size.x * bounds.size.z);
-            int tuftCount = Mathf.Clamp(
-                Mathf.RoundToInt(footprintArea * Mathf.Max(1f, _tuftDensity)),
-                Mathf.Max(16, _minTuftCount),
-                Mathf.Max(_minTuftCount, _maxTuftCount));
-
             float baseY = bounds.center.y - bounds.extents.y + 0.018f;
             float halfX = Mathf.Max(0.05f, bounds.extents.x * 0.98f);
             float halfZ = Mathf.Max(0.05f, bounds.extents.z * 0.98f);
-            float minHeight = Mathf.Max(0.28f, bounds.size.y * 0.34f);
-            float maxHeight = Mathf.Max(minHeight + 0.02f, bounds.size.y * 0.62f);
             AddBaseFill(bounds, baseY, halfX, halfZ);
             AddTriangularTuftField(bounds, baseY, halfX, halfZ, ref seed);
-            AddEdgeBand(bounds, baseY, halfX, halfZ, ref seed);
-
-            for (int i = 0; i < tuftCount; i++)
-            {
-                float x = bounds.center.x + Mathf.Lerp(-halfX, halfX, Next01(ref seed));
-                float z = bounds.center.z + Mathf.Lerp(-halfZ, halfZ, Next01(ref seed));
-                float angle = Next01(ref seed) * Mathf.PI;
-                float height = Mathf.Lerp(minHeight, maxHeight, Next01(ref seed));
-                float width = Mathf.Lerp(0.06f, 0.14f, Next01(ref seed));
-                float spread = Mathf.Lerp(0.08f, 0.18f, Next01(ref seed));
-                int materialIndex = Mathf.Clamp(Mathf.FloorToInt(Next01(ref seed) * _triangles.Length), 0, _triangles.Length - 1);
-
-                AddTuft(
-                    new Vector3(x, baseY, z),
-                    angle,
-                    width,
-                    height,
-                    spread,
-                    materialIndex);
-            }
 
             Mesh mesh = new Mesh();
             mesh.SetVertices(_vertices);
@@ -250,11 +220,13 @@ namespace MOBA.Core.Infrastructure
             float halfZ,
             ref int seed)
         {
-            float cell = 0.18f;
+            float cell = Mathf.Max(0.08f, _tuftCellSize);
             int columns = Mathf.Clamp(Mathf.CeilToInt((halfX * 2f) / cell), 4, 28);
             int rows = Mathf.Clamp(Mathf.CeilToInt((halfZ * 2f) / cell), 4, 28);
             float stepX = (halfX * 2f) / columns;
             float stepZ = (halfZ * 2f) / rows;
+            float visualMinX = bounds.center.x - halfX;
+            float visualMaxX = bounds.center.x + halfX;
 
             for (int z = 0; z < rows; z++)
             {
@@ -267,15 +239,23 @@ namespace MOBA.Core.Infrastructure
                     if (rowX > bounds.center.x + halfX)
                         rowX -= halfX * 2f;
 
-                    float jitterX = Mathf.Lerp(-stepX * 0.16f, stepX * 0.16f, Next01(ref seed));
-                    float jitterZ = Mathf.Lerp(-stepZ * 0.12f, stepZ * 0.12f, Next01(ref seed));
-                    int materialIndex = Next01(ref seed) > 0.58f ? 2 : 1;
+                    float jitterX = Mathf.Lerp(-stepX * 0.07f, stepX * 0.07f, Next01(ref seed));
+                    float jitterZ = Mathf.Lerp(-stepZ * 0.05f, stepZ * 0.05f, Next01(ref seed));
+                    Vector3 center = new Vector3(
+                        Mathf.Clamp(rowX + jitterX, visualMinX + stepX * 0.22f, visualMaxX - stepX * 0.22f),
+                        baseY + 0.014f + z * 0.0007f,
+                        rowZ + jitterZ);
+                    float width = stepX * Mathf.Lerp(0.92f, 1.18f, Next01(ref seed));
+                    float height = stepZ * Mathf.Lerp(1.08f, 1.36f, Next01(ref seed));
+                    float direction = (z & 1) == 0 ? 1f : -1f;
+
+                    AddTopDownTuft(center, width, height, direction, 1);
                     AddTopDownTuft(
-                        new Vector3(rowX + jitterX, baseY + 0.014f + z * 0.0006f, rowZ + jitterZ),
-                        stepX * Mathf.Lerp(0.82f, 1.12f, Next01(ref seed)),
-                        stepZ * Mathf.Lerp(0.92f, 1.22f, Next01(ref seed)),
-                        (z & 1) == 0 ? 1f : -1f,
-                        materialIndex);
+                        center + new Vector3(0f, 0.001f, -height * 0.18f * direction),
+                        width * 0.62f,
+                        height * 0.72f,
+                        direction,
+                        2);
                 }
             }
         }
@@ -302,102 +282,6 @@ namespace MOBA.Core.Infrastructure
             triangles.Add(start);
             triangles.Add(start + 2);
             triangles.Add(start + 1);
-        }
-
-        private void AddEdgeBand(
-            Bounds bounds,
-            float baseY,
-            float halfX,
-            float halfZ,
-            ref int seed)
-        {
-            int edgeTuftsPerSide = Mathf.Clamp(
-                Mathf.RoundToInt((halfX + halfZ) * 10f),
-                10,
-                34);
-
-            for (int i = 0; i < edgeTuftsPerSide; i++)
-            {
-                float t = edgeTuftsPerSide <= 1 ? 0.5f : i / (float)(edgeTuftsPerSide - 1);
-                AddEdgeTuft(new Vector3(bounds.center.x + Mathf.Lerp(-halfX, halfX, t), baseY, bounds.center.z - halfZ), 0f, ref seed);
-                AddEdgeTuft(new Vector3(bounds.center.x + Mathf.Lerp(-halfX, halfX, t), baseY, bounds.center.z + halfZ), Mathf.PI, ref seed);
-                AddEdgeTuft(new Vector3(bounds.center.x - halfX, baseY, bounds.center.z + Mathf.Lerp(-halfZ, halfZ, t)), Mathf.PI * 0.5f, ref seed);
-                AddEdgeTuft(new Vector3(bounds.center.x + halfX, baseY, bounds.center.z + Mathf.Lerp(-halfZ, halfZ, t)), -Mathf.PI * 0.5f, ref seed);
-            }
-        }
-
-        private void AddEdgeTuft(Vector3 basePosition, float inwardAngle, ref int seed)
-        {
-            float angle = inwardAngle + Mathf.Lerp(-0.45f, 0.45f, Next01(ref seed));
-            int materialIndex = Mathf.Clamp(Mathf.FloorToInt(Next01(ref seed) * _triangles.Length), 0, _triangles.Length - 1);
-            AddTuft(
-                basePosition,
-                angle,
-                Mathf.Lerp(0.08f, 0.15f, Next01(ref seed)),
-                Mathf.Lerp(0.34f, 0.58f, Next01(ref seed)),
-                Mathf.Lerp(0.12f, 0.22f, Next01(ref seed)),
-                materialIndex);
-        }
-
-        private void AddTuft(
-            Vector3 basePosition,
-            float angle,
-            float width,
-            float height,
-            float spread,
-            int materialIndex)
-        {
-            AddGrassCard(basePosition, angle, width, height, spread, materialIndex);
-            AddGrassCard(basePosition, angle + Mathf.PI * 0.52f, width * 0.86f, height * 0.92f, spread * 0.84f, materialIndex);
-            AddGrassCard(basePosition, angle - Mathf.PI * 0.48f, width * 0.78f, height * 0.82f, spread * 0.74f, materialIndex);
-        }
-
-        private void AddGrassCard(
-            Vector3 basePosition,
-            float angle,
-            float width,
-            float height,
-            float spread,
-            int materialIndex)
-        {
-            int start = _vertices.Count;
-            Vector3 forward = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
-            Vector3 right = new Vector3(-forward.z, 0f, forward.x) * (width * 0.5f);
-            Vector3 top = basePosition + Vector3.up * height + forward * spread;
-            Vector3 mid = basePosition + Vector3.up * (height * 0.58f) + forward * (spread * 0.52f);
-
-            _vertices.Add(basePosition - right);
-            _vertices.Add(basePosition + right);
-            _vertices.Add(mid - right * 0.82f);
-            _vertices.Add(mid + right * 0.82f);
-            _vertices.Add(top);
-
-            _uvs.Add(new Vector2(0f, 0f));
-            _uvs.Add(new Vector2(1f, 0f));
-            _uvs.Add(new Vector2(0f, 0.58f));
-            _uvs.Add(new Vector2(1f, 0.58f));
-            _uvs.Add(new Vector2(0.5f, 1f));
-
-            List<int> triangles = _triangles[Mathf.Clamp(materialIndex, 0, _triangles.Length - 1)];
-            triangles.Add(start);
-            triangles.Add(start + 2);
-            triangles.Add(start + 1);
-            triangles.Add(start + 1);
-            triangles.Add(start + 2);
-            triangles.Add(start + 3);
-            triangles.Add(start + 2);
-            triangles.Add(start + 4);
-            triangles.Add(start + 3);
-
-            triangles.Add(start + 1);
-            triangles.Add(start + 2);
-            triangles.Add(start);
-            triangles.Add(start + 3);
-            triangles.Add(start + 2);
-            triangles.Add(start + 1);
-            triangles.Add(start + 3);
-            triangles.Add(start + 4);
-            triangles.Add(start + 2);
         }
 
         private Material[] CreateGrassMaterials()

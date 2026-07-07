@@ -12,7 +12,7 @@ namespace MOBA.Tests.EditMode
     //   IsStatusRevealed { get; set; }
     //   LastAttackTick   { get; set; }
     //   LastDamageTakenTick { get; set; }
-    //   const RecentlyAttackedTicks = 60
+    //   const RecentlyAttackedTicks = 6
     //   IsHidden(currentTick) -> bool
     //   Reset()
     //
@@ -87,13 +87,12 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
-        public void RecentlyAttackedTicks_IsPinnedAtSixty()
+        public void RecentlyAttackedTicks_IsPinnedAtBriefShootingWindow()
         {
-            // Pin the constant. 60 ticks = ~2 seconds at 30 TPS. If this
-            // changes during a balance pass, that's a *design* decision and
-            // this test should be updated alongside the change — not silently
-            // moved by someone "tidying up." Catches any drift.
-            Assert.AreEqual(60u, BrawlerStealth.RecentlyAttackedTicks);
+            // Pin the constant. Attack reveal is intentionally brief: projectile
+            // spawns refresh the tick, then the brawler quickly returns to bush
+            // stealth after shooting stops.
+            Assert.AreEqual(6u, BrawlerStealth.RecentlyAttackedTicks);
         }
 
         [Test]
@@ -125,11 +124,11 @@ namespace MOBA.Tests.EditMode
         {
             // Pick a "now" comfortably past the window so we can express
             // "recently attacked" via a recent LastAttackTick and "old"
-            // via one well outside the window.
+            // via one at the strict expiry boundary.
             const uint currentTick = 1000;
             uint lastAttack = recentlyAttacked
-                ? currentTick - 30   // 30 < 60 → inside window
-                : currentTick - 200; // 200 > 60 → outside window
+                ? currentTick - (Window - 1) // inside attack reveal window
+                : currentTick - Window;      // exactly outside attack reveal window
 
             var stealth = new BrawlerStealth
             {
@@ -219,18 +218,18 @@ namespace MOBA.Tests.EditMode
             {
                 IsInBush = true,
                 IsRevealed = false,
-                LastAttackTick = currentTick - Window,
+                LastAttackTick = currentTick - BrawlerStealth.RecentlyAttackedTicks,
             };
 
-            stealth.LastDamageTakenTick = currentTick - (Window - 1);
+            stealth.LastDamageTakenTick = currentTick - (BrawlerStealth.RecentlyDamagedTicks - 1);
             Assert.IsFalse(
                 stealth.IsHidden(currentTick),
                 "Recent damage should reveal a brawler in grass");
 
-            stealth.LastDamageTakenTick = currentTick - Window;
+            stealth.LastDamageTakenTick = currentTick - BrawlerStealth.RecentlyDamagedTicks;
             Assert.IsTrue(
                 stealth.IsHidden(currentTick),
-                "Damage reveal should expire at the same strict boundary as attack reveal");
+                "Damage reveal should expire at its strict boundary");
         }
 
         // ---- Reset ----------------------------------------------------------

@@ -14,10 +14,11 @@ namespace MOBA.Core.Simulation
     {
         /// <summary>
         /// Ticks after firing a shot during which the brawler is visible even
-        /// while standing in a bush (classic "shooting reveals you" window).
-        /// 60 ticks = ~2 seconds at the sim's 30 TPS.
+        /// while standing in a bush. Kept deliberately short so visibility
+        /// follows active shooting and quickly returns to hidden after the
+        /// last projectile is spawned.
         /// </summary>
-        public const uint RecentlyAttackedTicks = 60;
+        public const uint RecentlyAttackedTicks = 6;
         public const uint RecentlyDamagedTicks = 60;
 
         public bool IsInBush { get; set; }

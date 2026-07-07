@@ -1069,6 +1069,16 @@ namespace MOBA.Core.Infrastructure
             };
 
             projectileService.FireProjectile(spawnContext);
+            RefreshStealthAttackReveal();
+        }
+
+        private void RefreshStealthAttackReveal()
+        {
+            if (State == null)
+                return;
+
+            if (ServiceProvider.TryGet<ISimulationClock>(out ISimulationClock clock))
+                State.LastAttackTick = clock.CurrentTick;
         }
 
         private void ExecuteCommand(BufferedCommand cmd, uint currentTick)
