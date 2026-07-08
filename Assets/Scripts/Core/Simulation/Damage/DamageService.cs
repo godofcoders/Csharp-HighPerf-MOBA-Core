@@ -13,6 +13,9 @@ namespace MOBA.Core.Simulation
     {
         public void ApplyDamage(in DamageContext ctx)
         {
+            if (!MatchStateUtility.IsCombatResolutionOpen())
+                return;
+
             if (!SpatialEntityUtility.IsAlive(ctx.Target))
                 return;
 
@@ -36,6 +39,11 @@ namespace MOBA.Core.Simulation
             {
                 wasAliveBefore = !targetBreakable.IsDestroyed;
             }
+
+            // Kill-credit: stamp the current attacker before TakeDamage can
+            // fire OnDeath, so final-hit stats/logs do not read stale credit.
+            if (targetBrawler != null && targetBrawler.State != null)
+                targetBrawler.State.LastAttacker = ctx.Attacker;
 
             if (ctx.Attacker != null && ctx.Attacker.State != null)
             {
@@ -103,11 +111,6 @@ namespace MOBA.Core.Simulation
 
                 ctx.Target.TakeDamage(workingDamage);
             }
-
-            // Kill-credit: stamp the attacker on the victim BEFORE the
-            // OnDeath fires so MatchStatsTracker can attribute it.
-            if (targetBrawler != null && targetBrawler.State != null && ctx.Attacker != null)
-                targetBrawler.State.LastAttacker = ctx.Attacker;
 
             bool wasFatal = false;
 

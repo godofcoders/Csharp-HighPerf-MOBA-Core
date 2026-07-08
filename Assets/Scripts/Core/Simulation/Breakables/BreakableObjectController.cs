@@ -125,6 +125,9 @@ namespace MOBA.Core.Simulation
 
         public void TakeDamage(float amount)
         {
+            if (!MatchStateUtility.IsCombatResolutionOpen())
+                return;
+
             if (_destroyed || _definition == null || amount <= 0f)
                 return;
 

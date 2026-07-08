@@ -1006,6 +1006,9 @@ namespace MOBA.Core.Infrastructure
 
         public void TakeDamage(float amount)
         {
+            if (!MatchStateUtility.IsCombatResolutionOpen())
+                return;
+
             State?.TakeDamage(amount);
         }
 

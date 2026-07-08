@@ -218,17 +218,14 @@ namespace MOBA.Core.Simulation
 
         private void HandleDeath(BrawlerController dying)
         {
+            if (!MatchStateUtility.IsCombatResolutionOpen() || _matchEnding)
+                return;
+
             if (dying == null)
                 return;
 
             if (!_placementsByEntityId.ContainsKey(dying.EntityID))
                 _placementsByEntityId[dying.EntityID] = Mathf.Max(1, _nextPlacement--);
-
-            if (MatchManager.Instance == null ||
-                MatchManager.Instance.CurrentState != MatchState.Active)
-            {
-                return;
-            }
 
             CheckEndCondition();
         }

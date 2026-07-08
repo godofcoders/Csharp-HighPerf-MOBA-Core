@@ -221,6 +221,9 @@ namespace MOBA.Core.Simulation
 
         private void HandleDeath(BrawlerController dying)
         {
+            if (!MatchStateUtility.IsCombatResolutionOpen())
+                return;
+
             if (_roundEnding) return;
             // Count alive per team after this death.
             int blueAlive = 0, redAlive = 0;

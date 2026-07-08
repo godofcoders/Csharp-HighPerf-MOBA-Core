@@ -143,6 +143,9 @@ namespace MOBA.Core.Simulation
 
         private void HandleDeath(BrawlerController dying)
         {
+            if (!MatchStateUtility.IsCombatResolutionOpen())
+                return;
+
             if (dying == null || dying.State == null)
                 return;
 
