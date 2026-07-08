@@ -35,11 +35,26 @@ namespace MOBA.Core.Infrastructure
 
         [Tooltip("Text shown for the final 'GO!' beat. Override to localise.")]
         [SerializeField] private string _goLabel = "GO!";
+        [SerializeField, Min(0f)] private float _goalHoldSeconds = 1.1f;
+        [SerializeField] private string _blueGoalLabel = "BLUE GOAL!";
+        [SerializeField] private string _redGoalLabel = "RED GOAL!";
 
         // Tracks when the match transitioned to Active so we know when to
         // stop holding the GO! flash.
         private float _activeStartTime = -1f;
+        private float _goalMessageUntil = -1f;
+        private string _goalMessage = string.Empty;
         private MatchState _previousState = MatchState.Waiting;
+
+        private void OnEnable()
+        {
+            BrawlBallEventBus.OnGoalScored += HandleBrawlBallGoalScored;
+        }
+
+        private void OnDisable()
+        {
+            BrawlBallEventBus.OnGoalScored -= HandleBrawlBallGoalScored;
+        }
 
         public void BindOverlay(GameObject overlayRoot, TMP_Text bigTextTmp, Text bigTextLegacy)
         {
@@ -65,6 +80,13 @@ namespace MOBA.Core.Infrastructure
             if (_previousState != MatchState.Active && mm.CurrentState == MatchState.Active)
                 _activeStartTime = Time.time;
             _previousState = mm.CurrentState;
+
+            if (_goalMessageUntil > Time.time)
+            {
+                SetText(_goalMessage);
+                Show(true);
+                return;
+            }
 
             switch (mm.CurrentState)
             {
@@ -110,6 +132,20 @@ namespace MOBA.Core.Infrastructure
         {
             if (_overlayRoot != null && _overlayRoot.activeSelf != visible)
                 _overlayRoot.SetActive(visible);
+        }
+
+        private void HandleBrawlBallGoalScored(TeamType scoringTeam, int blueGoals, int redGoals)
+        {
+            if (scoringTeam == TeamType.Blue)
+                _goalMessage = _blueGoalLabel;
+            else if (scoringTeam == TeamType.Red)
+                _goalMessage = _redGoalLabel;
+            else
+                _goalMessage = "GOAL!";
+
+            _goalMessageUntil = Time.time + Mathf.Max(0f, _goalHoldSeconds);
+            SetText(_goalMessage);
+            Show(true);
         }
 
         private void SetText(string s)

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
@@ -16,6 +17,7 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(1f)] private float _regulationDurationSeconds = 120f;
         [SerializeField, Min(1f)] private float _overtimeDurationSeconds = 60f;
         [SerializeField] private bool _resetBrawlersAfterNonFinalGoal = true;
+        [SerializeField, Min(0f)] private float _goalCelebrationSeconds = 1.1f;
 
         [Header("Map Placement")]
         [SerializeField] private bool _autoPlaceGoalsFromMap = true;
@@ -38,6 +40,7 @@ namespace MOBA.Core.Simulation
         private bool _isOvertime;
         private bool _matchResolved;
         private TeamType _resolvedWinner = TeamType.Neutral;
+        private Coroutine _roundResetRoutine;
 
         private const float GoalPlacementClearance = 0.12f;
         private const float GoalPlacementProbeHeight = 1.4f;
@@ -122,6 +125,12 @@ namespace MOBA.Core.Simulation
 
         private void OnDisable()
         {
+            if (_roundResetRoutine != null)
+            {
+                StopCoroutine(_roundResetRoutine);
+                _roundResetRoutine = null;
+            }
+
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
@@ -152,7 +161,7 @@ namespace MOBA.Core.Simulation
                 return;
             }
 
-            if (matchManager.CurrentState != MatchState.Ended)
+            if (matchManager.CurrentState == MatchState.Waiting)
                 ResetMatchClock();
         }
 
@@ -319,17 +328,16 @@ namespace MOBA.Core.Simulation
 
             bool endsMatch = _isOvertime || GetTeamGoals(scoringTeam) >= _goalsToWin;
 
-            ResetBall();
-            DeployableMatchCleanup.DespawnAllActiveDeployables();
             BrawlBallEventBus.RaiseGoalScored(scoringTeam, BlueGoals, RedGoals);
 
             if (endsMatch)
             {
+                DeployableMatchCleanup.DespawnAllActiveDeployables();
                 ResolveMatch(scoringTeam);
                 return;
             }
 
-            ResetBrawlersForNextRound();
+            StartRoundResetAfterGoal();
         }
 
         public int GetTeamGoals(TeamType team)
@@ -623,6 +631,33 @@ namespace MOBA.Core.Simulation
                     redOrdinal++;
                 }
             }
+        }
+
+        private void StartRoundResetAfterGoal()
+        {
+            if (_roundResetRoutine != null)
+            {
+                StopCoroutine(_roundResetRoutine);
+                _roundResetRoutine = null;
+            }
+
+            MatchManager matchManager = MatchManager.Instance;
+            if (matchManager != null)
+                matchManager.StartRoundResetCountdown(_goalCelebrationSeconds);
+
+            _roundResetRoutine = StartCoroutine(RoundResetAfterGoalRoutine());
+        }
+
+        private IEnumerator RoundResetAfterGoalRoutine()
+        {
+            float delaySeconds = Mathf.Max(0f, _goalCelebrationSeconds);
+            if (delaySeconds > 0f)
+                yield return new WaitForSeconds(delaySeconds);
+
+            ResetBall();
+            DeployableMatchCleanup.DespawnAllActiveDeployables();
+            ResetBrawlersForNextRound();
+            _roundResetRoutine = null;
         }
 
         private void PlaceModeObjectsFromMap()

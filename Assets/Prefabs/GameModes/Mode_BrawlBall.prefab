@@ -51,6 +51,7 @@ MonoBehaviour:
   _regulationDurationSeconds: 120
   _overtimeDurationSeconds: 60
   _resetBrawlersAfterNonFinalGoal: 1
+  _goalCelebrationSeconds: 1.1
   _autoPlaceGoalsFromMap: 1
   _autoPlaceBallAtMapCenter: 1
   _goalEdgeInset: 0.15

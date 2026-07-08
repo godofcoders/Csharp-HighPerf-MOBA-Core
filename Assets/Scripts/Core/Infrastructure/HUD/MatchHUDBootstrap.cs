@@ -670,6 +670,9 @@ namespace MOBA.Core.Infrastructure
                 Color.white,
                 FontStyle.Bold);
 
+            countdownText.horizontalOverflow = HorizontalWrapMode.Overflow;
+            countdownText.verticalOverflow = VerticalWrapMode.Truncate;
+
             MatchCountdownOverlay countdown = controller.AddComponent<MatchCountdownOverlay>();
             countdown.BindOverlay(root, null, countdownText);
         }

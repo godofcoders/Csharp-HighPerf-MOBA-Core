@@ -27,7 +27,7 @@ namespace MOBA.Core.Infrastructure
             {
                 if (CurrentState != MatchState.CountingDown || _countdownStartTime < 0f)
                     return 0f;
-                float elapsed = Time.time - _countdownStartTime;
+                float elapsed = Mathf.Max(0f, Time.time - _countdownStartTime);
                 float remaining = _countdownDuration - elapsed;
                 return remaining < 0f ? 0f : remaining;
             }
@@ -67,9 +67,24 @@ namespace MOBA.Core.Infrastructure
             DeployableMatchCleanup.DespawnAllActiveDeployables();
             _winner = TeamType.Neutral;
             _winnerKnown = false;
-            _countdownStartTime = Time.time;
+            StartCountdown(0f);
+        }
+
+        public void StartRoundResetCountdown(float leadInSeconds = 0f)
+        {
+            if (CurrentState == MatchState.Ended)
+                return;
+
+            StartCountdown(leadInSeconds);
+        }
+
+        private void StartCountdown(float leadInSeconds)
+        {
+            CancelInvoke(nameof(BeginGameplay));
+            float safeLeadInSeconds = Mathf.Max(0f, leadInSeconds);
+            _countdownStartTime = Time.time + safeLeadInSeconds;
             ChangeState(MatchState.CountingDown);
-            Invoke(nameof(BeginGameplay), _countdownDuration);
+            Invoke(nameof(BeginGameplay), safeLeadInSeconds + _countdownDuration);
         }
 
         private void BeginGameplay()
