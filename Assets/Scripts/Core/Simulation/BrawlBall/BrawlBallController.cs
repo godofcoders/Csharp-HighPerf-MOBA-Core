@@ -14,6 +14,8 @@ namespace MOBA.Core.Simulation
     {
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private const float BallCollisionSkin = 0.025f;
+        private const float BallCollisionEpsilon = 0.001f;
 
         [Header("Mode")]
         [SerializeField] private BrawlBallMode _mode;
@@ -26,13 +28,15 @@ namespace MOBA.Core.Simulation
 
         [Header("Kicking")]
         [SerializeField, Min(0.5f)] private float _normalKickSpeed = 13f;
-        [SerializeField, Min(0.5f)] private float _normalKickRange = 8f;
+        [SerializeField, Min(0.5f)] private float _normalKickRange = 9f;
         [SerializeField, Min(0.5f)] private float _superKickSpeed = 18f;
         [SerializeField, Min(0.5f)] private float _superKickRange = 11.5f;
         [SerializeField, Min(0f)] private float _pickupLockoutSeconds = 0.16f;
         [SerializeField, Min(0.01f)] private float _collisionRadius = 0.32f;
         [SerializeField, Min(0f)] private float _collisionHeightOffset = 0.35f;
         [SerializeField] private LayerMask _worldCollisionMask;
+        [SerializeField, Range(0.1f, 1f)] private float _bounceVelocityRetain = 0.86f;
+        [SerializeField, Range(0, 4)] private int _maxBouncesPerTick = 2;
 
         [Header("Presentation")]
         [SerializeField] private bool _useRuntimeVisual = true;
@@ -272,27 +276,81 @@ namespace MOBA.Core.Simulation
                 return;
             }
 
+            float remainingTickSeconds = SimulationClock.TickDeltaTime;
+            if (remainingTickSeconds <= BallCollisionEpsilon)
+            {
+                StopLooseMotion();
+                return;
+            }
+
             Vector3 direction = _looseVelocity / speed;
-            float distance = Mathf.Min(speed * SimulationClock.TickDeltaTime, _remainingTravelDistance);
-            if (distance <= 0.001f)
-            {
-                StopLooseMotion();
-                return;
-            }
+            Vector3 currentPosition = transform.position;
+            float consumedDistance = 0f;
+            int bouncesUsed = 0;
+            int maxBounces = Mathf.Max(0, _maxBouncesPerTick);
 
-            Vector3 previousPosition = transform.position;
-            Vector3 movement = direction * distance;
-            if (TryResolveWorldCollision(previousPosition, movement, out Vector3 resolvedPosition))
+            while (remainingTickSeconds > BallCollisionEpsilon &&
+                   consumedDistance < _remainingTravelDistance - BallCollisionEpsilon)
             {
+                float stepDistance = Mathf.Min(
+                    speed * remainingTickSeconds,
+                    _remainingTravelDistance - consumedDistance);
+                if (stepDistance <= BallCollisionEpsilon)
+                    break;
+
+                Vector3 movement = direction * stepDistance;
+                if (!TryResolveWorldCollision(
+                        currentPosition,
+                        movement,
+                        out Vector3 resolvedPosition,
+                        out Vector3 bounceDirection,
+                        out float hitDistance))
+                {
+                    SetLoosePosition(currentPosition + movement);
+                    RollVisual(direction, stepDistance);
+                    consumedDistance += stepDistance;
+                    break;
+                }
+
+                float safeTravelDistance = Vector3.Distance(currentPosition, resolvedPosition);
                 SetLoosePosition(resolvedPosition);
-                RollVisual(direction, Vector3.Distance(previousPosition, resolvedPosition));
-                StopLooseMotion();
-                return;
+                RollVisual(direction, safeTravelDistance);
+
+                float segmentConsumed = Mathf.Clamp(hitDistance, BallCollisionSkin, stepDistance);
+                consumedDistance += segmentConsumed;
+                remainingTickSeconds = Mathf.Max(0f, remainingTickSeconds - segmentConsumed / speed);
+                currentPosition = transform.position;
+
+                if (bounceDirection.sqrMagnitude <= BallCollisionEpsilon || bouncesUsed >= maxBounces)
+                {
+                    StopLooseMotion();
+                    return;
+                }
+
+                bouncesUsed++;
+                speed *= Mathf.Clamp(_bounceVelocityRetain, 0.1f, 1f);
+                if (speed <= BallCollisionEpsilon)
+                {
+                    StopLooseMotion();
+                    return;
+                }
+
+                direction = bounceDirection.normalized;
+                _looseVelocity = direction * speed;
+
+                if (safeTravelDistance <= BallCollisionEpsilon && remainingTickSeconds > BallCollisionEpsilon)
+                {
+                    float nudgeDistance = Mathf.Min(
+                        BallCollisionSkin,
+                        _remainingTravelDistance - consumedDistance);
+                    currentPosition += direction * nudgeDistance;
+                    SetLoosePosition(currentPosition);
+                    consumedDistance += nudgeDistance;
+                    remainingTickSeconds = Mathf.Max(0f, remainingTickSeconds - nudgeDistance / speed);
+                }
             }
 
-            SetLoosePosition(previousPosition + movement);
-            RollVisual(direction, distance);
-            _remainingTravelDistance -= distance;
+            _remainingTravelDistance -= consumedDistance;
 
             if (_remainingTravelDistance <= 0.001f)
                 StopLooseMotion();
@@ -301,16 +359,20 @@ namespace MOBA.Core.Simulation
         private bool TryResolveWorldCollision(
             Vector3 previousPosition,
             Vector3 movement,
-            out Vector3 resolvedPosition)
+            out Vector3 resolvedPosition,
+            out Vector3 bounceDirection,
+            out float hitDistance)
         {
             resolvedPosition = previousPosition + movement;
+            bounceDirection = Vector3.zero;
+            hitDistance = movement.magnitude;
 
             int collisionMask = ResolveWorldCollisionMask();
             if (collisionMask == 0)
                 return false;
 
             float distance = movement.magnitude;
-            if (distance <= 0.001f)
+            if (distance <= BallCollisionEpsilon)
                 return false;
 
             Vector3 direction = movement / distance;
@@ -329,8 +391,35 @@ namespace MOBA.Core.Simulation
                 return false;
             }
 
-            resolvedPosition = previousPosition + direction * Mathf.Max(0f, hit.distance - 0.02f);
+            hitDistance = Mathf.Clamp(hit.distance, 0f, distance);
+            resolvedPosition = previousPosition + direction * Mathf.Max(0f, hitDistance - BallCollisionSkin);
+            bounceDirection = ResolveBounceDirection(direction, hit.normal);
             return true;
+        }
+
+        private static Vector3 ResolveBounceDirection(Vector3 incomingDirection, Vector3 hitNormal)
+        {
+            incomingDirection.y = 0f;
+            if (incomingDirection.sqrMagnitude <= BallCollisionEpsilon)
+                return Vector3.zero;
+
+            incomingDirection.Normalize();
+
+            Vector3 horizontalNormal = hitNormal;
+            horizontalNormal.y = 0f;
+            if (horizontalNormal.sqrMagnitude <= BallCollisionEpsilon)
+                horizontalNormal = -incomingDirection;
+            else
+                horizontalNormal.Normalize();
+
+            Vector3 reflected = Vector3.Reflect(incomingDirection, horizontalNormal);
+            reflected.y = 0f;
+            if (reflected.sqrMagnitude <= BallCollisionEpsilon)
+                reflected = -incomingDirection;
+
+            return reflected.sqrMagnitude > BallCollisionEpsilon
+                ? reflected.normalized
+                : Vector3.zero;
         }
 
         private void TryPickupNearest()

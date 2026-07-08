@@ -109,7 +109,7 @@ MonoBehaviour:
   _carrierHeightOffset: 0.32
   _dropForwardOffset: 0.72
   _normalKickSpeed: 13
-  _normalKickRange: 8
+  _normalKickRange: 9
   _superKickSpeed: 18
   _superKickRange: 11.5
   _pickupLockoutSeconds: 0.16
@@ -118,6 +118,8 @@ MonoBehaviour:
   _worldCollisionMask:
     serializedVersion: 2
     m_Bits: 0
+  _bounceVelocityRetain: 0.86
+  _maxBouncesPerTick: 2
   _useRuntimeVisual: 1
   _visualRoot: {fileID: 0}
   _ballColor: {r: 0.96, g: 0.94, b: 0.86, a: 1}
