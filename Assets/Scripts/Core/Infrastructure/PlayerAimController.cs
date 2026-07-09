@@ -184,6 +184,9 @@ namespace MOBA.Core.Infrastructure
                             kind,
                             brawlerPosition + Vector3.up * Mathf.Max(0f, _originHeightOffset));
                         float actualRange = (previewTargetPoint - brawlerPosition).magnitude;
+                        float radius = ability is LeapAbilityDefinition leap && leap.LandingRadius > 0f
+                            ? leap.LandingRadius
+                            : _defaultPlacementRadius;
 
                         return new AimPreviewData
                         {
@@ -195,7 +198,7 @@ namespace MOBA.Core.Infrastructure
                             Range = actualRange,
                             TargetPoint = previewTargetPoint,
                             ArcHeight = 0f,
-                            Radius = _defaultPlacementRadius
+                            Radius = radius
                         };
                     }
 
@@ -248,6 +251,9 @@ namespace MOBA.Core.Infrastructure
             if (ability is VolleyProjectileAbilityDefinition volley && volley.SpreadAngle > 0f)
                 return volley.SpreadAngle * 0.5f;
 
+            if (ability is MeleeConeAbilityDefinition melee && melee.ArcDegrees > 0f)
+                return melee.ArcDegrees * 0.5f;
+
             return 0f;
         }
 
@@ -297,6 +303,12 @@ namespace MOBA.Core.Infrastructure
 
             if (ability is AoEAbilityDefinition aoe)
                 return aoe.Radius;
+
+            if (ability is MeleeConeAbilityDefinition melee)
+                return melee.Range;
+
+            if (ability is LeapAbilityDefinition leap)
+                return leap.Range;
 
             return _defaultRange;
         }

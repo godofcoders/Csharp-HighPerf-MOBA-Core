@@ -1713,6 +1713,35 @@ namespace MOBA.Core.Infrastructure
             SimulationClock.Grid?.Add(this);
         }
 
+        public void WarpTo(Vector3 position)
+        {
+            Vector3 previousPosition = transform.position;
+            transform.position = position;
+            _lastTickPosition = position;
+            _lastKnownPosition = position;
+            _planarVelocity = Vector3.zero;
+
+            _previousSimPosition = position;
+            _currentSimPosition = position;
+            _previousSimRotation = transform.rotation;
+            _currentSimRotation = transform.rotation;
+            _lastSimulationUpdateTime = Time.time;
+
+            if (_presentationAnchor != null)
+            {
+                _presentationAnchor.position = position;
+                _presentationAnchor.rotation = transform.rotation;
+            }
+
+            if (_visualRoot != null)
+            {
+                _visualRoot.localPosition = Vector3.zero;
+                _visualRoot.localRotation = Quaternion.identity;
+            }
+
+            SimulationClock.Grid?.UpdateEntity(this, previousPosition, position);
+        }
+
         private void UpdateVisualStealth()
         {
             if (State == null)

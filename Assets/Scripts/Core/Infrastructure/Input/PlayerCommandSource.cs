@@ -516,6 +516,12 @@ namespace MOBA.Core.Infrastructure
             if (abilityDefinition is AoEAbilityDefinition aoe)
                 return aoe.Radius;
 
+            if (abilityDefinition is MeleeConeAbilityDefinition melee)
+                return melee.Range;
+
+            if (abilityDefinition is LeapAbilityDefinition leap)
+                return leap.Range;
+
             if (abilityDefinition is BurstSequenceProjectileAbilityDefinition burst)
                 return burst.Range;
 
