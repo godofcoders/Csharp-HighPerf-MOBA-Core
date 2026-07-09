@@ -1621,6 +1621,12 @@ namespace MOBA.Core.Infrastructure
             if (ability is ChainProjectileAbilityDefinition chain)
                 return Mathf.RoundToInt(chain.Damage).ToString();
 
+            if (ability is MeleeConeAbilityDefinition melee)
+                return Mathf.RoundToInt(melee.Damage).ToString();
+
+            if (ability is LeapAbilityDefinition leap)
+                return Mathf.RoundToInt(leap.Damage).ToString();
+
             if (ability is AoEAbilityDefinition aoe)
                 return Mathf.RoundToInt(aoe.Damage).ToString();
 
@@ -1659,6 +1665,12 @@ namespace MOBA.Core.Infrastructure
 
             if (ability is ChainProjectileAbilityDefinition chain)
                 return chain.Damage;
+
+            if (ability is MeleeConeAbilityDefinition melee)
+                return melee.Damage;
+
+            if (ability is LeapAbilityDefinition leap)
+                return leap.Damage;
 
             if (ability is AoEAbilityDefinition aoe)
                 return aoe.Damage;
