@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4acade4956184ba5b740f811376b7515, type: 3}
+  m_Name: ElPrimo_HyperchargeSuper
+  m_EditorClassIdentifier:
+  OptionName: Meteor Elbow Drop
+  Description: Hypercharged leap with a larger landing shock.
+  AllowedBuildSlotTypes:
+  AbilityName: Meteor Elbow Drop
+  Icon: {fileID: 0}
+  SlotType: 1
+  TargetingType: 3
+  DeliveryType: 2
+  Cooldown: 1
+  Tags:
+  CastDurationSeconds: 0.22
+  AllowMovementDuringCast: 0
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 2
+  AllowAimAssist: 1
+  AimAssistMode: 6
+  AimAssistIncludeSelf: 0
+  PreferManualAim: 1
+  AimAssistRangeOverride: 7
+  AimAssistForwardBias: 2
+  AimAssistDistanceBias: 0.85
+  AimAssistIdealRange: 5.5
+  AimAssistPlacementDistance: 5.5
+  AimAssistLowHealthBias: 1.45
+  AimAssistGemCarrierBias: 0.6
+  AimAssistCloseTargetRange: 2
+  AimAssistLeadStrength: 0.35
+  PreviewMode: 3
+  AimPreviewWidth: 0.65
+  Range: 7
+  LandingRadius: 2.25
+  Damage: 1950
+  LandingSearchRadius: 1.4
