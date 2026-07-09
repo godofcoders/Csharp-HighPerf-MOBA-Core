@@ -110,6 +110,8 @@ namespace MOBA.Core.Simulation.AI
             if (ability is ThrownHybridAoEAbilityDefinition ||
                 ability is ThrownVolleyAoEAbilityDefinition ||
                 ability is AoEAbilityDefinition ||
+                ability is MeleeConeAbilityDefinition ||
+                ability is LeapAbilityDefinition ||
                 ability is EffectAbilityDefinition)
             {
                 return false;
@@ -207,6 +209,8 @@ namespace MOBA.Core.Simulation.AI
             if (ability is ThrownVolleyAoEAbilityDefinition thrownVolley) return thrownVolley.EnemyDamage * Mathf.Max(1, thrownVolley.ProjectileCount);
             if (ability is HybridAoEAbilityDefinition hybridAoE) return hybridAoE.EnemyDamage;
             if (ability is AoEAbilityDefinition aoe) return aoe.Damage;
+            if (ability is MeleeConeAbilityDefinition melee) return melee.Damage;
+            if (ability is LeapAbilityDefinition leap) return leap.Damage;
             return 0f;
         }
 
@@ -214,10 +218,14 @@ namespace MOBA.Core.Simulation.AI
         {
             if (ability is AoEAbilityDefinition ||
                 ability is ThrownHybridAoEAbilityDefinition ||
-                ability is ThrownVolleyAoEAbilityDefinition)
+                ability is ThrownVolleyAoEAbilityDefinition ||
+                ability is LeapAbilityDefinition)
             {
                 return DamageType.AoE;
             }
+
+            if (ability is MeleeConeAbilityDefinition)
+                return DamageType.Melee;
 
             return DamageType.Projectile;
         }

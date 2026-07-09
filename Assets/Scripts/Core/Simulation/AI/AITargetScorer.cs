@@ -465,6 +465,13 @@ namespace MOBA.Core.Simulation.AI
                 }
             }
 
+            if (attack is MeleeConeAbilityDefinition melee)
+            {
+                int closeTargets = CountEnemiesNear(target.Position, Mathf.Max(1.5f, melee.Range), _self.Team);
+                if (closeTargets > 1)
+                    return (closeTargets - 1) * _profile.ClusterTargetBonus;
+            }
+
             if (attack is BurstSequenceProjectileAbilityDefinition burst)
             {
                 int lineTargets = CountEnemiesAlongLine(target.Position, burst.Range, 1.5f);

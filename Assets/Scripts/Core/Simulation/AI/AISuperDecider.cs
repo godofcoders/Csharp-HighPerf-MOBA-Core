@@ -199,6 +199,13 @@ namespace MOBA.Core.Simulation.AI
                        healthRatio <= Mathf.Max(0.42f, _profile.SuperLowHealthTargetThreshold);
             }
 
+            if (super is LeapAbilityDefinition)
+            {
+                float selfHealthRatio = _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value);
+                return healthRatio <= Mathf.Max(0.45f, _profile.SuperLowHealthTargetThreshold) ||
+                       selfHealthRatio >= _profile.LowHealthRetreatRatio;
+            }
+
             if (super is BurstSequenceProjectileAbilityDefinition)
             {
                 int laneCluster = CountEnemiesNear(target.Position, 2.75f);

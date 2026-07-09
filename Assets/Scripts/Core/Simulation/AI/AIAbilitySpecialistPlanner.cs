@@ -344,6 +344,28 @@ namespace MOBA.Core.Simulation.AI
                 return true;
             }
 
+            if (ability is LeapAbilityDefinition leap)
+            {
+                if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
+                    return false;
+
+                Vector3 targetPoint = GetPredictedTargetPoint(
+                    ability,
+                    requestedTarget,
+                    leap.Range,
+                    currentTick,
+                    out _);
+                targetPoint = ClampPointToRange(targetPoint, leap.Range);
+
+                plan = AIAbilityCastPlan.PointTarget(
+                    requestedTarget,
+                    _self.Position,
+                    targetPoint,
+                    "leap_engage");
+                ApplyComboWindow(requestedTarget, currentTick, ref plan);
+                return true;
+            }
+
             if (ability is BurstSequenceProjectileAbilityDefinition)
             {
                 if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
@@ -1376,6 +1398,10 @@ namespace MOBA.Core.Simulation.AI
                     return thrown.ThrowRange;
                 case ThrownVolleyAoEAbilityDefinition volley:
                     return volley.ThrowRange;
+                case MeleeConeAbilityDefinition melee:
+                    return melee.Range;
+                case LeapAbilityDefinition leap:
+                    return leap.Range;
                 case EffectAbilityDefinition effect:
                     return effect.PreviewRange;
                 default:
