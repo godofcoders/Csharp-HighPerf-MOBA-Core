@@ -1627,6 +1627,11 @@ namespace MOBA.Core.Infrastructure
             if (ability is LeapAbilityDefinition leap)
                 return Mathf.RoundToInt(leap.Damage).ToString();
 
+            if (ability is MinefieldAbilityDefinition minefield)
+                return minefield.MineCount > 1
+                    ? $"{Mathf.RoundToInt(minefield.Damage)} x {minefield.MineCount}"
+                    : Mathf.RoundToInt(minefield.Damage).ToString();
+
             if (ability is AoEAbilityDefinition aoe)
                 return Mathf.RoundToInt(aoe.Damage).ToString();
 
@@ -1671,6 +1676,9 @@ namespace MOBA.Core.Infrastructure
 
             if (ability is LeapAbilityDefinition leap)
                 return leap.Damage;
+
+            if (ability is MinefieldAbilityDefinition minefield)
+                return minefield.Damage * Mathf.Max(1, minefield.MineCount);
 
             if (ability is AoEAbilityDefinition aoe)
                 return aoe.Damage;
