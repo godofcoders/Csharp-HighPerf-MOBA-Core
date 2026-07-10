@@ -492,6 +492,22 @@ namespace MOBA.Core.Simulation.AI
                 return normalized * _profile.InRangeTargetBonus;
             }
 
+            if (attack is VolleyProjectileAbilityDefinition volleyProjectile)
+            {
+                int lineTargets = CountEnemiesAlongLine(
+                    target.Position,
+                    volleyProjectile.Range,
+                    Mathf.Max(1.15f, volleyProjectile.AimPreviewWidth));
+
+                if (lineTargets > 1)
+                    return (lineTargets - 1) * (_profile.InRangeTargetBonus * 0.65f);
+
+                float range = Mathf.Max(1f, volleyProjectile.Range);
+                float distance = Vector3.Distance(_self.Position, target.Position);
+                float normalized = 1f - Mathf.Clamp01(distance / range);
+                return normalized * (_profile.InRangeTargetBonus * 0.85f);
+            }
+
             // Straight projectile users prefer more reachable targets.
             if (attack is ProjectileAbilityDefinition projectile)
             {

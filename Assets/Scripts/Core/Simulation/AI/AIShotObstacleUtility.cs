@@ -112,6 +112,7 @@ namespace MOBA.Core.Simulation.AI
                 ability is AoEAbilityDefinition ||
                 ability is MeleeConeAbilityDefinition ||
                 ability is LeapAbilityDefinition ||
+                ability is MinefieldAbilityDefinition ||
                 ability is EffectAbilityDefinition)
             {
                 return false;
@@ -211,6 +212,7 @@ namespace MOBA.Core.Simulation.AI
             if (ability is AoEAbilityDefinition aoe) return aoe.Damage;
             if (ability is MeleeConeAbilityDefinition melee) return melee.Damage;
             if (ability is LeapAbilityDefinition leap) return leap.Damage;
+            if (ability is MinefieldAbilityDefinition minefield) return minefield.Damage * Mathf.Max(1, minefield.MineCount);
             return 0f;
         }
 
@@ -219,7 +221,8 @@ namespace MOBA.Core.Simulation.AI
             if (ability is AoEAbilityDefinition ||
                 ability is ThrownHybridAoEAbilityDefinition ||
                 ability is ThrownVolleyAoEAbilityDefinition ||
-                ability is LeapAbilityDefinition)
+                ability is LeapAbilityDefinition ||
+                ability is MinefieldAbilityDefinition)
             {
                 return DamageType.AoE;
             }

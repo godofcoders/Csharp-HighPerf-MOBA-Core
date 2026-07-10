@@ -153,6 +153,11 @@ namespace MOBA.Core.Simulation.AI
                     speed = burst.Speed;
                     return true;
 
+                case VolleyProjectileAbilityDefinition volleyProjectile:
+                    range = volleyProjectile.Range;
+                    speed = volleyProjectile.Speed;
+                    return true;
+
                 case ChainProjectileAbilityDefinition chain:
                     range = chain.Range;
                     speed = chain.Speed;

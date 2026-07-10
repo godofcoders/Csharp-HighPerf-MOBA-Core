@@ -189,6 +189,18 @@ namespace MOBA.Core.Simulation.AI
                        healthRatio <= Mathf.Max(0.42f, _profile.SuperLowHealthTargetThreshold);
             }
 
+            if (super is MinefieldAbilityDefinition minefield)
+            {
+                int clusterCount = CountEnemiesNear(
+                    target.Position,
+                    Mathf.Max(3.25f, minefield.ExplosionRadius + minefield.MineSpacing * Mathf.Max(1, minefield.MineCount - 1)));
+
+                int carriedGems = targetBrawler.State.CarriedGemCount;
+                return clusterCount >= _profile.SuperMinClusterCount ||
+                       carriedGems >= 2 ||
+                       healthRatio <= Mathf.Max(0.45f, _profile.SuperLowHealthTargetThreshold);
+            }
+
             if (super is ThrownHybridAoEAbilityDefinition thrown)
             {
                 int clusterCount = CountEnemiesNear(

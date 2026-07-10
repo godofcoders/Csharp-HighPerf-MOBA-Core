@@ -312,6 +312,43 @@ namespace MOBA.Core.Simulation.AI
                 return true;
             }
 
+            if (ability is MinefieldAbilityDefinition minefield)
+            {
+                if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
+                    return false;
+
+                Vector3 targetPoint = GetPredictedTargetPoint(
+                    ability,
+                    requestedTarget,
+                    minefield.Range,
+                    currentTick,
+                    out Vector3 targetVelocity);
+
+                float impactRadius = Mathf.Max(1f, minefield.ExplosionRadius);
+                Vector3 point = BuildLayeredAreaDenialPoint(
+                    targetPoint,
+                    targetVelocity,
+                    minefield.Range,
+                    Mathf.Max(3.25f, impactRadius + minefield.MineSpacing * Mathf.Max(1, minefield.MineCount - 1)),
+                    impactRadius,
+                    out int enemyPressure);
+
+                plan = AIAbilityCastPlan.PointTarget(requestedTarget, _self.Position, point, "minefield_area_control");
+                AppendAreaDenialDecision(
+                    requestedTarget,
+                    enemyPressure,
+                    CountAlliesNear(point, impactRadius),
+                    true,
+                    true,
+                    ref plan);
+
+                if (enemyPressure >= 2 || IsHighValueCarrier(requestedTarget))
+                    plan.ForceUse = true;
+
+                ApplyComboWindow(requestedTarget, currentTick, ref plan);
+                return true;
+            }
+
             if (ability is ThrownVolleyAoEAbilityDefinition volley)
             {
                 if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
@@ -810,6 +847,13 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return count;
+        }
+
+        private static bool IsHighValueCarrier(ISpatialEntity target)
+        {
+            return target is BrawlerController brawler &&
+                   brawler.State != null &&
+                   brawler.State.CarriedGemCount >= 2;
         }
 
         private void RecordComboSetup(
@@ -1388,6 +1432,8 @@ namespace MOBA.Core.Simulation.AI
                     return basicSuper.Range;
                 case BurstSequenceProjectileAbilityDefinition burst:
                     return burst.Range;
+                case VolleyProjectileAbilityDefinition volleyProjectile:
+                    return volleyProjectile.Range;
                 case ProjectileAbilityDefinition projectile:
                     return projectile.Range;
                 case ChainProjectileAbilityDefinition chain:
@@ -1402,6 +1448,8 @@ namespace MOBA.Core.Simulation.AI
                     return melee.Range;
                 case LeapAbilityDefinition leap:
                     return leap.Range;
+                case MinefieldAbilityDefinition minefield:
+                    return minefield.Range;
                 case EffectAbilityDefinition effect:
                     return effect.PreviewRange;
                 default:
