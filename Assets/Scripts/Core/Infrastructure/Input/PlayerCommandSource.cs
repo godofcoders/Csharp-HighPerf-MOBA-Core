@@ -522,6 +522,9 @@ namespace MOBA.Core.Infrastructure
             if (abilityDefinition is LeapAbilityDefinition leap)
                 return leap.Range;
 
+            if (abilityDefinition is MinefieldAbilityDefinition minefield)
+                return minefield.Range;
+
             if (abilityDefinition is BurstSequenceProjectileAbilityDefinition burst)
                 return burst.Range;
 

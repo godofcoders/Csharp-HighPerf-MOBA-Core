@@ -170,6 +170,9 @@ namespace MOBA.Core.Simulation
                 case DeployableType.SummonUnit:
                     return new SummonUnitDeployableBehavior();
 
+                case DeployableType.Trap:
+                    return new TrapDeployableBehavior();
+
                 default:
                     return null;
             }

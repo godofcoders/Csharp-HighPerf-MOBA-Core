@@ -187,6 +187,12 @@ namespace MOBA.Core.Infrastructure
                         float radius = ability is LeapAbilityDefinition leap && leap.LandingRadius > 0f
                             ? leap.LandingRadius
                             : _defaultPlacementRadius;
+                        if (ability is MinefieldAbilityDefinition minefield)
+                        {
+                            float mineRadius = minefield.ExplosionRadius;
+                            float mineSpread = Mathf.Max(0f, minefield.MineSpacing);
+                            radius = Mathf.Max(_defaultPlacementRadius, mineRadius + mineSpread);
+                        }
 
                         return new AimPreviewData
                         {
@@ -309,6 +315,9 @@ namespace MOBA.Core.Infrastructure
 
             if (ability is LeapAbilityDefinition leap)
                 return leap.Range;
+
+            if (ability is MinefieldAbilityDefinition minefield)
+                return minefield.Range;
 
             return _defaultRange;
         }
