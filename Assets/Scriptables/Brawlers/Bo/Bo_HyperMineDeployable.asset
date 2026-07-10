@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1433df1fc76f4803b9dd9ced88adac15, type: 3}
+  m_Name: Bo_HyperMineDeployable
+  m_EditorClassIdentifier:
+  DeployableName: Bo Hyper Mine
+  Prefab: {fileID: 884401900100000001, guid: 78c10f632ec849c29a46dcc60a636929, type: 3}
+  DeployableType: 4
+  LifetimeSeconds: 20
+  MaxHealth: 1
+  DetectionRadius: 0
+  ActionIntervalSeconds: 1
+  AbilityDefinition: {fileID: 0}
+  PulseIntervalSeconds: 1
+  PulseRadius: 0
+  CanReceiveHealing: 0
+  CanReceiveShield: 0
+  CanReceiveStatusEffects: 0
+  UniquePerOwner: 0
+  ReplaceOlderOwnedDeployable: 0
+  TriggerRadius: 0.95
+  ExplosionRadius: 2.45
+  Damage: 2100
+  ArmDelaySeconds: 0.25
+  DetonationDelaySeconds: 1.5
+  HideWhenArmed: 1

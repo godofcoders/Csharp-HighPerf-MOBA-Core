@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 42e8fc87f8344945b37beb0cb93568f9, type: 3}
+  m_Name: Bo_HyperchargeSuper
+  m_EditorClassIdentifier:
+  OptionName: Spirit Minefield
+  Description: Hypercharged mines arm faster and cover a wider blast area.
+  AllowedBuildSlotTypes:
+  AbilityName: Spirit Minefield
+  Icon: {fileID: 0}
+  SlotType: 1
+  TargetingType: 3
+  DeliveryType: 2
+  Cooldown: 1
+  Tags:
+  CastDurationSeconds: 0.22
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 5
+  AllowAimAssist: 1
+  AimAssistMode: 9
+  AimAssistIncludeSelf: 0
+  PreferManualAim: 1
+  AimAssistRangeOverride: 8
+  AimAssistForwardBias: 2
+  AimAssistDistanceBias: 0.8
+  AimAssistIdealRange: 6.75
+  AimAssistPlacementDistance: 6.75
+  AimAssistLowHealthBias: 1.25
+  AimAssistGemCarrierBias: 0.6
+  AimAssistCloseTargetRange: 2
+  AimAssistLeadStrength: 0.2
+  PreviewMode: 3
+  AimPreviewWidth: 0.9
+  MineDefinition: {fileID: 11400000, guid: 137208023b794428868e47fb2b67656b, type: 2}
+  MineCount: 3
+  Range: 8
+  MineSpacing: 1.2

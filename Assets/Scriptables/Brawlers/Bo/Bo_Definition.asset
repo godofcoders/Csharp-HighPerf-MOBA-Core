@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
+  m_Name: Bo_Definition
+  m_EditorClassIdentifier:
+  BrawlerName: Bo
+  ModelPrefab: {fileID: 884401910100000001, guid: fbedd24bf26142f3890afbf47c851ca2, type: 3}
+  Portrait: {fileID: 0}
+  BaseHealth: 3900
+  BaseMoveSpeed: 5
+  BaseDamage: 720
+  ProgressionBonuses: []
+  MainAttack: {fileID: 11400000, guid: 6e94ca33b120467d85e9a621ccdd50ed, type: 2}
+  SuperAbility: {fileID: 11400000, guid: 6bb8c39cf2c44acd8b588ff6bc0ae5f7, type: 2}
+  Gadget: {fileID: 11400000, guid: 1d29f69bf946451da40abbf7bf7206c2, type: 2}
+  StarPower: {fileID: 11400000, guid: ecb6e45de1f041baac8755b61d40b303, type: 2}
+  DefaultPassiveLoadout: {fileID: 0}
+  DefaultPassiveEntries: []
+  Hypercharge: {fileID: 11400000, guid: 62672284f59e47db8fc1a3bbc15cc991, type: 2}
+  SuperChargeSources:
+  - {fileID: 11400000, guid: 8ac035bdac5e47ed8d5727b5c5fce801, type: 2}
+  AIProfile: {fileID: 11400000, guid: 49b61964394745f78396044d1fdcc7f6, type: 2}
+  Archetype: 5
+  Aggression: 1.05
+  SurvivalInstinct: 1
+  TeamplayWeight: 1.15
+  BuildLayout: {fileID: 11400000, guid: e7eb581d16fba44e382042c75204d09c, type: 2}
+  GadgetOptions:
+  - {fileID: 11400000, guid: 1d29f69bf946451da40abbf7bf7206c2, type: 2}
+  StarPowerOptions:
+  - {fileID: 11400000, guid: ecb6e45de1f041baac8755b61d40b303, type: 2}
+  - {fileID: 11400000, guid: fa1e05f816ef4a07ad09e6d294a3d8e1, type: 2}
+  HyperchargeOptions:
+  - {fileID: 11400000, guid: 62672284f59e47db8fc1a3bbc15cc991, type: 2}
+  DefaultBuild: {fileID: 11400000, guid: 6c210dc22f504a638961b8c90cfc4be3, type: 2}
+  SharedGearCatalog: {fileID: 11400000, guid: 7f9a7730557864b77bb0ca97e22ea9e6, type: 2}
+  GearOptions: []
+  ExtraGearOptions: []
