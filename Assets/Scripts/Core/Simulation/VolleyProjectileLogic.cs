@@ -67,7 +67,8 @@ namespace MOBA.Core.Simulation
                 _definition,
                 context.SlotType,
                 context.IsSuper,
-                context.IsGadget
+                context.IsGadget,
+                _definition.PresentationProfile
             );
         }
     }

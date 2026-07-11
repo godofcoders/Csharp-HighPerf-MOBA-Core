@@ -15,6 +15,7 @@ namespace MOBA.Core.Definitions
         [Min(1)] public int ProjectileCount = 6;
         [Min(0f)] public float SpreadAngle = 12f;
         [Min(0f)] public float DelayBetweenShots = 0f;
+        public ProjectilePresentationProfile PresentationProfile;
 
         public override IAbilityLogic CreateLogic()
         {

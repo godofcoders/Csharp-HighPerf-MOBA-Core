@@ -590,6 +590,23 @@ namespace MOBA.Core.Infrastructure
                     isSuper ? 0.034f : 0.026f);
             }
 
+            if (profileName.Contains("bo") || profileName.Contains("arrow"))
+            {
+                return new ProjectileVisualStyle(
+                    new Color(1f, 0.78f, 0.28f, 1f),
+                    new Color(1f, 0.48f, 0.10f, 0.54f),
+                    new Color(1f, 0.66f, 0.20f, 0.70f),
+                    new Color(1f, 0.54f, 0.10f, 0.54f),
+                    0.18f,
+                    0.70f,
+                    0.62f,
+                    16f,
+                    0.045f,
+                    0.070f,
+                    0.16f,
+                    0.020f);
+            }
+
             return new ProjectileVisualStyle(
                 FallbackVisualColor,
                 FallbackSuperVisualColor,

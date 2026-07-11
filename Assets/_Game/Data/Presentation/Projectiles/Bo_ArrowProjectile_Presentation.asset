@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d4d7476af0334c89ba9613aa4565986, type: 3}
+  m_Name: Bo_ArrowProjectile_Presentation
+  m_EditorClassIdentifier:
+  VisualPrefab: {fileID: 884401930100000001, guid: cc7c96f534c84e0b901505296dff3d7e, type: 3}
+  LocalPosition: {x: 0, y: 0, z: 0}
+  LocalRotationEuler: {x: 0, y: 0, z: 0}
+  LocalScale: {x: 1.15, y: 1.15, z: 1.15}
+  FaceMovementDirection: 1
+  UseSpin: 0
+  SpinEulerPerSecond: {x: 0, y: 0, z: 0}
+  MinimumVisualDiameter: 0.34
+  UseRuntimeTrail: 1
+  TrailTime: 0.050
+  TrailStartWidth: 0.075
+  TrailEndWidth: 0.012
+  TrailColor: {r: 1, g: 0.66, b: 0.20, a: 0.70}
+  SuperTrailColor: {r: 0.46, g: 0.12, b: 0.82, a: 0.84}

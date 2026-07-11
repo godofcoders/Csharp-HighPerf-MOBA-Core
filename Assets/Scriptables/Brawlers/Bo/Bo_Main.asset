@@ -48,3 +48,4 @@ MonoBehaviour:
   ProjectileCount: 3
   SpreadAngle: 5
   DelayBetweenShots: 0.12
+  PresentationProfile: {fileID: 11400000, guid: 0ddb3086f1384e589a88c73b1f99eac5, type: 2}
