@@ -37,6 +37,8 @@ namespace MOBA.Core.Infrastructure
 
             if (controller.Definition.DeployableType == DeployableType.Turret)
                 BuildTurret();
+            else if (controller.Definition.DeployableType == DeployableType.Trap)
+                BuildTrapMine();
             else
                 BuildFallbackBeacon();
         }
@@ -165,6 +167,77 @@ namespace MOBA.Core.Infrastructure
                 _teamColor,
                 false,
                 out _);
+        }
+
+        private void BuildTrapMine()
+        {
+            _runtimeRoot = CreateRoot("RuntimeDeployablePresentation");
+
+            CreatePrimitive(
+                _runtimeRoot,
+                "MineTeamRing",
+                PrimitiveType.Cylinder,
+                new Vector3(0f, 0.018f, 0f),
+                new Vector3(0.92f, 0.010f, 0.92f),
+                Quaternion.identity,
+                _teamColor.WithAlpha(0.32f),
+                true,
+                out _teamRingRenderer);
+
+            CreatePrimitive(
+                _runtimeRoot,
+                "MineOuterDisc",
+                PrimitiveType.Cylinder,
+                new Vector3(0f, 0.055f, 0f),
+                new Vector3(0.62f, 0.050f, 0.62f),
+                Quaternion.identity,
+                _darkMetalColor,
+                false,
+                out _);
+
+            CreatePrimitive(
+                _runtimeRoot,
+                "MinePressurePlate",
+                PrimitiveType.Cylinder,
+                new Vector3(0f, 0.115f, 0f),
+                new Vector3(0.42f, 0.030f, 0.42f),
+                Quaternion.identity,
+                _teamColor,
+                false,
+                out _);
+
+            CreatePrimitive(
+                _runtimeRoot,
+                "TripWireFront",
+                PrimitiveType.Cylinder,
+                new Vector3(0f, 0.155f, 0.18f),
+                new Vector3(0.020f, 0.34f, 0.020f),
+                Quaternion.Euler(0f, 0f, 90f),
+                _metalColor,
+                false,
+                out _);
+
+            CreatePrimitive(
+                _runtimeRoot,
+                "TripWireBack",
+                PrimitiveType.Cylinder,
+                new Vector3(0f, 0.155f, -0.18f),
+                new Vector3(0.020f, 0.34f, 0.020f),
+                Quaternion.Euler(0f, 0f, 90f),
+                _metalColor,
+                false,
+                out _);
+
+            CreatePrimitive(
+                _runtimeRoot,
+                "WarningLamp",
+                PrimitiveType.Sphere,
+                new Vector3(0f, 0.245f, 0f),
+                new Vector3(0.16f, 0.16f, 0.16f),
+                Quaternion.identity,
+                _muzzleColor,
+                true,
+                out _muzzleRenderer);
         }
 
         private Transform CreateRoot(string rootName)

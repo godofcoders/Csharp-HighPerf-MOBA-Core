@@ -7,12 +7,16 @@ namespace MOBA.Core.Simulation
 {
     public sealed class TrapDeployableBehavior : IDeployableBehavior
     {
+        private const int WarningBlipCount = 2;
+
         private readonly List<ISpatialEntity> _targetBuffer = new List<ISpatialEntity>(16);
 
         private DeployableController _controller;
         private MineTrapDeployableDefinition _definition;
         private Renderer[] _renderers;
+        private uint _spawnTick;
         private uint _armTick;
+        private uint _triggerTick;
         private uint _detonationTick;
         private bool _armed;
         private bool _triggered;
@@ -26,7 +30,9 @@ namespace MOBA.Core.Simulation
 
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
             float armDelay = _definition != null ? Mathf.Max(0f, _definition.ArmDelaySeconds) : 0f;
+            _spawnTick = currentTick;
             _armTick = currentTick + SimulationClock.SecondsToTicks(armDelay);
+            _triggerTick = 0;
             _detonationTick = 0;
             _armed = armDelay <= 0f;
             _triggered = false;
@@ -34,7 +40,7 @@ namespace MOBA.Core.Simulation
                 ? controller.GetComponentsInChildren<Renderer>(true)
                 : null;
 
-            SetVisible(!_armed || !ShouldHideWhenArmed());
+            UpdateVisibility(currentTick);
         }
 
         public void Tick(uint currentTick)
@@ -45,11 +51,14 @@ namespace MOBA.Core.Simulation
             if (!_armed && currentTick >= _armTick)
             {
                 _armed = true;
-                SetVisible(!ShouldHideWhenArmed());
+                UpdateVisibility(currentTick);
             }
 
             if (!_armed)
+            {
+                UpdateVisibility(currentTick);
                 return;
+            }
 
             if (!_triggered)
             {
@@ -57,14 +66,18 @@ namespace MOBA.Core.Simulation
                     return;
 
                 _triggered = true;
+                _triggerTick = currentTick;
                 _detonationTick = currentTick + SimulationClock.SecondsToTicks(
                     Mathf.Max(0f, _definition.DetonationDelaySeconds));
-                SetVisible(true);
+                UpdateVisibility(currentTick);
                 return;
             }
 
             if (currentTick < _detonationTick)
+            {
+                UpdateVisibility(currentTick);
                 return;
+            }
 
             Explode();
             _controller.Despawn();
@@ -186,6 +199,48 @@ namespace MOBA.Core.Simulation
         private bool ShouldHideWhenArmed()
         {
             return _definition != null && _definition.HideWhenArmed && !_triggered;
+        }
+
+        private void UpdateVisibility(uint currentTick)
+        {
+            if (_definition == null)
+            {
+                SetVisible(true);
+                return;
+            }
+
+            if (_triggered)
+            {
+                SetVisible(IsVisibleDuringBlipSequence(currentTick, _triggerTick, _detonationTick));
+                return;
+            }
+
+            if (!_armed)
+            {
+                SetVisible(
+                    _definition.HideWhenArmed
+                        ? IsVisibleDuringBlipSequence(currentTick, _spawnTick, _armTick)
+                        : true);
+                return;
+            }
+
+            SetVisible(!ShouldHideWhenArmed());
+        }
+
+        private static bool IsVisibleDuringBlipSequence(uint currentTick, uint startTick, uint endTick)
+        {
+            if (endTick <= startTick)
+                return true;
+
+            if (currentTick < startTick || currentTick >= endTick)
+                return false;
+
+            uint duration = endTick - startTick;
+            uint elapsed = currentTick - startTick;
+            const int phaseCount = WarningBlipCount * 2;
+            uint phase = (uint)(((ulong)elapsed * phaseCount) / duration);
+
+            return phase < phaseCount && (phase & 1u) == 0u;
         }
 
         private void SetVisible(bool visible)
