@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
@@ -25,25 +26,7 @@ namespace MOBA.Core.Simulation
                 ? context.Direction.normalized
                 : brawler.transform.forward;
 
-            int count = Mathf.Max(1, _definition.ProjectileCount);
-
-            if (count == 1)
-            {
-                FireSingleProjectile(brawler, baseDirection, context);
-                return AbilityExecutionResult.Succeeded(_definition, context.SlotType);
-            }
-
-            float totalSpread = _definition.SpreadAngle;
-            float step = count > 1 ? totalSpread / (count - 1) : 0f;
-            float startAngle = -totalSpread * 0.5f;
-
-            for (int i = 0; i < count; i++)
-            {
-                float angle = startAngle + step * i;
-                Vector3 shotDirection = Quaternion.Euler(0f, angle, 0f) * baseDirection;
-
-                FireSingleProjectile(brawler, shotDirection.normalized, context);
-            }
+            brawler.RunTimedBurst(FireVolleyRoutine(brawler, baseDirection, context));
 
             return AbilityExecutionResult.Succeeded(_definition, context.SlotType);
         }
@@ -52,10 +35,31 @@ namespace MOBA.Core.Simulation
         {
         }
 
+        private IEnumerator FireVolleyRoutine(BrawlerController brawler, Vector3 baseDirection, AbilityExecutionContext context)
+        {
+            int count = Mathf.Max(1, _definition.ProjectileCount);
+            float totalSpread = Mathf.Max(0f, _definition.SpreadAngle);
+            float step = count > 1 ? totalSpread / (count - 1) : 0f;
+            float startAngle = -totalSpread * 0.5f;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (!SpatialEntityUtility.IsAlive(brawler) || brawler.State == null || brawler.State.IsDead)
+                    yield break;
+
+                float angle = startAngle + step * i;
+                Vector3 shotDirection = Quaternion.Euler(0f, angle, 0f) * baseDirection;
+                FireSingleProjectile(brawler, shotDirection.normalized, context);
+
+                if (i < count - 1 && _definition.DelayBetweenShots > 0f)
+                    yield return new WaitForSeconds(_definition.DelayBetweenShots);
+            }
+        }
+
         private void FireSingleProjectile(BrawlerController brawler, Vector3 direction, AbilityExecutionContext context)
         {
             brawler.FireProjectile(
-                brawler.transform.position,
+                brawler.GetCastPosition(),
                 direction,
                 _definition.Speed,
                 _definition.Range,

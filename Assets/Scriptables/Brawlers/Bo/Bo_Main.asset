@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Bo_Main
   m_EditorClassIdentifier:
   OptionName: Bo Main Attack
-  Description: Three medium-long range projectiles with a slight spread.
+  Description: Three medium-long range arrows fired in a quick narrow sequence.
   AllowedBuildSlotTypes:
   AbilityName: Eagle Shot
   Icon: {fileID: 0}
@@ -46,5 +46,5 @@ MonoBehaviour:
   Range: 9.5
   Speed: 23
   ProjectileCount: 3
-  SpreadAngle: 13
-  DelayBetweenShots: 0
+  SpreadAngle: 5
+  DelayBetweenShots: 0.12
