@@ -9,15 +9,15 @@ namespace MOBA.Core.Definitions
     public class LeapAbilityDefinition : AbilityDefinition
     {
         [Header("Leap")]
-        public float Range = 6.5f;
+        public float Range = 7.6f;
         public float LandingRadius = 1.8f;
         public float Damage = 1600f;
         [Tooltip("How far around a blocked landing point the leap may search for the nearest clear landing.")]
         public float LandingSearchRadius = 1.25f;
         [Tooltip("Visual and damage delay for the jump. Damage resolves when the brawler lands.")]
-        public float TravelDurationSeconds = 0.46f;
+        public float TravelDurationSeconds = 0.66f;
         [Tooltip("Presentation-only height used by the leap arc.")]
-        public float JumpHeight = 2.15f;
+        public float JumpHeight = 3.15f;
 
         private void OnValidate()
         {

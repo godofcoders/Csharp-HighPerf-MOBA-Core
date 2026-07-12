@@ -119,10 +119,26 @@ namespace MOBA.Core.Infrastructure
 
             if (superKeyHeld && !_wasSuperKeyHeldLastFrame)
             {
+                if (!CanStartActionPreview(BrawlerActionRequestType.Super))
+                {
+                    ClearSuperPreviewState(false);
+                    _wasSuperKeyHeldLastFrame = superKeyHeld;
+                    return;
+                }
+
                 _isHoldingSuperAim = true;
                 _heldSuperAimDirection = Vector3.zero;
                 _heldSuperTargetPoint = Vector3.zero;
                 _superAimHoldStartTime = Time.time;
+            }
+
+            if (superKeyHeld &&
+                _isHoldingSuperAim &&
+                !CanStartActionPreview(BrawlerActionRequestType.Super))
+            {
+                ClearSuperPreviewState(true);
+                _wasSuperKeyHeldLastFrame = superKeyHeld;
+                return;
             }
 
             if (!superKeyHeld && _wasSuperKeyHeldLastFrame)
@@ -131,7 +147,7 @@ namespace MOBA.Core.Infrastructure
                 bool hasManualRelease = HasSuperPreviewDelayElapsed() &&
                                         releaseDirection.sqrMagnitude > 0.001f;
 
-                if (_isHoldingSuperAim)
+                if (_isHoldingSuperAim && CanStartActionPreview(BrawlerActionRequestType.Super))
                 {
                     if (hasManualRelease)
                     {
@@ -150,9 +166,7 @@ namespace MOBA.Core.Infrastructure
                     }
                 }
 
-                _isHoldingSuperAim = false;
-                _heldSuperAimDirection = Vector3.zero;
-                _heldSuperTargetPoint = Vector3.zero;
+                ClearSuperPreviewState(false);
                 MarkPreviewCanceled();
             }
 
@@ -283,6 +297,7 @@ namespace MOBA.Core.Infrastructure
         {
             AimPreviewKind kind = GetPreviewKind();
             return kind != AimPreviewKind.None &&
+                   CanPreviewKind(kind) &&
                    HasPreviewDelayElapsed(kind) &&
                    ResolvePreviewAimDirection(kind).sqrMagnitude > 0.001f;
         }
@@ -326,9 +341,41 @@ namespace MOBA.Core.Infrastructure
         public Vector3 GetPreviewAimDirection()
         {
             AimPreviewKind kind = GetPreviewKind();
-            return kind != AimPreviewKind.None && HasPreviewDelayElapsed(kind)
+            return kind != AimPreviewKind.None &&
+                   CanPreviewKind(kind) &&
+                   HasPreviewDelayElapsed(kind)
                 ? ResolvePreviewAimDirection(kind)
                 : Vector3.zero;
+        }
+
+        private bool CanPreviewKind(AimPreviewKind kind)
+        {
+            switch (kind)
+            {
+                case AimPreviewKind.MainAttack:
+                    return true;
+
+                case AimPreviewKind.Super:
+                    return CanStartActionPreview(BrawlerActionRequestType.Super);
+
+                default:
+                    return false;
+            }
+        }
+
+        private bool CanStartActionPreview(BrawlerActionRequestType actionType)
+        {
+            if (_controlledBrawler == null || _controlledBrawler.State == null)
+                return false;
+
+            AbilityDefinition ability = GetAbilityDefinition(actionType);
+            if (ability == null)
+                return false;
+
+            if (ServiceProvider.TryGet<ISimulationClock>(out ISimulationClock clock) && clock != null)
+                return _controlledBrawler.State.CanUseAction(actionType, clock.CurrentTick);
+
+            return _controlledBrawler.State.CanPayActionCost(actionType);
         }
 
         private Vector3 ResolvePreviewAimDirection(AimPreviewKind kind)
@@ -891,6 +938,17 @@ namespace MOBA.Core.Infrastructure
             _heldSuperTargetPoint = Vector3.zero;
             _wasSuperKeyHeldLastFrame = false;
             _wasHyperchargeKeyHeldLastFrame = false;
+
+            if (markCancellation && wasPreviewing)
+                MarkPreviewCanceled();
+        }
+
+        private void ClearSuperPreviewState(bool markCancellation)
+        {
+            bool wasPreviewing = _isHoldingSuperAim;
+            _isHoldingSuperAim = false;
+            _heldSuperAimDirection = Vector3.zero;
+            _heldSuperTargetPoint = Vector3.zero;
 
             if (markCancellation && wasPreviewing)
                 MarkPreviewCanceled();

@@ -59,11 +59,11 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Leap Impact")]
         [Min(0.05f)]
-        [SerializeField] private float _leapShockwaveDurationSeconds = 0.24f;
+        [SerializeField] private float _leapShockwaveDurationSeconds = 0.34f;
         [Min(0.05f)]
-        [SerializeField] private float _leapCraterDurationSeconds = 0.72f;
-        [SerializeField] private float _leapShockwaveRadiusMultiplier = 1.35f;
-        [SerializeField] private float _leapCraterRadiusMultiplier = 1.05f;
+        [SerializeField] private float _leapCraterDurationSeconds = 0.9f;
+        [SerializeField] private float _leapShockwaveRadiusMultiplier = 1.75f;
+        [SerializeField] private float _leapCraterRadiusMultiplier = 1.15f;
         [SerializeField] private Color _leapShockwaveColor = new Color(1f, 0.56f, 0.10f, 0.72f);
         [SerializeField] private Color _leapCraterColor = new Color(0.26f, 0.13f, 0.045f, 0.48f);
 
@@ -204,12 +204,21 @@ namespace MOBA.Core.Infrastructure
                 _leapShockwaveDurationSeconds,
                 _impactPulseMaterial);
 
+            Color innerShockColor = shockwaveColor;
+            innerShockColor.a = Mathf.Min(1f, innerShockColor.a * 1.18f);
+            SpawnPulse(
+                evt.Position + Vector3.up * 0.06f,
+                radius * 0.72f,
+                innerShockColor,
+                _leapShockwaveDurationSeconds * 0.68f,
+                _impactPulseMaterial);
+
             SpawnSpark(
                 evt.Position,
                 evt.Direction,
                 shockwaveColor,
                 Mathf.Max(_sparkDurationSeconds, _leapShockwaveDurationSeconds * 0.55f),
-                Mathf.Clamp(radius * 0.92f, 1.35f, 2.4f));
+                Mathf.Clamp(radius * 1.15f, 1.6f, 3f));
         }
 
         private void PrewarmPool()

@@ -22,7 +22,7 @@ MonoBehaviour:
   DeliveryType: 2
   Cooldown: 1
   Tags:
-  CastDurationSeconds: 0.48
+  CastDurationSeconds: 0.68
   AllowMovementDuringCast: 0
   AllowActionInputDuringCast: 0
   IsInterruptible: 1
@@ -31,20 +31,20 @@ MonoBehaviour:
   AimAssistMode: 6
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: 6.5
+  AimAssistRangeOverride: 7.6
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 0.85
-  AimAssistIdealRange: 5.25
-  AimAssistPlacementDistance: 5
+  AimAssistIdealRange: 6.15
+  AimAssistPlacementDistance: 6
   AimAssistLowHealthBias: 1.4
   AimAssistGemCarrierBias: 0.55
   AimAssistCloseTargetRange: 2
   AimAssistLeadStrength: 0.35
   PreviewMode: 3
   AimPreviewWidth: 0.65
-  Range: 6.5
+  Range: 7.6
   LandingRadius: 1.8
   Damage: 1650
   LandingSearchRadius: 1.25
-  TravelDurationSeconds: 0.46
-  JumpHeight: 2.15
+  TravelDurationSeconds: 0.66
+  JumpHeight: 3.15
