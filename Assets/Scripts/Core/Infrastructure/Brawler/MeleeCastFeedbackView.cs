@@ -24,23 +24,23 @@ namespace MOBA.Core.Infrastructure
         [Range(1, 6)]
         [SerializeField] private int _punchesPerCast = 4;
         [Min(0.01f)]
-        [SerializeField] private float _punchIntervalSeconds = 0.035f;
+        [SerializeField] private float _punchIntervalSeconds = 0.040f;
         [Min(0.04f)]
-        [SerializeField] private float _punchDurationSeconds = 0.105f;
+        [SerializeField] private float _punchDurationSeconds = 0.130f;
 
         [Header("Placement")]
-        [SerializeField] private float _heightOffset = 0.36f;
-        [SerializeField] private float _startForwardOffset = 0.30f;
+        [SerializeField] private float _heightOffset = 0.42f;
+        [SerializeField] private float _startForwardOffset = 0.22f;
         [SerializeField] private float _endRangeRatio = 0.92f;
-        [SerializeField] private float _sideOffset = 0.28f;
+        [SerializeField] private float _sideOffset = 0.34f;
 
         [Header("Scale")]
-        [SerializeField] private Vector3 _startScale = new Vector3(0.30f, 0.24f, 0.38f);
-        [SerializeField] private Vector3 _endScale = new Vector3(0.44f, 0.30f, 0.58f);
+        [SerializeField] private Vector3 _startScale = new Vector3(0.48f, 0.36f, 0.58f);
+        [SerializeField] private Vector3 _endScale = new Vector3(0.72f, 0.46f, 0.86f);
 
         [Header("Color")]
-        [SerializeField] private Color _fistColor = new Color(1f, 0.72f, 0.18f, 0.90f);
-        [SerializeField] private Color _trailColor = new Color(1f, 0.44f, 0.08f, 0.72f);
+        [SerializeField] private Color _fistColor = new Color(1f, 1f, 1f, 0.96f);
+        [SerializeField] private Color _trailColor = new Color(1f, 1f, 1f, 0.88f);
 
         private readonly List<PunchInstance> _pool = new List<PunchInstance>(48);
         private readonly List<ScheduledMeleeCast> _scheduledCasts = new List<ScheduledMeleeCast>(24);
@@ -215,32 +215,54 @@ namespace MOBA.Core.Infrastructure
             go.transform.SetParent(transform, false);
             go.transform.localScale = Vector3.zero;
 
-            Renderer[] renderers = new Renderer[4];
-            renderers[0] = CreateFistPart(
+            Renderer[] renderers = new Renderer[7];
+            renderers[0] = CreateVisualPart(
                 go.transform,
                 "Palm",
+                PrimitiveType.Sphere,
                 new Vector3(0f, 0f, -0.05f),
-                new Vector3(0.58f, 0.40f, 0.46f));
-            renderers[1] = CreateFistPart(
+                new Vector3(0.70f, 0.48f, 0.54f));
+            renderers[1] = CreateVisualPart(
                 go.transform,
                 "CenterKnuckle",
+                PrimitiveType.Sphere,
                 new Vector3(0f, 0.015f, 0.25f),
-                new Vector3(0.28f, 0.22f, 0.24f));
-            renderers[2] = CreateFistPart(
+                new Vector3(0.34f, 0.27f, 0.30f));
+            renderers[2] = CreateVisualPart(
                 go.transform,
                 "LeftKnuckle",
+                PrimitiveType.Sphere,
                 new Vector3(-0.17f, 0f, 0.20f),
-                new Vector3(0.24f, 0.20f, 0.22f));
-            renderers[3] = CreateFistPart(
+                new Vector3(0.30f, 0.24f, 0.28f));
+            renderers[3] = CreateVisualPart(
                 go.transform,
                 "RightKnuckle",
+                PrimitiveType.Sphere,
                 new Vector3(0.17f, 0f, 0.20f),
-                new Vector3(0.24f, 0.20f, 0.22f));
+                new Vector3(0.30f, 0.24f, 0.28f));
+            renderers[4] = CreateVisualPart(
+                go.transform,
+                "PunchSmear",
+                PrimitiveType.Cube,
+                new Vector3(0f, 0f, -0.44f),
+                new Vector3(0.24f, 0.18f, 0.78f));
+            renderers[5] = CreateVisualPart(
+                go.transform,
+                "LeftSpeedLine",
+                PrimitiveType.Cube,
+                new Vector3(-0.22f, 0f, -0.34f),
+                new Vector3(0.055f, 0.080f, 0.58f));
+            renderers[6] = CreateVisualPart(
+                go.transform,
+                "RightSpeedLine",
+                PrimitiveType.Cube,
+                new Vector3(0.22f, 0f, -0.34f),
+                new Vector3(0.055f, 0.080f, 0.58f));
 
             TrailRenderer trail = go.AddComponent<TrailRenderer>();
-            trail.time = 0.070f;
-            trail.startWidth = 0.18f;
-            trail.endWidth = 0.018f;
+            trail.time = 0.115f;
+            trail.startWidth = 0.34f;
+            trail.endWidth = 0.040f;
             trail.startColor = _trailColor;
             trail.endColor = WithAlpha(_trailColor, 0f);
             trail.material = _fistMaterial;
@@ -257,13 +279,14 @@ namespace MOBA.Core.Infrastructure
             return instance;
         }
 
-        private Renderer CreateFistPart(
+        private Renderer CreateVisualPart(
             Transform parent,
             string partName,
+            PrimitiveType primitiveType,
             Vector3 localPosition,
             Vector3 localScale)
         {
-            GameObject part = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            GameObject part = GameObject.CreatePrimitive(primitiveType);
             part.name = partName;
             part.transform.SetParent(parent, false);
             part.transform.localPosition = localPosition;
@@ -293,13 +316,14 @@ namespace MOBA.Core.Infrastructure
             punch.Transform.localScale = Vector3.Lerp(_startScale, _endScale, Mathf.Sin(t * Mathf.PI));
 
             Color color = punch.Color;
-            color.a *= 1f - Mathf.Clamp01(t);
+            float visibility = 1f - Mathf.Clamp01(t * t);
+            color.a *= visibility;
             ApplyRendererColor(punch.Renderers, color);
 
             if (punch.Trail != null)
             {
                 Color trailStart = _trailColor;
-                trailStart.a *= Mathf.Lerp(0.90f, 0.15f, t);
+                trailStart.a *= Mathf.Lerp(1f, 0.22f, t);
                 Color trailEnd = trailStart;
                 trailEnd.a = 0f;
                 punch.Trail.startColor = trailStart;
