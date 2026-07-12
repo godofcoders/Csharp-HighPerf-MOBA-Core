@@ -14,6 +14,10 @@ namespace MOBA.Core.Definitions
         public float Damage = 1600f;
         [Tooltip("How far around a blocked landing point the leap may search for the nearest clear landing.")]
         public float LandingSearchRadius = 1.25f;
+        [Tooltip("Visual and damage delay for the jump. Damage resolves when the brawler lands.")]
+        public float TravelDurationSeconds = 0.46f;
+        [Tooltip("Presentation-only height used by the leap arc.")]
+        public float JumpHeight = 2.15f;
 
         private void OnValidate()
         {

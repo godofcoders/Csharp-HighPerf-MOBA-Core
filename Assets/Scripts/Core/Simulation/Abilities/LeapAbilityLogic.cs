@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
@@ -38,17 +39,55 @@ namespace MOBA.Core.Simulation.Abilities
             if (!TryResolveLanding(owner, origin, requestedLanding, out Vector3 landing))
                 return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
 
+            float travelDuration = Mathf.Max(0f, _definition.TravelDurationSeconds);
             owner.WarpTo(landing);
-
-            int targetsAffected = ApplyLandingDamage(owner, context, landing);
+            owner.PlayPresentationLeapArc(
+                origin,
+                landing,
+                travelDuration,
+                Mathf.Max(0f, _definition.JumpHeight));
 
             AbilityExecutionResult result = AbilityExecutionResult.Succeeded(
                 context.AbilityDefinition,
                 context.SlotType);
             result.AppliedAreaEffect = true;
-            result.TargetsAffected = targetsAffected;
+            result.TargetsAffected = 0;
             result.ConsumedResource = true;
 
+            owner.RunTimedBurst(ResolveLandingRoutine(owner, context, landing, forward, travelDuration));
+
+            return result;
+        }
+
+        public void Tick(uint currentTick) { }
+
+        private IEnumerator ResolveLandingRoutine(
+            BrawlerController owner,
+            AbilityExecutionContext context,
+            Vector3 landing,
+            Vector3 forward,
+            float travelDurationSeconds)
+        {
+            float elapsed = 0f;
+            float duration = Mathf.Max(0f, travelDurationSeconds);
+            while (elapsed < duration)
+            {
+                if (owner == null || owner.State == null || !owner.gameObject.activeInHierarchy)
+                    yield break;
+
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            if (owner == null ||
+                owner.State == null ||
+                !owner.gameObject.activeInHierarchy ||
+                !SpatialEntityUtility.IsAlive(owner))
+            {
+                yield break;
+            }
+
+            int targetsAffected = ApplyLandingDamage(owner, context, landing);
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
             {
                 EventType = CombatPresentationEventType.AreaEffectResolved,
@@ -62,11 +101,7 @@ namespace MOBA.Core.Simulation.Abilities
                 IsSuper = true,
                 IsHypercharged = context.IsHypercharged
             });
-
-            return result;
         }
-
-        public void Tick(uint currentTick) { }
 
         private int ApplyLandingDamage(
             BrawlerController owner,

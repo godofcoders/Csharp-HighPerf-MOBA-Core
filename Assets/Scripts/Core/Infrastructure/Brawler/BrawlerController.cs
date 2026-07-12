@@ -29,6 +29,8 @@ namespace MOBA.Core.Infrastructure
         private Quaternion _previousSimRotation;
         private Quaternion _currentSimRotation;
         private float _lastSimulationUpdateTime;
+        private Vector3 _presentationWorldOffset;
+        private Coroutine _presentationLeapRoutine;
 
         private const float SimulationTickInterval = 1f / 30f;
         private const float LocalObserverRefreshIntervalSeconds = 0.5f;
@@ -152,7 +154,7 @@ namespace MOBA.Core.Infrastructure
             Vector3 interpolatedWorldPosition = Vector3.Lerp(_previousSimPosition, _currentSimPosition, alpha);
             Quaternion interpolatedWorldRotation = Quaternion.Slerp(_previousSimRotation, _currentSimRotation, alpha);
 
-            _presentationAnchor.position = interpolatedWorldPosition;
+            _presentationAnchor.position = interpolatedWorldPosition + _presentationWorldOffset;
             _presentationAnchor.rotation = interpolatedWorldRotation;
 
             if (_visualRoot != null)
@@ -212,6 +214,7 @@ namespace MOBA.Core.Infrastructure
 
             _lastTickPosition = transform.position;
             _lastKnownPosition = transform.position;
+            CancelPresentationLeap();
 
             _previousSimPosition = transform.position;
             _currentSimPosition = transform.position;
@@ -1015,6 +1018,7 @@ namespace MOBA.Core.Infrastructure
         protected override void OnDisable()
         {
             base.OnDisable();
+            CancelPresentationLeap();
             _lastKnownPosition = Position;
             SimulationClock.Grid?.Remove(this, _lastKnownPosition);
             CombatRegistry.Unregister(this);
@@ -1637,6 +1641,7 @@ namespace MOBA.Core.Infrastructure
                 MatchManager.Instance.AddScore(enemyTeam, 1);
             }
 
+            CancelPresentationLeap();
             gameObject.SetActive(false);
             _lastKnownPosition = Position;
             SimulationClock.Grid?.Remove(this, _lastKnownPosition);
@@ -1662,6 +1667,7 @@ namespace MOBA.Core.Infrastructure
 
         public void Respawn(Vector3 position)
         {
+            CancelPresentationLeap();
             transform.position = position;
             _lastTickPosition = position;
             _planarVelocity = Vector3.zero;
@@ -1715,6 +1721,7 @@ namespace MOBA.Core.Infrastructure
 
         public void WarpTo(Vector3 position)
         {
+            CancelPresentationLeap();
             Vector3 previousPosition = transform.position;
             transform.position = position;
             _lastTickPosition = position;
@@ -2025,6 +2032,58 @@ namespace MOBA.Core.Infrastructure
         public Coroutine RunTimedBurst(IEnumerator routine)
         {
             return StartCoroutine(routine);
+        }
+
+        public void PlayPresentationLeapArc(
+            Vector3 takeoffPosition,
+            Vector3 landingPosition,
+            float durationSeconds,
+            float jumpHeight)
+        {
+            CancelPresentationLeap();
+
+            if (_presentationAnchor == null)
+                return;
+
+            float duration = Mathf.Max(0.01f, durationSeconds);
+            _presentationLeapRoutine = StartCoroutine(PresentationLeapArcRoutine(
+                takeoffPosition,
+                landingPosition,
+                duration,
+                Mathf.Max(0f, jumpHeight)));
+        }
+
+        private IEnumerator PresentationLeapArcRoutine(
+            Vector3 takeoffPosition,
+            Vector3 landingPosition,
+            float durationSeconds,
+            float jumpHeight)
+        {
+            float elapsed = 0f;
+            while (elapsed < durationSeconds)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / durationSeconds);
+                float easedTravel = Mathf.SmoothStep(0f, 1f, t);
+                Vector3 visualPosition = Vector3.Lerp(takeoffPosition, landingPosition, easedTravel);
+                visualPosition.y += Mathf.Sin(t * Mathf.PI) * jumpHeight;
+                _presentationWorldOffset = visualPosition - transform.position;
+                yield return null;
+            }
+
+            _presentationWorldOffset = Vector3.zero;
+            _presentationLeapRoutine = null;
+        }
+
+        private void CancelPresentationLeap()
+        {
+            if (_presentationLeapRoutine != null)
+            {
+                StopCoroutine(_presentationLeapRoutine);
+                _presentationLeapRoutine = null;
+            }
+
+            _presentationWorldOffset = Vector3.zero;
         }
 
         private void BuildVisualFromDefinition()

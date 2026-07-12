@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -55,6 +56,16 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Color _superImpactColor = new Color(1f, 0.30f, 0.04f, 0.92f);
         [SerializeField] private Color _hyperImpactColor = new Color(0.24f, 0.05f, 0.48f, 0.96f);
         [SerializeField] private Color _expiredColor = new Color(0.42f, 0.46f, 0.50f, 0.20f);
+
+        [Header("Leap Impact")]
+        [Min(0.05f)]
+        [SerializeField] private float _leapShockwaveDurationSeconds = 0.24f;
+        [Min(0.05f)]
+        [SerializeField] private float _leapCraterDurationSeconds = 0.72f;
+        [SerializeField] private float _leapShockwaveRadiusMultiplier = 1.35f;
+        [SerializeField] private float _leapCraterRadiusMultiplier = 1.05f;
+        [SerializeField] private Color _leapShockwaveColor = new Color(1f, 0.56f, 0.10f, 0.72f);
+        [SerializeField] private Color _leapCraterColor = new Color(0.26f, 0.13f, 0.045f, 0.48f);
 
         private readonly List<PulseInstance> _pool = new List<PulseInstance>(48);
         private readonly List<SparkInstance> _sparkPool = new List<SparkInstance>(48);
@@ -163,7 +174,42 @@ namespace MOBA.Core.Infrastructure
                         _expiredDurationSeconds,
                         _expiredPulseMaterial);
                     break;
+
+                case CombatPresentationEventType.AreaEffectResolved:
+                    if (evt.AbilityDefinition is LeapAbilityDefinition leap)
+                        SpawnLeapImpact(evt, leap);
+                    break;
             }
+        }
+
+        private void SpawnLeapImpact(CombatPresentationEvent evt, LeapAbilityDefinition leap)
+        {
+            float radius = Mathf.Max(0.25f, leap.LandingRadius);
+            Color shockwaveColor = evt.IsHypercharged ? _hyperImpactColor : _leapShockwaveColor;
+            Color craterColor = evt.IsHypercharged
+                ? new Color(_hyperImpactColor.r * 0.55f, _hyperImpactColor.g * 0.55f, _hyperImpactColor.b * 0.55f, 0.55f)
+                : _leapCraterColor;
+
+            SpawnPulse(
+                evt.Position,
+                radius * Mathf.Max(0.1f, _leapCraterRadiusMultiplier),
+                craterColor,
+                _leapCraterDurationSeconds,
+                _expiredPulseMaterial != null ? _expiredPulseMaterial : _impactPulseMaterial);
+
+            SpawnPulse(
+                evt.Position + Vector3.up * 0.03f,
+                radius * Mathf.Max(0.1f, _leapShockwaveRadiusMultiplier),
+                shockwaveColor,
+                _leapShockwaveDurationSeconds,
+                _impactPulseMaterial);
+
+            SpawnSpark(
+                evt.Position,
+                evt.Direction,
+                shockwaveColor,
+                Mathf.Max(_sparkDurationSeconds, _leapShockwaveDurationSeconds * 0.55f),
+                Mathf.Clamp(radius * 0.92f, 1.35f, 2.4f));
         }
 
         private void PrewarmPool()

@@ -22,7 +22,7 @@ MonoBehaviour:
   DeliveryType: 2
   Cooldown: 1
   Tags:
-  CastDurationSeconds: 0.25
+  CastDurationSeconds: 0.48
   AllowMovementDuringCast: 0
   AllowActionInputDuringCast: 0
   IsInterruptible: 1
@@ -46,3 +46,5 @@ MonoBehaviour:
   LandingRadius: 1.8
   Damage: 1650
   LandingSearchRadius: 1.25
+  TravelDurationSeconds: 0.46
+  JumpHeight: 2.15
