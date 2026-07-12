@@ -31,6 +31,7 @@ namespace MOBA.Core.Infrastructure
             _pool = GetComponent<SimpleObjectPool>();
             EnsureImpactFeedbackView();
             EnsureColtCastFeedbackView();
+            EnsureMeleeCastFeedbackView();
             ServiceProvider.Register<IProjectileService>(this);
             ServiceProvider.Register<IProjectileThreatProvider>(this);
         }
@@ -866,6 +867,12 @@ namespace MOBA.Core.Infrastructure
         {
             if (GetComponent<ColtCastFeedbackView>() == null)
                 gameObject.AddComponent<ColtCastFeedbackView>();
+        }
+
+        private void EnsureMeleeCastFeedbackView()
+        {
+            if (GetComponent<MeleeCastFeedbackView>() == null)
+                gameObject.AddComponent<MeleeCastFeedbackView>();
         }
 
         private BrawlerController ResolveNextChainTarget(ActiveProjectile p, BrawlerController currentTarget)
