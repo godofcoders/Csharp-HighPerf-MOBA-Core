@@ -68,6 +68,8 @@ namespace MOBA.Core.Infrastructure
             new Dictionary<string, BrawlerBuildOptionDefinition>(8);
         private readonly Dictionary<BrawlerDefinition, RosterCardView> _rosterCards =
             new Dictionary<BrawlerDefinition, RosterCardView>(12);
+        private readonly List<NanopowerDefinition> _nanopowerPreviewOptions =
+            new List<NanopowerDefinition>(4);
 
         private RectTransform _runtimeRoot;
         private Transform _runtimeRosterContainer;
@@ -84,6 +86,11 @@ namespace MOBA.Core.Infrastructure
         private TMP_Text _superTitleText;
         private TMP_Text _superDetailText;
         private GameObject _superAbilityBox;
+        private GameObject _nanopowerSection;
+        private readonly GameObject[] _nanopowerRows = new GameObject[3];
+        private readonly Image[] _nanopowerAccents = new Image[3];
+        private readonly TMP_Text[] _nanopowerNameTexts = new TMP_Text[3];
+        private readonly TMP_Text[] _nanopowerDescriptionTexts = new TMP_Text[3];
         private StatRowView _healthStat;
         private StatRowView _attackStat;
         private StatRowView _superStat;
@@ -431,6 +438,7 @@ namespace MOBA.Core.Infrastructure
 
             CreateAbilityBox(panel.transform, "Main Attack", out _attackTitleText, out _attackDetailText);
             _superAbilityBox = CreateAbilityBox(panel.transform, "Super", out _superTitleText, out _superDetailText);
+            CreateNanopowerSection(panel.transform);
         }
 
         private void BuildLoadoutBar(Transform parent)
@@ -707,6 +715,54 @@ namespace MOBA.Core.Infrastructure
                 _superTitleText.text = ResolveAbilityName(_previewed.SuperAbility).ToUpperInvariant();
             if (hasSuper && _superDetailText != null)
                 _superDetailText.text = ResolveAbilityDetail(_previewed.SuperAbility, 0f);
+
+            RefreshNanopowerPreview(_previewed);
+        }
+
+        private void RefreshNanopowerPreview(BrawlerDefinition def)
+        {
+            if (_nanopowerSection == null)
+                return;
+
+            NanopowerCatalog.BuildOptions(def, _nanopowerPreviewOptions);
+            _nanopowerSection.SetActive(true);
+
+            for (int i = 0; i < _nanopowerRows.Length; i++)
+            {
+                bool hasOption = i < _nanopowerPreviewOptions.Count &&
+                                 _nanopowerPreviewOptions[i] != null;
+
+                if (_nanopowerRows[i] != null)
+                    _nanopowerRows[i].SetActive(hasOption);
+
+                if (!hasOption)
+                    continue;
+
+                NanopowerDefinition option = _nanopowerPreviewOptions[i];
+                if (_nanopowerAccents[i] != null)
+                    _nanopowerAccents[i].color = option.AccentColor;
+
+                if (_nanopowerNameTexts[i] != null)
+                    _nanopowerNameTexts[i].text = option.DisplayName.ToUpperInvariant();
+
+                if (_nanopowerDescriptionTexts[i] != null)
+                    _nanopowerDescriptionTexts[i].text = option.DisplayDescription;
+            }
+
+            if (_nanopowerPreviewOptions.Count == 0 && _nanopowerRows.Length > 0)
+            {
+                if (_nanopowerRows[0] != null)
+                    _nanopowerRows[0].SetActive(true);
+
+                if (_nanopowerAccents[0] != null)
+                    _nanopowerAccents[0].color = new Color(0.38f, 0.46f, 0.62f, 1f);
+
+                if (_nanopowerNameTexts[0] != null)
+                    _nanopowerNameTexts[0].text = "NANOPOWERS";
+
+                if (_nanopowerDescriptionTexts[0] != null)
+                    _nanopowerDescriptionTexts[0].text = "No match nanopowers configured yet.";
+            }
         }
 
         private void RefreshRosterSelection()
@@ -1393,6 +1449,70 @@ namespace MOBA.Core.Infrastructure
             Anchor(detailText.rectTransform, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.52f), Vector2.zero, Vector2.zero);
 
             return box;
+        }
+
+        private void CreateNanopowerSection(Transform parent)
+        {
+            _nanopowerSection = CreatePanel(
+                "Nanopowers",
+                parent,
+                new Color(0.07f, 0.12f, 0.24f, 0.92f));
+
+            LayoutElement sectionLayout = _nanopowerSection.AddComponent<LayoutElement>();
+            sectionLayout.preferredHeight = 172f;
+
+            TMP_Text title = CreateText(
+                _nanopowerSection.transform,
+                "Title",
+                "NANOPOWERS",
+                15,
+                TextAlignmentOptions.Left,
+                _goldColor);
+            title.fontStyle = FontStyles.Bold;
+            Anchor(title.rectTransform, new Vector2(0.05f, 0.80f), new Vector2(0.95f, 0.98f), Vector2.zero, Vector2.zero);
+
+            for (int i = 0; i < _nanopowerRows.Length; i++)
+            {
+                float top = 0.74f - (i * 0.23f);
+                float bottom = top - 0.19f;
+
+                GameObject row = CreatePanel(
+                    $"Nanopower_{i + 1}",
+                    _nanopowerSection.transform,
+                    new Color(0.035f, 0.065f, 0.14f, 0.94f));
+                Anchor(row.GetComponent<RectTransform>(), new Vector2(0.05f, bottom), new Vector2(0.95f, top), Vector2.zero, Vector2.zero);
+
+                Image accent = CreatePanel("Accent", row.transform, _cyanColor).GetComponent<Image>();
+                Anchor(accent.rectTransform, new Vector2(0f, 0f), new Vector2(0.035f, 1f), Vector2.zero, Vector2.zero);
+
+                TMP_Text name = CreateText(
+                    row.transform,
+                    "Name",
+                    "",
+                    12,
+                    TextAlignmentOptions.Left,
+                    Color.white);
+                name.fontStyle = FontStyles.Bold;
+                name.enableWordWrapping = false;
+                name.overflowMode = TextOverflowModes.Ellipsis;
+                Anchor(name.rectTransform, new Vector2(0.07f, 0.48f), new Vector2(0.96f, 0.96f), Vector2.zero, Vector2.zero);
+
+                TMP_Text description = CreateText(
+                    row.transform,
+                    "Description",
+                    "",
+                    10,
+                    TextAlignmentOptions.Left,
+                    new Color(0.88f, 0.94f, 1f, 1f));
+                description.enableWordWrapping = false;
+                description.overflowMode = TextOverflowModes.Ellipsis;
+                Anchor(description.rectTransform, new Vector2(0.07f, 0.05f), new Vector2(0.96f, 0.54f), Vector2.zero, Vector2.zero);
+
+                _nanopowerRows[i] = row;
+                _nanopowerAccents[i] = accent;
+                _nanopowerNameTexts[i] = name;
+                _nanopowerDescriptionTexts[i] = description;
+            }
         }
 
         private static GameObject CreatePanel(
