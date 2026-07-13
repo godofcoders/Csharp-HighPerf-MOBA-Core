@@ -64,6 +64,7 @@ namespace MOBA.Core.Infrastructure
 
         private readonly List<GadgetDefinition> _equippedGadgets = new List<GadgetDefinition>(2);
         private HyperchargeDefinition _equippedHypercharge;
+        private NanopowerDefinition _activeNanopower;
         private BrawlerBuildDefinition _resolvedBuildSource;
         private BrawlerBuildDefinition _buildOverride;
         private int _powerLevelOverride;
@@ -88,6 +89,7 @@ namespace MOBA.Core.Infrastructure
         public GameObject VisualModel => _visualModel;
         public Vector3 PlanarVelocity => _planarVelocity;
         public bool DebugReadySuperAndHyperchargeForPlayer => _debugReadySuperAndHyperchargeForPlayer;
+        public NanopowerDefinition ActiveNanopower => _activeNanopower;
 
         [Header("World Collision")]
         [SerializeField] private LayerMask _worldCollisionLayer;
@@ -294,7 +296,7 @@ namespace MOBA.Core.Infrastructure
             State.RuntimeKit.SetHypercharge(_equippedHypercharge);
 
             List<PassiveDefinition> fallbackPassives = _definition.BuildDefaultPassiveLoadout();
-            State.SetPassiveLoadout(fallbackPassives, false);
+            State.SetPassiveLoadout(BuildPassiveLoadoutWithActiveNanopower(fallbackPassives), false);
 
             StarPowerDefinition equippedStarPower = null;
             List<GearDefinition> equippedGears = new List<GearDefinition>(2);
@@ -354,7 +356,7 @@ namespace MOBA.Core.Infrastructure
 
             if (resolved == null)
             {
-                State.SetPassiveLoadout(null, false);
+                State.SetPassiveLoadout(BuildPassiveLoadoutWithActiveNanopower(null), false);
                 State.SetEquippedHypercharge(null);
                 State.RuntimeBuild?.Clear();
                 State.RefreshRuntimeBuildUnlockState();
@@ -375,7 +377,7 @@ namespace MOBA.Core.Infrastructure
             GadgetDefinition activeGadget = GetActiveGadgetDefinition();
             _gadgetLogic = activeGadget?.CreateLogic();
 
-            State.SetPassiveLoadout(resolved.PassiveOptions, false);
+            State.SetPassiveLoadout(BuildPassiveLoadoutWithActiveNanopower(resolved.PassiveOptions), false);
 
             State.RuntimeKit.SetMainAttack(_definition.MainAttack, _mainAttack);
             State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
@@ -422,6 +424,43 @@ namespace MOBA.Core.Infrastructure
                 return _equippedGadgets[0];
 
             return _definition != null ? _definition.Gadget : null;
+        }
+
+        public void SetActiveNanopower(NanopowerDefinition nanopower, bool preserveHealthRatio = true)
+        {
+            if (_activeNanopower == nanopower)
+                return;
+
+            _activeNanopower = nanopower;
+
+            if (State == null)
+                return;
+
+            State.SetPassiveLoadout(
+                BuildPassiveLoadoutWithActiveNanopower(State.EquippedPassives),
+                preserveHealthRatio);
+        }
+
+        private List<PassiveDefinition> BuildPassiveLoadoutWithActiveNanopower(IEnumerable<PassiveDefinition> basePassives)
+        {
+            List<PassiveDefinition> result = new List<PassiveDefinition>(6);
+
+            if (basePassives != null)
+            {
+                foreach (PassiveDefinition passive in basePassives)
+                {
+                    if (passive == null || passive is NanopowerDefinition)
+                        continue;
+
+                    if (!result.Contains(passive))
+                        result.Add(passive);
+                }
+            }
+
+            if (_activeNanopower != null && !result.Contains(_activeNanopower))
+                result.Add(_activeNanopower);
+
+            return result;
         }
 
         private IAbilityLogic GetCurrentSuperLogic()

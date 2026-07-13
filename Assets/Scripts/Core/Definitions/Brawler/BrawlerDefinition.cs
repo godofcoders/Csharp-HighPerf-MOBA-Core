@@ -63,6 +63,10 @@ namespace MOBA.Core.Definitions
         public StarPowerDefinition[] StarPowerOptions;
         public HyperchargeDefinition[] HyperchargeOptions;
 
+        [Header("Match Nanopowers")]
+        [Tooltip("Three match-start modifiers available for this brawler. The match UI offers two random choices and equips one for the whole match.")]
+        public NanopowerDefinition[] NanopowerOptions;
+
         [Header("Default Build")]
         public BrawlerBuildDefinition DefaultBuild;
 
