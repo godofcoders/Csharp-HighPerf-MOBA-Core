@@ -17,7 +17,7 @@ namespace MOBA.Core.Infrastructure
     {
         private const string MatchSceneName = "Match";
         private const int CanvasSortingOrder = 112;
-        private const float SelectionDurationSeconds = 3f;
+        private const float SelectionDurationSeconds = 5f;
         private const float PlayerSpawnWaitSeconds = 1.25f;
 
         private static Font _runtimeFont;
@@ -29,6 +29,7 @@ namespace MOBA.Core.Infrastructure
         private readonly GameObject[] _offerCards = new GameObject[2];
         private readonly Image[] _offerBackgrounds = new Image[2];
         private readonly Image[] _offerAccents = new Image[2];
+        private readonly GameObject[] _offerSelectionFrames = new GameObject[2];
         private readonly Text[] _offerNames = new Text[2];
         private readonly Text[] _offerDescriptions = new Text[2];
 
@@ -39,6 +40,7 @@ namespace MOBA.Core.Infrastructure
         private Coroutine _selectionRoutine;
         private bool _hasHandledMatchStart;
         private bool _selectionActive;
+        private int _selectedOfferIndex = -1;
         private float _selectionEndsAt;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -106,7 +108,7 @@ namespace MOBA.Core.Infrastructure
             RefreshTimer();
 
             if (Time.time >= _selectionEndsAt)
-                SelectOffer(0);
+                FinalizeSelection();
         }
 
         private void TryBindMatchManager()
@@ -134,7 +136,7 @@ namespace MOBA.Core.Infrastructure
 
             if (state == MatchState.Active && _selectionActive)
             {
-                SelectOffer(0);
+                FinalizeSelection();
                 return;
             }
 
@@ -187,6 +189,7 @@ namespace MOBA.Core.Infrastructure
             if (_optionsBuffer.Count == 0)
                 yield break;
 
+            MatchManager.Instance?.ExtendCurrentCountdownTo(SelectionDurationSeconds);
             PickOffers(_optionsBuffer);
             ShowSelection();
         }
@@ -284,6 +287,8 @@ namespace MOBA.Core.Infrastructure
 
             _selectionEndsAt = Time.time + ResolveSelectionWindow();
             _selectionActive = true;
+            _selectedOfferIndex = -1;
+            RefreshSelectedOfferFrames();
             RefreshTimer();
 
             if (_root != null)
@@ -309,7 +314,20 @@ namespace MOBA.Core.Infrastructure
 
             NanopowerDefinition selected = _offers[index] != null ? _offers[index] : _offers[0];
             if (selected != null && _localPlayer != null)
+            {
+                _selectedOfferIndex = index;
                 _localPlayer.SetActiveNanopower(selected, true);
+                RefreshSelectedOfferFrames();
+            }
+        }
+
+        private void FinalizeSelection()
+        {
+            if (!_selectionActive)
+                return;
+
+            if (_selectedOfferIndex < 0)
+                SelectOffer(0);
 
             HideSelection();
         }
@@ -329,6 +347,15 @@ namespace MOBA.Core.Infrastructure
 
             float remaining = Mathf.Max(0f, _selectionEndsAt - Time.time);
             _timerText.text = remaining.ToString("0.0");
+        }
+
+        private void RefreshSelectedOfferFrames()
+        {
+            for (int i = 0; i < _offerSelectionFrames.Length; i++)
+            {
+                if (_offerSelectionFrames[i] != null)
+                    _offerSelectionFrames[i].SetActive(i == _selectedOfferIndex);
+            }
         }
 
         private void HandleSelectionKeys()
@@ -519,6 +546,58 @@ namespace MOBA.Core.Infrastructure
                 TextAnchor.UpperLeft,
                 new Color(1f, 1f, 1f, 0.82f),
                 FontStyle.Normal);
+
+            _offerSelectionFrames[index] = CreateSelectionFrame(card.transform);
+        }
+
+        private static GameObject CreateSelectionFrame(Transform parent)
+        {
+            GameObject root = new GameObject("SelectedOutline", typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+
+            RectTransform rect = root.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            Color outlineColor = new Color(1f, 0.86f, 0.18f, 1f);
+            CreateFrameBar(root.transform, "Top", new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -5f), Vector2.zero, outlineColor);
+            CreateFrameBar(root.transform, "Bottom", Vector2.zero, new Vector2(1f, 0f), Vector2.zero, new Vector2(0f, 5f), outlineColor);
+            CreateFrameBar(root.transform, "Left", Vector2.zero, new Vector2(0f, 1f), Vector2.zero, new Vector2(5f, 0f), outlineColor);
+            CreateFrameBar(root.transform, "Right", new Vector2(1f, 0f), Vector2.one, new Vector2(-5f, 0f), Vector2.zero, outlineColor);
+
+            root.SetActive(false);
+            return root;
+        }
+
+        private static void CreateFrameBar(
+            Transform parent,
+            string name,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 offsetMin,
+            Vector2 offsetMax,
+            Color color)
+        {
+            GameObject bar = CreatePanel(
+                parent,
+                name,
+                anchorMin,
+                anchorMax,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                color);
+
+            RectTransform rect = bar.GetComponent<RectTransform>();
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+
+            Image image = bar.GetComponent<Image>();
+            if (image != null)
+                image.raycastTarget = false;
         }
 
         private static GameObject CreatePanel(

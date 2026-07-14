@@ -16,8 +16,10 @@ namespace MOBA.Core.Infrastructure
         public MatchState CurrentState { get; private set; } = MatchState.Waiting;
 
         // When the countdown began. -1 = no countdown active. HUD reads
-        // CountdownRemainingSeconds (computed from this + _countdownDuration).
+        // CountdownRemainingSeconds from the active countdown duration, which
+        // can be temporarily extended by pre-match systems like nanopowers.
         private float _countdownStartTime = -1f;
+        private float _activeCountdownDuration;
 
         /// <summary>Seconds left in the pre-match countdown. 0 outside of
         /// the CountingDown state. Drives the 3-2-1-GO overlay.</summary>
@@ -28,14 +30,16 @@ namespace MOBA.Core.Infrastructure
                 if (CurrentState != MatchState.CountingDown || _countdownStartTime < 0f)
                     return 0f;
                 float elapsed = Mathf.Max(0f, Time.time - _countdownStartTime);
-                float remaining = _countdownDuration - elapsed;
+                float remaining = _activeCountdownDuration - elapsed;
                 return remaining < 0f ? 0f : remaining;
             }
         }
 
         /// <summary>Total countdown length authored on this MatchManager.
         /// Public so the overlay can compute "GO!" hold duration etc.</summary>
-        public float CountdownDuration => _countdownDuration;
+        public float CountdownDuration => CurrentState == MatchState.CountingDown
+            ? _activeCountdownDuration
+            : _countdownDuration;
 
         // Scores
         private Dictionary<TeamType, int> _teamScores = new Dictionary<TeamType, int>();
@@ -83,8 +87,25 @@ namespace MOBA.Core.Infrastructure
             CancelInvoke(nameof(BeginGameplay));
             float safeLeadInSeconds = Mathf.Max(0f, leadInSeconds);
             _countdownStartTime = Time.time + safeLeadInSeconds;
+            _activeCountdownDuration = _countdownDuration;
             ChangeState(MatchState.CountingDown);
-            Invoke(nameof(BeginGameplay), safeLeadInSeconds + _countdownDuration);
+            Invoke(nameof(BeginGameplay), safeLeadInSeconds + _activeCountdownDuration);
+        }
+
+        public void ExtendCurrentCountdownTo(float minimumRemainingSeconds)
+        {
+            if (CurrentState != MatchState.CountingDown || _countdownStartTime < 0f)
+                return;
+
+            float safeMinimumRemaining = Mathf.Max(0f, minimumRemainingSeconds);
+            if (CountdownRemainingSeconds >= safeMinimumRemaining)
+                return;
+
+            float elapsed = Mathf.Max(0f, Time.time - _countdownStartTime);
+            _activeCountdownDuration = elapsed + safeMinimumRemaining;
+
+            CancelInvoke(nameof(BeginGameplay));
+            Invoke(nameof(BeginGameplay), safeMinimumRemaining);
         }
 
         private void BeginGameplay()
