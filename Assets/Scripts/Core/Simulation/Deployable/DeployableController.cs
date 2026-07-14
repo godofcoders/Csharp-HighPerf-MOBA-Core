@@ -122,6 +122,11 @@ namespace MOBA.Core.Simulation
             _presentationView?.SetAimDirection(direction);
         }
 
+        public void SetTrapIndicator(float intensity, bool visible)
+        {
+            _presentationView?.SetTrapIndicator(intensity, visible);
+        }
+
         public void TakeDamage(float amount)
         {
             if (!MatchStateUtility.IsCombatResolutionOpen())

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Bo_Super
   m_EditorClassIdentifier:
   OptionName: Bo Super
-  Description: Places three armed mines that become hidden and explode after a trigger delay.
+  Description: Places three hidden mines that blip, explode, and briefly stun enemies after triggering.
   AllowedBuildSlotTypes:
   AbilityName: Catch a Fox
   Icon: {fileID: 0}

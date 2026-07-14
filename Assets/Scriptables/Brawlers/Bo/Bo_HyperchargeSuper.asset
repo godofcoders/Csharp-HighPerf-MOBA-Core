@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Bo_HyperchargeSuper
   m_EditorClassIdentifier:
   OptionName: Spirit Minefield
-  Description: Hypercharged mines arm faster and cover a wider blast area.
+  Description: Hypercharged mines arm faster, cover a wider blast area, and briefly stun enemies.
   AllowedBuildSlotTypes:
   AbilityName: Spirit Minefield
   Icon: {fileID: 0}

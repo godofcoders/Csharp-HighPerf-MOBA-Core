@@ -9,6 +9,8 @@ namespace MOBA.Core.Definitions
         public float TriggerRadius = 0.85f;
         public float ExplosionRadius = 2.15f;
         public float Damage = 1800f;
+        [Tooltip("Enemy brawlers caught in the explosion are stunned for this many seconds.")]
+        public float StunDurationSeconds = 1.0f;
         public float ArmDelaySeconds = 0.35f;
         public float DetonationDelaySeconds = 1.5f;
         public bool HideWhenArmed = true;

@@ -20,9 +20,13 @@ namespace MOBA.Core.Infrastructure
         private Transform _turretHead;
         private Renderer _muzzleRenderer;
         private Renderer _teamRingRenderer;
+        private Renderer _trapPlateRenderer;
         private MaterialPropertyBlock _propertyBlock;
         private Color _teamColor;
         private Color _muzzleColor;
+        private bool _isTrapPresentation;
+        private bool _trapIndicatorVisible = true;
+        private float _trapIndicatorIntensity;
 
         public void Build(DeployableController controller)
         {
@@ -34,6 +38,10 @@ namespace MOBA.Core.Infrastructure
 
             _teamColor = ResolveTeamColor(controller.Team);
             _muzzleColor = new Color(1f, 0.68f, 0.18f, 0.92f);
+            _isTrapPresentation = false;
+            _trapIndicatorVisible = true;
+            _trapIndicatorIntensity = 0f;
+            _trapPlateRenderer = null;
 
             if (controller.Definition.DeployableType == DeployableType.Turret)
                 BuildTurret();
@@ -60,6 +68,12 @@ namespace MOBA.Core.Infrastructure
             if (_runtimeRoot == null)
                 return;
 
+            if (_isTrapPresentation)
+            {
+                ApplyTrapIndicatorPresentation();
+                return;
+            }
+
             float pulse = 0.78f + Mathf.PingPong(Time.time * 4.6f, 0.22f);
 
             if (_muzzleRenderer != null)
@@ -75,6 +89,20 @@ namespace MOBA.Core.Infrastructure
                 ring.a = 0.34f + Mathf.PingPong(Time.time * 1.8f, 0.16f);
                 ApplyRendererColor(_teamRingRenderer, ring);
             }
+        }
+
+        public void SetTrapIndicator(float intensity, bool visible)
+        {
+            _trapIndicatorIntensity = Mathf.Clamp01(intensity);
+            _trapIndicatorVisible = visible;
+        }
+
+        public static void SpawnTrapExplosionEffect(Vector3 position, TeamType team, float radius)
+        {
+            GameObject effect = new GameObject("TrapMineExplosionEffect");
+            effect.transform.position = position;
+            TrapExplosionEffect view = effect.AddComponent<TrapExplosionEffect>();
+            view.Initialize(team, radius);
         }
 
         private void BuildTurret()
@@ -171,6 +199,7 @@ namespace MOBA.Core.Infrastructure
 
         private void BuildTrapMine()
         {
+            _isTrapPresentation = true;
             _runtimeRoot = CreateRoot("RuntimeDeployablePresentation");
 
             CreatePrimitive(
@@ -204,7 +233,7 @@ namespace MOBA.Core.Infrastructure
                 Quaternion.identity,
                 _teamColor,
                 false,
-                out _);
+                out _trapPlateRenderer);
 
             CreatePrimitive(
                 _runtimeRoot,
@@ -238,6 +267,38 @@ namespace MOBA.Core.Infrastructure
                 _muzzleColor,
                 true,
                 out _muzzleRenderer);
+        }
+
+        private void ApplyTrapIndicatorPresentation()
+        {
+            if (_runtimeRoot == null)
+                return;
+
+            _runtimeRoot.gameObject.SetActive(_trapIndicatorVisible);
+            if (!_trapIndicatorVisible)
+                return;
+
+            float eased = Mathf.SmoothStep(0f, 1f, _trapIndicatorIntensity);
+            float scale = 1f + eased * 0.16f;
+            _runtimeRoot.localScale = new Vector3(scale, 1f, scale);
+
+            if (_teamRingRenderer != null)
+            {
+                Color ring = Color.Lerp(_teamColor.WithAlpha(0.20f), new Color(1f, 0.78f, 0.14f, 0.74f), eased);
+                ApplyRendererColor(_teamRingRenderer, ring);
+            }
+
+            if (_trapPlateRenderer != null)
+            {
+                Color plate = Color.Lerp(_teamColor, new Color(1f, 0.34f, 0.08f, 1f), eased);
+                ApplyRendererColor(_trapPlateRenderer, plate);
+            }
+
+            if (_muzzleRenderer != null)
+            {
+                Color lamp = Color.Lerp(new Color(1f, 0.68f, 0.18f, 0.28f), new Color(1f, 0.12f, 0.02f, 1f), eased);
+                ApplyRendererColor(_muzzleRenderer, lamp);
+            }
         }
 
         private Transform CreateRoot(string rootName)
@@ -326,6 +387,11 @@ namespace MOBA.Core.Infrastructure
 
         private Color ResolveTeamColor(TeamType team)
         {
+            return ResolveTeamColorValue(team);
+        }
+
+        private static Color ResolveTeamColorValue(TeamType team)
+        {
             if (team == TeamType.Red)
                 return new Color(1f, 0.24f, 0.18f, 1f);
 
@@ -383,6 +449,154 @@ namespace MOBA.Core.Infrastructure
         {
             if (_propertyBlock == null)
                 _propertyBlock = new MaterialPropertyBlock();
+        }
+
+        private sealed class TrapExplosionEffect : MonoBehaviour
+        {
+            private const float Duration = 0.55f;
+
+            private readonly Renderer[] _renderers = new Renderer[5];
+            private readonly Vector3[] _baseScales = new Vector3[5];
+            private readonly Color[] _baseColors = new Color[5];
+
+            private MaterialPropertyBlock _propertyBlock;
+            private float _startTime;
+            private float _radius;
+            private Color _teamColor;
+
+            public void Initialize(TeamType team, float radius)
+            {
+                _startTime = Time.time;
+                _radius = Mathf.Max(0.4f, radius);
+                _teamColor = ResolveTeamColorValue(team);
+
+                CreateEffectPrimitive(
+                    0,
+                    "Shockwave",
+                    PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.045f, 0f),
+                    new Vector3(_radius * 0.35f, 0.012f, _radius * 0.35f),
+                    Quaternion.identity,
+                    new Color(1f, 0.78f, 0.15f, 0.62f));
+
+                CreateEffectPrimitive(
+                    1,
+                    "BlastCore",
+                    PrimitiveType.Sphere,
+                    new Vector3(0f, 0.26f, 0f),
+                    new Vector3(_radius * 0.28f, _radius * 0.18f, _radius * 0.28f),
+                    Quaternion.identity,
+                    new Color(1f, 0.42f, 0.08f, 0.82f));
+
+                CreateEffectPrimitive(
+                    2,
+                    "TeamFlash",
+                    PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.075f, 0f),
+                    new Vector3(_radius * 0.18f, 0.010f, _radius * 0.18f),
+                    Quaternion.identity,
+                    _teamColor.WithAlpha(0.52f));
+
+                CreateEffectPrimitive(
+                    3,
+                    "SparkA",
+                    PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.22f, 0f),
+                    new Vector3(0.045f, _radius * 0.36f, 0.045f),
+                    Quaternion.Euler(0f, 0f, 64f),
+                    new Color(1f, 0.92f, 0.32f, 0.86f));
+
+                CreateEffectPrimitive(
+                    4,
+                    "SparkB",
+                    PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.20f, 0f),
+                    new Vector3(0.040f, _radius * 0.30f, 0.040f),
+                    Quaternion.Euler(0f, 0f, -48f),
+                    new Color(1f, 0.58f, 0.12f, 0.82f));
+            }
+
+            private void Update()
+            {
+                float t = Mathf.Clamp01((Time.time - _startTime) / Duration);
+                float expand = Mathf.SmoothStep(0f, 1f, t);
+                float alpha = 1f - expand;
+
+                SetScaleAndAlpha(0, new Vector3(_radius * 2.08f, 0.012f, _radius * 2.08f), alpha * 0.54f, expand);
+                SetScaleAndAlpha(1, new Vector3(_radius * 0.52f, _radius * 0.28f, _radius * 0.52f), alpha * 0.72f, expand);
+                SetScaleAndAlpha(2, new Vector3(_radius * 1.28f, 0.010f, _radius * 1.28f), alpha * 0.36f, expand);
+                SetScaleAndAlpha(3, new Vector3(0.045f, _radius * 0.58f, 0.045f), alpha * 0.70f, expand);
+                SetScaleAndAlpha(4, new Vector3(0.040f, _radius * 0.48f, 0.040f), alpha * 0.64f, expand);
+
+                if (t >= 1f)
+                    Destroy(gameObject);
+            }
+
+            private void CreateEffectPrimitive(
+                int index,
+                string objectName,
+                PrimitiveType primitiveType,
+                Vector3 localPosition,
+                Vector3 localScale,
+                Quaternion localRotation,
+                Color color)
+            {
+                GameObject primitive = GameObject.CreatePrimitive(primitiveType);
+                primitive.name = objectName;
+                primitive.transform.SetParent(transform, false);
+                primitive.transform.localPosition = localPosition;
+                primitive.transform.localRotation = localRotation;
+                primitive.transform.localScale = localScale;
+
+                Collider collider = primitive.GetComponent<Collider>();
+                if (collider != null)
+                    Destroy(collider);
+
+                Renderer renderer = primitive.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                    renderer.sharedMaterial = ResolveTransparentMaterial();
+                    ApplyColor(renderer, color);
+                }
+
+                _renderers[index] = renderer;
+                _baseScales[index] = localScale;
+                _baseColors[index] = color;
+            }
+
+            private void SetScaleAndAlpha(int index, Vector3 targetScale, float alpha, float t)
+            {
+                Renderer renderer = _renderers[index];
+                if (renderer == null)
+                    return;
+
+                renderer.transform.localScale = Vector3.Lerp(_baseScales[index], targetScale, t);
+
+                Color color = _baseColors[index];
+                color.a = Mathf.Clamp01(alpha);
+                ApplyColor(renderer, color);
+            }
+
+            private void ApplyColor(Renderer renderer, Color color)
+            {
+                if (renderer == null)
+                    return;
+
+                EnsurePropertyBlock();
+                renderer.GetPropertyBlock(_propertyBlock);
+                _propertyBlock.SetColor(ColorId, color);
+                _propertyBlock.SetColor(BaseColorId, color);
+                _propertyBlock.SetColor(EmissionColorId, color);
+                renderer.SetPropertyBlock(_propertyBlock);
+            }
+
+            private void EnsurePropertyBlock()
+            {
+                if (_propertyBlock == null)
+                    _propertyBlock = new MaterialPropertyBlock();
+            }
         }
     }
 

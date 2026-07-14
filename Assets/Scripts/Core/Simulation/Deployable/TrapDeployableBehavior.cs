@@ -13,7 +13,6 @@ namespace MOBA.Core.Simulation
 
         private DeployableController _controller;
         private MineTrapDeployableDefinition _definition;
-        private Renderer[] _renderers;
         private uint _spawnTick;
         private uint _armTick;
         private uint _triggerTick;
@@ -36,9 +35,6 @@ namespace MOBA.Core.Simulation
             _detonationTick = 0;
             _armed = armDelay <= 0f;
             _triggered = false;
-            _renderers = controller != null
-                ? controller.GetComponentsInChildren<Renderer>(true)
-                : null;
 
             UpdateVisibility(currentTick);
         }
@@ -119,6 +115,7 @@ namespace MOBA.Core.Simulation
                 return;
 
             IDamageService damageService = ServiceProvider.Get<IDamageService>();
+            IStatusEffectService statusEffectService = ServiceProvider.Get<IStatusEffectService>();
             float radius = Mathf.Max(0.1f, _definition.ExplosionRadius);
             int targetsAffected = 0;
             Vector3 minePosition = _controller.Position;
@@ -158,6 +155,8 @@ namespace MOBA.Core.Simulation
                     IsSuper = true
                 });
 
+                ApplyStunIfNeeded(statusEffectService, target, minePosition);
+
                 CombatPresentationEventBus.Raise(new CombatPresentationEvent
                 {
                     EventType = CombatPresentationEventType.DamageHit,
@@ -174,6 +173,11 @@ namespace MOBA.Core.Simulation
                 targetsAffected++;
             }
 
+            DeployablePresentationView.SpawnTrapExplosionEffect(
+                minePosition,
+                _controller.Team,
+                radius);
+
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
             {
                 EventType = CombatPresentationEventType.AreaEffectResolved,
@@ -185,6 +189,32 @@ namespace MOBA.Core.Simulation
                 Direction = Vector3.up,
                 Value = targetsAffected,
                 IsSuper = true
+            });
+        }
+
+        private void ApplyStunIfNeeded(
+            IStatusEffectService statusEffectService,
+            ISpatialEntity target,
+            Vector3 origin)
+        {
+            if (statusEffectService == null ||
+                _definition.StunDurationSeconds <= 0f ||
+                target is not BrawlerController brawler ||
+                brawler.State == null ||
+                brawler.State.IsDead)
+            {
+                return;
+            }
+
+            statusEffectService.ApplyStatus(new StatusEffectContext
+            {
+                Source = _controller.Owner,
+                Target = brawler.State,
+                Type = StatusEffectType.Stun,
+                Duration = _definition.StunDurationSeconds,
+                Magnitude = 1f,
+                Origin = origin,
+                SourceToken = _controller
             });
         }
 
@@ -205,55 +235,48 @@ namespace MOBA.Core.Simulation
         {
             if (_definition == null)
             {
-                SetVisible(true);
+                SetVisible(true, 0f);
                 return;
             }
 
             if (_triggered)
             {
-                SetVisible(IsVisibleDuringBlipSequence(currentTick, _triggerTick, _detonationTick));
+                SetVisible(true, ResolveBlipIntensity(currentTick, _triggerTick, _detonationTick));
                 return;
             }
 
             if (!_armed)
             {
-                SetVisible(
-                    _definition.HideWhenArmed
-                        ? IsVisibleDuringBlipSequence(currentTick, _spawnTick, _armTick)
-                        : true);
+                if (_definition.HideWhenArmed)
+                    SetVisible(true, ResolveBlipIntensity(currentTick, _spawnTick, _armTick));
+                else
+                    SetVisible(true, 0f);
+
                 return;
             }
 
-            SetVisible(!ShouldHideWhenArmed());
+            SetVisible(!ShouldHideWhenArmed(), 0f);
         }
 
-        private static bool IsVisibleDuringBlipSequence(uint currentTick, uint startTick, uint endTick)
+        private static float ResolveBlipIntensity(uint currentTick, uint startTick, uint endTick)
         {
             if (endTick <= startTick)
-                return true;
+                return 1f;
 
             if (currentTick < startTick || currentTick >= endTick)
-                return false;
+                return 0f;
 
-            uint duration = endTick - startTick;
-            uint elapsed = currentTick - startTick;
-            const int phaseCount = WarningBlipCount * 2;
-            uint phase = (uint)(((ulong)elapsed * phaseCount) / duration);
+            float duration = endTick - startTick;
+            float elapsed = currentTick - startTick;
+            float normalized = Mathf.Clamp01(elapsed / duration);
+            float pulsePosition = Mathf.Repeat(normalized * WarningBlipCount, 1f);
 
-            return phase < phaseCount && (phase & 1u) == 0u;
+            return Mathf.Sin(pulsePosition * Mathf.PI);
         }
 
-        private void SetVisible(bool visible)
+        private void SetVisible(bool visible, float indicatorIntensity)
         {
-            if (_renderers == null)
-                return;
-
-            for (int i = 0; i < _renderers.Length; i++)
-            {
-                Renderer renderer = _renderers[i];
-                if (renderer != null)
-                    renderer.enabled = visible;
-            }
+            _controller?.SetTrapIndicator(indicatorIntensity, visible);
         }
     }
 }
