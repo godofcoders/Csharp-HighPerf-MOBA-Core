@@ -38,6 +38,8 @@ namespace MOBA.Core.Infrastructure
         private const int WorldCollisionDepenetrationPasses = 3;
         private const float WorldCollisionEpsilon = 0.000001f;
         private const float WorldCollisionSkinEpsilon = 0.001f;
+        private const float MovementInputDeadZoneSqr = 0.01f;
+        private const float MovementVelocityStopEpsilonSqr = 0.0004f;
 
         private static TeamType _cachedLocalObserverTeam = TeamType.Neutral;
         private static float _nextLocalObserverRefreshTime;
@@ -90,6 +92,18 @@ namespace MOBA.Core.Infrastructure
         public Vector3 PlanarVelocity => _planarVelocity;
         public bool DebugReadySuperAndHyperchargeForPlayer => _debugReadySuperAndHyperchargeForPlayer;
         public NanopowerDefinition ActiveNanopower => _activeNanopower;
+
+        [Header("Movement Feel")]
+        [Tooltip("Global feel multiplier applied after brawler stats/modifiers. Keeps authored balance intact while tuning how fast movement reads on the current camera/map scale.")]
+        [SerializeField, Range(0.5f, 1.1f)] private float _movementFeelSpeedScale = 0.90f;
+        [Tooltip("Meters/second^2 used when a brawler starts moving or changes movement direction.")]
+        [SerializeField, Min(1f)] private float _groundAcceleration = 24f;
+        [Tooltip("Meters/second^2 used when movement input is released. Higher values keep movement responsive while avoiding instant stops.")]
+        [SerializeField, Min(1f)] private float _groundDeceleration = 40f;
+        [Tooltip("Maximum body turn speed while moving normally.")]
+        [SerializeField, Min(90f)] private float _bodyTurnSpeedDegrees = 540f;
+        [Tooltip("Maximum body turn speed while an attack/super is holding facing direction.")]
+        [SerializeField, Min(90f)] private float _actionTurnSpeedDegrees = 1080f;
 
         [Header("World Collision")]
         [SerializeField] private LayerMask _worldCollisionLayer;
@@ -614,9 +628,13 @@ namespace MOBA.Core.Infrastructure
             if (State.CanMove(currentTick))
                 ProcessMovement(currentTick);
             else
+            {
                 SetMoveInput(Vector3.zero);
+                _planarVelocity = Vector3.zero;
+            }
 
-            if (_currentMoveInput.sqrMagnitude <= 0.01f)
+            if (_currentMoveInput.sqrMagnitude <= MovementInputDeadZoneSqr &&
+                _planarVelocity.sqrMagnitude <= MovementVelocityStopEpsilonSqr)
             {
                 _planarVelocity = Vector3.zero;
                 _previousSimPosition = _currentSimPosition;
@@ -712,46 +730,105 @@ namespace MOBA.Core.Infrastructure
 
         private void ProcessMovement(uint currentTick)
         {
-            if (_currentMoveInput.sqrMagnitude <= 0.01f)
+            bool hasMoveInput = _currentMoveInput.sqrMagnitude > MovementInputDeadZoneSqr;
+            bool hasResidualVelocity = _planarVelocity.sqrMagnitude > MovementVelocityStopEpsilonSqr;
+
+            if (!hasMoveInput && !hasResidualVelocity)
                 return;
 
             _previousSimPosition = _currentSimPosition;
             _previousSimRotation = _currentSimRotation;
 
-            float speed = State.IncomingMovementModifiers.Apply(State.MoveSpeed.Value);
             float tickDelta = SimulationTickInterval;
+            float speed = State.IncomingMovementModifiers.Apply(State.MoveSpeed.Value) *
+                          Mathf.Clamp(_movementFeelSpeedScale, 0.1f, 2f);
 
-            float inputMagnitude = Mathf.Clamp01(_currentMoveInput.magnitude);
+            float inputMagnitude = hasMoveInput ? Mathf.Clamp01(_currentMoveInput.magnitude) : 0f;
             Vector3 moveDirection = inputMagnitude > 0.001f
                 ? _currentMoveInput / inputMagnitude
                 : Vector3.zero;
 
-            Vector3 desiredMovement = moveDirection * (speed * tickDelta * inputMagnitude);
+            Vector3 desiredVelocity = moveDirection * (speed * inputMagnitude);
+            float acceleration = hasMoveInput
+                ? Mathf.Max(1f, _groundAcceleration)
+                : Mathf.Max(1f, _groundDeceleration);
 
+            if (hasMoveInput && _planarVelocity.sqrMagnitude > MovementVelocityStopEpsilonSqr)
+            {
+                float directionAlignment = Vector3.Dot(_planarVelocity.normalized, moveDirection);
+                if (directionAlignment < -0.15f)
+                    acceleration = Mathf.Max(acceleration, _groundDeceleration);
+            }
+
+            Vector3 nextVelocity = Vector3.MoveTowards(
+                _planarVelocity,
+                desiredVelocity,
+                acceleration * tickDelta);
+
+            if (!hasMoveInput && nextVelocity.sqrMagnitude <= MovementVelocityStopEpsilonSqr)
+                nextVelocity = Vector3.zero;
+
+            Vector3 desiredMovement = nextVelocity * tickDelta;
             Vector3 resolvedMovement = ResolveMovementAgainstWorld(desiredMovement);
 
             transform.position += resolvedMovement;
             _planarVelocity = tickDelta > 0f ? resolvedMovement / tickDelta : Vector3.zero;
             _planarVelocity.y = 0f;
 
-            if (resolvedMovement != Vector3.zero)
-            {
-                Vector3 facingDirection = IsActionFacingActive(currentTick)
-                    ? _actionFacingDirection
-                    : resolvedMovement;
+            if (!hasMoveInput && _planarVelocity.sqrMagnitude <= MovementVelocityStopEpsilonSqr)
+                _planarVelocity = Vector3.zero;
 
-                if (facingDirection.sqrMagnitude > 0.001f)
-                    transform.rotation = Quaternion.LookRotation(facingDirection.normalized);
-            }
-            else if (desiredMovement.sqrMagnitude > 0.001f && IsActionFacingActive(currentTick))
+            Vector3 facingDirection = ResolveMovementFacingDirection(
+                currentTick,
+                resolvedMovement,
+                nextVelocity,
+                moveDirection,
+                hasMoveInput);
+
+            if (facingDirection.sqrMagnitude > 0.001f)
             {
-                if (_actionFacingDirection.sqrMagnitude > 0.001f)
-                    transform.rotation = Quaternion.LookRotation(_actionFacingDirection.normalized);
+                float turnSpeed = IsActionFacingActive(currentTick)
+                    ? Mathf.Max(90f, _actionTurnSpeedDegrees)
+                    : Mathf.Max(90f, _bodyTurnSpeedDegrees);
+
+                RotateBodyTowards(facingDirection, turnSpeed, tickDelta);
             }
 
             _currentSimPosition = transform.position;
             _currentSimRotation = transform.rotation;
             _lastSimulationUpdateTime = Time.time;
+        }
+
+        private Vector3 ResolveMovementFacingDirection(
+            uint currentTick,
+            Vector3 resolvedMovement,
+            Vector3 nextVelocity,
+            Vector3 moveDirection,
+            bool hasMoveInput)
+        {
+            if (IsActionFacingActive(currentTick))
+                return _actionFacingDirection;
+
+            if (resolvedMovement.sqrMagnitude > WorldCollisionEpsilon)
+                return resolvedMovement;
+
+            if (nextVelocity.sqrMagnitude > MovementVelocityStopEpsilonSqr)
+                return nextVelocity;
+
+            return hasMoveInput ? moveDirection : Vector3.zero;
+        }
+
+        private void RotateBodyTowards(Vector3 direction, float turnSpeedDegrees, float tickDelta)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.001f)
+                return;
+
+            Quaternion targetRotation = Quaternion.LookRotation(direction.normalized);
+            transform.rotation = Quaternion.RotateTowards(
+                transform.rotation,
+                targetRotation,
+                turnSpeedDegrees * tickDelta);
         }
 
         private Vector3 ResolveMovementAgainstWorld(Vector3 desiredMovement)
