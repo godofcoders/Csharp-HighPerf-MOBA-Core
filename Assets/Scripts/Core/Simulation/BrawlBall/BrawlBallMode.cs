@@ -46,6 +46,7 @@ namespace MOBA.Core.Simulation
         private const float GoalPlacementProbeHeight = 1.4f;
         private const float GoalPlacementFallbackBoundsPaddingX = 6f;
         private const float GoalPlacementFallbackBoundsPaddingZ = 8f;
+        private const int MaxGoalSweepSamples = 12;
 
         private struct TeamSpawnLane
         {
@@ -226,13 +227,50 @@ namespace MOBA.Core.Simulation
 
         public bool TryScoreGoalAt(Vector3 ballPosition, uint currentTick, out TeamType scoringTeam)
         {
+            return TryScoreGoalBetween(ballPosition, ballPosition, currentTick, out scoringTeam);
+        }
+
+        public bool TryScoreGoalBetween(
+            Vector3 startPosition,
+            Vector3 endPosition,
+            uint currentTick,
+            out TeamType scoringTeam)
+        {
             scoringTeam = TeamType.Neutral;
 
             if (!CanResolveGoal(currentTick))
                 return false;
 
             float ballRadius = _ball != null ? _ball.CollisionRadius : 0f;
+            float distance = Vector3.Distance(startPosition, endPosition);
+            float sampleStep = Mathf.Max(0.05f, ballRadius * 0.5f);
+            int sampleCount = distance <= 0.001f
+                ? 0
+                : Mathf.Clamp(Mathf.CeilToInt(distance / sampleStep), 1, MaxGoalSweepSamples);
 
+            for (int sample = 0; sample <= sampleCount; sample++)
+            {
+                float t = sampleCount == 0 ? 1f : sample / (float)sampleCount;
+                Vector3 sampledPosition = Vector3.Lerp(startPosition, endPosition, t);
+                if (!TryResolveScoringGoalAt(sampledPosition, ballRadius, out scoringTeam))
+                    continue;
+
+                _goalScoreUnlockTick = currentTick +
+                    SimulationClock.SecondsToTicks(_goalScoreLockoutSeconds);
+                ConsumeBallAfterGoal();
+                RecordGoal(scoringTeam);
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryResolveScoringGoalAt(
+            Vector3 ballPosition,
+            float ballRadius,
+            out TeamType scoringTeam)
+        {
+            scoringTeam = TeamType.Neutral;
             for (int i = _goals.Count - 1; i >= 0; i--)
             {
                 BrawlBallGoalController goal = _goals[i];
@@ -249,13 +287,18 @@ namespace MOBA.Core.Simulation
                 }
 
                 scoringTeam = goal.ScoringTeam;
-                _goalScoreUnlockTick = currentTick +
-                    SimulationClock.SecondsToTicks(_goalScoreLockoutSeconds);
-                RecordGoal(scoringTeam);
                 return true;
             }
 
             return false;
+        }
+
+        private void ConsumeBallAfterGoal()
+        {
+            SetBallCarrierState(null);
+
+            if (_ball != null)
+                _ball.ConsumeForGoal();
         }
 
         public bool CanKickBall(BrawlerController carrier)

@@ -56,6 +56,7 @@ namespace MOBA.Core.Simulation
         private Vector3 _looseVelocity;
         private float _remainingTravelDistance;
         private uint _pickupUnlockTick;
+        private bool _isGoalConsumed;
         private bool _hasResolvedWorldCollisionMask;
         private int _resolvedWorldCollisionMask;
 
@@ -104,6 +105,9 @@ namespace MOBA.Core.Simulation
 
         public override void Tick(uint currentTick)
         {
+            if (_isGoalConsumed)
+                return;
+
             if (_carrier != null)
             {
                 if (!IsValidCarrier(_carrier))
@@ -117,7 +121,9 @@ namespace MOBA.Core.Simulation
                 return;
             }
 
-            MoveLooseBall();
+            MoveLooseBall(currentTick);
+            if (_isGoalConsumed)
+                return;
 
             if (TryScoreGoal(currentTick))
                 return;
@@ -136,6 +142,9 @@ namespace MOBA.Core.Simulation
 
         public bool TryPickupBy(BrawlerController carrier)
         {
+            if (_isGoalConsumed)
+                return false;
+
             if (!IsValidCarrier(carrier))
                 return false;
 
@@ -168,6 +177,8 @@ namespace MOBA.Core.Simulation
 
         public void DropAt(Vector3 position)
         {
+            _isGoalConsumed = false;
+            SetVisualVisible(true);
             _carrier = null;
             StopLooseMotion();
             ClearPickupLockout();
@@ -181,6 +192,8 @@ namespace MOBA.Core.Simulation
 
         public void ResetToSpawn()
         {
+            _isGoalConsumed = false;
+            SetVisualVisible(true);
             _carrier = null;
             StopLooseMotion();
             ClearPickupLockout();
@@ -215,6 +228,8 @@ namespace MOBA.Core.Simulation
                 return;
             }
 
+            _isGoalConsumed = false;
+            SetVisualVisible(true);
             _carrier = carrier;
             StopLooseMotion();
             ClearPickupLockout();
@@ -224,10 +239,23 @@ namespace MOBA.Core.Simulation
 
         public void ClearCarrierFromMode()
         {
+            _isGoalConsumed = false;
+            SetVisualVisible(true);
             _carrier = null;
             StopLooseMotion();
             ClearPickupLockout();
             SetLoosePosition(transform.position);
+        }
+
+        public void ConsumeForGoal()
+        {
+            _carrier = null;
+            StopLooseMotion();
+            ClearPickupLockout();
+            SetLoosePosition(_spawnPosition);
+            ResetVisualRotation();
+            _isGoalConsumed = true;
+            SetVisualVisible(false);
         }
 
         public bool KickFromCarrier(
@@ -236,6 +264,9 @@ namespace MOBA.Core.Simulation
             bool isSuperKick,
             uint currentTick)
         {
+            if (_isGoalConsumed)
+                return false;
+
             if (!IsValidCarrier(kicker) || _carrier != kicker)
                 return false;
 
@@ -261,7 +292,7 @@ namespace MOBA.Core.Simulation
             return true;
         }
 
-        private void MoveLooseBall()
+        private void MoveLooseBall(uint currentTick)
         {
             if (_looseVelocity.sqrMagnitude <= 0.001f || _remainingTravelDistance <= 0.001f)
             {
@@ -299,6 +330,7 @@ namespace MOBA.Core.Simulation
                     break;
 
                 Vector3 movement = direction * stepDistance;
+                Vector3 targetPosition = currentPosition + movement;
                 if (!TryResolveWorldCollision(
                         currentPosition,
                         movement,
@@ -306,11 +338,17 @@ namespace MOBA.Core.Simulation
                         out Vector3 bounceDirection,
                         out float hitDistance))
                 {
-                    SetLoosePosition(currentPosition + movement);
+                    if (TryScoreGoalBetween(currentPosition, targetPosition, currentTick))
+                        return;
+
+                    SetLoosePosition(targetPosition);
                     RollVisual(direction, stepDistance);
                     consumedDistance += stepDistance;
                     break;
                 }
+
+                if (TryScoreGoalBetween(currentPosition, resolvedPosition, currentTick))
+                    return;
 
                 float safeTravelDistance = Vector3.Distance(currentPosition, resolvedPosition);
                 SetLoosePosition(resolvedPosition);
@@ -420,6 +458,12 @@ namespace MOBA.Core.Simulation
             return reflected.sqrMagnitude > BallCollisionEpsilon
                 ? reflected.normalized
                 : Vector3.zero;
+        }
+
+        private bool TryScoreGoalBetween(Vector3 from, Vector3 to, uint currentTick)
+        {
+            return _mode != null &&
+                   _mode.TryScoreGoalBetween(from, to, currentTick, out _);
         }
 
         private void TryPickupNearest()
@@ -559,6 +603,22 @@ namespace MOBA.Core.Simulation
         {
             if (_visualRoot != null)
                 _visualRoot.localRotation = Quaternion.identity;
+        }
+
+        private void SetVisualVisible(bool visible)
+        {
+            if (_visualRoot != null)
+            {
+                _visualRoot.gameObject.SetActive(visible);
+                return;
+            }
+
+            Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] != null)
+                    renderers[i].enabled = visible;
+            }
         }
 
         private void ClearPickupLockout()
