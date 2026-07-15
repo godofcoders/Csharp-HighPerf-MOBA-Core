@@ -62,6 +62,7 @@ namespace MOBA.Core.Infrastructure
             SpawnedMapInstance.name = prefab.name;
             MapDesertThemePresentation.InstallUnder(SpawnedMapInstance);
             BushPatchPresentation.InstallUnder(SpawnedMapInstance);
+            MapArenaBoundaryPresentation.InstallUnder(SpawnedMapInstance);
 
             HandSpawnPointsToSpawnManager();
         }
