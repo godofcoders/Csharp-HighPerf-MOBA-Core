@@ -7,6 +7,7 @@ namespace MOBA.Core.Definitions
     {
         private static NanopowerDefinition[] _coltDefaults;
         private static NanopowerDefinition[] _jessieDefaults;
+        private static NanopowerDefinition[] _byronDefaults;
 
         public static void BuildOptions(BrawlerDefinition brawler, List<NanopowerDefinition> output)
         {
@@ -38,6 +39,12 @@ namespace MOBA.Core.Definitions
                      (IsNamedBrawler(brawler, "jessie") || IsNamedBrawler(brawler, "jesse")))
             {
                 NanopowerDefinition[] defaults = GetJessieDefaults();
+                for (int i = 0; i < defaults.Length; i++)
+                    output.Add(defaults[i]);
+            }
+            else if (output.Count == 0 && IsNamedBrawler(brawler, "byron"))
+            {
+                NanopowerDefinition[] defaults = GetByronDefaults();
                 for (int i = 0; i < defaults.Length; i++)
                     output.Add(defaults[i]);
             }
@@ -107,6 +114,39 @@ namespace MOBA.Core.Definitions
             };
 
             return _jessieDefaults;
+        }
+
+        private static NanopowerDefinition[] GetByronDefaults()
+        {
+            if (_byronDefaults != null)
+                return _byronDefaults;
+
+            _byronDefaults = new[]
+            {
+                CreateRuntimeNanopower(
+                    "ByronNanoPotentDose",
+                    "Potent Dose",
+                    "+11% damage. Byron's pressure becomes more punishing when enemies ignore his lane.",
+                    new Color(0.70f, 0.34f, 1f, 1f),
+                    outgoingDamageBonusPercent: 0.11f),
+
+                CreateRuntimeNanopower(
+                    "ByronNanoSwiftSerum",
+                    "Swift Serum",
+                    "+8% movement speed. Faster rotations for healing angles, kiting, and cleanup.",
+                    new Color(0.18f, 0.95f, 0.82f, 1f),
+                    moveSpeedBonusPercent: 0.08f),
+
+                CreateRuntimeNanopower(
+                    "ByronNanoTriageCoat",
+                    "Triage Coat",
+                    "+300 health and 7% damage reduction. Keeps Byron alive while supporting from mid range.",
+                    new Color(0.48f, 0.94f, 0.36f, 1f),
+                    bonusMaxHealth: 300f,
+                    incomingDamageReductionPercent: 0.07f)
+            };
+
+            return _byronDefaults;
         }
 
         private static NanopowerDefinition CreateRuntimeNanopower(
