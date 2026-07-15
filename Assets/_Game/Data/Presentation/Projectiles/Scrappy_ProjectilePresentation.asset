@@ -12,17 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d4d7476af0334c89ba9613aa4565986, type: 3}
   m_Name: Scrappy_ProjectilePresentation
   m_EditorClassIdentifier: 
-  VisualPrefab: {fileID: 4599272613687540432, guid: fe8d475b0617346499ae1afaa96234ac, type: 3}
+  VisualPrefab: {fileID: 0}
   LocalPosition: {x: 0, y: 0, z: 0}
   LocalRotationEuler: {x: 0, y: 0, z: 0}
-  LocalScale: {x: 0.16, y: 0.16, z: 0.38}
+  LocalScale: {x: 0.19, y: 0.19, z: 0.19}
+  PreferRuntimeShape: 1
+  RuntimeShape: 3
   FaceMovementDirection: 1
   UseSpin: 0
   SpinEulerPerSecond: {x: 0, y: 0, z: 0}
-  MinimumVisualDiameter: 0.17
+  MinimumVisualDiameter: 0.16
   UseRuntimeTrail: 1
-  TrailTime: 0.040
-  TrailStartWidth: 0.10
+  TrailTime: 0.035
+  TrailStartWidth: 0.075
   TrailEndWidth: 0.012
   TrailColor: {r: 0.22, g: 0.86, b: 1, a: 0.80}
   SuperTrailColor: {r: 1, g: 0.62, b: 0.12, a: 0.84}

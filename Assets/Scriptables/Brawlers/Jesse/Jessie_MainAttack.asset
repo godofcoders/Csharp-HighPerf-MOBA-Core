@@ -38,7 +38,7 @@ MonoBehaviour:
   AimAssistPlacementDistance: 3
   Damage: 1200
   Range: 9
-  Speed: 18
+  Speed: 20
   BounceCount: 3
   BounceRadius: 5
   PresentationProfile: {fileID: 11400000, guid: e4a0e596df2834d0894ba9e6533d059b, type: 2}

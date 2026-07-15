@@ -12,17 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d4d7476af0334c89ba9613aa4565986, type: 3}
   m_Name: Jesse_MainProjectile_Presentation
   m_EditorClassIdentifier: 
-  VisualPrefab: {fileID: 6113608135349567630, guid: c12d9eb4ec2024d8aa27c6d6d092b7af, type: 3}
+  VisualPrefab: {fileID: 0}
   LocalPosition: {x: 0, y: 0, z: 0}
   LocalRotationEuler: {x: 0, y: 0, z: 0}
-  LocalScale: {x: 0.20, y: 0.20, z: 0.34}
+  LocalScale: {x: 0.30, y: 0.30, z: 0.30}
+  PreferRuntimeShape: 1
+  RuntimeShape: 2
   FaceMovementDirection: 1
   UseSpin: 1
-  SpinEulerPerSecond: {x: 0, y: 0, z: 420}
-  MinimumVisualDiameter: 0.20
+  SpinEulerPerSecond: {x: 0, y: 180, z: 420}
+  MinimumVisualDiameter: 0.28
   UseRuntimeTrail: 1
-  TrailTime: 0.050
-  TrailStartWidth: 0.12
-  TrailEndWidth: 0.015
+  TrailTime: 0.060
+  TrailStartWidth: 0.15
+  TrailEndWidth: 0.020
   TrailColor: {r: 0.18, g: 0.92, b: 1, a: 0.78}
   SuperTrailColor: {r: 1, g: 0.95, b: 0.16, a: 0.82}

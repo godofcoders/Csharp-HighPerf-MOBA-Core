@@ -38,7 +38,7 @@ MonoBehaviour:
   AimAssistPlacementDistance: 3
   Damage: 320
   Range: 9.5
-  Speed: 28
+  Speed: 25.5
   ProjectileCount: 1
   DelayBetweenProjectiles: 0
   SpreadAngle: 0
