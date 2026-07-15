@@ -38,7 +38,7 @@ MonoBehaviour:
   AimAssistPlacementDistance: 3
   PreviewMode: 2
   ThrowRange: 7
-  ThrowSpeed: 16
+  ThrowSpeed: 13.5
   ImpactRadius: 10
   EnemyDamage: 350
   AllyHeal: 350

@@ -12,17 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d4d7476af0334c89ba9613aa4565986, type: 3}
   m_Name: Byron_MainProjectile_Presentation
   m_EditorClassIdentifier: 
-  VisualPrefab: {fileID: 6261421238213109056, guid: c44b35786d8884cb796bf1e302f32734, type: 3}
+  VisualPrefab: {fileID: 0}
   LocalPosition: {x: 0, y: 0, z: 0}
   LocalRotationEuler: {x: 0, y: 0, z: 0}
-  LocalScale: {x: 0.13, y: 0.13, z: 0.38}
+  LocalScale: {x: 0.18, y: 0.18, z: 0.52}
+  PreferRuntimeShape: 1
+  RuntimeShape: 4
   FaceMovementDirection: 1
   UseSpin: 0
   SpinEulerPerSecond: {x: 0, y: 0, z: 0}
-  MinimumVisualDiameter: 0.15
+  MinimumVisualDiameter: 0.18
   UseRuntimeTrail: 1
-  TrailTime: 0.040
-  TrailStartWidth: 0.08
-  TrailEndWidth: 0.010
+  TrailTime: 0.048
+  TrailStartWidth: 0.09
+  TrailEndWidth: 0.012
   TrailColor: {r: 0.12, g: 1, b: 0.72, a: 0.76}
   SuperTrailColor: {r: 0.34, g: 0.12, b: 0.86, a: 0.84}

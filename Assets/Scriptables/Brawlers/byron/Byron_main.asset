@@ -37,7 +37,7 @@ MonoBehaviour:
   AimAssistIdealRange: 12
   AimAssistPlacementDistance: 3
   Range: 12
-  Speed: 40
+  Speed: 28
   EnemyDamage: 1100
   AllyHeal: 1100
   PresentationProfile: {fileID: 11400000, guid: af00dcd2be6044f16bbbd5ddeb4b2878, type: 2}

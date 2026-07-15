@@ -12,17 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d4d7476af0334c89ba9613aa4565986, type: 3}
   m_Name: Byron_SuperProjectile_Presentation
   m_EditorClassIdentifier: 
-  VisualPrefab: {fileID: 6291096669837962545, guid: f8046c9f7811a4f7197cb884150f3c8b, type: 3}
+  VisualPrefab: {fileID: 0}
   LocalPosition: {x: 0, y: 0, z: 0}
   LocalRotationEuler: {x: 0, y: 0, z: 0}
-  LocalScale: {x: 0.26, y: 0.26, z: 0.34}
+  LocalScale: {x: 0.42, y: 0.28, z: 0.42}
+  PreferRuntimeShape: 1
+  RuntimeShape: 5
   FaceMovementDirection: 1
   UseSpin: 1
-  SpinEulerPerSecond: {x: 0, y: 0, z: 260}
-  MinimumVisualDiameter: 0.28
+  SpinEulerPerSecond: {x: 0, y: 120, z: 180}
+  MinimumVisualDiameter: 0.36
   UseRuntimeTrail: 1
-  TrailTime: 0.060
-  TrailStartWidth: 0.16
-  TrailEndWidth: 0.020
+  TrailTime: 0.070
+  TrailStartWidth: 0.18
+  TrailEndWidth: 0.024
   TrailColor: {r: 0.34, g: 0.12, b: 0.86, a: 0.82}
   SuperTrailColor: {r: 0.12, g: 1, b: 0.72, a: 0.84}
