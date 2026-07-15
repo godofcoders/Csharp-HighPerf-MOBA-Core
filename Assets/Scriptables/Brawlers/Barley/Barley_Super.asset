@@ -38,7 +38,7 @@ MonoBehaviour:
   AimAssistPlacementDistance: 3
   PreviewMode: 2
   ThrowRange: 7
-  ThrowSpeed: 16
+  ThrowSpeed: 13.5
   ArcHeight: 1.75
   ImpactRadius: 2.25
   EnemyDamage: 0

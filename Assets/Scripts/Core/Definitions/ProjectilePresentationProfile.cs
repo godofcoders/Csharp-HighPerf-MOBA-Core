@@ -2,6 +2,16 @@ using UnityEngine;
 
 namespace MOBA.Core.Definitions
 {
+    public enum ProjectileRuntimeShape
+    {
+        Sphere = 0,
+        Bottle = 1,
+        EnergyOrb = 2,
+        MiniOrb = 3,
+        Vial = 4,
+        Bowl = 5
+    }
+
     [CreateAssetMenu(fileName = "ProjectilePresentationProfile", menuName = "MOBA/Presentation/Projectile Presentation Profile")]
     public class ProjectilePresentationProfile : ScriptableObject
     {
@@ -10,6 +20,10 @@ namespace MOBA.Core.Definitions
         public Vector3 LocalPosition = Vector3.zero;
         public Vector3 LocalRotationEuler = Vector3.zero;
         public Vector3 LocalScale = Vector3.one;
+
+        [Header("Runtime Shape")]
+        public bool PreferRuntimeShape = false;
+        public ProjectileRuntimeShape RuntimeShape = ProjectileRuntimeShape.Sphere;
 
         [Header("Orientation")]
         public bool FaceMovementDirection = true;

@@ -68,7 +68,7 @@ namespace MOBA.Core.Infrastructure
             ClearVisual();
             ConfigureTrail(_currentProfile, _currentStyle);
 
-            if (_currentProfile == null || _currentProfile.VisualPrefab == null)
+            if (ShouldUseRuntimeShape(_currentProfile))
             {
                 CreateFallbackVisual(_currentStyle);
                 ConfigureProjectileParticles(_currentStyle);
@@ -173,35 +173,163 @@ namespace MOBA.Core.Infrastructure
             if (!_createFallbackVisualWhenMissing)
                 return;
 
-            _currentVisualInstance = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            _currentVisualInstance.name = "RuntimeProjectileVisual";
-            _currentVisualInstance.transform.SetParent(_visualRoot, false);
-            _currentVisualInstance.transform.localPosition = Vector3.zero;
-            _currentVisualInstance.transform.localRotation = Quaternion.identity;
+            ProjectileRuntimeShape shape = _currentProfile != null
+                ? _currentProfile.RuntimeShape
+                : ProjectileRuntimeShape.Sphere;
 
-            float diameter = Mathf.Max(0.05f, _fallbackVisualDiameter) * _powerVisualScale;
-            _currentVisualInstance.transform.localScale = Vector3.one * diameter;
-
-            Collider collider = _currentVisualInstance.GetComponent<Collider>();
-            if (collider != null)
-                Destroy(collider);
-
-            Renderer renderer = _currentVisualInstance.GetComponent<Renderer>();
-            if (renderer == null)
+            _currentVisualInstance = CreateRuntimeShapeVisual(shape);
+            if (_currentVisualInstance == null)
                 return;
 
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
-            renderer.sharedMaterial = ResolveFallbackVisualMaterial();
+            _currentVisualInstance.transform.localPosition = _currentProfile != null
+                ? _currentProfile.LocalPosition
+                : Vector3.zero;
+            _currentVisualInstance.transform.localRotation = _currentProfile != null
+                ? Quaternion.Euler(_currentProfile.LocalRotationEuler)
+                : Quaternion.identity;
 
-            EnsurePropertyBlock();
-            renderer.GetPropertyBlock(_propertyBlock);
-            _propertyBlock.SetColor(ColorId, style.CoreColor);
-            _propertyBlock.SetColor(BaseColorId, style.CoreColor);
-            _propertyBlock.SetColor(EmissionColorId, style.CoreColor);
-            renderer.SetPropertyBlock(_propertyBlock);
+            _currentVisualInstance.transform.localScale = ResolveRuntimeShapeScale(_currentProfile);
 
+            if (_currentProfile != null)
+            {
+                _useSpin = _currentProfile.UseSpin;
+                _spinEulerPerSecond = _currentProfile.SpinEulerPerSecond;
+            }
+
+            Renderer[] renderers = _currentVisualInstance.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null)
+                    continue;
+
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.sharedMaterial = ResolveFallbackVisualMaterial();
+            }
+
+            ApplyStyleToRenderers(_currentVisualInstance, style);
             CreateRuntimeGlow(style);
+        }
+
+        private static bool ShouldUseRuntimeShape(ProjectilePresentationProfile profile)
+        {
+            return profile == null ||
+                   profile.PreferRuntimeShape ||
+                   profile.VisualPrefab == null;
+        }
+
+        private Vector3 ResolveRuntimeShapeScale(ProjectilePresentationProfile profile)
+        {
+            if (profile != null)
+            {
+                return ResolveReadableScale(
+                    profile.LocalScale,
+                    profile.MinimumVisualDiameter) * _powerVisualScale;
+            }
+
+            float diameter = Mathf.Max(0.05f, _fallbackVisualDiameter) * _powerVisualScale;
+            return Vector3.one * diameter;
+        }
+
+        private GameObject CreateRuntimeShapeVisual(ProjectileRuntimeShape shape)
+        {
+            GameObject root = new GameObject("RuntimeProjectileVisual");
+            root.transform.SetParent(_visualRoot, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+
+            switch (shape)
+            {
+                case ProjectileRuntimeShape.Bottle:
+                    CreatePrimitivePart(root.transform, "BottleBody", PrimitiveType.Cylinder,
+                        new Vector3(0f, 0f, -0.04f),
+                        Quaternion.Euler(90f, 0f, 0f),
+                        new Vector3(0.70f, 0.38f, 0.70f));
+                    CreatePrimitivePart(root.transform, "BottleNeck", PrimitiveType.Cylinder,
+                        new Vector3(0f, 0f, 0.44f),
+                        Quaternion.Euler(90f, 0f, 0f),
+                        new Vector3(0.36f, 0.18f, 0.36f));
+                    CreatePrimitivePart(root.transform, "BottleCap", PrimitiveType.Sphere,
+                        new Vector3(0f, 0f, 0.64f),
+                        Quaternion.identity,
+                        new Vector3(0.42f, 0.42f, 0.24f));
+                    break;
+
+                case ProjectileRuntimeShape.EnergyOrb:
+                    CreatePrimitivePart(root.transform, "EnergyOrbCore", PrimitiveType.Sphere,
+                        Vector3.zero,
+                        Quaternion.identity,
+                        Vector3.one);
+                    CreatePrimitivePart(root.transform, "EnergyOrbPulse", PrimitiveType.Sphere,
+                        Vector3.zero,
+                        Quaternion.identity,
+                        Vector3.one * 1.22f);
+                    break;
+
+                case ProjectileRuntimeShape.MiniOrb:
+                    CreatePrimitivePart(root.transform, "MiniOrbCore", PrimitiveType.Sphere,
+                        Vector3.zero,
+                        Quaternion.identity,
+                        Vector3.one * 0.72f);
+                    break;
+
+                case ProjectileRuntimeShape.Vial:
+                    CreatePrimitivePart(root.transform, "VialBody", PrimitiveType.Cylinder,
+                        new Vector3(0f, 0f, 0f),
+                        Quaternion.Euler(90f, 0f, 0f),
+                        new Vector3(0.44f, 0.48f, 0.44f));
+                    CreatePrimitivePart(root.transform, "VialTip", PrimitiveType.Sphere,
+                        new Vector3(0f, 0f, 0.58f),
+                        Quaternion.identity,
+                        new Vector3(0.42f, 0.42f, 0.24f));
+                    CreatePrimitivePart(root.transform, "VialTail", PrimitiveType.Sphere,
+                        new Vector3(0f, 0f, -0.58f),
+                        Quaternion.identity,
+                        new Vector3(0.34f, 0.34f, 0.20f));
+                    break;
+
+                case ProjectileRuntimeShape.Bowl:
+                    CreatePrimitivePart(root.transform, "PoisonBowl", PrimitiveType.Sphere,
+                        new Vector3(0f, -0.05f, 0f),
+                        Quaternion.identity,
+                        new Vector3(1.08f, 0.42f, 1.08f));
+                    CreatePrimitivePart(root.transform, "PoisonBowlRim", PrimitiveType.Cylinder,
+                        new Vector3(0f, 0.16f, 0f),
+                        Quaternion.identity,
+                        new Vector3(1.12f, 0.06f, 1.12f));
+                    break;
+
+                default:
+                    CreatePrimitivePart(root.transform, "SphereCore", PrimitiveType.Sphere,
+                        Vector3.zero,
+                        Quaternion.identity,
+                        Vector3.one);
+                    break;
+            }
+
+            return root;
+        }
+
+        private static void CreatePrimitivePart(
+            Transform parent,
+            string objectName,
+            PrimitiveType primitiveType,
+            Vector3 localPosition,
+            Quaternion localRotation,
+            Vector3 localScale)
+        {
+            GameObject part = GameObject.CreatePrimitive(primitiveType);
+            part.name = objectName;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = localPosition;
+            part.transform.localRotation = localRotation;
+            part.transform.localScale = localScale;
+
+            Collider collider = part.GetComponent<Collider>();
+            if (collider != null)
+                Destroy(collider);
         }
 
         private static Vector3 ResolveReadableScale(Vector3 requestedScale, float minimumDiameter)
