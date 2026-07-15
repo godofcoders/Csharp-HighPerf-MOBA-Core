@@ -6,6 +6,7 @@ namespace MOBA.Core.Definitions
     public static class NanopowerCatalog
     {
         private static NanopowerDefinition[] _coltDefaults;
+        private static NanopowerDefinition[] _jessieDefaults;
 
         public static void BuildOptions(BrawlerDefinition brawler, List<NanopowerDefinition> output)
         {
@@ -30,6 +31,13 @@ namespace MOBA.Core.Definitions
             if (output.Count == 0 && IsNamedBrawler(brawler, "colt"))
             {
                 NanopowerDefinition[] defaults = GetColtDefaults();
+                for (int i = 0; i < defaults.Length; i++)
+                    output.Add(defaults[i]);
+            }
+            else if (output.Count == 0 &&
+                     (IsNamedBrawler(brawler, "jessie") || IsNamedBrawler(brawler, "jesse")))
+            {
+                NanopowerDefinition[] defaults = GetJessieDefaults();
                 for (int i = 0; i < defaults.Length; i++)
                     output.Add(defaults[i]);
             }
@@ -66,6 +74,39 @@ namespace MOBA.Core.Definitions
             };
 
             return _coltDefaults;
+        }
+
+        private static NanopowerDefinition[] GetJessieDefaults()
+        {
+            if (_jessieDefaults != null)
+                return _jessieDefaults;
+
+            _jessieDefaults = new[]
+            {
+                CreateRuntimeNanopower(
+                    "JessieNanoShockCoil",
+                    "Shock Coil",
+                    "+10% damage. Jessie gets stronger lane pressure when she finds bounce angles.",
+                    new Color(1f, 0.73f, 0.20f, 1f),
+                    outgoingDamageBonusPercent: 0.10f),
+
+                CreateRuntimeNanopower(
+                    "JessieNanoCircuitSkates",
+                    "Circuit Skates",
+                    "+8% movement speed. Quicker repositioning for safe poke and turret setup.",
+                    new Color(0.20f, 0.82f, 1f, 1f),
+                    moveSpeedBonusPercent: 0.08f),
+
+                CreateRuntimeNanopower(
+                    "JessieNanoScrapShield",
+                    "Scrap Shield",
+                    "+320 health and 5% damage reduction. Better survivability while controlling space.",
+                    new Color(0.58f, 0.90f, 0.30f, 1f),
+                    bonusMaxHealth: 320f,
+                    incomingDamageReductionPercent: 0.05f)
+            };
+
+            return _jessieDefaults;
         }
 
         private static NanopowerDefinition CreateRuntimeNanopower(
