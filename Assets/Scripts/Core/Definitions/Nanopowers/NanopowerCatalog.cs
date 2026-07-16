@@ -10,6 +10,7 @@ namespace MOBA.Core.Definitions
         private static NanopowerDefinition[] _byronDefaults;
         private static NanopowerDefinition[] _barleyDefaults;
         private static NanopowerDefinition[] _boDefaults;
+        private static NanopowerDefinition[] _elPrimoDefaults;
 
         public static void BuildOptions(BrawlerDefinition brawler, List<NanopowerDefinition> output)
         {
@@ -59,6 +60,13 @@ namespace MOBA.Core.Definitions
             else if (output.Count == 0 && IsNamedBrawler(brawler, "bo"))
             {
                 NanopowerDefinition[] defaults = GetBoDefaults();
+                for (int i = 0; i < defaults.Length; i++)
+                    output.Add(defaults[i]);
+            }
+            else if (output.Count == 0 &&
+                     (IsNamedBrawler(brawler, "el primo") || IsNamedBrawler(brawler, "primo")))
+            {
+                NanopowerDefinition[] defaults = GetElPrimoDefaults();
                 for (int i = 0; i < defaults.Length; i++)
                     output.Add(defaults[i]);
             }
@@ -227,6 +235,39 @@ namespace MOBA.Core.Definitions
             };
 
             return _boDefaults;
+        }
+
+        private static NanopowerDefinition[] GetElPrimoDefaults()
+        {
+            if (_elPrimoDefaults != null)
+                return _elPrimoDefaults;
+
+            _elPrimoDefaults = new[]
+            {
+                CreateRuntimeNanopower(
+                    "ElPrimoNanoHeavyFists",
+                    "Heavy Fists",
+                    "+12% damage. El Primo's close-range punches become a real knockout threat.",
+                    new Color(1f, 0.48f, 0.18f, 1f),
+                    outgoingDamageBonusPercent: 0.12f),
+
+                CreateRuntimeNanopower(
+                    "ElPrimoNanoRingFootwork",
+                    "Ring Footwork",
+                    "+7% movement speed. Better gap-closing and cleaner dodge timing.",
+                    new Color(0.18f, 0.78f, 1f, 1f),
+                    moveSpeedBonusPercent: 0.07f),
+
+                CreateRuntimeNanopower(
+                    "ElPrimoNanoChampionBulk",
+                    "Champion Bulk",
+                    "+520 health and 8% damage reduction. Lets El Primo commit to tank engages.",
+                    new Color(0.95f, 0.82f, 0.24f, 1f),
+                    bonusMaxHealth: 520f,
+                    incomingDamageReductionPercent: 0.08f)
+            };
+
+            return _elPrimoDefaults;
         }
 
         private static NanopowerDefinition CreateRuntimeNanopower(
