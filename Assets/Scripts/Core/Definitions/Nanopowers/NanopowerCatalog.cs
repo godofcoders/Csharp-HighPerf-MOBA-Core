@@ -9,6 +9,7 @@ namespace MOBA.Core.Definitions
         private static NanopowerDefinition[] _jessieDefaults;
         private static NanopowerDefinition[] _byronDefaults;
         private static NanopowerDefinition[] _barleyDefaults;
+        private static NanopowerDefinition[] _boDefaults;
 
         public static void BuildOptions(BrawlerDefinition brawler, List<NanopowerDefinition> output)
         {
@@ -52,6 +53,12 @@ namespace MOBA.Core.Definitions
             else if (output.Count == 0 && IsNamedBrawler(brawler, "barley"))
             {
                 NanopowerDefinition[] defaults = GetBarleyDefaults();
+                for (int i = 0; i < defaults.Length; i++)
+                    output.Add(defaults[i]);
+            }
+            else if (output.Count == 0 && IsNamedBrawler(brawler, "bo"))
+            {
+                NanopowerDefinition[] defaults = GetBoDefaults();
                 for (int i = 0; i < defaults.Length; i++)
                     output.Add(defaults[i]);
             }
@@ -187,6 +194,39 @@ namespace MOBA.Core.Definitions
             };
 
             return _barleyDefaults;
+        }
+
+        private static NanopowerDefinition[] GetBoDefaults()
+        {
+            if (_boDefaults != null)
+                return _boDefaults;
+
+            _boDefaults = new[]
+            {
+                CreateRuntimeNanopower(
+                    "BoNanoSharpenedArrowheads",
+                    "Sharpened Arrowheads",
+                    "+11% damage. Bo's volleys and trap pressure become harder to ignore.",
+                    new Color(1f, 0.72f, 0.22f, 1f),
+                    outgoingDamageBonusPercent: 0.11f),
+
+                CreateRuntimeNanopower(
+                    "BoNanoTrackerSteps",
+                    "Tracker Steps",
+                    "+8% movement speed. Better lane rotations, ball pressure, and mine follow-up.",
+                    new Color(0.18f, 0.78f, 1f, 1f),
+                    moveSpeedBonusPercent: 0.08f),
+
+                CreateRuntimeNanopower(
+                    "BoNanoWarPaint",
+                    "War Paint",
+                    "+360 health and 5% damage reduction. Helps Bo hold mid-range control.",
+                    new Color(0.84f, 0.92f, 0.28f, 1f),
+                    bonusMaxHealth: 360f,
+                    incomingDamageReductionPercent: 0.05f)
+            };
+
+            return _boDefaults;
         }
 
         private static NanopowerDefinition CreateRuntimeNanopower(
