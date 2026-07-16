@@ -5,9 +5,8 @@ using MOBA.Core.Definitions;
 namespace MOBA.Core.Infrastructure
 {
     /// <summary>
-    /// Main menu landing screen. Single "Play" button advances to brawler
-    /// selection. Optional Quit button. Resets SceneSelection on enable so
-    /// returning here from end-of-match clears stale picks.
+    /// Main menu landing screen. Play advances to brawler selection, while
+    /// Map opens the combined mode/map picker.
     /// </summary>
     public class MainMenuScreen : MonoBehaviour
     {
@@ -41,18 +40,22 @@ namespace MOBA.Core.Infrastructure
 
         private void OnPlay()
         {
-            // Backfill defaults if menu interactions didn't set everything.
-            if (SceneSelection.SelectedBrawler == null) SceneSelection.SelectedBrawler = _defaultBrawler;
-            if (SceneSelection.SelectedMap == null) SceneSelection.SelectedMap = _defaultMap;
-            if (SceneSelection.SelectedMode == default) SceneSelection.SelectedMode = _defaultMode;
-
-            SceneFlow.Instance?.LoadScene(SceneId.Match);
+            SceneFlow.Instance?.LoadScene(SceneId.BrawlerSelect);
         }
 
         private void OnMapSelect()
         {
-            Debug.Log("[MainMenuScreen] Map Select clicked" + SceneId.MapSelect);
-            SceneFlow.Instance?.LoadScene((SceneId.MapSelect));
+            if (SceneSelection.SelectedBrawler == null)
+                SceneSelection.SelectedBrawler = _defaultBrawler;
+            if (SceneSelection.SelectedMap == null)
+                SceneSelection.SelectedMap = _defaultMap;
+            SceneSelection.SelectedMode = SceneSelection.SelectedMap != null &&
+                                          SceneSelection.SelectedMap.SupportsMode(SceneSelection.SelectedMode)
+                ? SceneSelection.SelectedMode
+                : _defaultMode;
+            SceneSelection.MapSelectReturnScene = SceneId.MainMenu;
+
+            SceneFlow.Instance?.LoadScene(SceneId.MapSelect);
         }
     }
 }

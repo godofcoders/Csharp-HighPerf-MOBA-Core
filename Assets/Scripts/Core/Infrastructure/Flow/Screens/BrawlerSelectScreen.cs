@@ -206,7 +206,8 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            SceneFlow.Instance?.LoadScene(SceneId.GameModeSelect);
+            SceneSelection.MapSelectReturnScene = SceneId.BrawlerSelect;
+            SceneFlow.Instance?.LoadScene(SceneId.MapSelect);
         }
 
         private void OnBack()

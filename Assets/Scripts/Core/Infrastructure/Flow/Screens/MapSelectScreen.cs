@@ -8,8 +8,8 @@ using MOBA.Core.Definitions;
 namespace MOBA.Core.Infrastructure
 {
     /// <summary>
-    /// Map-select screen. Filters MapCatalog by SceneSelection.SelectedMode
-    /// and commits SceneSelection.SelectedMap before loading Match.
+    /// Combined mode/map picker. Mode tabs filter MapCatalog, then the
+    /// chosen map commits SceneSelection.SelectedMap before loading Match.
     /// </summary>
     public class MapSelectScreen : MonoBehaviour
     {
@@ -43,12 +43,24 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Color _goldColor = new Color(1f, 0.76f, 0.12f, 1f);
         [SerializeField] private Color _cyanColor = new Color(0.12f, 0.76f, 1f, 1f);
 
+        private static readonly GameModeId[] ModeDisplayOrder =
+        {
+            GameModeId.GemGrab,
+            GameModeId.BrawlBall,
+            GameModeId.Knockout,
+            GameModeId.SoloShowdown,
+            GameModeId.HotZone
+        };
+
         private MapDefinition _previewed;
         private readonly List<GameObject> _spawnedCards = new List<GameObject>(8);
         private readonly Dictionary<MapDefinition, RuntimeMapCardView> _runtimeCards =
             new Dictionary<MapDefinition, RuntimeMapCardView>(8);
+        private readonly Dictionary<GameModeId, RuntimeModeTabView> _runtimeModeTabs =
+            new Dictionary<GameModeId, RuntimeModeTabView>(8);
 
         private RectTransform _runtimeRoot;
+        private Transform _runtimeModeTabContainer;
         private Transform _runtimeCardContainer;
         private TMP_Text _modeHeaderText;
         private TMP_Text _detailNameText;
@@ -62,6 +74,8 @@ namespace MOBA.Core.Infrastructure
 
         private void Start()
         {
+            NormalizeSelectedMode();
+
             if (_useBrawlInspiredRuntimeView)
             {
                 BuildRuntimeView();
@@ -83,6 +97,36 @@ namespace MOBA.Core.Infrastructure
             if (_confirmButton != null) _confirmButton.onClick.RemoveListener(OnConfirm);
         }
 
+        private void NormalizeSelectedMode()
+        {
+            if (HasMapsForMode(SceneSelection.SelectedMode))
+                return;
+
+            for (int i = 0; i < ModeDisplayOrder.Length; i++)
+            {
+                if (!HasMapsForMode(ModeDisplayOrder[i]))
+                    continue;
+
+                SceneSelection.SelectedMode = ModeDisplayOrder[i];
+                return;
+            }
+        }
+
+        private bool HasMapsForMode(GameModeId mode)
+        {
+            if (_catalog == null || _catalog.Maps == null)
+                return false;
+
+            for (int i = 0; i < _catalog.Maps.Length; i++)
+            {
+                MapDefinition map = _catalog.Maps[i];
+                if (map != null && map.SupportsMode(mode))
+                    return true;
+            }
+
+            return false;
+        }
+
         private void BuildRuntimeView()
         {
             RectTransform host = transform as RectTransform;
@@ -97,6 +141,7 @@ namespace MOBA.Core.Infrastructure
                 HideLegacySceneWidgets(rootObject.transform);
 
             BuildHeader(_runtimeRoot);
+            BuildModeTabs(_runtimeRoot);
             BuildMapListPanel(_runtimeRoot);
             BuildDetailPanel(_runtimeRoot);
             BuildActionButtons(_runtimeRoot);
@@ -118,16 +163,16 @@ namespace MOBA.Core.Infrastructure
         {
             GameObject header = CreatePanel("Header", parent, new Color(0.04f, 0.13f, 0.32f, 0.98f));
             RectTransform rect = header.GetComponent<RectTransform>();
-            Anchor(rect, new Vector2(0f, 0.88f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
+            Anchor(rect, new Vector2(0f, 0.90f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
 
-            TMP_Text title = CreateText(header.transform, "Title", "MAPS", 42, TextAlignmentOptions.Left, Color.white);
+            TMP_Text title = CreateText(header.transform, "Title", "EVENTS", 42, TextAlignmentOptions.Left, Color.white);
             title.fontStyle = FontStyles.Bold;
             Anchor(title.rectTransform, new Vector2(0.035f, 0f), new Vector2(0.42f, 1f), Vector2.zero, Vector2.zero);
 
             _modeHeaderText = CreateText(
                 header.transform,
                 "Mode",
-                ResolveModeLabel(SceneSelection.SelectedMode),
+                ResolveModeLabel(SceneSelection.SelectedMode) + " MAPS",
                 22,
                 TextAlignmentOptions.Right,
                 _goldColor);
@@ -135,11 +180,79 @@ namespace MOBA.Core.Infrastructure
             Anchor(_modeHeaderText.rectTransform, new Vector2(0.48f, 0f), new Vector2(0.965f, 1f), Vector2.zero, Vector2.zero);
         }
 
+        private void BuildModeTabs(Transform parent)
+        {
+            GameObject tabs = CreatePanel("ModeTabs", parent, new Color(0.020f, 0.048f, 0.13f, 0.98f));
+            RectTransform rect = tabs.GetComponent<RectTransform>();
+            Anchor(rect, new Vector2(0.035f, 0.805f), new Vector2(0.965f, 0.885f), Vector2.zero, Vector2.zero);
+
+            HorizontalLayoutGroup layout = tabs.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(10, 10, 8, 8);
+            layout.spacing = 10f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = true;
+
+            _runtimeModeTabContainer = tabs.transform;
+            _runtimeModeTabs.Clear();
+
+            for (int i = 0; i < ModeDisplayOrder.Length; i++)
+            {
+                GameModeId mode = ModeDisplayOrder[i];
+                if (!HasMapsForMode(mode))
+                    continue;
+
+                CreateRuntimeModeTab(mode);
+            }
+
+            RefreshRuntimeModeTabs();
+        }
+
+        private void CreateRuntimeModeTab(GameModeId mode)
+        {
+            GameObject tab = CreatePanel("ModeTab_" + ResolveModeLabel(mode).Replace(" ", ""), _runtimeModeTabContainer, _panelColor);
+            LayoutElement layoutElement = tab.AddComponent<LayoutElement>();
+            layoutElement.minHeight = 46f;
+            layoutElement.flexibleWidth = 1f;
+
+            Button button = tab.AddComponent<Button>();
+            button.targetGraphic = tab.GetComponent<Image>();
+            GameModeId captured = mode;
+            button.onClick.AddListener(() => SelectMode(captured));
+
+            TMP_Text label = CreateText(tab.transform, "Label", ResolveModeLabel(mode), 18, TextAlignmentOptions.Center, Color.white);
+            label.fontStyle = FontStyles.Bold;
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 12f;
+            label.fontSizeMax = 18f;
+            Anchor(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(8f, 2f), new Vector2(-8f, -2f));
+
+            _runtimeModeTabs[mode] = new RuntimeModeTabView(tab.GetComponent<Image>(), label);
+        }
+
+        private void SelectMode(GameModeId mode)
+        {
+            if (!HasMapsForMode(mode))
+                return;
+
+            SceneSelection.SelectedMode = mode;
+            if (SceneSelection.SelectedMap != null && !SceneSelection.SelectedMap.SupportsMode(mode))
+                SceneSelection.SelectedMap = null;
+
+            if (_useBrawlInspiredRuntimeView)
+                BuildRuntimeCards();
+            else
+                BuildLegacyCards();
+
+            RefreshRuntimeModeTabs();
+        }
+
         private void BuildMapListPanel(Transform parent)
         {
             GameObject panel = CreatePanel("MapListPanel", parent, _panelDarkColor);
             RectTransform rect = panel.GetComponent<RectTransform>();
-            Anchor(rect, new Vector2(0.035f, 0.16f), new Vector2(0.625f, 0.84f), Vector2.zero, Vector2.zero);
+            Anchor(rect, new Vector2(0.035f, 0.16f), new Vector2(0.625f, 0.78f), Vector2.zero, Vector2.zero);
 
             VerticalLayoutGroup panelLayout = panel.AddComponent<VerticalLayoutGroup>();
             panelLayout.padding = new RectOffset(16, 16, 14, 14);
@@ -175,7 +288,7 @@ namespace MOBA.Core.Infrastructure
         {
             GameObject panel = CreatePanel("DetailPanel", parent, _panelColor);
             RectTransform rect = panel.GetComponent<RectTransform>();
-            Anchor(rect, new Vector2(0.655f, 0.16f), new Vector2(0.965f, 0.84f), Vector2.zero, Vector2.zero);
+            Anchor(rect, new Vector2(0.655f, 0.16f), new Vector2(0.965f, 0.78f), Vector2.zero, Vector2.zero);
 
             _detailPreviewBackground = CreatePanel("MapPreview", panel.transform, new Color(0.12f, 0.24f, 0.42f, 1f)).GetComponent<Image>();
             Anchor(_detailPreviewBackground.rectTransform, new Vector2(0.07f, 0.52f), new Vector2(0.93f, 0.94f), Vector2.zero, Vector2.zero);
@@ -409,7 +522,9 @@ namespace MOBA.Core.Infrastructure
             RefreshRuntimeCardSelection();
 
             if (_modeHeaderText != null)
-                _modeHeaderText.text = ResolveModeLabel(SceneSelection.SelectedMode);
+                _modeHeaderText.text = ResolveModeLabel(SceneSelection.SelectedMode) + " MAPS";
+
+            RefreshRuntimeModeTabs();
 
             if (_previewed == null)
             {
@@ -460,6 +575,18 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        private void RefreshRuntimeModeTabs()
+        {
+            foreach (KeyValuePair<GameModeId, RuntimeModeTabView> entry in _runtimeModeTabs)
+            {
+                bool selected = entry.Key == SceneSelection.SelectedMode;
+                if (entry.Value.Background != null)
+                    entry.Value.Background.color = selected ? _goldColor : _panelColor;
+                if (entry.Value.Label != null)
+                    entry.Value.Label.color = selected ? Color.black : Color.white;
+            }
+        }
+
         private void OnConfirm()
         {
             if (_previewed == null) return;
@@ -473,7 +600,14 @@ namespace MOBA.Core.Infrastructure
             if (_confirmButton != null) _confirmButton.interactable = _previewed != null;
         }
 
-        private void OnBack() => SceneFlow.Instance?.LoadScene(SceneId.GameModeSelect);
+        private void OnBack()
+        {
+            SceneId target = SceneSelection.MapSelectReturnScene;
+            if (target == SceneId.MapSelect || target == SceneId.Match || target == SceneId.Results)
+                target = SceneId.MainMenu;
+
+            SceneFlow.Instance?.LoadScene(target);
+        }
 
         private void ClearSpawnedCards()
         {
@@ -655,6 +789,18 @@ namespace MOBA.Core.Infrastructure
                 Accent = accent;
                 SelectedOverlay = selectedOverlay;
                 SelectedLabel = selectedLabel;
+            }
+        }
+
+        private sealed class RuntimeModeTabView
+        {
+            public readonly Image Background;
+            public readonly TMP_Text Label;
+
+            public RuntimeModeTabView(Image background, TMP_Text label)
+            {
+                Background = background;
+                Label = label;
             }
         }
     }

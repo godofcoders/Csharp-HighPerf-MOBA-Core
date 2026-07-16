@@ -22,10 +22,14 @@ namespace MOBA.Core.Infrastructure
         /// over its inspector _mapPrefab fallback when set.</summary>
         public static MapDefinition SelectedMap;
 
+        /// <summary>Scene the combined map/mode picker should return to
+        /// when Back is pressed. Set by the screen that opens MapSelect.</summary>
+        public static SceneId MapSelectReturnScene = SceneId.MainMenu;
+
         /// <summary>True when the brawler-select screen was opened from
         /// MainMenu's preview tap (just to swap the showcased brawler).
         /// On confirm, BrawlerSelectScreen routes back to MainMenu instead
-        /// of advancing to GameModeSelect, then clears this flag.</summary>
+        /// of advancing to MapSelect, then clears this flag.</summary>
         public static bool PickerReturnsToMainMenu;
 
         public static void Reset()
@@ -36,6 +40,8 @@ namespace MOBA.Core.Infrastructure
             // between menu hops. Only mode is wiped so post-match flow
             // re-asks rather than auto-rematching.
             SelectedMode = GameModeId.GemGrab;
+            MapSelectReturnScene = SceneId.MainMenu;
+            PickerReturnsToMainMenu = false;
         }
     }
 
