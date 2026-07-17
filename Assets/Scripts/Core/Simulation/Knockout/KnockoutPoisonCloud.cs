@@ -1,0 +1,429 @@
+using System.Collections.Generic;
+using MOBA.Core.Infrastructure;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+namespace MOBA.Core.Simulation
+{
+    public sealed class KnockoutPoisonCloud : MonoBehaviour
+    {
+        public static KnockoutPoisonCloud Instance { get; private set; }
+
+        private static readonly int ColorId = Shader.PropertyToID("_Color");
+        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+
+        [Header("Safe Zone")]
+        [SerializeField] private Transform _centerOverride;
+        [SerializeField] private Vector2 _initialHalfExtents = new Vector2(28f, 28f);
+        [SerializeField] private Vector2 _finalHalfExtents = new Vector2(5.5f, 5.5f);
+        [SerializeField, Min(0f)] private float _initialBoundsPadding = 9f;
+        [SerializeField, Min(0f)] private float _shrinkDelaySeconds = 10f;
+        [SerializeField, Min(1f)] private float _shrinkDurationSeconds = 80f;
+        [SerializeField, Min(0f)] private float _dangerBuffer = 2.8f;
+
+        [Header("Damage")]
+        [SerializeField, Min(0f)] private float _damagePerTick = 520f;
+        [SerializeField, Min(0.1f)] private float _tickIntervalSeconds = 1f;
+        [SerializeField, Min(0.1f)] private float _cacheRefreshSeconds = 1.5f;
+
+        [Header("Visuals")]
+        [SerializeField] private Color _cloudColor = new Color(0.36f, 0.06f, 0.58f, 0.46f);
+        [SerializeField] private Color _edgeColor = new Color(0.78f, 0.18f, 1f, 0.78f);
+        [SerializeField, Min(0.01f)] private float _cloudHeight = 0.08f;
+        [SerializeField, Min(0.01f)] private float _edgeWidth = 0.18f;
+
+        private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
+        private readonly Transform[] _cloudStrips = new Transform[4];
+        private readonly Transform[] _edgeStrips = new Transform[4];
+        private readonly Renderer[] _cloudRenderers = new Renderer[4];
+        private readonly Renderer[] _edgeRenderers = new Renderer[4];
+
+        private Material _cloudMaterial;
+        private Material _edgeMaterial;
+        private float _elapsedActiveSeconds;
+        private float _tickTimer;
+        private float _cacheRefreshTimer;
+        private bool _visualsBuilt;
+
+        public Vector3 Center => _centerOverride != null
+            ? _centerOverride.position
+            : transform.position;
+
+        public Vector2 CurrentHalfExtents { get; private set; }
+        public Vector2 InitialHalfExtents => _initialHalfExtents;
+        public bool IsShrinking => _elapsedActiveSeconds >= _shrinkDelaySeconds;
+        public float DamagePerTick => _damagePerTick;
+
+        private void Awake()
+        {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(this);
+                return;
+            }
+
+            Instance = this;
+            CurrentHalfExtents = SanitizeHalfExtents(_initialHalfExtents);
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
+        }
+
+        private void Update()
+        {
+            if (MatchManager.Instance != null &&
+                MatchManager.Instance.CurrentState != MatchState.Active)
+            {
+                return;
+            }
+
+            float deltaTime = Time.deltaTime;
+            _elapsedActiveSeconds += deltaTime;
+            _tickTimer += deltaTime;
+            _cacheRefreshTimer += deltaTime;
+
+            UpdateSafeZone();
+            UpdateVisuals();
+
+            if (_cacheRefreshTimer >= _cacheRefreshSeconds)
+            {
+                _cacheRefreshTimer = 0f;
+                RefreshBrawlerCache();
+            }
+
+            if (_tickTimer >= _tickIntervalSeconds)
+            {
+                _tickTimer -= _tickIntervalSeconds;
+                ApplyPoisonTick();
+            }
+        }
+
+        public void ConfigureFromBrawlers(IList<BrawlerController> brawlers)
+        {
+            if (brawlers == null || brawlers.Count == 0)
+                return;
+
+            Vector3 center = Center;
+            Vector2 halfExtents = SanitizeHalfExtents(_initialHalfExtents);
+
+            for (int i = 0; i < brawlers.Count; i++)
+            {
+                BrawlerController brawler = brawlers[i];
+                if (brawler == null)
+                    continue;
+
+                Vector3 delta = brawler.Position - center;
+                halfExtents.x = Mathf.Max(halfExtents.x, Mathf.Abs(delta.x) + _initialBoundsPadding);
+                halfExtents.y = Mathf.Max(halfExtents.y, Mathf.Abs(delta.z) + _initialBoundsPadding);
+
+                if (!_brawlers.Contains(brawler))
+                    _brawlers.Add(brawler);
+            }
+
+            _initialHalfExtents = halfExtents;
+            CurrentHalfExtents = halfExtents;
+            EnsureVisuals();
+            UpdateVisuals();
+        }
+
+        public void ResetCloud()
+        {
+            _elapsedActiveSeconds = 0f;
+            _tickTimer = 0f;
+            _cacheRefreshTimer = 0f;
+            CurrentHalfExtents = SanitizeHalfExtents(_initialHalfExtents);
+            UpdateVisuals();
+        }
+
+        public bool IsInsideSafeZone(Vector3 position)
+        {
+            Vector3 delta = position - Center;
+            return Mathf.Abs(delta.x) <= CurrentHalfExtents.x &&
+                   Mathf.Abs(delta.z) <= CurrentHalfExtents.y;
+        }
+
+        public float GetDistanceBeyondSafeZone(Vector3 position)
+        {
+            Vector3 delta = position - Center;
+            float outsideX = Mathf.Max(0f, Mathf.Abs(delta.x) - CurrentHalfExtents.x);
+            float outsideZ = Mathf.Max(0f, Mathf.Abs(delta.z) - CurrentHalfExtents.y);
+            return Mathf.Max(outsideX, outsideZ);
+        }
+
+        public float GetEdgeDangerDistance(Vector3 position)
+        {
+            Vector3 delta = position - Center;
+            float edgeX = CurrentHalfExtents.x - Mathf.Abs(delta.x);
+            float edgeZ = CurrentHalfExtents.y - Mathf.Abs(delta.z);
+            return Mathf.Min(edgeX, edgeZ);
+        }
+
+        public bool IsInDangerBand(Vector3 position)
+        {
+            return GetDistanceBeyondSafeZone(position) > 0f ||
+                   GetEdgeDangerDistance(position) <= _dangerBuffer;
+        }
+
+        public void AppendPoisonThreatNonAlloc(
+            Vector3 observerPosition,
+            TeamType observerTeam,
+            float scanRadius,
+            List<GameplayThreatInfo> results)
+        {
+            if (results == null || !IsShrinking)
+                return;
+
+            float outsideDistance = GetDistanceBeyondSafeZone(observerPosition);
+            float edgeDistance = GetEdgeDangerDistance(observerPosition);
+            if (outsideDistance <= 0f && edgeDistance > Mathf.Max(_dangerBuffer, scanRadius * 0.35f))
+                return;
+
+            Vector3 outward = ResolveOutwardDirection(observerPosition);
+            if (outward.sqrMagnitude <= 0.001f)
+                outward = Vector3.forward;
+
+            float radius = outsideDistance > 0f
+                ? Mathf.Max(1.6f, outsideDistance + _dangerBuffer)
+                : Mathf.Max(1.2f, _dangerBuffer - edgeDistance);
+
+            results.Add(new GameplayThreatInfo
+            {
+                Owner = null,
+                Team = TeamType.Neutral,
+                Position = observerPosition + outward.normalized * Mathf.Max(0.6f, radius),
+                Direction = -outward.normalized,
+                Radius = radius,
+                Damage = _damagePerTick,
+                TimeToImpact = outsideDistance > 0f ? 0f : 0.35f,
+                IsProjectile = false,
+                IsAreaHazard = true,
+                IsSuper = false
+            });
+        }
+
+        private void UpdateSafeZone()
+        {
+            Vector2 initial = SanitizeHalfExtents(_initialHalfExtents);
+            Vector2 final = SanitizeHalfExtents(_finalHalfExtents);
+            final.x = Mathf.Min(final.x, initial.x);
+            final.y = Mathf.Min(final.y, initial.y);
+
+            float progress = _elapsedActiveSeconds <= _shrinkDelaySeconds
+                ? 0f
+                : Mathf.Clamp01((_elapsedActiveSeconds - _shrinkDelaySeconds) /
+                                Mathf.Max(0.1f, _shrinkDurationSeconds));
+
+            CurrentHalfExtents = Vector2.Lerp(initial, final, progress);
+        }
+
+        private void RefreshBrawlerCache()
+        {
+            _brawlers.Clear();
+            BrawlerController[] discovered = FindObjectsOfType<BrawlerController>();
+            for (int i = 0; i < discovered.Length; i++)
+            {
+                if (discovered[i] != null)
+                    _brawlers.Add(discovered[i]);
+            }
+        }
+
+        private void ApplyPoisonTick()
+        {
+            if (!IsShrinking || _damagePerTick <= 0f)
+                return;
+
+            if (_brawlers.Count == 0)
+                RefreshBrawlerCache();
+
+            if (!ServiceProvider.TryGet<IDamageService>(out var damageService))
+                return;
+
+            for (int i = 0; i < _brawlers.Count; i++)
+            {
+                BrawlerController brawler = _brawlers[i];
+                if (!SpatialEntityUtility.IsAlive(brawler) ||
+                    brawler.State == null ||
+                    brawler.State.IsDead ||
+                    IsInsideSafeZone(brawler.Position))
+                {
+                    continue;
+                }
+
+                Vector3 direction = brawler.Position - Center;
+                direction.y = 0f;
+                if (direction.sqrMagnitude <= 0.001f)
+                    direction = Vector3.forward;
+
+                damageService.ApplyDamage(new DamageContext
+                {
+                    Attacker = null,
+                    Target = brawler,
+                    Damage = _damagePerTick,
+                    Type = DamageType.AoE,
+                    HitPosition = brawler.Position,
+                    Direction = direction.normalized,
+                    SourceAbility = null,
+                    IsSuper = false
+                });
+
+                CombatPresentationEventBus.Raise(new CombatPresentationEvent
+                {
+                    EventType = CombatPresentationEventType.DamageHit,
+                    Source = null,
+                    Target = brawler,
+                    AbilityDefinition = null,
+                    SlotType = default,
+                    Position = brawler.Position,
+                    Direction = direction.normalized,
+                    Value = _damagePerTick,
+                    IsSuper = false,
+                    IsHypercharged = false,
+                    IsLingeringAreaEffect = true
+                });
+            }
+        }
+
+        private Vector3 ResolveOutwardDirection(Vector3 position)
+        {
+            Vector3 delta = position - Center;
+            float edgeX = CurrentHalfExtents.x - Mathf.Abs(delta.x);
+            float edgeZ = CurrentHalfExtents.y - Mathf.Abs(delta.z);
+
+            if (edgeX < edgeZ)
+                return new Vector3(delta.x >= 0f ? 1f : -1f, 0f, 0f);
+
+            return new Vector3(0f, 0f, delta.z >= 0f ? 1f : -1f);
+        }
+
+        private void EnsureVisuals()
+        {
+            if (_visualsBuilt)
+                return;
+
+            _visualsBuilt = true;
+            _cloudMaterial = CreateRuntimeMaterial(_cloudColor);
+            _edgeMaterial = CreateRuntimeMaterial(_edgeColor);
+
+            for (int i = 0; i < 4; i++)
+            {
+                _cloudStrips[i] = CreateStrip($"PoisonCloud_{i}", _cloudMaterial, out _cloudRenderers[i]);
+                _edgeStrips[i] = CreateStrip($"PoisonEdge_{i}", _edgeMaterial, out _edgeRenderers[i]);
+            }
+        }
+
+        private Transform CreateStrip(string stripName, Material material, out Renderer stripRenderer)
+        {
+            GameObject strip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            strip.name = stripName;
+            strip.transform.SetParent(transform, false);
+
+            Collider collider = strip.GetComponent<Collider>();
+            if (collider != null)
+                Destroy(collider);
+
+            stripRenderer = strip.GetComponent<Renderer>();
+            if (stripRenderer != null)
+                stripRenderer.sharedMaterial = material;
+
+            return strip.transform;
+        }
+
+        private void UpdateVisuals()
+        {
+            EnsureVisuals();
+
+            bool visible = IsShrinking;
+            for (int i = 0; i < _cloudStrips.Length; i++)
+            {
+                SetStripVisible(_cloudStrips[i], visible);
+                SetStripVisible(_edgeStrips[i], visible);
+            }
+
+            Vector3 center = Center;
+            Vector2 initial = SanitizeHalfExtents(_initialHalfExtents);
+            Vector2 current = CurrentHalfExtents;
+
+            float leftWidth = Mathf.Max(0.01f, initial.x - current.x);
+            float rightWidth = leftWidth;
+            float bottomDepth = Mathf.Max(0.01f, initial.y - current.y);
+            float topDepth = bottomDepth;
+            float fullDepth = initial.y * 2f;
+            float currentWidth = current.x * 2f;
+
+            SetStrip(_cloudStrips[0], center + new Vector3(-current.x - leftWidth * 0.5f, _cloudHeight, 0f), new Vector3(leftWidth, _cloudHeight, fullDepth));
+            SetStrip(_cloudStrips[1], center + new Vector3(current.x + rightWidth * 0.5f, _cloudHeight, 0f), new Vector3(rightWidth, _cloudHeight, fullDepth));
+            SetStrip(_cloudStrips[2], center + new Vector3(0f, _cloudHeight, -current.y - bottomDepth * 0.5f), new Vector3(currentWidth, _cloudHeight, bottomDepth));
+            SetStrip(_cloudStrips[3], center + new Vector3(0f, _cloudHeight, current.y + topDepth * 0.5f), new Vector3(currentWidth, _cloudHeight, topDepth));
+
+            SetStrip(_edgeStrips[0], center + new Vector3(-current.x, _cloudHeight * 1.35f, 0f), new Vector3(_edgeWidth, _cloudHeight * 1.4f, current.y * 2f));
+            SetStrip(_edgeStrips[1], center + new Vector3(current.x, _cloudHeight * 1.35f, 0f), new Vector3(_edgeWidth, _cloudHeight * 1.4f, current.y * 2f));
+            SetStrip(_edgeStrips[2], center + new Vector3(0f, _cloudHeight * 1.35f, -current.y), new Vector3(current.x * 2f, _cloudHeight * 1.4f, _edgeWidth));
+            SetStrip(_edgeStrips[3], center + new Vector3(0f, _cloudHeight * 1.35f, current.y), new Vector3(current.x * 2f, _cloudHeight * 1.4f, _edgeWidth));
+        }
+
+        private static void SetStrip(Transform strip, Vector3 position, Vector3 scale)
+        {
+            if (strip == null)
+                return;
+
+            strip.position = position;
+            strip.localRotation = Quaternion.identity;
+            strip.localScale = new Vector3(
+                Mathf.Max(0.01f, scale.x),
+                Mathf.Max(0.01f, scale.y),
+                Mathf.Max(0.01f, scale.z));
+        }
+
+        private static void SetStripVisible(Transform strip, bool visible)
+        {
+            if (strip != null && strip.gameObject.activeSelf != visible)
+                strip.gameObject.SetActive(visible);
+        }
+
+        private static Vector2 SanitizeHalfExtents(Vector2 value)
+        {
+            return new Vector2(
+                Mathf.Max(0.5f, value.x),
+                Mathf.Max(0.5f, value.y));
+        }
+
+        private static Material CreateRuntimeMaterial(Color color)
+        {
+            Shader shader =
+                Shader.Find("Universal Render Pipeline/Unlit") ??
+                Shader.Find("Sprites/Default") ??
+                Shader.Find("Standard");
+
+            Material material = new Material(shader);
+            material.color = color;
+            if (material.HasProperty(ColorId))
+                material.SetColor(ColorId, color);
+            if (material.HasProperty(BaseColorId))
+                material.SetColor(BaseColorId, color);
+
+            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
+            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
+            material.SetInt("_ZWrite", 0);
+            material.DisableKeyword("_ALPHATEST_ON");
+            material.EnableKeyword("_ALPHABLEND_ON");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.renderQueue = (int)RenderQueue.Transparent;
+            return material;
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            Vector3 center = Center;
+            Vector2 current = Application.isPlaying
+                ? CurrentHalfExtents
+                : SanitizeHalfExtents(_initialHalfExtents);
+
+            Gizmos.color = new Color(0.76f, 0.16f, 1f, 0.48f);
+            Vector3 size = new Vector3(current.x * 2f, 0.1f, current.y * 2f);
+            Gizmos.DrawWireCube(center, size);
+        }
+    }
+}

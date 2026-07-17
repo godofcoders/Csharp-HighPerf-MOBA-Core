@@ -148,6 +148,9 @@ namespace MOBA.Core.Infrastructure
 
         private bool IsPoisonLike(CombatPresentationEvent evt)
         {
+            if (evt.AbilityDefinition == null && evt.Source == null)
+                return true;
+
             string key = evt.AbilityDefinition != null
                 ? evt.AbilityDefinition.name.ToLowerInvariant()
                 : string.Empty;

@@ -47,6 +47,10 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0f)] private float _fightCenterPresenceRadius = 5.5f;
         [SerializeField, Range(0f, 1f)] private float _enemySideObjectiveBias = 0.56f;
 
+        [Header("Poison Cloud")]
+        [SerializeField] private bool _enablePoisonCloud = true;
+        [SerializeField] private KnockoutPoisonCloud _poisonCloud;
+
         public int BlueRoundsWon { get; private set; }
         public int RedRoundsWon { get; private set; }
         public int CurrentRound { get; private set; } = 1;
@@ -95,6 +99,7 @@ namespace MOBA.Core.Simulation
             if (SpawnManager.Instance != null) SpawnManager.Instance.AllowAutoRespawn = false;
 
             DiscoverBrawlers();
+            EnsurePoisonCloud();
         }
 
         private void Update()
@@ -115,6 +120,8 @@ namespace MOBA.Core.Simulation
             {
                 _autoDiscoverBrawlers = false;
             }
+
+            _poisonCloud?.ConfigureFromBrawlers(_brawlers);
         }
 
         public void RegisterBrawler(BrawlerController b)
@@ -190,6 +197,9 @@ namespace MOBA.Core.Simulation
             if (team == TeamType.Neutral || _roundEnding)
                 return false;
 
+            if (TryGetPoisonObjective(selfPosition, out objective))
+                return true;
+
             TeamType enemyTeam = team == TeamType.Blue ? TeamType.Red : TeamType.Blue;
             if (!TryGetAliveCentroid(team, out Vector3 friendlyCenter, out int friendlyAlive) ||
                 !TryGetAliveCentroid(enemyTeam, out Vector3 enemyCenter, out int enemyAlive))
@@ -240,6 +250,40 @@ namespace MOBA.Core.Simulation
                 controlState,
                 friendlyPresence,
                 enemyPresence);
+            return true;
+        }
+
+        private bool TryGetPoisonObjective(
+            Vector3 selfPosition,
+            out AIObjectiveCandidate objective)
+        {
+            objective = default;
+
+            KnockoutPoisonCloud cloud = ResolvePoisonCloud();
+            if (cloud == null ||
+                !cloud.IsShrinking ||
+                !cloud.IsInDangerBand(selfPosition))
+            {
+                return false;
+            }
+
+            float outsideDistance = cloud.GetDistanceBeyondSafeZone(selfPosition);
+            float edgeDistance = cloud.GetEdgeDangerDistance(selfPosition);
+            float urgency = outsideDistance > 0f
+                ? 1f
+                : 1f - Mathf.Clamp01(edgeDistance / 2.8f);
+            Vector2 halfExtents = cloud.CurrentHalfExtents;
+
+            objective = new AIObjectiveCandidate(
+                AIObjectiveType.SafeDefense,
+                cloud.Center,
+                180f + urgency * 40f,
+                Mathf.Max(2f, Mathf.Min(halfExtents.x, halfExtents.y)),
+                "Knockout Poison Safe Zone",
+                true,
+                AIObjectiveControlState.Neutral,
+                friendlyPresence: 0,
+                enemyPresence: 0);
             return true;
         }
 
@@ -403,6 +447,7 @@ namespace MOBA.Core.Simulation
         private void StartNextRound()
         {
             DeployableMatchCleanup.DespawnAllActiveDeployables();
+            ResolvePoisonCloud()?.ResetCloud();
             CurrentRound++;
             _roundEnding = false;
             if (SpawnManager.Instance == null) return;
@@ -422,6 +467,30 @@ namespace MOBA.Core.Simulation
 
                 SpawnManager.Instance.ForceRespawn(b, b.Team, teamOrdinal);
             }
+        }
+
+        private void EnsurePoisonCloud()
+        {
+            if (!_enablePoisonCloud)
+                return;
+
+            KnockoutPoisonCloud cloud = ResolvePoisonCloud();
+            if (cloud == null)
+                cloud = gameObject.AddComponent<KnockoutPoisonCloud>();
+
+            _poisonCloud = cloud;
+            _poisonCloud.ConfigureFromBrawlers(_brawlers);
+        }
+
+        private KnockoutPoisonCloud ResolvePoisonCloud()
+        {
+            if (!_enablePoisonCloud)
+                return null;
+
+            if (_poisonCloud == null)
+                _poisonCloud = GetComponent<KnockoutPoisonCloud>();
+
+            return _poisonCloud;
         }
     }
 }

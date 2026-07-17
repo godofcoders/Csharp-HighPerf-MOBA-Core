@@ -61,6 +61,16 @@ namespace MOBA.Core.Simulation.AI
                     _threatBuffer);
             }
 
+            KnockoutPoisonCloud poisonCloud = KnockoutPoisonCloud.Instance;
+            if (poisonCloud != null)
+            {
+                poisonCloud.AppendPoisonThreatNonAlloc(
+                    selfPosition,
+                    selfTeam,
+                    profile.DangerScanRadius,
+                    _threatBuffer);
+            }
+
             EvaluateThreats(
                 selfPosition,
                 self.CollisionRadius,
