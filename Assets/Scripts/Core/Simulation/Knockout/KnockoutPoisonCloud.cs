@@ -21,6 +21,8 @@ namespace MOBA.Core.Simulation
         private static readonly int ZWriteId = Shader.PropertyToID("_ZWrite");
         private static readonly int CullId = Shader.PropertyToID("_Cull");
         private const string MatchSceneName = "Match";
+        private const float SpawnFallbackBoundsPaddingX = 10f;
+        private const float SpawnFallbackBoundsPaddingZ = 12f;
 
         [Header("Safe Zone")]
         [SerializeField] private Transform _centerOverride;
@@ -28,7 +30,7 @@ namespace MOBA.Core.Simulation
         [SerializeField] private Vector2 _finalHalfExtents = new Vector2(5.5f, 5.5f);
         [SerializeField, Min(0f)] private float _initialBoundsPadding = 9f;
         [SerializeField, Min(0f)] private float _shrinkDelaySeconds = 10f;
-        [SerializeField, Min(1f)] private float _shrinkDurationSeconds = 80f;
+        [SerializeField, Min(1f)] private float _shrinkDurationSeconds = 55f;
         [SerializeField, Min(0f)] private float _dangerBuffer = 2.8f;
 
         [Header("Damage")]
@@ -54,10 +56,14 @@ namespace MOBA.Core.Simulation
         private float _tickTimer;
         private float _cacheRefreshTimer;
         private bool _visualsBuilt;
+        private bool _hasResolvedCenter;
+        private Vector3 _resolvedCenter;
 
         public Vector3 Center => _centerOverride != null
             ? _centerOverride.position
-            : transform.position;
+            : _hasResolvedCenter
+                ? _resolvedCenter
+                : transform.position;
 
         public Vector2 CurrentHalfExtents { get; private set; }
         public Vector2 InitialHalfExtents => _initialHalfExtents;
@@ -119,24 +125,39 @@ namespace MOBA.Core.Simulation
 
         public void ConfigureFromBrawlers(IList<BrawlerController> brawlers)
         {
-            if (brawlers == null || brawlers.Count == 0)
+            bool hasBrawlers = brawlers != null && brawlers.Count > 0;
+            bool hasMapBounds = TryResolvePlayableMapBounds(out Bounds mapBounds);
+            if (!hasBrawlers && !hasMapBounds)
                 return;
 
             Vector3 center = Center;
             Vector2 halfExtents = SanitizeHalfExtents(_initialHalfExtents);
-
-            for (int i = 0; i < brawlers.Count; i++)
+            if (hasMapBounds)
             {
-                BrawlerController brawler = brawlers[i];
-                if (brawler == null)
-                    continue;
+                center = new Vector3(mapBounds.center.x, transform.position.y, mapBounds.center.z);
+                _resolvedCenter = center;
+                _hasResolvedCenter = true;
+                halfExtents = SanitizeHalfExtents(new Vector2(mapBounds.extents.x, mapBounds.extents.z));
+            }
 
-                Vector3 delta = brawler.Position - center;
-                halfExtents.x = Mathf.Max(halfExtents.x, Mathf.Abs(delta.x) + _initialBoundsPadding);
-                halfExtents.y = Mathf.Max(halfExtents.y, Mathf.Abs(delta.z) + _initialBoundsPadding);
+            if (hasBrawlers)
+            {
+                for (int i = 0; i < brawlers.Count; i++)
+                {
+                    BrawlerController brawler = brawlers[i];
+                    if (brawler == null)
+                        continue;
 
-                if (!_brawlers.Contains(brawler))
-                    _brawlers.Add(brawler);
+                    if (!hasMapBounds)
+                    {
+                        Vector3 delta = brawler.Position - center;
+                        halfExtents.x = Mathf.Max(halfExtents.x, Mathf.Abs(delta.x) + _initialBoundsPadding);
+                        halfExtents.y = Mathf.Max(halfExtents.y, Mathf.Abs(delta.z) + _initialBoundsPadding);
+                    }
+
+                    if (!_brawlers.Contains(brawler))
+                        _brawlers.Add(brawler);
+                }
             }
 
             _initialHalfExtents = halfExtents;
@@ -410,6 +431,152 @@ namespace MOBA.Core.Simulation
                    matchManager.CurrentState == MatchState.Active &&
                    KnockoutMode.Instance != null &&
                    SceneManager.GetActiveScene().name == MatchSceneName;
+        }
+
+        private static bool TryResolvePlayableMapBounds(out Bounds bounds)
+        {
+            if (TryResolveSpawnedMapGroundBounds(out bounds))
+                return true;
+
+            if (TryResolveSpawnPointBounds(out bounds))
+                return true;
+
+            return TryResolveGeneratorBounds(out bounds);
+        }
+
+        private static bool TryResolveSpawnedMapGroundBounds(out Bounds bounds)
+        {
+            bounds = default;
+
+            MapLoader mapLoader = FindObjectOfType<MapLoader>();
+            GameObject spawnedMap = mapLoader != null ? mapLoader.SpawnedMapInstance : null;
+            if (spawnedMap == null)
+                return false;
+
+            int excludedMask = ResolveObstacleMask() |
+                               ResolveLayerMask("Bushes") |
+                               ResolveLayerMask("Bush");
+            bool found = false;
+
+            Collider[] colliders = spawnedMap.GetComponentsInChildren<Collider>(false);
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider collider = colliders[i];
+                if (collider == null ||
+                    collider.isTrigger ||
+                    !IsMapBoundsCandidate(collider.gameObject, excludedMask))
+                {
+                    continue;
+                }
+
+                EncapsulateBounds(collider.bounds, ref bounds, ref found);
+            }
+
+            if (found)
+                return true;
+
+            Renderer[] renderers = spawnedMap.GetComponentsInChildren<Renderer>(false);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null ||
+                    !IsMapBoundsCandidate(renderer.gameObject, excludedMask))
+                {
+                    continue;
+                }
+
+                EncapsulateBounds(renderer.bounds, ref bounds, ref found);
+            }
+
+            return found;
+        }
+
+        private static bool IsMapBoundsCandidate(GameObject candidate, int excludedMask)
+        {
+            if (candidate == null)
+                return false;
+
+            int layerMask = 1 << candidate.layer;
+            if ((excludedMask & layerMask) != 0)
+                return false;
+
+            string objectName = candidate.name;
+            return objectName.IndexOf("Poison", System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                   objectName.IndexOf("ArenaWall", System.StringComparison.OrdinalIgnoreCase) < 0 &&
+                   objectName.IndexOf("RuntimeArenaBoundary", System.StringComparison.OrdinalIgnoreCase) < 0;
+        }
+
+        private static bool TryResolveSpawnPointBounds(out Bounds bounds)
+        {
+            SpawnPointMarker[] markers = FindObjectsOfType<SpawnPointMarker>(false);
+            if (markers == null || markers.Length == 0)
+            {
+                bounds = default;
+                return false;
+            }
+
+            bool found = false;
+            bounds = default;
+            for (int i = 0; i < markers.Length; i++)
+            {
+                SpawnPointMarker marker = markers[i];
+                if (marker == null)
+                    continue;
+
+                EncapsulateBounds(new Bounds(marker.transform.position, Vector3.zero), ref bounds, ref found);
+            }
+
+            if (!found)
+                return false;
+
+            bounds.Expand(new Vector3(SpawnFallbackBoundsPaddingX, 0f, SpawnFallbackBoundsPaddingZ));
+            return true;
+        }
+
+        private static bool TryResolveGeneratorBounds(out Bounds bounds)
+        {
+            MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
+            if (mapGenerator == null)
+            {
+                bounds = default;
+                return false;
+            }
+
+            float cellSize = Mathf.Max(0.1f, mapGenerator.CellSize);
+            float width = Mathf.Max(1, mapGenerator.Width) * cellSize;
+            float height = Mathf.Max(1, mapGenerator.Height) * cellSize;
+            bounds = new Bounds(
+                mapGenerator.transform.position,
+                new Vector3(width, 0f, height));
+            return true;
+        }
+
+        private static void EncapsulateBounds(Bounds candidate, ref Bounds bounds, ref bool found)
+        {
+            if (!found)
+            {
+                bounds = candidate;
+                found = true;
+                return;
+            }
+
+            bounds.Encapsulate(candidate);
+        }
+
+        private static int ResolveObstacleMask()
+        {
+            MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
+            if (mapGenerator != null && mapGenerator.ObstacleLayer.value != 0)
+                return mapGenerator.ObstacleLayer.value;
+
+            int obstacleLayer = LayerMask.NameToLayer("Obstacles");
+            return obstacleLayer >= 0 ? 1 << obstacleLayer : 0;
+        }
+
+        private static int ResolveLayerMask(string layerName)
+        {
+            int layer = LayerMask.NameToLayer(layerName);
+            return layer >= 0 ? 1 << layer : 0;
         }
 
         private static Vector2 SanitizeHalfExtents(Vector2 value)
