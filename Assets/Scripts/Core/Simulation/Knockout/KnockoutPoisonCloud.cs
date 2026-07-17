@@ -11,6 +11,14 @@ namespace MOBA.Core.Simulation
 
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        private static readonly int SurfaceId = Shader.PropertyToID("_Surface");
+        private static readonly int ModeId = Shader.PropertyToID("_Mode");
+        private static readonly int BlendId = Shader.PropertyToID("_Blend");
+        private static readonly int AlphaClipId = Shader.PropertyToID("_AlphaClip");
+        private static readonly int SrcBlendId = Shader.PropertyToID("_SrcBlend");
+        private static readonly int DstBlendId = Shader.PropertyToID("_DstBlend");
+        private static readonly int ZWriteId = Shader.PropertyToID("_ZWrite");
+        private static readonly int CullId = Shader.PropertyToID("_Cull");
 
         [Header("Safe Zone")]
         [SerializeField] private Transform _centerOverride;
@@ -27,9 +35,9 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0.1f)] private float _cacheRefreshSeconds = 1.5f;
 
         [Header("Visuals")]
-        [SerializeField] private Color _cloudColor = new Color(0.36f, 0.06f, 0.58f, 0.46f);
-        [SerializeField] private Color _edgeColor = new Color(0.78f, 0.18f, 1f, 0.78f);
-        [SerializeField, Min(0.01f)] private float _cloudHeight = 0.08f;
+        [SerializeField] private Color _cloudColor = new Color(0.32f, 0.78f, 0.16f, 0.24f);
+        [SerializeField] private Color _edgeColor = new Color(0.72f, 1f, 0.18f, 0.46f);
+        [SerializeField, Min(0.01f)] private float _cloudHeight = 0.04f;
         [SerializeField, Min(0.01f)] private float _edgeWidth = 0.18f;
 
         private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
@@ -392,26 +400,64 @@ namespace MOBA.Core.Simulation
 
         private static Material CreateRuntimeMaterial(Color color)
         {
-            Shader shader =
-                Shader.Find("Universal Render Pipeline/Unlit") ??
-                Shader.Find("Sprites/Default") ??
-                Shader.Find("Standard");
+            Shader shader = ResolveTransparentShader();
+            if (shader == null)
+                return null;
 
             Material material = new Material(shader);
+            material.name = "Runtime_KnockoutPoisonGas";
             material.color = color;
+            material.SetOverrideTag("RenderType", "Transparent");
+
             if (material.HasProperty(ColorId))
                 material.SetColor(ColorId, color);
             if (material.HasProperty(BaseColorId))
                 material.SetColor(BaseColorId, color);
 
-            material.SetInt("_SrcBlend", (int)BlendMode.SrcAlpha);
-            material.SetInt("_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
-            material.SetInt("_ZWrite", 0);
+            SetMaterialFloatIfPresent(material, SurfaceId, 1f);
+            SetMaterialFloatIfPresent(material, ModeId, 3f);
+            SetMaterialFloatIfPresent(material, BlendId, 0f);
+            SetMaterialFloatIfPresent(material, AlphaClipId, 0f);
+            SetMaterialFloatIfPresent(material, CullId, (float)CullMode.Off);
+            SetMaterialIntIfPresent(material, SrcBlendId, (int)BlendMode.SrcAlpha);
+            SetMaterialIntIfPresent(material, DstBlendId, (int)BlendMode.OneMinusSrcAlpha);
+            SetMaterialIntIfPresent(material, ZWriteId, 0);
+            SetMaterialIntIfPresent(material, CullId, (int)CullMode.Off);
             material.DisableKeyword("_ALPHATEST_ON");
             material.EnableKeyword("_ALPHABLEND_ON");
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
             material.renderQueue = (int)RenderQueue.Transparent;
             return material;
+        }
+
+        private static Shader ResolveTransparentShader()
+        {
+            if (GraphicsSettings.currentRenderPipeline != null)
+            {
+                return Shader.Find("Universal Render Pipeline/Particles/Unlit") ??
+                       Shader.Find("Universal Render Pipeline/Unlit") ??
+                       Shader.Find("Sprites/Default") ??
+                       Shader.Find("Standard");
+            }
+
+            return Shader.Find("Particles/Standard Unlit") ??
+                   Shader.Find("Sprites/Default") ??
+                   Shader.Find("Legacy Shaders/Transparent/Diffuse") ??
+                   Shader.Find("Unlit/Transparent") ??
+                   Shader.Find("Standard");
+        }
+
+        private static void SetMaterialFloatIfPresent(Material material, int propertyId, float value)
+        {
+            if (material != null && material.HasProperty(propertyId))
+                material.SetFloat(propertyId, value);
+        }
+
+        private static void SetMaterialIntIfPresent(Material material, int propertyId, int value)
+        {
+            if (material != null && material.HasProperty(propertyId))
+                material.SetInt(propertyId, value);
         }
 
         private void OnDrawGizmosSelected()
@@ -421,7 +467,7 @@ namespace MOBA.Core.Simulation
                 ? CurrentHalfExtents
                 : SanitizeHalfExtents(_initialHalfExtents);
 
-            Gizmos.color = new Color(0.76f, 0.16f, 1f, 0.48f);
+            Gizmos.color = new Color(0.44f, 0.95f, 0.18f, 0.48f);
             Vector3 size = new Vector3(current.x * 2f, 0.1f, current.y * 2f);
             Gizmos.DrawWireCube(center, size);
         }
