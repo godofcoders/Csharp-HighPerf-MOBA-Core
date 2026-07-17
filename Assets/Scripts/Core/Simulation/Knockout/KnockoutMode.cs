@@ -261,7 +261,7 @@ namespace MOBA.Core.Simulation
 
             KnockoutPoisonCloud cloud = ResolvePoisonCloud();
             if (cloud == null ||
-                !cloud.IsShrinking ||
+                !cloud.IsHazardActive ||
                 !cloud.IsInDangerBand(selfPosition))
             {
                 return false;

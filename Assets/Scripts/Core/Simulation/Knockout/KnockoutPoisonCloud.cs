@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using MOBA.Core.Infrastructure;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 namespace MOBA.Core.Simulation
 {
@@ -19,6 +20,7 @@ namespace MOBA.Core.Simulation
         private static readonly int DstBlendId = Shader.PropertyToID("_DstBlend");
         private static readonly int ZWriteId = Shader.PropertyToID("_ZWrite");
         private static readonly int CullId = Shader.PropertyToID("_Cull");
+        private const string MatchSceneName = "Match";
 
         [Header("Safe Zone")]
         [SerializeField] private Transform _centerOverride;
@@ -60,6 +62,7 @@ namespace MOBA.Core.Simulation
         public Vector2 CurrentHalfExtents { get; private set; }
         public Vector2 InitialHalfExtents => _initialHalfExtents;
         public bool IsShrinking => _elapsedActiveSeconds >= _shrinkDelaySeconds;
+        public bool IsHazardActive => ShouldSimulatePoison() && IsShrinking;
         public float DamagePerTick => _damagePerTick;
 
         private void Awake()
@@ -80,11 +83,16 @@ namespace MOBA.Core.Simulation
                 Instance = null;
         }
 
+        private void OnDisable()
+        {
+            SetVisualsVisible(false);
+        }
+
         private void Update()
         {
-            if (MatchManager.Instance != null &&
-                MatchManager.Instance.CurrentState != MatchState.Active)
+            if (!ShouldSimulatePoison())
             {
+                SetVisualsVisible(false);
                 return;
             }
 
@@ -181,7 +189,7 @@ namespace MOBA.Core.Simulation
             float scanRadius,
             List<GameplayThreatInfo> results)
         {
-            if (results == null || !IsShrinking)
+            if (results == null || !IsHazardActive)
                 return;
 
             float outsideDistance = GetDistanceBeyondSafeZone(observerPosition);
@@ -240,7 +248,7 @@ namespace MOBA.Core.Simulation
 
         private void ApplyPoisonTick()
         {
-            if (!IsShrinking || _damagePerTick <= 0f)
+            if (!IsHazardActive || _damagePerTick <= 0f)
                 return;
 
             if (_brawlers.Count == 0)
@@ -343,12 +351,7 @@ namespace MOBA.Core.Simulation
         {
             EnsureVisuals();
 
-            bool visible = IsShrinking;
-            for (int i = 0; i < _cloudStrips.Length; i++)
-            {
-                SetStripVisible(_cloudStrips[i], visible);
-                SetStripVisible(_edgeStrips[i], visible);
-            }
+            SetVisualsVisible(IsHazardActive);
 
             Vector3 center = Center;
             Vector2 initial = SanitizeHalfExtents(_initialHalfExtents);
@@ -389,6 +392,24 @@ namespace MOBA.Core.Simulation
         {
             if (strip != null && strip.gameObject.activeSelf != visible)
                 strip.gameObject.SetActive(visible);
+        }
+
+        private void SetVisualsVisible(bool visible)
+        {
+            for (int i = 0; i < _cloudStrips.Length; i++)
+            {
+                SetStripVisible(_cloudStrips[i], visible);
+                SetStripVisible(_edgeStrips[i], visible);
+            }
+        }
+
+        private static bool ShouldSimulatePoison()
+        {
+            MatchManager matchManager = MatchManager.Instance;
+            return matchManager != null &&
+                   matchManager.CurrentState == MatchState.Active &&
+                   KnockoutMode.Instance != null &&
+                   SceneManager.GetActiveScene().name == MatchSceneName;
         }
 
         private static Vector2 SanitizeHalfExtents(Vector2 value)
