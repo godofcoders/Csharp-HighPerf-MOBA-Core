@@ -6,11 +6,9 @@ using MOBA.Core.Simulation;
 namespace MOBA.Core.Infrastructure
 {
     /// <summary>
-    /// Full-screen 3-2-1-GO overlay shown during MatchManager.CountingDown
-    /// and for a brief "GO!" hold once the match goes Active. Drives a
-    /// single Text widget; the parent root GameObject is toggled so an
-    /// optional vignette/dimmer Image can be attached as a sibling and
-    /// it'll show/hide together.
+    /// Bottom-right 5-4-3-2-1-GO badge shown during MatchManager.CountingDown
+    /// and for a brief "GO!" hold once the match goes Active. Goal messages
+    /// reuse the same root as a larger centered badge.
     ///
     /// Setup:
     ///   1. Full-screen Canvas (Screen Space - Overlay).
@@ -38,6 +36,14 @@ namespace MOBA.Core.Infrastructure
         [SerializeField, Min(0f)] private float _goalHoldSeconds = 1.1f;
         [SerializeField] private string _blueGoalLabel = "BLUE GOAL!";
         [SerializeField] private string _redGoalLabel = "RED GOAL!";
+        [SerializeField] private string _matchStartsFormat = "MATCH STARTS IN {0}";
+        [SerializeField] private Color _countdownBadgeColor = new Color(0f, 0f, 0f, 0.52f);
+        [SerializeField] private Color _goalBadgeColor = new Color(0f, 0f, 0f, 0.36f);
+        [SerializeField] private Vector2 _countdownBadgeSize = new Vector2(390f, 86f);
+        [SerializeField] private Vector2 _countdownBadgePosition = new Vector2(-42f, 126f);
+        [SerializeField] private Vector2 _goalBadgeSize = new Vector2(820f, 156f);
+        [SerializeField] private int _countdownFontSize = 34;
+        [SerializeField] private int _goalFontSize = 76;
 
         // Tracks when the match transitioned to Active so we know when to
         // stop holding the GO! flash.
@@ -45,6 +51,9 @@ namespace MOBA.Core.Infrastructure
         private float _goalMessageUntil = -1f;
         private string _goalMessage = string.Empty;
         private MatchState _previousState = MatchState.Waiting;
+        private RectTransform _rootRect;
+        private RectTransform _textRect;
+        private Image _rootImage;
 
         private void OnEnable()
         {
@@ -61,6 +70,11 @@ namespace MOBA.Core.Infrastructure
             _overlayRoot = overlayRoot;
             _bigTextTmp = bigTextTmp;
             _bigTextLegacy = bigTextLegacy;
+            _rootRect = _overlayRoot != null ? _overlayRoot.GetComponent<RectTransform>() : null;
+            _rootImage = _overlayRoot != null ? _overlayRoot.GetComponent<Image>() : null;
+            _textRect = _bigTextTmp != null
+                ? _bigTextTmp.rectTransform
+                : _bigTextLegacy != null ? _bigTextLegacy.rectTransform : null;
 
             SetText(string.Empty);
             Show(false);
@@ -83,6 +97,7 @@ namespace MOBA.Core.Infrastructure
 
             if (_goalMessageUntil > Time.time)
             {
+                ApplyGoalPresentation();
                 SetText(_goalMessage);
                 Show(true);
                 return;
@@ -92,16 +107,12 @@ namespace MOBA.Core.Infrastructure
             {
                 case MatchState.CountingDown:
                     {
-                        // Show "3", "2", "1" — Mathf.CeilToInt so the
-                        // character flips at the boundary (3.0s = "3",
-                        // 2.99s still reads "3" until it hits 2.99 → 2.99
-                        // ceil = 3 actually wait. Floor + 1?
-                        // Brawl Stars: number shown = ceil(remaining).
-                        // remaining=3.0 → 3, remaining=2.5 → 3, remaining=2.0 → 2.
-                        // CeilToInt(2.5)=3, CeilToInt(2.0)=2. Correct.
+                        // Show "MATCH STARTS IN 5" down to "1". Ceil keeps
+                        // each number visible for its full one-second beat.
                         float remaining = mm.CountdownRemainingSeconds;
                         int n = Mathf.Max(1, Mathf.CeilToInt(remaining));
-                        SetText(n.ToString());
+                        ApplyCountdownPresentation();
+                        SetText(string.Format(_matchStartsFormat, n));
                         Show(true);
                         break;
                     }
@@ -110,6 +121,7 @@ namespace MOBA.Core.Infrastructure
                     {
                         if (_activeStartTime >= 0f && (Time.time - _activeStartTime) <= _goHoldSeconds)
                         {
+                            ApplyCountdownPresentation();
                             SetText(_goLabel);
                             Show(true);
                         }
@@ -144,8 +156,66 @@ namespace MOBA.Core.Infrastructure
                 _goalMessage = "GOAL!";
 
             _goalMessageUntil = Time.time + Mathf.Max(0f, _goalHoldSeconds);
+            ApplyGoalPresentation();
             SetText(_goalMessage);
             Show(true);
+        }
+
+        private void ApplyCountdownPresentation()
+        {
+            ApplyRootLayout(
+                new Vector2(1f, 0f),
+                _countdownBadgePosition,
+                _countdownBadgeSize,
+                _countdownBadgeColor);
+            ApplyTextLayout(_countdownFontSize, TextAnchor.MiddleCenter, TextAlignmentOptions.Center);
+        }
+
+        private void ApplyGoalPresentation()
+        {
+            ApplyRootLayout(
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                _goalBadgeSize,
+                _goalBadgeColor);
+            ApplyTextLayout(_goalFontSize, TextAnchor.MiddleCenter, TextAlignmentOptions.Center);
+        }
+
+        private void ApplyRootLayout(Vector2 anchor, Vector2 anchoredPosition, Vector2 size, Color color)
+        {
+            if (_rootRect != null)
+            {
+                _rootRect.anchorMin = anchor;
+                _rootRect.anchorMax = anchor;
+                _rootRect.pivot = anchor;
+                _rootRect.anchoredPosition = anchoredPosition;
+                _rootRect.sizeDelta = size;
+            }
+
+            if (_rootImage != null)
+                _rootImage.color = color;
+        }
+
+        private void ApplyTextLayout(int fontSize, TextAnchor legacyAlignment, TextAlignmentOptions tmpAlignment)
+        {
+            if (_textRect != null)
+            {
+                _textRect.anchorMin = Vector2.zero;
+                _textRect.anchorMax = Vector2.one;
+                _textRect.offsetMin = new Vector2(14f, 8f);
+                _textRect.offsetMax = new Vector2(-14f, -8f);
+            }
+
+            if (_bigTextTmp != null)
+            {
+                _bigTextTmp.fontSize = fontSize;
+                _bigTextTmp.alignment = tmpAlignment;
+            }
+            else if (_bigTextLegacy != null)
+            {
+                _bigTextLegacy.fontSize = fontSize;
+                _bigTextLegacy.alignment = legacyAlignment;
+            }
         }
 
         private void SetText(string s)

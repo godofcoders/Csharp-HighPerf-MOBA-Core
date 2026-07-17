@@ -189,7 +189,10 @@ namespace MOBA.Core.Infrastructure
             if (_optionsBuffer.Count == 0)
                 yield break;
 
-            MatchManager.Instance?.ExtendCurrentCountdownTo(SelectionDurationSeconds);
+            MatchManager matchManager = MatchManager.Instance;
+            if (matchManager != null && matchManager.CountdownDuration < SelectionDurationSeconds)
+                matchManager.ExtendCurrentCountdownTo(SelectionDurationSeconds);
+
             PickOffers(_optionsBuffer);
             ShowSelection();
         }

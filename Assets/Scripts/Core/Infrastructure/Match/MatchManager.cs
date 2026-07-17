@@ -10,7 +10,7 @@ namespace MOBA.Core.Infrastructure
         public static MatchManager Instance { get; private set; }
 
         [Header("Settings")]
-        [SerializeField] private float _countdownDuration = 3f;
+        [SerializeField] private float _countdownDuration = 5f;
 
         // Match State
         public MatchState CurrentState { get; private set; } = MatchState.Waiting;
@@ -22,7 +22,7 @@ namespace MOBA.Core.Infrastructure
         private float _activeCountdownDuration;
 
         /// <summary>Seconds left in the pre-match countdown. 0 outside of
-        /// the CountingDown state. Drives the 3-2-1-GO overlay.</summary>
+        /// the CountingDown state. Drives the 5-4-3-2-1-GO overlay.</summary>
         public float CountdownRemainingSeconds
         {
             get
