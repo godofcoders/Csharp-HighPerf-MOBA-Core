@@ -20,7 +20,8 @@ namespace MOBA.Core.Simulation
     /// EndMatch path (same trick GemGrabMode uses).
     /// </summary>
     public sealed class KnockoutMode : MonoBehaviour,
-        IAIGameModeMacroStateProvider
+        IAIGameModeMacroStateProvider,
+        IAIRuntimeObjectiveProvider
     {
         public static KnockoutMode Instance { get; private set; }
 
@@ -38,6 +39,13 @@ namespace MOBA.Core.Simulation
 
         [Tooltip("Keep scanning briefly for brawlers spawned after this mode prefab starts.")]
         [SerializeField] private bool _autoDiscoverBrawlers = true;
+
+        [Header("AI Objective")]
+        [Tooltip("Runtime objective weight used to pull bots toward center pressure before enemies are directly visible.")]
+        [SerializeField, Min(0f)] private float _fightCenterObjectiveWeight = 128f;
+        [SerializeField, Min(0.5f)] private float _fightCenterObjectiveRadius = 4.5f;
+        [SerializeField, Min(0f)] private float _fightCenterPresenceRadius = 5.5f;
+        [SerializeField, Range(0f, 1f)] private float _enemySideObjectiveBias = 0.56f;
 
         public int BlueRoundsWon { get; private set; }
         public int RedRoundsWon { get; private set; }
@@ -60,12 +68,16 @@ namespace MOBA.Core.Simulation
         private void OnEnable()
         {
             if (Instance == this)
+            {
                 ServiceProvider.Register<IAIGameModeMacroStateProvider>(this);
+                ServiceProvider.Register<IAIRuntimeObjectiveProvider>(this);
+            }
         }
 
         private void OnDisable()
         {
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
+            ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
         private void OnDestroy()
@@ -73,6 +85,7 @@ namespace MOBA.Core.Simulation
             if (Instance == this) Instance = null;
             if (SpawnManager.Instance != null) SpawnManager.Instance.AllowAutoRespawn = true;
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
+            ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
         private void Start()
@@ -166,6 +179,70 @@ namespace MOBA.Core.Simulation
             return true;
         }
 
+        public bool TryGetRuntimeObjective(
+            TeamType team,
+            AIObjectiveType preferredType,
+            Vector3 selfPosition,
+            out AIObjectiveCandidate objective)
+        {
+            objective = default;
+
+            if (team == TeamType.Neutral || _roundEnding)
+                return false;
+
+            TeamType enemyTeam = team == TeamType.Blue ? TeamType.Red : TeamType.Blue;
+            if (!TryGetAliveCentroid(team, out Vector3 friendlyCenter, out int friendlyAlive) ||
+                !TryGetAliveCentroid(enemyTeam, out Vector3 enemyCenter, out int enemyAlive))
+            {
+                return false;
+            }
+
+            Vector3 fightCenter = Vector3.Lerp(
+                friendlyCenter,
+                enemyCenter,
+                Mathf.Clamp01(_enemySideObjectiveBias));
+
+            int friendlyPresence = CountAliveNear(team, fightCenter, _fightCenterPresenceRadius);
+            int enemyPresence = CountAliveNear(enemyTeam, fightCenter, _fightCenterPresenceRadius);
+            TeamType controllingTeam = ResolveObjectiveControlTeam(
+                friendlyPresence,
+                enemyPresence,
+                team,
+                enemyTeam);
+
+            AIObjectiveControlState controlState =
+                AIObjectiveControlUtility.ResolveForTeam(
+                    controllingTeam,
+                    team,
+                    friendlyPresence,
+                    enemyPresence);
+
+            float weight = _fightCenterObjectiveWeight;
+            if (enemyAlive > friendlyAlive)
+                weight += 18f;
+            else if (friendlyAlive > enemyAlive)
+                weight += 10f;
+
+            if (controlState == AIObjectiveControlState.EnemyControlled)
+                weight += 20f;
+            else if (controlState == AIObjectiveControlState.Contested)
+                weight += 14f;
+            else if (controlState == AIObjectiveControlState.Neutral)
+                weight += 10f;
+
+            objective = new AIObjectiveCandidate(
+                AIObjectiveType.MidControl,
+                fightCenter,
+                weight,
+                _fightCenterObjectiveRadius,
+                "Knockout Fight Center",
+                true,
+                controlState,
+                friendlyPresence,
+                enemyPresence);
+            return true;
+        }
+
         public int GetAliveCount(TeamType team)
         {
             int count = 0;
@@ -179,6 +256,66 @@ namespace MOBA.Core.Simulation
             }
 
             return count;
+        }
+
+        private bool TryGetAliveCentroid(TeamType team, out Vector3 centroid, out int aliveCount)
+        {
+            centroid = Vector3.zero;
+            aliveCount = 0;
+
+            for (int i = 0; i < _brawlers.Count; i++)
+            {
+                BrawlerController b = _brawlers[i];
+                if (b == null || b.Team != team || b.State == null || b.State.IsDead)
+                    continue;
+
+                centroid += b.Position;
+                aliveCount++;
+            }
+
+            if (aliveCount <= 0)
+                return false;
+
+            centroid /= aliveCount;
+            return true;
+        }
+
+        private int CountAliveNear(TeamType team, Vector3 position, float radius)
+        {
+            float radiusSq = Mathf.Max(0.1f, radius) * Mathf.Max(0.1f, radius);
+            int count = 0;
+
+            for (int i = 0; i < _brawlers.Count; i++)
+            {
+                BrawlerController b = _brawlers[i];
+                if (b == null || b.Team != team || b.State == null || b.State.IsDead)
+                    continue;
+
+                Vector3 offset = b.Position - position;
+                offset.y = 0f;
+                if (offset.sqrMagnitude <= radiusSq)
+                    count++;
+            }
+
+            return count;
+        }
+
+        private static TeamType ResolveObjectiveControlTeam(
+            int friendlyPresence,
+            int enemyPresence,
+            TeamType friendlyTeam,
+            TeamType enemyTeam)
+        {
+            if (friendlyPresence <= 0 && enemyPresence <= 0)
+                return TeamType.Neutral;
+
+            if (friendlyPresence > enemyPresence)
+                return friendlyTeam;
+
+            if (enemyPresence > friendlyPresence)
+                return enemyTeam;
+
+            return TeamType.Neutral;
         }
 
         public int GetRegisteredCount(TeamType team)

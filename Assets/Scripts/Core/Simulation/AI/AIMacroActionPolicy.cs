@@ -262,10 +262,10 @@ namespace MOBA.Core.Simulation.AI
             switch (context.MacroState.Mode)
             {
                 case GameModeId.Knockout:
-                    if (call == AIGameModeMacroCall.Push) return Result(2f, "knockout_map_pressure");
+                    if (call == AIGameModeMacroCall.Push) return Result(16f, "knockout_fight_center");
                     if (call == AIGameModeMacroCall.Reset) return Result(-14f, "knockout_stabilize");
                     if (call == AIGameModeMacroCall.Hold) return Result(-12f, "knockout_hold_round");
-                    if (context.MacroState.Phase == AIGameModeObjectivePhase.Opening) return Result(-6f, "knockout_no_static_objective");
+                    if (context.MacroState.Phase == AIGameModeObjectivePhase.Opening) return Result(10f, "knockout_opening_center");
                     break;
 
                 case GameModeId.BrawlBall:

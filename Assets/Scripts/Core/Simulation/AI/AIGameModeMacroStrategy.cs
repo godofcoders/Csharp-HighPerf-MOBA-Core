@@ -371,8 +371,10 @@ namespace MOBA.Core.Simulation.AI
             }
             else
             {
-                call = AIGameModeMacroCall.Neutral;
-                reason = "even_round";
+                call = AIGameModeMacroCall.Push;
+                reason = phase == AIGameModeObjectivePhase.Opening
+                    ? "opening_contest_center"
+                    : "even_round_trade";
             }
 
             return new AIGameModeMacroState(
