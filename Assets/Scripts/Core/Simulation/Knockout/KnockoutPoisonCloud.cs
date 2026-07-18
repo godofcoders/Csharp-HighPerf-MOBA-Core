@@ -29,7 +29,7 @@ namespace MOBA.Core.Simulation
         [SerializeField] private Vector2 _initialHalfExtents = new Vector2(28f, 28f);
         [SerializeField] private Vector2 _finalHalfExtents = new Vector2(5.5f, 5.5f);
         [SerializeField, Min(0f)] private float _initialBoundsPadding = 9f;
-        [SerializeField, Min(0f)] private float _shrinkDelaySeconds = 10f;
+        [SerializeField, Min(0f)] private float _shrinkDelaySeconds = 20f;
         [SerializeField, Min(1f)] private float _shrinkDurationSeconds = 55f;
         [SerializeField, Min(0f)] private float _dangerBuffer = 2.8f;
 
