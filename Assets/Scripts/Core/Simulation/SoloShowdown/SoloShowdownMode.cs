@@ -18,6 +18,10 @@ namespace MOBA.Core.Simulation
         [Header("AI Runtime Objective")]
         [SerializeField, Min(0f)] private float _safeZoneObjectiveWeight = 75f;
 
+        [Header("Power Cubes")]
+        [SerializeField] private bool _enablePowerCubeCrates = true;
+        [SerializeField] private SoloShowdownPowerCubeSpawner _powerCubeSpawner;
+
         private readonly List<BrawlerController> _contestants =
             new List<BrawlerController>(TeamRelationshipUtility.MaxSoloTeams);
         private readonly Dictionary<int, int> _placementsByEntityId =
@@ -58,6 +62,9 @@ namespace MOBA.Core.Simulation
 
             if (_autoDiscoverContestants)
                 DiscoverContestants();
+
+            EnsurePowerCubeSpawner();
+            _powerCubeSpawner?.SpawnInitialCrates();
         }
 
         private void Update()
@@ -295,6 +302,18 @@ namespace MOBA.Core.Simulation
             return SpatialEntityUtility.IsAlive(contestant) &&
                    contestant.State != null &&
                    !contestant.State.IsDead;
+        }
+
+        private void EnsurePowerCubeSpawner()
+        {
+            if (!_enablePowerCubeCrates)
+                return;
+
+            if (_powerCubeSpawner == null)
+                _powerCubeSpawner = GetComponent<SoloShowdownPowerCubeSpawner>();
+
+            if (_powerCubeSpawner == null)
+                _powerCubeSpawner = gameObject.AddComponent<SoloShowdownPowerCubeSpawner>();
         }
     }
 }
