@@ -16,6 +16,6 @@ MonoBehaviour:
   Radius: 2.25
   DurationSeconds: 2.5
   TickIntervalSeconds: 0.5
-  DamagePerTick: 180
+  DamagePerTick: 108
   TargetTeamRule: 2
   VisualPrefab: {fileID: 654608214986896001, guid: 9543e730c75074d5c93e2a718f4c5989, type: 3}

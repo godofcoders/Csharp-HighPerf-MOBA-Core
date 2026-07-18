@@ -36,7 +36,7 @@ MonoBehaviour:
   AimAssistDistanceBias: 1
   AimAssistIdealRange: 8
   AimAssistPlacementDistance: 3
-  Damage: 260
+  Damage: 156
   Range: 8
   Speed: 22.5
   ProjectileCount: 1

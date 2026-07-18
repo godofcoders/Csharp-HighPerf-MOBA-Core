@@ -44,7 +44,7 @@ MonoBehaviour:
   AimPreviewWidth: 0.65
   Range: 8.25
   LandingRadius: 2.25
-  Damage: 1950
+  Damage: 1170
   LandingSearchRadius: 1.4
   TravelDurationSeconds: 0.7
   JumpHeight: 3.65

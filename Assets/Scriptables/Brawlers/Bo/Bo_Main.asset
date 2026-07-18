@@ -42,7 +42,7 @@ MonoBehaviour:
   AimAssistLeadStrength: 0.45
   PreviewMode: 1
   AimPreviewWidth: 1.05
-  Damage: 720
+  Damage: 432
   Range: 9.5
   Speed: 23
   ProjectileCount: 3

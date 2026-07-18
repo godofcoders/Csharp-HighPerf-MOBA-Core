@@ -42,7 +42,7 @@ MonoBehaviour:
   AimAssistLeadStrength: 0.2
   PreviewMode: 1
   AimPreviewWidth: 1.45
-  Damage: 1550
+  Damage: 930
   Range: 2.35
   ArcDegrees: 105
   HitRadiusPadding: 0.2

@@ -40,7 +40,7 @@ MonoBehaviour:
   ThrowRange: 7.5
   ThrowSpeed: 14.5
   ImpactRadius: 11.5
-  EnemyDamage: 430
+  EnemyDamage: 258
   AllyHeal: 480
   PresentationProfile: {fileID: 11400000, guid: bf5d09313eb644759962493aae83506d, type: 2}
   LingeringHazard: {fileID: 0}

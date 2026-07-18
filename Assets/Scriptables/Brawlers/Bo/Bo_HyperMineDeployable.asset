@@ -29,7 +29,7 @@ MonoBehaviour:
   ReplaceOlderOwnedDeployable: 0
   TriggerRadius: 0.95
   ExplosionRadius: 2.45
-  Damage: 2100
+  Damage: 1260
   StunDurationSeconds: 1
   ArmDelaySeconds: 0.25
   DetonationDelaySeconds: 1.5
