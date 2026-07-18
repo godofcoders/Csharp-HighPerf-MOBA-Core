@@ -451,6 +451,7 @@ namespace MOBA.Core.Infrastructure
                             bounds,
                             team,
                             output.Count,
+                            requiredCount,
                             attempt,
                             output,
                             reservedPoints,
@@ -474,6 +475,7 @@ namespace MOBA.Core.Infrastructure
                     team,
                     output,
                     reservedPoints,
+                    requiredCount,
                     spacing);
                 output.Add(CreateRuntimeSpawnPoint(team, output.Count, position));
             }
@@ -507,6 +509,7 @@ namespace MOBA.Core.Infrastructure
             Bounds bounds,
             TeamType team,
             int ordinal,
+            int requiredCount,
             int attempt,
             List<Transform> existing,
             List<Transform> reservedPoints,
@@ -514,7 +517,12 @@ namespace MOBA.Core.Infrastructure
             out Vector3 position)
         {
             float minSeparationSq = minSeparation * minSeparation;
-            Vector3 candidate = ResolveRuntimeSpawnCandidate(bounds, team, ordinal, attempt);
+            Vector3 candidate = ResolveRuntimeSpawnCandidate(
+                bounds,
+                team,
+                ordinal,
+                requiredCount,
+                attempt);
             candidate = ResolveGroundedPosition(candidate);
 
             if (IsTooCloseToExistingSpawn(candidate, existing, minSeparationSq) ||
@@ -534,6 +542,7 @@ namespace MOBA.Core.Infrastructure
             TeamType team,
             List<Transform> existing,
             List<Transform> reservedPoints,
+            int requiredCount,
             float spacing)
         {
             float fallbackSpacing = Mathf.Max(1.5f, spacing * 0.6f);
@@ -545,6 +554,7 @@ namespace MOBA.Core.Infrastructure
                     bounds,
                     team,
                     baseOrdinal + attempt,
+                    requiredCount,
                     fallbackSpacing);
 
                 if (!IsTooCloseToExistingSpawn(candidate, existing, fallbackSpacingSq) &&
@@ -559,6 +569,7 @@ namespace MOBA.Core.Infrastructure
                 bounds,
                 team,
                 baseOrdinal + 32,
+                requiredCount,
                 Mathf.Max(0.75f, fallbackSpacing * 0.5f));
         }
 
@@ -566,6 +577,7 @@ namespace MOBA.Core.Infrastructure
             Bounds bounds,
             TeamType team,
             int ordinal,
+            int requiredCount,
             int attempt)
         {
             float inset = Mathf.Max(0.5f, _runtimeSpawnEdgeInset);
@@ -587,7 +599,17 @@ namespace MOBA.Core.Infrastructure
 
             bool teamMode = team == TeamType.Blue || team == TeamType.Red;
             if (!teamMode)
-                return ResolveSoloShowdownSpawnCandidate(bounds, minX, maxX, minZ, maxZ, ordinal, attempt);
+            {
+                return ResolveSoloShowdownSpawnCandidate(
+                    bounds,
+                    minX,
+                    maxX,
+                    minZ,
+                    maxZ,
+                    ordinal,
+                    requiredCount,
+                    attempt);
+            }
 
             float widthT = ((ordinal + attempt * 2) % 7 + 1f) / 8f;
             float x = Mathf.Lerp(minX, maxX, widthT);
@@ -607,64 +629,37 @@ namespace MOBA.Core.Infrastructure
             float minZ,
             float maxZ,
             int ordinal,
+            int requiredCount,
             int attempt)
         {
             float width = Mathf.Max(0.1f, maxX - minX);
             float depth = Mathf.Max(0.1f, maxZ - minZ);
-            float edgeStep = Mathf.Min(
-                Mathf.Min(width, depth) * 0.22f,
-                Mathf.Max(_minimumInitialSpawnSeparation * 1.45f, _runtimeSpawnEdgeInset));
-            edgeStep = Mathf.Clamp(edgeStep, 0.5f, Mathf.Min(width, depth) * 0.45f);
-
-            int anchorIndex = Mathf.Abs(ordinal + attempt) % 12;
-            Vector3 candidate;
-            switch (anchorIndex)
-            {
-                case 0:
-                    candidate = new Vector3(minX, bounds.center.y, minZ);
-                    break;
-                case 1:
-                    candidate = new Vector3(maxX, bounds.center.y, maxZ);
-                    break;
-                case 2:
-                    candidate = new Vector3(maxX, bounds.center.y, minZ);
-                    break;
-                case 3:
-                    candidate = new Vector3(minX, bounds.center.y, maxZ);
-                    break;
-                case 4:
-                    candidate = new Vector3(minX + edgeStep, bounds.center.y, minZ);
-                    break;
-                case 5:
-                    candidate = new Vector3(maxX - edgeStep, bounds.center.y, maxZ);
-                    break;
-                case 6:
-                    candidate = new Vector3(maxX - edgeStep, bounds.center.y, minZ);
-                    break;
-                case 7:
-                    candidate = new Vector3(minX + edgeStep, bounds.center.y, maxZ);
-                    break;
-                case 8:
-                    candidate = new Vector3(minX, bounds.center.y, minZ + edgeStep);
-                    break;
-                case 9:
-                    candidate = new Vector3(maxX, bounds.center.y, maxZ - edgeStep);
-                    break;
-                case 10:
-                    candidate = new Vector3(maxX, bounds.center.y, minZ + edgeStep);
-                    break;
-                default:
-                    candidate = new Vector3(minX, bounds.center.y, maxZ - edgeStep);
-                    break;
-            }
+            float perimeter = Mathf.Max(0.1f, 2f * (width + depth));
+            int safeCount = Mathf.Max(1, requiredCount);
+            float spacingAlongBoundary = perimeter / safeCount;
+            float retryStep = Mathf.Max(
+                _minimumInitialSpawnSeparation * 0.85f,
+                spacingAlongBoundary * 0.31f);
+            float boundaryDistance = Mathf.Repeat(
+                ordinal * spacingAlongBoundary + attempt * retryStep,
+                perimeter);
+            Vector3 candidate = ResolveBoundaryPoint(
+                boundaryDistance,
+                minX,
+                maxX,
+                minZ,
+                maxZ,
+                bounds.center.y);
 
             float jitter = Mathf.Min(
                 Mathf.Min(width, depth) * 0.045f,
                 Mathf.Max(0.15f, _minimumInitialSpawnSeparation * 0.2f));
             if (jitter > 0f)
             {
-                candidate.x += Random.Range(-jitter, jitter);
-                candidate.z += Random.Range(-jitter, jitter);
+                Vector3 inward = ResolveBoundaryInwardDirection(candidate, bounds.center);
+                Vector3 tangent = new Vector3(-inward.z, 0f, inward.x);
+                candidate += tangent * Random.Range(-jitter, jitter);
+                candidate += inward * Random.Range(0f, jitter);
             }
 
             candidate.x = Mathf.Clamp(candidate.x, minX, maxX);
@@ -672,10 +667,47 @@ namespace MOBA.Core.Infrastructure
             return candidate;
         }
 
+        private static Vector3 ResolveBoundaryPoint(
+            float distance,
+            float minX,
+            float maxX,
+            float minZ,
+            float maxZ,
+            float y)
+        {
+            float width = Mathf.Max(0.1f, maxX - minX);
+            float depth = Mathf.Max(0.1f, maxZ - minZ);
+
+            if (distance <= width)
+                return new Vector3(minX + distance, y, minZ);
+
+            distance -= width;
+            if (distance <= depth)
+                return new Vector3(maxX, y, minZ + distance);
+
+            distance -= depth;
+            if (distance <= width)
+                return new Vector3(maxX - distance, y, maxZ);
+
+            distance -= width;
+            return new Vector3(minX, y, maxZ - Mathf.Min(distance, depth));
+        }
+
+        private static Vector3 ResolveBoundaryInwardDirection(Vector3 candidate, Vector3 center)
+        {
+            Vector3 inward = center - candidate;
+            inward.y = 0f;
+            if (inward.sqrMagnitude <= 0.0001f)
+                return Vector3.forward;
+
+            return inward.normalized;
+        }
+
         private Vector3 ResolveFallbackRingSpawnPosition(
             Bounds bounds,
             TeamType team,
             int ordinal,
+            int requiredCount,
             float radius)
         {
             bool teamMode = team == TeamType.Blue || team == TeamType.Red;
@@ -705,6 +737,7 @@ namespace MOBA.Core.Infrastructure
                     minZ,
                     maxZ,
                     ordinal,
+                    requiredCount,
                     0));
             }
 
