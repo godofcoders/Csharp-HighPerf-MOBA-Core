@@ -587,12 +587,7 @@ namespace MOBA.Core.Infrastructure
 
             bool teamMode = team == TeamType.Blue || team == TeamType.Red;
             if (!teamMode)
-            {
-                return new Vector3(
-                    Random.Range(minX, maxX),
-                    bounds.center.y,
-                    Random.Range(minZ, maxZ));
-            }
+                return ResolveSoloShowdownSpawnCandidate(bounds, minX, maxX, minZ, maxZ, ordinal, attempt);
 
             float widthT = ((ordinal + attempt * 2) % 7 + 1f) / 8f;
             float x = Mathf.Lerp(minX, maxX, widthT);
@@ -605,6 +600,78 @@ namespace MOBA.Core.Infrastructure
             return new Vector3(x, bounds.center.y, z);
         }
 
+        private Vector3 ResolveSoloShowdownSpawnCandidate(
+            Bounds bounds,
+            float minX,
+            float maxX,
+            float minZ,
+            float maxZ,
+            int ordinal,
+            int attempt)
+        {
+            float width = Mathf.Max(0.1f, maxX - minX);
+            float depth = Mathf.Max(0.1f, maxZ - minZ);
+            float edgeStep = Mathf.Min(
+                Mathf.Min(width, depth) * 0.22f,
+                Mathf.Max(_minimumInitialSpawnSeparation * 1.45f, _runtimeSpawnEdgeInset));
+            edgeStep = Mathf.Clamp(edgeStep, 0.5f, Mathf.Min(width, depth) * 0.45f);
+
+            int anchorIndex = Mathf.Abs(ordinal + attempt) % 12;
+            Vector3 candidate;
+            switch (anchorIndex)
+            {
+                case 0:
+                    candidate = new Vector3(minX, bounds.center.y, minZ);
+                    break;
+                case 1:
+                    candidate = new Vector3(maxX, bounds.center.y, maxZ);
+                    break;
+                case 2:
+                    candidate = new Vector3(maxX, bounds.center.y, minZ);
+                    break;
+                case 3:
+                    candidate = new Vector3(minX, bounds.center.y, maxZ);
+                    break;
+                case 4:
+                    candidate = new Vector3(minX + edgeStep, bounds.center.y, minZ);
+                    break;
+                case 5:
+                    candidate = new Vector3(maxX - edgeStep, bounds.center.y, maxZ);
+                    break;
+                case 6:
+                    candidate = new Vector3(maxX - edgeStep, bounds.center.y, minZ);
+                    break;
+                case 7:
+                    candidate = new Vector3(minX + edgeStep, bounds.center.y, maxZ);
+                    break;
+                case 8:
+                    candidate = new Vector3(minX, bounds.center.y, minZ + edgeStep);
+                    break;
+                case 9:
+                    candidate = new Vector3(maxX, bounds.center.y, maxZ - edgeStep);
+                    break;
+                case 10:
+                    candidate = new Vector3(maxX, bounds.center.y, minZ + edgeStep);
+                    break;
+                default:
+                    candidate = new Vector3(minX, bounds.center.y, maxZ - edgeStep);
+                    break;
+            }
+
+            float jitter = Mathf.Min(
+                Mathf.Min(width, depth) * 0.045f,
+                Mathf.Max(0.15f, _minimumInitialSpawnSeparation * 0.2f));
+            if (jitter > 0f)
+            {
+                candidate.x += Random.Range(-jitter, jitter);
+                candidate.z += Random.Range(-jitter, jitter);
+            }
+
+            candidate.x = Mathf.Clamp(candidate.x, minX, maxX);
+            candidate.z = Mathf.Clamp(candidate.z, minZ, maxZ);
+            return candidate;
+        }
+
         private Vector3 ResolveFallbackRingSpawnPosition(
             Bounds bounds,
             TeamType team,
@@ -612,6 +679,35 @@ namespace MOBA.Core.Infrastructure
             float radius)
         {
             bool teamMode = team == TeamType.Blue || team == TeamType.Red;
+            if (!teamMode)
+            {
+                float inset = Mathf.Max(0.5f, _runtimeSpawnEdgeInset);
+                float minX = bounds.min.x + inset;
+                float maxX = bounds.max.x - inset;
+                float minZ = bounds.min.z + inset;
+                float maxZ = bounds.max.z - inset;
+                if (minX >= maxX)
+                {
+                    minX = bounds.min.x;
+                    maxX = bounds.max.x;
+                }
+
+                if (minZ >= maxZ)
+                {
+                    minZ = bounds.min.z;
+                    maxZ = bounds.max.z;
+                }
+
+                return ResolveGroundedPosition(ResolveSoloShowdownSpawnCandidate(
+                    bounds,
+                    minX,
+                    maxX,
+                    minZ,
+                    maxZ,
+                    ordinal,
+                    0));
+            }
+
             Vector3 center = bounds.center;
             if (teamMode)
             {
