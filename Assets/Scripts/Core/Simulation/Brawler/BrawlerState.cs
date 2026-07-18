@@ -42,6 +42,7 @@ namespace MOBA.Core.Simulation
 
         public Action OnDeath;
         public Action<float> OnHealthChanged;
+        public Action<int> OnPowerCubeCountChanged;
 
         public ResourceStorage Ammo => Resources.Ammo;
         public bool IsStunned;
@@ -147,6 +148,8 @@ namespace MOBA.Core.Simulation
         // brawler for CarriedGemCount, not CarriedGems.Count.
         public BrawlerCarriedGems CarriedGems { get; private set; }
         public int CarriedGemCount => CarriedGems.Count;
+        public BrawlerPowerCubes PowerCubes { get; private set; }
+        public int PowerCubeCount => PowerCubes.Count;
 
         public int CurrentPowerLevel => Loadout.CurrentPowerLevel;
         public IReadOnlyList<PassiveDefinition> EquippedPassives => Loadout.EquippedPassives;
@@ -186,6 +189,7 @@ namespace MOBA.Core.Simulation
             // Gem Grab carrier state. Starts at zero; brawlers spawn empty-
             // handed and earn gems by walking over them.
             CarriedGems = new BrawlerCarriedGems();
+            PowerCubes = new BrawlerPowerCubes();
 
             RefreshRuntimeBuildUnlockState();
             RefreshGadgetChargesFromRuntimeKit();
@@ -339,6 +343,81 @@ namespace MOBA.Core.Simulation
         public void RemoveAllStatModifiersFromSource(object source)
         {
             Stats.RemoveAllStatModifiersFromSource(source);
+        }
+
+        public bool AddPowerCubes(int amount)
+        {
+            if (amount <= 0 || PowerCubes == null)
+                return false;
+
+            float oldMaxHealth = MaxHealth.Value;
+            float oldHealth = CurrentHealth;
+
+            if (!PowerCubes.Add(amount))
+                return false;
+
+            RefreshPowerCubeModifiers(oldMaxHealth, oldHealth, true);
+            OnPowerCubeCountChanged?.Invoke(PowerCubeCount);
+            return true;
+        }
+
+        public bool SetPowerCubeCount(int count, bool preserveHealthRatio = true)
+        {
+            if (PowerCubes == null)
+                return false;
+
+            float oldMaxHealth = MaxHealth.Value;
+            float oldHealth = CurrentHealth;
+
+            if (!PowerCubes.SetCount(count))
+                return false;
+
+            RefreshPowerCubeModifiers(oldMaxHealth, oldHealth, preserveHealthRatio);
+            OnPowerCubeCountChanged?.Invoke(PowerCubeCount);
+            return true;
+        }
+
+        public int CalculateDroppedPowerCubesOnDeath()
+        {
+            return PowerCubeCount > 0 ? Mathf.Max(1, PowerCubeCount / 2) : 0;
+        }
+
+        private void ClearPowerCubes()
+        {
+            if (PowerCubes == null)
+                return;
+
+            bool changed = PowerCubes.Clear();
+            MaxHealth.RemoveModifiersFromSource(PowerCubes.ModifierSource);
+            Damage.RemoveModifiersFromSource(PowerCubes.ModifierSource);
+            Stats.SetCurrentHealth(CurrentHealth);
+
+            if (changed)
+                OnPowerCubeCountChanged?.Invoke(0);
+        }
+
+        private void RefreshPowerCubeModifiers(
+            float oldMaxHealth,
+            float oldHealth,
+            bool preserveHealthRatio)
+        {
+            MaxHealth.RemoveModifiersFromSource(PowerCubes.ModifierSource);
+            Damage.RemoveModifiersFromSource(PowerCubes.ModifierSource);
+
+            float bonus = PowerCubes.BonusMultiplier;
+            if (bonus > 0f)
+            {
+                MaxHealth.AddModifier(new StatModifier(
+                    bonus,
+                    ModifierType.Multiplicative,
+                    PowerCubes.ModifierSource));
+                Damage.AddModifier(new StatModifier(
+                    bonus,
+                    ModifierType.Multiplicative,
+                    PowerCubes.ModifierSource));
+            }
+
+            RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
         }
 
         public void AddIncomingMovementModifier(MovementModifier modifier)
@@ -656,6 +735,7 @@ namespace MOBA.Core.Simulation
             //        with the HyperchargeModifierSource token from those
             //        three collections.
             ClearHyperchargeRuntimeModifiers();
+            ClearPowerCubes();
 
             OnHealthChanged?.Invoke(CurrentHealth);
         }
