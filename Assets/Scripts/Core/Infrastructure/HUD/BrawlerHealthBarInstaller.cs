@@ -72,6 +72,11 @@ namespace MOBA.Core.Infrastructure
                         brawler,
                         existingBar.GetComponent<Canvas>() ??
                         existingBar.GetComponentInChildren<Canvas>(true));
+                    CreatePowerCubeBadge(
+                        existingBar.transform,
+                        brawler,
+                        existingBar.GetComponent<Canvas>() ??
+                        existingBar.GetComponentInChildren<Canvas>(true));
                     continue;
                 }
 
@@ -141,6 +146,7 @@ namespace MOBA.Core.Infrastructure
             BrawlerHealthBarView view = root.GetComponent<BrawlerHealthBarView>();
             view.Bind(brawler, fillImage, backgroundImage, frameImage, canvas);
             CreateCarrierBadge(root.transform, brawler, canvas);
+            CreatePowerCubeBadge(root.transform, brawler, canvas);
 
             SetLayerRecursively(root, LayerMask.NameToLayer("UI"));
         }
@@ -208,6 +214,76 @@ namespace MOBA.Core.Infrastructure
                 brawler,
                 badgeRoot,
                 gemIcon,
+                null,
+                countText,
+                canvas);
+
+            SetLayerRecursively(badgeRoot, LayerMask.NameToLayer("UI"));
+        }
+
+        private static void CreatePowerCubeBadge(
+            Transform parent,
+            BrawlerController brawler,
+            Canvas canvas)
+        {
+            if (parent == null ||
+                parent.GetComponentInChildren<BrawlerPowerCubeBadgeView>(true) != null)
+            {
+                return;
+            }
+
+            if (canvas == null)
+                canvas = parent.GetComponent<Canvas>() ??
+                         parent.GetComponentInChildren<Canvas>(true);
+
+            GameObject badgeRoot = new GameObject(
+                "PowerCubeBadge",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image));
+
+            badgeRoot.transform.SetParent(parent, false);
+
+            RectTransform badgeRect = badgeRoot.GetComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(0.5f, 0.5f);
+            badgeRect.anchorMax = new Vector2(0.5f, 0.5f);
+            badgeRect.pivot = new Vector2(0.5f, 0.5f);
+            badgeRect.anchoredPosition = new Vector2(0f, 39f);
+            badgeRect.sizeDelta = new Vector2(58f, 22f);
+
+            Image badgeBackground = badgeRoot.GetComponent<Image>();
+            badgeBackground.color = new Color(0f, 0f, 0f, 0.66f);
+            badgeBackground.sprite = ResolveUISprite();
+            badgeBackground.raycastTarget = false;
+
+            Image cubeIcon = CreateImage(
+                badgeRoot.transform,
+                "PowerCubeIcon",
+                new Vector2(-15f, 0f),
+                new Vector2(15f, 15f),
+                new Color(0.58f, 1f, 0.16f));
+            cubeIcon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+
+            Text countText = CreateText(
+                badgeRoot.transform,
+                "PowerCubeCount",
+                "0",
+                new Vector2(8f, 0f),
+                new Vector2(30f, 20f),
+                16,
+                TextAnchor.MiddleLeft,
+                Color.white,
+                FontStyle.Bold);
+
+            BrawlerPowerCubeBadgeView badgeView =
+                parent.GetComponent<BrawlerPowerCubeBadgeView>();
+            if (badgeView == null)
+                badgeView = parent.gameObject.AddComponent<BrawlerPowerCubeBadgeView>();
+
+            badgeView.Bind(
+                brawler,
+                badgeRoot,
+                cubeIcon,
                 null,
                 countText,
                 canvas);
