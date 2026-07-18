@@ -26,9 +26,11 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0.5f)] private float _spawnPointAvoidRadius = 4f;
         [SerializeField, Min(0.2f)] private float _obstacleClearanceRadius = 1.1f;
         [SerializeField, Min(1)] private int _maxPlacementAttemptsPerCrate = 80;
+        [SerializeField, Min(0.1f)] private float _deathDropScatterRadius = 0.92f;
 
         private readonly List<Vector3> _placedPositions = new List<Vector3>(16);
         private readonly List<Vector3> _spawnAvoidPositions = new List<Vector3>(16);
+        private readonly List<Vector3> _deathDropReservedPositions = new List<Vector3>(12);
         private readonly List<PowerCubeCrateController> _spawnedCrates =
             new List<PowerCubeCrateController>(16);
         private Coroutine _spawnRoutine;
@@ -92,6 +94,48 @@ namespace MOBA.Core.Simulation
                 crate.Configure(_powerCubePrefab, _crateHealth, _powerCubeValuePerCrate);
 
             return crate;
+        }
+
+        public void SpawnDroppedPowerCubes(Vector3 center, int count)
+        {
+            if (count <= 0)
+                return;
+
+            _deathDropReservedPositions.Clear();
+            for (int i = 0; i < count; i++)
+            {
+                int layoutIndex = count > 1 ? i + 1 : 0;
+                Vector3 spawnPosition = ResolveReadablePowerCubePosition(
+                    center,
+                    layoutIndex,
+                    _deathDropScatterRadius,
+                    _deathDropReservedPositions);
+
+                _deathDropReservedPositions.Add(spawnPosition);
+                SpawnPowerCube(spawnPosition, _powerCubeValuePerCrate);
+            }
+
+            _deathDropReservedPositions.Clear();
+        }
+
+        private PowerCube SpawnPowerCube(Vector3 position, int value)
+        {
+            PowerCube cube;
+            if (_powerCubePrefab != null)
+            {
+                cube = Instantiate(_powerCubePrefab, position, Quaternion.identity);
+            }
+            else
+            {
+                GameObject cubeObject = new GameObject("PowerCube");
+                cubeObject.transform.position = position;
+                cube = cubeObject.AddComponent<PowerCube>();
+            }
+
+            if (cube != null)
+                cube.SetValue(Mathf.Max(1, value));
+
+            return cube;
         }
 
         private bool TryResolvePlacement(Bounds bounds, out Vector3 position)
@@ -174,6 +218,66 @@ namespace MOBA.Core.Simulation
             }
 
             return false;
+        }
+
+        private static Vector3 ResolveReadablePowerCubePosition(
+            Vector3 center,
+            int layoutIndex,
+            float spacing,
+            IList<Vector3> reservedPositions)
+        {
+            float safeSpacing = Mathf.Max(0.05f, spacing);
+            int startIndex = Mathf.Max(0, layoutIndex);
+
+            for (int attempt = 0; attempt < 48; attempt++)
+            {
+                Vector3 candidate = center + GemPlacementUtility.GetClusterOffset(
+                    startIndex + attempt,
+                    safeSpacing);
+
+                if (!OverlapsPowerCube(candidate, safeSpacing, reservedPositions))
+                    return ResolveGroundedPosition(candidate);
+            }
+
+            return ResolveGroundedPosition(center + GemPlacementUtility.GetClusterOffset(
+                startIndex + 48,
+                safeSpacing));
+        }
+
+        private static bool OverlapsPowerCube(
+            Vector3 candidate,
+            float spacing,
+            IList<Vector3> reservedPositions)
+        {
+            float spacingSq = spacing * spacing;
+            IReadOnlyList<PowerCube> existing = PowerCube.All;
+            for (int i = 0; i < existing.Count; i++)
+            {
+                PowerCube cube = existing[i];
+                if (cube == null || cube.IsPickedUp)
+                    continue;
+
+                if (XZDistanceSq(candidate, cube.transform.position) < spacingSq)
+                    return true;
+            }
+
+            if (reservedPositions != null)
+            {
+                for (int i = 0; i < reservedPositions.Count; i++)
+                {
+                    if (XZDistanceSq(candidate, reservedPositions[i]) < spacingSq)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static float XZDistanceSq(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x;
+            float dz = a.z - b.z;
+            return dx * dx + dz * dz;
         }
 
         private void RefreshSpawnAvoidPositions()

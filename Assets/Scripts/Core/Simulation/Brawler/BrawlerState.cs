@@ -379,7 +379,7 @@ namespace MOBA.Core.Simulation
 
         public int CalculateDroppedPowerCubesOnDeath()
         {
-            return PowerCubeCount > 0 ? Mathf.Max(1, PowerCubeCount / 2) : 0;
+            return PowerCubeCount > 0 ? PowerCubeCount / 2 : 0;
         }
 
         private void ClearPowerCubes()

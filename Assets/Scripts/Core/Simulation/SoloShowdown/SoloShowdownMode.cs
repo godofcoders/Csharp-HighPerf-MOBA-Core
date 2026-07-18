@@ -231,10 +231,26 @@ namespace MOBA.Core.Simulation
             if (dying == null)
                 return;
 
+            DropPowerCubesFrom(dying);
+
             if (!_placementsByEntityId.ContainsKey(dying.EntityID))
                 _placementsByEntityId[dying.EntityID] = Mathf.Max(1, _nextPlacement--);
 
             CheckEndCondition();
+        }
+
+        private void DropPowerCubesFrom(BrawlerController dying)
+        {
+            if (dying == null || dying.State == null || dying.State.PowerCubeCount <= 0)
+                return;
+
+            EnsurePowerCubeSpawner();
+
+            int dropped = dying.State.CalculateDroppedPowerCubesOnDeath();
+            if (dropped > 0)
+                _powerCubeSpawner?.SpawnDroppedPowerCubes(dying.Position, dropped);
+
+            dying.State.SetPowerCubeCount(0, false);
         }
 
         private void CheckEndCondition()
