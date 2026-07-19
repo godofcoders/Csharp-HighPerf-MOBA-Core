@@ -119,10 +119,10 @@ namespace MOBA.Core.Infrastructure
 
                 float time = Time.time * (model.Celebrating ? 5.2f : 1.8f) + model.Phase;
                 float jump = model.Celebrating
-                    ? Mathf.Abs(Mathf.Sin(time)) * 0.34f
+                    ? Mathf.Abs(Mathf.Sin(time)) * 0.22f
                     : Mathf.Sin(time) * 0.025f;
                 float yaw = model.Celebrating
-                    ? Mathf.Sin(time * 0.7f) * 14f
+                    ? Mathf.Sin(time * 0.7f) * 10f
                     : Mathf.Sin(time * 0.5f) * 3f;
 
                 model.Root.localPosition = model.BasePosition + Vector3.up * jump;
@@ -374,7 +374,7 @@ namespace MOBA.Core.Infrastructure
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.025f, 0.035f, 0.075f, 1f);
             camera.orthographic = true;
-            camera.orthographicSize = 2.05f;
+            camera.orthographicSize = 2.25f;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 40f;
             return camera;
@@ -406,7 +406,7 @@ namespace MOBA.Core.Infrastructure
             floor.name = "ResultsStageFloor";
             floor.transform.SetParent(parent, false);
             floor.transform.localPosition = new Vector3(0f, -0.08f, 0.55f);
-            floor.transform.localScale = new Vector3(8.0f, 0.08f, 2.2f);
+            floor.transform.localScale = new Vector3(10.8f, 0.08f, 2.2f);
 
             Renderer renderer = floor.GetComponent<Renderer>();
             if (renderer != null)
@@ -422,17 +422,21 @@ namespace MOBA.Core.Infrastructure
             List<MatchResultEntry> blue = CollectTeamEntries(entries, TeamType.Blue);
             List<MatchResultEntry> red = CollectTeamEntries(entries, TeamType.Red);
 
-            SpawnTeamModels(blue, TeamType.Blue, -2.85f);
-            SpawnTeamModels(red, TeamType.Red, 0.85f);
+            SpawnTeamModels(blue, TeamType.Blue, -2.55f);
+            SpawnTeamModels(red, TeamType.Red, 2.55f);
         }
 
-        private void SpawnTeamModels(List<MatchResultEntry> entries, TeamType team, float startX)
+        private void SpawnTeamModels(List<MatchResultEntry> entries, TeamType team, float teamCenterX)
         {
             if (entries == null || entries.Count == 0 || _modelStageRoot == null)
                 return;
 
             bool winner = MatchResultBoard.WinnerKnown && MatchResultBoard.Winner == team;
             int count = Mathf.Min(entries.Count, 3);
+            float spacing = count > 2 ? 1.72f : 1.90f;
+            float firstX = teamCenterX - (count - 1) * spacing * 0.5f;
+            float modelHeight = winner ? 1.16f : 1.06f;
+
             for (int i = 0; i < count; i++)
             {
                 MatchResultEntry entry = entries[i];
@@ -441,9 +445,9 @@ namespace MOBA.Core.Infrastructure
                     continue;
 
                 model.transform.SetParent(_modelStageRoot.transform, false);
-                model.transform.localPosition = new Vector3(startX + i * 0.95f, 0f, winner ? 0.08f : 0.35f);
+                model.transform.localPosition = new Vector3(firstX + i * spacing, 0f, winner ? 0.04f : 0.34f);
                 model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-                NormalizeResultModel(model, winner ? 1.38f : 1.24f);
+                NormalizeResultModel(model, modelHeight);
 
                 _resultModels.Add(new ResultModelView
                 {
