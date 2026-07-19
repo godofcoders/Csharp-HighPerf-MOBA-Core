@@ -28,11 +28,26 @@ namespace MOBA.Core.Definitions
         [Tooltip("Which game modes this map supports. The map-select UI filters by this list.")]
         public GameModeId[] SupportedModes;
 
+        [Header("Match Modifiers")]
+        [Tooltip("Game modes where this map offers match-start nanopower selection. Leave empty for a classic start.")]
+        public GameModeId[] NanopowerEnabledModes;
+
         public bool SupportsMode(GameModeId id)
         {
             if (SupportedModes == null) return false;
             for (int i = 0; i < SupportedModes.Length; i++)
                 if (SupportedModes[i] == id) return true;
+            return false;
+        }
+
+        public bool EnablesNanopowersForMode(GameModeId id)
+        {
+            if (!SupportsMode(id) || NanopowerEnabledModes == null)
+                return false;
+
+            for (int i = 0; i < NanopowerEnabledModes.Length; i++)
+                if (NanopowerEnabledModes[i] == id) return true;
+
             return false;
         }
     }

@@ -425,7 +425,7 @@ namespace MOBA.Core.Infrastructure
             mode.fontStyle = FontStyles.Bold;
             Anchor(mode.rectTransform, new Vector2(0.10f, 0.27f), new Vector2(0.94f, 0.45f), Vector2.zero, Vector2.zero);
 
-            TMP_Text tag = CreateText(card.transform, "Tag", ResolveMapTag(map), 13, TextAlignmentOptions.Left, new Color(0.84f, 0.93f, 1f, 1f));
+            TMP_Text tag = CreateText(card.transform, "Tag", ResolveMapTag(map, SceneSelection.SelectedMode), 13, TextAlignmentOptions.Left, new Color(0.84f, 0.93f, 1f, 1f));
             Anchor(tag.rectTransform, new Vector2(0.10f, 0.08f), new Vector2(0.94f, 0.26f), Vector2.zero, Vector2.zero);
 
             _runtimeCards[map] = new RuntimeMapCardView(card.GetComponent<Image>(), accent, selectedOverlay, selectedLabel);
@@ -550,9 +550,9 @@ namespace MOBA.Core.Infrastructure
             if (_detailModeText != null)
                 _detailModeText.text = ResolveModeLabel(SceneSelection.SelectedMode);
             if (_detailTagText != null)
-                _detailTagText.text = ResolveMapTag(_previewed);
+                _detailTagText.text = ResolveMapTag(_previewed, SceneSelection.SelectedMode);
             if (_detailDescriptionText != null)
-                _detailDescriptionText.text = ResolveMapDescription(_previewed);
+                _detailDescriptionText.text = ResolveMapDescription(_previewed, SceneSelection.SelectedMode);
             if (_detailPrefabText != null)
                 _detailPrefabText.text = _previewed.MapPrefab != null ? _previewed.MapPrefab.name : "NO PREFAB";
         }
@@ -650,30 +650,38 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
-        private static string ResolveMapTag(MapDefinition map)
+        private static string ResolveMapTag(MapDefinition map, GameModeId mode)
         {
             string name = ResolveMapName(map).ToLowerInvariant();
-            if (name.Contains("crossfire"))
-                return "MID CONTROL";
-            if (name.Contains("side"))
-                return "SIDE LANES";
-            if (name.Contains("yard"))
-                return "BALANCED";
+            string modifier = map != null && map.EnablesNanopowersForMode(mode)
+                ? "NANO EVENT"
+                : "CLASSIC START";
 
-            return "STANDARD";
+            if (name.Contains("crossfire"))
+                return "MID CONTROL | " + modifier;
+            if (name.Contains("side"))
+                return "SIDE LANES | " + modifier;
+            if (name.Contains("yard"))
+                return "BALANCED | " + modifier;
+
+            return "STANDARD | " + modifier;
         }
 
-        private static string ResolveMapDescription(MapDefinition map)
+        private static string ResolveMapDescription(MapDefinition map, GameModeId mode)
         {
             string name = ResolveMapName(map).ToLowerInvariant();
-            if (name.Contains("crossfire"))
-                return "Compact center cover creates quick fights around the gem mine and rewards clean lane pressure.";
-            if (name.Contains("side"))
-                return "Wider side routes give flankers room while the center stays open enough for ranged control.";
-            if (name.Contains("yard"))
-                return "Classic three-lane layout with simple cover, readable rotations, and a clear center objective.";
+            string modifier = map != null && map.EnablesNanopowersForMode(mode)
+                ? " This map opens with a short nanopower draft before the countdown finishes."
+                : " This map starts with the normal countdown and no nanopower draft.";
 
-            return "Playable arena for the selected mode.";
+            if (name.Contains("crossfire"))
+                return "Compact center cover creates quick fights around the gem mine and rewards clean lane pressure." + modifier;
+            if (name.Contains("side"))
+                return "Wider side routes give flankers room while the center stays open enough for ranged control." + modifier;
+            if (name.Contains("yard"))
+                return "Classic three-lane layout with simple cover, readable rotations, and a clear center objective." + modifier;
+
+            return "Playable arena for the selected mode." + modifier;
         }
 
         private Color ResolveMapColor(MapDefinition map, int fallbackIndex)

@@ -61,6 +61,9 @@ namespace MOBA.Core.Infrastructure
             if (!scene.IsValid() || scene.name != MatchSceneName)
                 return;
 
+            if (!AreNanopowersEnabledForSelectedMap())
+                return;
+
             if (FindObjectOfType<NanopowerSelectionController>() != null)
                 return;
 
@@ -159,6 +162,12 @@ namespace MOBA.Core.Infrastructure
 
         private IEnumerator BeginSelectionWhenReady()
         {
+            if (!AreNanopowersEnabledForSelectedMap())
+            {
+                HideSelection();
+                yield break;
+            }
+
             float deadline = Time.time + PlayerSpawnWaitSeconds;
 
             while (_localPlayer == null && Time.time < deadline)
@@ -195,6 +204,12 @@ namespace MOBA.Core.Infrastructure
 
             PickOffers(_optionsBuffer);
             ShowSelection();
+        }
+
+        private static bool AreNanopowersEnabledForSelectedMap()
+        {
+            MapDefinition selectedMap = SceneSelection.SelectedMap;
+            return selectedMap != null && selectedMap.EnablesNanopowersForMode(SceneSelection.SelectedMode);
         }
 
         private static BrawlerController FindLocalPlayer()

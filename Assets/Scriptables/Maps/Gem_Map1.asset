@@ -16,3 +16,4 @@ MonoBehaviour:
   Icon: {fileID: 0}
   MapPrefab: {fileID: 1590026745255197339, guid: 09bf88949507a42d3a52ebd11828ba1a, type: 3}
   SupportedModes: 00000000010000000200000004000000
+  NanopowerEnabledModes: 00000000010000000200000004000000
