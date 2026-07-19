@@ -147,6 +147,7 @@ namespace MOBA.Core.Infrastructure
                 {
                     DisplayName = ResolveBrawlerName(brawler),
                     Team = brawler.Team,
+                    Definition = brawler.Definition,
                     Stats = stats,
                     StarScore = starScore,
                     IsStarPlayer = brawler == starPlayer
