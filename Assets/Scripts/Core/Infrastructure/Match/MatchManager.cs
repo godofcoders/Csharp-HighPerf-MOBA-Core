@@ -68,6 +68,7 @@ namespace MOBA.Core.Infrastructure
 
         public void StartMatchFlow()
         {
+            MatchResultBoard.Reset();
             DeployableMatchCleanup.DespawnAllActiveDeployables();
             _winner = TeamType.Neutral;
             _winnerKnown = false;

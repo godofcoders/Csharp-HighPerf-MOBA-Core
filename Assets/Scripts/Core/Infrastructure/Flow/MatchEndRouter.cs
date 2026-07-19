@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Simulation;
 
@@ -83,20 +84,200 @@ namespace MOBA.Core.Infrastructure
 
             MatchResultBoard.Capture(_capturedWinner, blue, red);
 
-            // MVP snapshot, if a MatchStatsTracker was in the scene.
-            if (MatchStatsTracker.Instance != null)
+            CaptureMatchStats(_capturedWinner, blue, red);
+
+            Invoke(nameof(GoToResults), _delayBeforeResultsSeconds);
+        }
+
+        private static void CaptureMatchStats(TeamType winner, int blueScore, int redScore)
+        {
+            MatchStatsTracker tracker = MatchStatsTracker.Instance;
+            if (tracker == null || tracker.Stats.Count == 0)
             {
-                BrawlerController mvp = MatchStatsTracker.Instance.FindMVP();
-                if (mvp != null)
+                MatchResultBoard.CaptureEntries(null);
+                return;
+            }
+
+            BrawlerController starPlayer = null;
+            float bestScore = float.NegativeInfinity;
+
+            foreach (KeyValuePair<BrawlerController, MatchStats> kvp in tracker.Stats)
+            {
+                BrawlerController brawler = kvp.Key;
+                if (brawler == null)
+                    continue;
+
+                MatchStats stats = kvp.Value;
+                int ownScore = ResolveTeamScore(brawler.Team, blueScore, redScore);
+                int enemyScore = ResolveTeamScore(GetEnemyTeam(brawler.Team), blueScore, redScore);
+                float starScore = ComputeStarScore(
+                    stats,
+                    SceneSelection.SelectedMode,
+                    brawler.Team,
+                    winner,
+                    ownScore,
+                    enemyScore);
+
+                if (starScore > bestScore)
                 {
-                    string mvpName = mvp.Definition != null && !string.IsNullOrWhiteSpace(mvp.Definition.BrawlerName)
-                        ? mvp.Definition.BrawlerName
-                        : (mvp.Definition != null ? mvp.Definition.name : "Unknown");
-                    MatchResultBoard.CaptureMvp(mvpName, MatchStatsTracker.Instance.GetStats(mvp));
+                    bestScore = starScore;
+                    starPlayer = brawler;
                 }
             }
 
-            Invoke(nameof(GoToResults), _delayBeforeResultsSeconds);
+            List<MatchResultEntry> entries = new List<MatchResultEntry>(tracker.Stats.Count);
+            foreach (KeyValuePair<BrawlerController, MatchStats> kvp in tracker.Stats)
+            {
+                BrawlerController brawler = kvp.Key;
+                if (brawler == null)
+                    continue;
+
+                MatchStats stats = kvp.Value;
+                int ownScore = ResolveTeamScore(brawler.Team, blueScore, redScore);
+                int enemyScore = ResolveTeamScore(GetEnemyTeam(brawler.Team), blueScore, redScore);
+                float starScore = ComputeStarScore(
+                    stats,
+                    SceneSelection.SelectedMode,
+                    brawler.Team,
+                    winner,
+                    ownScore,
+                    enemyScore);
+
+                entries.Add(new MatchResultEntry
+                {
+                    DisplayName = ResolveBrawlerName(brawler),
+                    Team = brawler.Team,
+                    Stats = stats,
+                    StarScore = starScore,
+                    IsStarPlayer = brawler == starPlayer
+                });
+            }
+
+            if (starPlayer != null)
+            {
+                MatchResultBoard.CaptureMvp(
+                    ResolveBrawlerName(starPlayer),
+                    tracker.GetStats(starPlayer));
+            }
+
+            entries.Sort(CompareResultEntries);
+            MatchResultBoard.CaptureEntries(entries.ToArray());
+        }
+
+        private static float ComputeStarScore(
+            MatchStats stats,
+            GameModeId mode,
+            TeamType team,
+            TeamType matchWinner,
+            int ownModeScore,
+            int enemyModeScore)
+        {
+            float combatScore =
+                stats.Kills * 180f +
+                stats.Assists * 85f +
+                stats.DamageDealt * 0.07f +
+                stats.HealingDone * 0.08f +
+                stats.DamageTaken * 0.015f -
+                stats.Deaths * 70f;
+
+            return combatScore + ComputeModeObjectiveScore(
+                stats,
+                mode,
+                team,
+                matchWinner,
+                ownModeScore,
+                enemyModeScore);
+        }
+
+        private static float ComputeModeObjectiveScore(
+            MatchStats stats,
+            GameModeId mode,
+            TeamType team,
+            TeamType matchWinner,
+            int ownModeScore,
+            int enemyModeScore)
+        {
+            bool wonMatch = team != TeamType.Neutral && team == matchWinner;
+            int scoreLead = ownModeScore - enemyModeScore;
+
+            switch (mode)
+            {
+                case GameModeId.GemGrab:
+                    return stats.GemsCollected * 190f + (wonMatch ? 140f : 0f);
+
+                case GameModeId.Knockout:
+                    return stats.Kills * 110f + stats.Assists * 50f - stats.Deaths * 85f + (wonMatch ? 170f : 0f);
+
+                case GameModeId.BrawlBall:
+                    return Mathf.Max(0, scoreLead) * 170f + (wonMatch ? 220f : 0f);
+
+                case GameModeId.HotZone:
+                    return Mathf.Max(0, scoreLead) * 3f + (wonMatch ? 230f : 0f);
+
+                case GameModeId.SoloShowdown:
+                    return stats.Kills * 140f - stats.Deaths * 120f + (wonMatch ? 260f : 0f);
+
+                default:
+                    return wonMatch ? 150f : 0f;
+            }
+        }
+
+        private static int CompareResultEntries(MatchResultEntry left, MatchResultEntry right)
+        {
+            if (left.IsStarPlayer != right.IsStarPlayer)
+                return left.IsStarPlayer ? -1 : 1;
+
+            if (left.Team != right.Team)
+                return GetTeamSortOrder(left.Team).CompareTo(GetTeamSortOrder(right.Team));
+
+            return right.StarScore.CompareTo(left.StarScore);
+        }
+
+        private static int GetTeamSortOrder(TeamType team)
+        {
+            if (team == TeamType.Blue)
+                return 0;
+
+            if (team == TeamType.Red)
+                return 1;
+
+            if (team == TeamType.Neutral)
+                return 99;
+
+            return 10 + (int)team;
+        }
+
+        private static int ResolveTeamScore(TeamType team, int blueScore, int redScore)
+        {
+            if (team == TeamType.Blue)
+                return blueScore;
+
+            if (team == TeamType.Red)
+                return redScore;
+
+            return 0;
+        }
+
+        private static TeamType GetEnemyTeam(TeamType team)
+        {
+            if (team == TeamType.Blue)
+                return TeamType.Red;
+
+            if (team == TeamType.Red)
+                return TeamType.Blue;
+
+            return TeamType.Neutral;
+        }
+
+        private static string ResolveBrawlerName(BrawlerController brawler)
+        {
+            if (brawler == null)
+                return "Unknown";
+
+            if (brawler.Definition != null && !string.IsNullOrWhiteSpace(brawler.Definition.BrawlerName))
+                return brawler.Definition.BrawlerName;
+
+            return brawler.Definition != null ? brawler.Definition.name : brawler.name;
         }
 
         private static TeamType ResolveWinnerFromScore(int blue, int red)

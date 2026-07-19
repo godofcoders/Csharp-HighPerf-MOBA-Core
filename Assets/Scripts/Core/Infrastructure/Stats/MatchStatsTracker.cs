@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using MOBA.Core.Simulation;
 
 namespace MOBA.Core.Infrastructure
@@ -11,12 +12,16 @@ namespace MOBA.Core.Infrastructure
     /// brawlers on Start. MatchEndRouter snapshots the stats into
     /// MatchResultBoard before transitioning to Results.
     ///
-    /// Phase 1 actively populates Deaths + GemsCollected. Damage and Kills
-    /// are reserved for when the damage-event hookup lands; the fields
-    /// are present so the wire shape doesn't change later.
+    /// Tracks deaths, kills, assists, gems, and damage. Kept separate from
+    /// Results UI so the match can snapshot data even after the Match scene
+    /// unloads.
     /// </summary>
     public class MatchStatsTracker : MonoBehaviour
     {
+        private const string MatchSceneName = "Match";
+        private const uint AssistWindowTicks = 180;
+        private const int RegistrationRefreshFrames = 30;
+
         public static MatchStatsTracker Instance { get; private set; }
 
         // Per-brawler running stats. Keyed by BrawlerController so the
@@ -31,6 +36,31 @@ namespace MOBA.Core.Infrastructure
         private readonly List<Action> _deathHandlers = new List<Action>(8);
 
         public IReadOnlyDictionary<BrawlerController, MatchStats> Stats => _stats;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void RegisterSceneHook()
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+            TryInstallForScene(SceneManager.GetActiveScene());
+        }
+
+        private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            TryInstallForScene(scene);
+        }
+
+        private static void TryInstallForScene(Scene scene)
+        {
+            if (!scene.IsValid() || scene.name != MatchSceneName)
+                return;
+
+            if (FindObjectOfType<MatchStatsTracker>() != null)
+                return;
+
+            GameObject host = new GameObject("MatchStatsTracker");
+            host.AddComponent<MatchStatsTracker>();
+        }
 
         private void Awake()
         {
@@ -62,6 +92,20 @@ namespace MOBA.Core.Infrastructure
 
             _damageHandler = HandleDamageApplied;
             DamageEventBus.OnDamageApplied += _damageHandler;
+        }
+
+        private void Update()
+        {
+            if (Time.frameCount % RegistrationRefreshFrames != 0)
+                return;
+
+            if (MatchManager.Instance != null &&
+                MatchManager.Instance.CurrentState == MatchState.Ended)
+            {
+                return;
+            }
+
+            DiscoverAndRegister();
         }
 
         private void OnDisable()
@@ -163,6 +207,55 @@ namespace MOBA.Core.Infrastructure
                 ks.Kills += 1;
                 _stats[killer] = ks;
             }
+
+            RecordAssists(dying, killer);
+        }
+
+        private void RecordAssists(BrawlerController dying, BrawlerController killer)
+        {
+            if (dying == null || dying.State == null || dying.State.AssistTracker == null)
+                return;
+
+            int killerId = killer != null ? killer.EntityID : 0;
+            uint currentTick = dying.State.LastDamageTakenTick;
+            if (ServiceProvider.TryGet<ISimulationClock>(out ISimulationClock clock) && clock != null)
+                currentTick = clock.CurrentTick;
+
+            List<int> assists = dying.State.AssistTracker.GetAssistContributors(
+                currentTick,
+                AssistWindowTicks,
+                killerId);
+
+            for (int i = 0; i < assists.Count; i++)
+            {
+                BrawlerController assister = FindRegisteredBrawlerByEntityId(assists[i]);
+                if (assister == null || assister == dying || assister == killer)
+                    continue;
+
+                MatchStats stats = _stats[assister];
+                stats.Assists += 1;
+                _stats[assister] = stats;
+            }
+
+            ListPool<int>.Release(assists);
+        }
+
+        private BrawlerController FindRegisteredBrawlerByEntityId(int entityId)
+        {
+            if (entityId == 0)
+                return null;
+
+            foreach (var kvp in _stats)
+            {
+                BrawlerController brawler = kvp.Key;
+                if (brawler == null)
+                    continue;
+
+                if (brawler.EntityID == entityId)
+                    return brawler;
+            }
+
+            return null;
         }
 
         /// <summary>Look up a brawler's current stats. Returns default
