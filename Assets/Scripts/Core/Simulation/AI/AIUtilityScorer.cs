@@ -110,7 +110,7 @@ namespace MOBA.Core.Simulation.AI
             results.Add(ScoreRetreat(targetInfo, currentTick, macroState));
             results.Add(ScoreUseSuper(targetInfo, macroState));
             results.Add(ScoreHoldRange(targetInfo));
-            results.Add(ScoreReposition(targetInfo, currentTick));
+            results.Add(ScoreReposition(targetInfo, currentTick, macroState));
             results.Add(ScoreApproach(targetInfo, currentTick, macroState));
             results.Add(ScorePeel(currentTick, macroState));
             results.Add(ScoreRegroup(targetInfo, currentTick, macroState));
@@ -1201,7 +1201,10 @@ namespace MOBA.Core.Simulation.AI
       _profile.HoldRangeWeight);
         }
 
-        private AIActionScore ScoreReposition(AITargetInfo targetInfo, uint currentTick)
+        private AIActionScore ScoreReposition(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState)
         {
             if (!targetInfo.HasLiveTarget)
                 return new AIActionScore(AIActionType.Reposition, 0f);
@@ -1231,6 +1234,16 @@ namespace MOBA.Core.Simulation.AI
                 float reloadRepositionBonus = IsArtillery ? 18f : 14f;
                 score += ammoPressure * reloadRepositionBonus;
             }
+
+            CloseRangeMatchupEvaluation closeRange =
+                EvaluateCloseRangeMatchup(
+                    targetInfo,
+                    dist,
+                    currentTick,
+                    macroState);
+
+            if (closeRange.IsActive)
+                score += closeRange.RepositionBonus;
 
             return MakeScore(
      AIActionType.Reposition,
@@ -1272,12 +1285,29 @@ namespace MOBA.Core.Simulation.AI
                 currentTick,
                 macroState);
 
+            CloseRangeMatchupEvaluation closeRange =
+                EvaluateCloseRangeMatchup(
+                    targetInfo,
+                    dist,
+                    currentTick,
+                    macroState);
+
+            if (closeRange.IsActive)
+            {
+                score += closeRange.ApproachDelta;
+                _lastChaseDebug = $"{_lastChaseDebug} CloseRole={closeRange.Reason}";
+            }
+
             if (_teamCoordinator != null &&
                 _teamCoordinator.TryGetFocusTarget(currentTick, out var focusTarget) &&
                 SpatialEntityUtility.IsAlive(focusTarget) &&
                 targetInfo.Target.EntityID == focusTarget.EntityID)
             {
-                score += _profile.FocusFireWeight;
+                float focusBonus = _profile.FocusFireWeight;
+                if (closeRange.IsActive && closeRange.ApproachDelta < 0f)
+                    focusBonus *= 0.35f;
+
+                score += focusBonus;
             }
 
             float reactivePressure = GetReactiveDamagePressure(currentTick);
@@ -1289,7 +1319,11 @@ namespace MOBA.Core.Simulation.AI
                     out ISpatialEntity recentAttacker) &&
                 SpatialEntityUtility.IsSameEntity(targetInfo.Target, recentAttacker))
             {
-                score += _profile.ReactiveAttackerFocusBonus * reactivePressure;
+                float reactiveBonus = _profile.ReactiveAttackerFocusBonus * reactivePressure;
+                if (closeRange.IsActive && closeRange.ApproachDelta < 0f)
+                    reactiveBonus *= 0.35f;
+
+                score += reactiveBonus;
             }
 
             float roleAggression = _self.Definition != null ? _self.Definition.Aggression : 1f;
@@ -2039,6 +2073,169 @@ namespace MOBA.Core.Simulation.AI
             return baseBonus * laneWeight * multiplier;
         }
 
+        private CloseRangeMatchupEvaluation EvaluateCloseRangeMatchup(
+            AITargetInfo targetInfo,
+            float distance,
+            uint currentTick,
+            AIGameModeMacroState macroState)
+        {
+            if (_profile == null ||
+                targetInfo == null ||
+                !targetInfo.HasLiveTarget ||
+                !(targetInfo.Target is BrawlerController targetBrawler) ||
+                targetBrawler.State == null ||
+                !IsCloseRangePressureRole())
+            {
+                return CloseRangeMatchupEvaluation.Inactive;
+            }
+
+            float ownRange = Mathf.Max(1f, GetAbilityMaxRange());
+            float targetRange = Mathf.Max(1f, GetTargetAbilityMaxRange(targetBrawler));
+            float rangeGap = targetRange - ownRange;
+            float meaningfulGap = Mathf.Max(0.85f, ownRange * 0.30f);
+
+            if (rangeGap <= meaningfulGap)
+                return CloseRangeMatchupEvaluation.Inactive;
+
+            float catchDistance = Mathf.Max(
+                ownRange + _profile.AttackRangeBuffer,
+                ownRange * Mathf.Max(1.25f, _profile.CloseRangeCatchDistanceMultiplier));
+
+            float chaseThreshold = Mathf.Clamp(
+                _profile.LowHealthChaseHealthThreshold > 0f
+                    ? _profile.LowHealthChaseHealthThreshold
+                    : _profile.FinisherHealthThreshold,
+                0.05f,
+                0.85f);
+            float targetHealthRatio = targetBrawler.State.CurrentHealth /
+                                      Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
+            int targetCarriedGems = targetBrawler.State.CarriedGemCount;
+            bool targetLow = targetHealthRatio <= chaseThreshold;
+            bool objectiveTarget = targetCarriedGems > 0 ||
+                                   IsModeCriticalTarget(targetBrawler, macroState);
+            bool superReady = _self.State != null &&
+                              _self.State.SuperCharge.IsReady;
+            bool teamCollapse = HasTeamCollapseOnTarget(targetBrawler, currentTick);
+            bool catchable =
+                distance <= catchDistance ||
+                targetLow ||
+                objectiveTarget ||
+                superReady ||
+                teamCollapse;
+
+            float overReach = Mathf.Max(0f, distance - catchDistance);
+
+            if (catchable)
+            {
+                float engageBonus = Mathf.Max(0f, _profile.CloseRangeEvasivePressureBonus);
+
+                if (targetLow)
+                    engageBonus += _profile.ChaseCommitScoreBonus * 0.55f;
+
+                if (objectiveTarget)
+                    engageBonus += Mathf.Min(18f, 6f + targetCarriedGems * 4f);
+
+                if (superReady)
+                    engageBonus += 8f;
+
+                if (teamCollapse)
+                    engageBonus += 8f;
+
+                float repositionBonus =
+                    Mathf.Max(0f, _profile.CloseRangeEvasivePressureBonus) *
+                    (distance > ownRange + _profile.AttackRangeBuffer ? 0.75f : 0.35f);
+
+                return new CloseRangeMatchupEvaluation(
+                    true,
+                    engageBonus,
+                    repositionBonus,
+                    $"engage rangeGap={rangeGap:0.0} dist={distance:0.0} catch={catchDistance:0.0}");
+            }
+
+            float penalty =
+                Mathf.Max(0f, _profile.CloseRangeOutrangedChasePenalty) +
+                overReach * 5f +
+                rangeGap * 2.5f;
+
+            if (macroState.Call == AIGameModeMacroCall.Hold ||
+                macroState.Call == AIGameModeMacroCall.Reset ||
+                macroState.OwnTeamHasCountdown)
+            {
+                penalty += 10f;
+            }
+
+            if (_self.State != null)
+            {
+                float healthRatio = _self.State.CurrentHealth /
+                                    Mathf.Max(1f, _self.State.MaxHealth.Value);
+                if (healthRatio <= _profile.LowHealthRetreatRatio + 0.20f)
+                    penalty += 12f;
+            }
+
+            float coverBonus =
+                Mathf.Max(0f, _profile.CloseRangeCoverRepositionBonus) +
+                Mathf.Min(16f, overReach * 4f);
+
+            return new CloseRangeMatchupEvaluation(
+                true,
+                -penalty,
+                coverBonus,
+                $"cover_outmatched rangeGap={rangeGap:0.0} dist={distance:0.0} catch={catchDistance:0.0}");
+        }
+
+        private bool IsCloseRangePressureRole()
+        {
+            if (IsTank || IsAssassin)
+                return true;
+
+            return IsFighter && GetAbilityMaxRange() <= 4.75f;
+        }
+
+        private static float GetTargetAbilityMaxRange(BrawlerController target)
+        {
+            if (target == null)
+                return 6f;
+
+            AbilityDefinition attack = target.State != null
+                ? target.State.GetCurrentMainAttackDefinition()
+                : target.Definition?.MainAttack;
+
+            return attack != null ? attack.GetAIMaxRange() : 6f;
+        }
+
+        private bool IsModeCriticalTarget(
+            BrawlerController target,
+            AIGameModeMacroState macroState)
+        {
+            if (target == null)
+                return false;
+
+            if (macroState.Mode == GameModeId.BrawlBall)
+            {
+                BrawlBallMode mode = BrawlBallMode.Instance;
+                return mode != null &&
+                       SpatialEntityUtility.IsSameEntity(mode.BallCarrier, target);
+            }
+
+            return macroState.Mode == GameModeId.Knockout &&
+                   macroState.Call == AIGameModeMacroCall.Push &&
+                   macroState.Phase == AIGameModeObjectivePhase.FinalPressure;
+        }
+
+        private bool HasTeamCollapseOnTarget(BrawlerController target, uint currentTick)
+        {
+            if (_teamCoordinator == null || target == null)
+                return false;
+
+            return _teamCoordinator.TryGetFocusDirective(
+                       currentTick,
+                       out BrawlerController focusTarget,
+                       out float urgency,
+                       out _) &&
+                   urgency >= 1.35f &&
+                   SpatialEntityUtility.IsSameEntity(focusTarget, target);
+        }
+
         private float GetChaseDisciplineDelta(
             AITargetInfo targetInfo,
             float distance,
@@ -2256,6 +2453,29 @@ namespace MOBA.Core.Simulation.AI
 
             int walkableNeighbors = pathfinder.CountWalkableNeighbors(targetCoords);
             return walkableNeighbors <= 2 && !IsTank;
+        }
+
+        private readonly struct CloseRangeMatchupEvaluation
+        {
+            public static readonly CloseRangeMatchupEvaluation Inactive =
+                new CloseRangeMatchupEvaluation(false, 0f, 0f, "inactive");
+
+            public readonly bool IsActive;
+            public readonly float ApproachDelta;
+            public readonly float RepositionBonus;
+            public readonly string Reason;
+
+            public CloseRangeMatchupEvaluation(
+                bool isActive,
+                float approachDelta,
+                float repositionBonus,
+                string reason)
+            {
+                IsActive = isActive;
+                ApproachDelta = approachDelta;
+                RepositionBonus = repositionBonus;
+                Reason = reason;
+            }
         }
 
         private float GetObjectiveCrowdingPenalty()

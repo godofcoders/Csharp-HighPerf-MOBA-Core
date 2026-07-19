@@ -443,6 +443,14 @@ namespace MOBA.Core.Simulation.AI
             profile.ChaseCommitScoreBonus = Mathf.Clamp(profile.ChaseCommitScoreBonus, 0f, 35f);
             profile.ChaseDisengageScorePenalty = Mathf.Clamp(profile.ChaseDisengageScorePenalty, 0f, 90f);
             profile.BadMapChasePenalty = Mathf.Clamp(profile.BadMapChasePenalty, 0f, 60f);
+            profile.CloseRangeCatchDistanceMultiplier =
+                Mathf.Clamp(profile.CloseRangeCatchDistanceMultiplier, 1.25f, 4.0f);
+            profile.CloseRangeOutrangedChasePenalty =
+                Mathf.Clamp(profile.CloseRangeOutrangedChasePenalty, 0f, 90f);
+            profile.CloseRangeCoverRepositionBonus =
+                Mathf.Clamp(profile.CloseRangeCoverRepositionBonus, 0f, 70f);
+            profile.CloseRangeEvasivePressureBonus =
+                Mathf.Clamp(profile.CloseRangeEvasivePressureBonus, 0f, 40f);
 
             profile.TacticalMoveRetargetTicks = ClampTicks(profile.TacticalMoveRetargetTicks, 1, 45);
             profile.TacticalMoveHeartbeatTicks = ClampTicks(profile.TacticalMoveHeartbeatTicks, 1, 60);
@@ -776,6 +784,18 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.BadMapChasePenalty <= 0f)
                 profile.BadMapChasePenalty = 24f;
+
+            if (profile.CloseRangeCatchDistanceMultiplier <= 0f)
+                profile.CloseRangeCatchDistanceMultiplier = 2.35f;
+
+            if (profile.CloseRangeOutrangedChasePenalty <= 0f)
+                profile.CloseRangeOutrangedChasePenalty = 52f;
+
+            if (profile.CloseRangeCoverRepositionBonus <= 0f)
+                profile.CloseRangeCoverRepositionBonus = 26f;
+
+            if (profile.CloseRangeEvasivePressureBonus <= 0f)
+                profile.CloseRangeEvasivePressureBonus = 12f;
         }
 
         private static void ApplyFairPlayGuardrails(BrawlerAIProfile profile)

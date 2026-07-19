@@ -147,6 +147,16 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Approach score removed when a chase would enter bad map geometry without a valuable target.")]
         public float BadMapChasePenalty = 24f;
 
+        [Header("Close Range Role Strategy")]
+        [Tooltip("Short-range roles can freely chase until this multiple of their own attack range. Past this, they need a finisher, objective, super, or team-collapse reason.")]
+        public float CloseRangeCatchDistanceMultiplier = 2.35f;
+        [Tooltip("Approach score removed when a short-range brawler is badly outranged and the chase has no concrete payoff.")]
+        public float CloseRangeOutrangedChasePenalty = 52f;
+        [Tooltip("Reposition score added when a short-range brawler should break line, take cover, or rotate instead of chasing forever.")]
+        public float CloseRangeCoverRepositionBonus = 26f;
+        [Tooltip("Approach/reposition pressure added when a short-range brawler has a valid engage but should close with evasive footwork.")]
+        public float CloseRangeEvasivePressureBonus = 12f;
+
         [Header("Game Mode Macro")]
         [Tooltip("Scales score deltas from mode-level push/hold/reset macro calls.")]
         public float MacroActionBiasWeight = 1f;
@@ -899,6 +909,10 @@ namespace MOBA.Core.Simulation.AI
             ChaseCommitScoreBonus = 10f;
             ChaseDisengageScorePenalty = 42f;
             BadMapChasePenalty = 24f;
+            CloseRangeCatchDistanceMultiplier = 2.35f;
+            CloseRangeOutrangedChasePenalty = 52f;
+            CloseRangeCoverRepositionBonus = 26f;
+            CloseRangeEvasivePressureBonus = 12f;
 
             switch (archetype)
             {
@@ -926,6 +940,10 @@ namespace MOBA.Core.Simulation.AI
                     LowHealthChaseMaxTicks = 100;
                     ChaseDisengageScorePenalty = 34f;
                     BadMapChasePenalty = 16f;
+                    CloseRangeCatchDistanceMultiplier = 2.45f;
+                    CloseRangeOutrangedChasePenalty = 58f;
+                    CloseRangeCoverRepositionBonus = 30f;
+                    CloseRangeEvasivePressureBonus = 15f;
                     break;
 
                 case BrawlerArchetype.Assassin:
@@ -942,6 +960,10 @@ namespace MOBA.Core.Simulation.AI
                     ChaseCommitScoreBonus = 16f;
                     ChaseDisengageScorePenalty = 30f;
                     BadMapChasePenalty = 14f;
+                    CloseRangeCatchDistanceMultiplier = 2.80f;
+                    CloseRangeOutrangedChasePenalty = 44f;
+                    CloseRangeCoverRepositionBonus = 24f;
+                    CloseRangeEvasivePressureBonus = 18f;
                     break;
 
                 case BrawlerArchetype.Support:

@@ -1719,6 +1719,7 @@ namespace MOBA.Core.Simulation.AI
                 Vector3 destination = BuildTacticalApproachDestination(
                     targetInfo,
                     currentTick,
+                    attackRange,
                     idealRange);
 
                 _navAgent.RequestDestination(
@@ -1850,6 +1851,7 @@ namespace MOBA.Core.Simulation.AI
                 Vector3 destination = BuildTacticalRepositionDestination(
                     targetInfo,
                     currentTick,
+                    attackRange,
                     idealRange);
 
                 _navAgent.RequestDestination(
@@ -2865,6 +2867,57 @@ namespace MOBA.Core.Simulation.AI
                    _profile.Archetype == BrawlerArchetype.Artillery;
         }
 
+        private bool IsCloseRangePressureArchetype(float attackRange)
+        {
+            if (_profile.Archetype == BrawlerArchetype.Tank ||
+                _profile.Archetype == BrawlerArchetype.Assassin)
+            {
+                return true;
+            }
+
+            return _profile.Archetype == BrawlerArchetype.Fighter &&
+                   attackRange <= 4.75f;
+        }
+
+        private bool ShouldUseEvasiveCloseRangeApproach(
+            ISpatialEntity target,
+            float distance,
+            float attackRange,
+            float preferredRange)
+        {
+            if (!IsCloseRangePressureArchetype(attackRange) ||
+                !(target is BrawlerController targetBrawler))
+            {
+                return false;
+            }
+
+            float safeAttackRange = Mathf.Max(1f, attackRange);
+            float targetRange = Mathf.Max(1f, GetTargetAbilityMaxRange(targetBrawler));
+            float rangeGap = targetRange - safeAttackRange;
+            float meaningfulGap = Mathf.Max(0.85f, safeAttackRange * 0.30f);
+
+            if (rangeGap <= meaningfulGap)
+                return false;
+
+            float catchDistance = Mathf.Max(
+                safeAttackRange + _profile.AttackRangeBuffer,
+                safeAttackRange * Mathf.Max(1.25f, _profile.CloseRangeCatchDistanceMultiplier));
+
+            return distance > Mathf.Max(catchDistance * 0.70f, preferredRange * 1.10f);
+        }
+
+        private static float GetTargetAbilityMaxRange(BrawlerController target)
+        {
+            if (target == null)
+                return 6f;
+
+            AbilityDefinition attack = target.State != null
+                ? target.State.GetCurrentMainAttackDefinition()
+                : target.Definition?.MainAttack;
+
+            return attack != null ? attack.GetAIMaxRange() : 6f;
+        }
+
         private float GetTacticalPreferredRange(float idealRange)
         {
             float preferred = _profile.GetPreferredAttackRange(idealRange);
@@ -3061,6 +3114,7 @@ namespace MOBA.Core.Simulation.AI
         private Vector3 BuildTacticalRepositionDestination(
       AITargetInfo targetInfo,
       uint currentTick,
+      float attackRange,
       float idealRange)
         {
             if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
@@ -3095,6 +3149,26 @@ namespace MOBA.Core.Simulation.AI
 
             AITacticalMovementIntent intent;
             Vector3 destination;
+
+            if (ShouldUseEvasiveCloseRangeApproach(
+                    targetInfo.Target,
+                    dist,
+                    attackRange,
+                    preferredRange))
+            {
+                intent = AITacticalMovementIntent.RepositionAngle;
+
+                destination =
+                    selfPos +
+                    awayFromTarget * (_profile.TacticalKiteDistance * 0.70f) +
+                    side * (_profile.TacticalStrafeDistance * 1.35f);
+
+                return CommitTacticalMove(
+                    intent,
+                    destination,
+                    currentTick,
+                    $"reposition_close_range_cover dist={dist:0.0} preferred={preferredRange:0.0} range={attackRange:0.0}");
+            }
 
             if (IsFragileArchetype())
             {
@@ -3151,6 +3225,7 @@ namespace MOBA.Core.Simulation.AI
         private Vector3 BuildTacticalApproachDestination(
       AITargetInfo targetInfo,
       uint currentTick,
+      float attackRange,
       float idealRange)
         {
             if (targetInfo == null || !targetInfo.HasLiveTarget || targetInfo.Target == null)
@@ -3185,6 +3260,30 @@ namespace MOBA.Core.Simulation.AI
 
             AITacticalMovementIntent intent;
             Vector3 destination;
+
+            if (ShouldUseEvasiveCloseRangeApproach(
+                    targetInfo.Target,
+                    dist,
+                    attackRange,
+                    preferredRange))
+            {
+                intent = AITacticalMovementIntent.RepositionAngle;
+
+                float forwardStep = Mathf.Min(
+                    Mathf.Max(1.0f, dist - attackRange * 0.85f),
+                    Mathf.Max(1.2f, _profile.RepositionStepDistance * 1.15f));
+
+                destination =
+                    selfPos +
+                    toTarget * forwardStep +
+                    side * (_profile.TacticalStrafeDistance * 1.25f);
+
+                return CommitTacticalMove(
+                    intent,
+                    destination,
+                    currentTick,
+                    $"approach_close_range_evasive dist={dist:0.0} preferred={preferredRange:0.0} range={attackRange:0.0}");
+            }
 
             if (_profile.Archetype == BrawlerArchetype.Assassin)
             {
