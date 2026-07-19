@@ -434,6 +434,8 @@ namespace MOBA.Core.Simulation
             if (winner == TeamType.Blue) BlueRoundsWon++;
             else if (winner == TeamType.Red) RedRoundsWon++;
 
+            KnockoutEventBus.RaiseRoundEnded(winner, CurrentRound, BlueRoundsWon, RedRoundsWon);
+
             if (BlueRoundsWon >= _roundsToWin || RedRoundsWon >= _roundsToWin)
             {
                 TeamType matchWinner = BlueRoundsWon > RedRoundsWon ? TeamType.Blue : TeamType.Red;
@@ -491,6 +493,20 @@ namespace MOBA.Core.Simulation
                 _poisonCloud = GetComponent<KnockoutPoisonCloud>();
 
             return _poisonCloud;
+        }
+    }
+
+    public static class KnockoutEventBus
+    {
+        public static System.Action<TeamType, int, int, int> OnRoundEnded;
+
+        public static void RaiseRoundEnded(
+            TeamType winner,
+            int roundNumber,
+            int blueRoundsWon,
+            int redRoundsWon)
+        {
+            OnRoundEnded?.Invoke(winner, roundNumber, blueRoundsWon, redRoundsWon);
         }
     }
 }

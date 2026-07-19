@@ -36,6 +36,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField, Min(0f)] private float _goalHoldSeconds = 1.1f;
         [SerializeField] private string _blueGoalLabel = "BLUE GOAL!";
         [SerializeField] private string _redGoalLabel = "RED GOAL!";
+        [SerializeField] private string _blueRoundWinLabel = "BLUE WINS ROUND";
+        [SerializeField] private string _redRoundWinLabel = "RED WINS ROUND";
+        [SerializeField] private string _roundDrawLabel = "ROUND DRAW";
         [SerializeField] private string _matchStartsFormat = "MATCH STARTS IN {0}";
         [SerializeField] private Color _countdownBadgeColor = new Color(0f, 0f, 0f, 0.52f);
         [SerializeField] private Color _goalBadgeColor = new Color(0f, 0f, 0f, 0.36f);
@@ -58,11 +61,13 @@ namespace MOBA.Core.Infrastructure
         private void OnEnable()
         {
             BrawlBallEventBus.OnGoalScored += HandleBrawlBallGoalScored;
+            KnockoutEventBus.OnRoundEnded += HandleKnockoutRoundEnded;
         }
 
         private void OnDisable()
         {
             BrawlBallEventBus.OnGoalScored -= HandleBrawlBallGoalScored;
+            KnockoutEventBus.OnRoundEnded -= HandleKnockoutRoundEnded;
         }
 
         public void BindOverlay(GameObject overlayRoot, TMP_Text bigTextTmp, Text bigTextLegacy)
@@ -154,6 +159,25 @@ namespace MOBA.Core.Infrastructure
                 _goalMessage = _redGoalLabel;
             else
                 _goalMessage = "GOAL!";
+
+            _goalMessageUntil = Time.time + Mathf.Max(0f, _goalHoldSeconds);
+            ApplyGoalPresentation();
+            SetText(_goalMessage);
+            Show(true);
+        }
+
+        private void HandleKnockoutRoundEnded(
+            TeamType winningTeam,
+            int roundNumber,
+            int blueRoundsWon,
+            int redRoundsWon)
+        {
+            if (winningTeam == TeamType.Blue)
+                _goalMessage = _blueRoundWinLabel;
+            else if (winningTeam == TeamType.Red)
+                _goalMessage = _redRoundWinLabel;
+            else
+                _goalMessage = _roundDrawLabel;
 
             _goalMessageUntil = Time.time + Mathf.Max(0f, _goalHoldSeconds);
             ApplyGoalPresentation();
