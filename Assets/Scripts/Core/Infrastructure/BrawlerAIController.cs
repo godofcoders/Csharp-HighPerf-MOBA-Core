@@ -1303,17 +1303,18 @@ $"Map={LastMapRouteDebug}";
         }
 
 #if UNITY_EDITOR
-        private static readonly Color SceneObjectiveColor = new Color(1f, 0.84f, 0.18f, 0.85f);
-        private static readonly Color SceneDestinationColor = new Color(0.18f, 0.95f, 1f, 0.95f);
-        private static readonly Color SceneWaypointColor = new Color(0.25f, 1f, 0.35f, 0.95f);
-        private static readonly Color SceneBlockedColor = new Color(1f, 0.20f, 0.15f, 0.95f);
-        private static readonly Color SceneHighPriorityColor = new Color(1f, 0.55f, 0.08f, 0.98f);
-        private static readonly Color ScenePathColor = new Color(0.30f, 0.72f, 1f, 0.72f);
+        private static readonly Color SceneObjectiveColor = new Color(0.62f, 0.24f, 1f, 0.92f);
+        private static readonly Color SceneDestinationColor = new Color(0.00f, 0.96f, 1f, 0.98f);
+        private static readonly Color SceneWaypointColor = new Color(0.12f, 1f, 0.46f, 0.98f);
+        private static readonly Color SceneBlockedColor = new Color(1f, 0.05f, 0.14f, 0.98f);
+        private static readonly Color SceneHighPriorityColor = new Color(1f, 0.12f, 0.92f, 0.98f);
+        private static readonly Color ScenePathColor = new Color(0.18f, 0.48f, 1f, 0.82f);
         private static readonly Color SceneFacingColor = new Color(0.88f, 0.88f, 1f, 0.78f);
-        private static readonly Color ScenePreferredRangeColor = new Color(0.22f, 0.68f, 1f, 0.42f);
-        private static readonly Color SceneTooCloseRangeColor = new Color(1f, 0.18f, 0.08f, 0.36f);
-        private static readonly Color SceneMoveColor = new Color(0.55f, 0.90f, 1f, 0.95f);
-        private static readonly Color SceneTargetColor = new Color(1f, 0.30f, 0.75f, 0.88f);
+        private static readonly Color ScenePreferredRangeColor = new Color(0.00f, 0.86f, 1f, 0.48f);
+        private static readonly Color SceneTooCloseRangeColor = new Color(1f, 0.04f, 0.24f, 0.42f);
+        private static readonly Color SceneMoveColor = new Color(0.22f, 1f, 0.88f, 0.98f);
+        private static readonly Color SceneTargetColor = new Color(1f, 0.08f, 0.72f, 0.92f);
+        private static readonly Color SceneLabelMutedColor = new Color(0.78f, 0.94f, 1f, 0.96f);
         private const int SceneDebugMaxPathNodes = 28;
         private static GUIStyle _sceneDebugLabelStyle;
         private static readonly System.Collections.Generic.List<Vector3> SceneDebugPathNodes =
@@ -1519,7 +1520,7 @@ $"Map={LastMapRouteDebug}";
                     LastObjectiveCenter,
                     Mathf.Max(0.35f, LastObjectiveRadius));
                 Gizmos.DrawWireSphere(LastObjectiveSlot + Vector3.up * 0.05f, selected ? 0.48f : 0.34f);
-                Gizmos.DrawLine(LastObjectiveCenter, LastObjectiveSlot);
+                DrawBoldLine(LastObjectiveCenter, LastObjectiveSlot, SceneObjectiveColor, selected ? 3.2f : 2f);
 
                 if (selected)
                 {
@@ -1547,14 +1548,23 @@ $"Map={LastMapRouteDebug}";
 
             DrawPathBreadcrumbs(selected, destinationColor);
 
-            Gizmos.color = _navAgent.DebugHasSteeringTarget ? SceneWaypointColor : destinationColor;
-            Gizmos.DrawLine(origin + Vector3.up * 0.12f, waypoint + Vector3.up * 0.12f);
+            Color waypointColor = _navAgent.DebugHasSteeringTarget ? SceneWaypointColor : destinationColor;
+            Gizmos.color = waypointColor;
+            DrawBoldLine(
+                origin + Vector3.up * 0.12f,
+                waypoint + Vector3.up * 0.12f,
+                waypointColor,
+                selected ? 3.4f : 2.2f);
             Gizmos.DrawWireSphere(waypoint + Vector3.up * 0.08f, selected ? 0.32f : 0.24f);
 
             if (PlanarDistance(waypoint, destination) > 0.2f)
             {
                 Gizmos.color = destinationColor;
-                Gizmos.DrawLine(waypoint + Vector3.up * 0.10f, destination + Vector3.up * 0.10f);
+                DrawBoldLine(
+                    waypoint + Vector3.up * 0.10f,
+                    destination + Vector3.up * 0.10f,
+                    destinationColor,
+                    selected ? 2.8f : 1.8f);
             }
 
             Gizmos.color = destinationColor;
@@ -1565,8 +1575,13 @@ $"Map={LastMapRouteDebug}";
             if (LastTacticalMovementIntent != AITacticalMovementIntent.None &&
                 PlanarDistance(origin, LastTacticalMoveDestination) > 0.2f)
             {
-                Gizmos.color = WithAlpha(SceneDestinationColor, selected ? 0.58f : 0.36f);
-                Gizmos.DrawLine(origin + Vector3.up * 0.20f, LastTacticalMoveDestination + Vector3.up * 0.20f);
+                Color tacticalDestinationColor = WithAlpha(SceneDestinationColor, selected ? 0.68f : 0.46f);
+                Gizmos.color = tacticalDestinationColor;
+                DrawBoldLine(
+                    origin + Vector3.up * 0.20f,
+                    LastTacticalMoveDestination + Vector3.up * 0.20f,
+                    tacticalDestinationColor,
+                    selected ? 2.6f : 1.6f);
                 Gizmos.DrawWireSphere(LastTacticalMoveDestination + Vector3.up * 0.12f, selected ? 0.24f : 0.18f);
             }
         }
@@ -1581,8 +1596,13 @@ $"Map={LastMapRouteDebug}";
             }
 
             Vector3 targetPosition = _targetInfo.Target.Position;
-            Gizmos.color = WithAlpha(SceneTargetColor, selected ? 0.92f : 0.48f);
-            Gizmos.DrawLine(origin + Vector3.up * 0.35f, targetPosition + Vector3.up * 0.35f);
+            Color targetColor = WithAlpha(SceneTargetColor, selected ? 0.92f : 0.54f);
+            Gizmos.color = targetColor;
+            DrawBoldLine(
+                origin + Vector3.up * 0.35f,
+                targetPosition + Vector3.up * 0.35f,
+                targetColor,
+                selected ? 3f : 1.8f);
             if (selected)
                 Gizmos.DrawWireSphere(targetPosition + Vector3.up * 0.10f, 0.42f);
         }
@@ -1657,7 +1677,7 @@ $"Map={LastMapRouteDebug}";
             {
                 Vector3 current = SceneDebugPathNodes[i] + Vector3.up * 0.07f;
                 if (i > 0)
-                    Gizmos.DrawLine(previous, current);
+                    DrawBoldLine(previous, current, pathColor, selected ? 2.5f : 1.5f);
 
                 float radius = i == 0
                     ? selected ? 0.18f : 0.12f
@@ -1698,7 +1718,7 @@ $"Map={LastMapRouteDebug}";
             GUIStyle style = ResolveSceneDebugLabelStyle();
             style.normal.textColor = _navAgent != null && _navAgent.IsRouteBlocked
                 ? SceneBlockedColor
-                : selected ? Color.white : new Color(0.82f, 0.95f, 1f, 0.95f);
+                : selected ? Color.white : SceneLabelMutedColor;
 
             Handles.Label(
                 origin + Vector3.up * Mathf.Max(0.6f, _sceneDebugLabelHeight),
@@ -1717,19 +1737,20 @@ $"Map={LastMapRouteDebug}";
             if (!selected)
             {
                 return
-                    $"{brawlerName} | {_lastChosenAction.ActionType} {_lastChosenAction.Score:0.0}\n" +
-                    $"Move {LastTacticalMovementIntent} | {navState}\n" +
-                    $"Target {targetName}";
+                    $"{SceneRich(brawlerName, Color.white)} | {SceneRich(_lastChosenAction.ActionType.ToString(), ResolveActionColor(_lastChosenAction.ActionType))} " +
+                    $"{SceneRich(_lastChosenAction.Score.ToString("0.0"), SceneLabelMutedColor)}\n" +
+                    $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} | {SceneRich(navState, ResolveNavigationColor())}\n" +
+                    $"{SceneRich("Target", SceneTargetColor)} {targetName}";
             }
 
             return
-                $"{brawlerName} [{(_brawler != null ? _brawler.Team.ToString() : "?")}]\n" +
-                $"Action {_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}\n" +
-                $"Top {BuildTopActionScoreSummary(4)}\n" +
-                $"Target {targetName} focus={CurrentTargetFocusCount}/{CurrentTargetAllyFocusCount} penalty={CurrentTargetOverFocusPenalty:0.0}\n" +
-                $"Move {LastTacticalMovementIntent} reason={LastTacticalMoveReason}\n" +
-                $"{navState} | {LastTacticalStopDebug}\n" +
-                $"Obj {LastObjectiveType} {LastObjectiveName} role={LastObjectiveSlotRole}->{LastObjectiveDesiredSlotRole}\n" +
+                $"{SceneRich(brawlerName, Color.white)} [{SceneRich(_brawler != null ? _brawler.Team.ToString() : "?", SceneLabelMutedColor)}]\n" +
+                $"{SceneRich("Action", ResolveActionColor(_lastChosenAction.ActionType))} {_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}\n" +
+                $"{SceneRich("Top", SceneObjectiveColor)} {BuildTopActionScoreSummary(4)}\n" +
+                $"{SceneRich("Target", SceneTargetColor)} {targetName} focus={CurrentTargetFocusCount}/{CurrentTargetAllyFocusCount} penalty={CurrentTargetOverFocusPenalty:0.0}\n" +
+                $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} reason={LastTacticalMoveReason}\n" +
+                $"{SceneRich(navState, ResolveNavigationColor())} | {LastTacticalStopDebug}\n" +
+                $"{SceneRich("Obj", SceneObjectiveColor)} {LastObjectiveType} {LastObjectiveName} role={LastObjectiveSlotRole}->{LastObjectiveDesiredSlotRole}\n" +
                 $"{FailureRecoveryDebug}";
         }
 
@@ -1781,42 +1802,53 @@ $"Map={LastMapRouteDebug}";
             return transform.position;
         }
 
+        private Color ResolveNavigationColor()
+        {
+            if (_navAgent != null && _navAgent.IsRouteBlocked)
+                return SceneBlockedColor;
+
+            if (_navAgent != null && _navAgent.DebugHasPath)
+                return ScenePathColor;
+
+            return SceneDestinationColor;
+        }
+
         private static Color ResolveActionColor(AIActionType actionType)
         {
             switch (actionType)
             {
                 case AIActionType.Approach:
-                    return new Color(1f, 0.46f, 0.18f, 0.95f);
+                    return new Color(1f, 0.08f, 0.72f, 0.98f);
 
                 case AIActionType.HoldRange:
-                    return new Color(0.28f, 0.76f, 1f, 0.95f);
+                    return new Color(0.00f, 0.92f, 1f, 0.98f);
 
                 case AIActionType.Reposition:
-                    return new Color(0.55f, 0.96f, 0.70f, 0.95f);
+                    return new Color(0.16f, 1f, 0.45f, 0.98f);
 
                 case AIActionType.Retreat:
-                    return new Color(1f, 0.18f, 0.16f, 0.95f);
+                    return new Color(1f, 0.05f, 0.14f, 0.98f);
 
                 case AIActionType.Evade:
-                    return new Color(1f, 0.88f, 0.12f, 0.95f);
+                    return new Color(0.80f, 0.18f, 1f, 0.98f);
 
                 case AIActionType.UseSuper:
-                    return new Color(0.82f, 0.28f, 1f, 0.95f);
+                    return new Color(0.48f, 0.18f, 1f, 0.98f);
 
                 case AIActionType.Regroup:
-                    return new Color(0.38f, 0.62f, 1f, 0.95f);
+                    return new Color(0.16f, 0.50f, 1f, 0.98f);
 
                 case AIActionType.Peel:
-                    return new Color(0.16f, 1f, 0.96f, 0.95f);
+                    return new Color(0.00f, 1f, 0.78f, 0.98f);
 
                 case AIActionType.Objective:
-                    return new Color(1f, 0.72f, 0.16f, 0.95f);
+                    return new Color(0.58f, 0.22f, 1f, 0.98f);
 
                 case AIActionType.Search:
-                    return new Color(0.62f, 0.82f, 1f, 0.95f);
+                    return new Color(0.58f, 0.82f, 1f, 0.98f);
 
                 case AIActionType.Wander:
-                    return new Color(0.72f, 0.72f, 0.72f, 0.86f);
+                    return new Color(0.78f, 0.94f, 1f, 0.90f);
 
                 default:
                     return new Color(0.92f, 0.92f, 0.92f, 0.86f);
@@ -1835,9 +1867,17 @@ $"Map={LastMapRouteDebug}";
             float headLength = Mathf.Min(0.35f, vector.magnitude * 0.35f);
 
             Gizmos.color = color;
-            Gizmos.DrawLine(origin, end);
-            Gizmos.DrawLine(end, end + right * headLength);
-            Gizmos.DrawLine(end, end + left * headLength);
+            DrawBoldLine(origin, end, color, 3.2f);
+            DrawBoldLine(end, end + right * headLength, color, 3.2f);
+            DrawBoldLine(end, end + left * headLength, color, 3.2f);
+        }
+
+        private static void DrawBoldLine(Vector3 from, Vector3 to, Color color, float width)
+        {
+            Handles.color = color;
+            Handles.DrawAAPolyLine(Mathf.Max(1f, width), from, to);
+            Gizmos.color = color;
+            Gizmos.DrawLine(from, to);
         }
 
         private static GUIStyle ResolveSceneDebugLabelStyle()
@@ -1847,12 +1887,18 @@ $"Map={LastMapRouteDebug}";
 
             _sceneDebugLabelStyle = new GUIStyle(EditorStyles.boldLabel)
             {
-                richText = false,
-                fontSize = 11,
+                richText = true,
+                fontSize = 13,
+                fontStyle = FontStyle.Bold,
                 alignment = TextAnchor.UpperLeft
             };
             _sceneDebugLabelStyle.normal.textColor = Color.white;
             return _sceneDebugLabelStyle;
+        }
+
+        private static string SceneRich(string text, Color color)
+        {
+            return $"<color=#{ColorUtility.ToHtmlStringRGB(color)}><b>{text}</b></color>";
         }
 
         private static Color WithAlpha(Color color, float alpha)
