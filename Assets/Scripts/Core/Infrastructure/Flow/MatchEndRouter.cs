@@ -99,13 +99,18 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
+            bool soloShowdown = SceneSelection.SelectedMode == GameModeId.SoloShowdown;
+            BrawlerController localPlayer = soloShowdown
+                ? ResolveLocalPlayerBrawler()
+                : null;
+            bool restrictToLocalPlayer = soloShowdown && localPlayer != null;
             BrawlerController starPlayer = null;
             float bestScore = float.NegativeInfinity;
 
             foreach (KeyValuePair<BrawlerController, MatchStats> kvp in tracker.Stats)
             {
                 BrawlerController brawler = kvp.Key;
-                if (brawler == null)
+                if (ShouldSkipResultEntry(brawler, restrictToLocalPlayer, localPlayer))
                     continue;
 
                 MatchStats stats = kvp.Value;
@@ -130,7 +135,7 @@ namespace MOBA.Core.Infrastructure
             foreach (KeyValuePair<BrawlerController, MatchStats> kvp in tracker.Stats)
             {
                 BrawlerController brawler = kvp.Key;
-                if (brawler == null)
+                if (ShouldSkipResultEntry(brawler, restrictToLocalPlayer, localPlayer))
                     continue;
 
                 MatchStats stats = kvp.Value;
@@ -151,7 +156,8 @@ namespace MOBA.Core.Infrastructure
                     Definition = brawler.Definition,
                     Stats = stats,
                     StarScore = starScore,
-                    IsStarPlayer = brawler == starPlayer
+                    IsStarPlayer = brawler == starPlayer,
+                    IsLocalPlayer = brawler == localPlayer
                 });
             }
 
@@ -164,6 +170,17 @@ namespace MOBA.Core.Infrastructure
 
             entries.Sort(CompareResultEntries);
             MatchResultBoard.CaptureEntries(entries.ToArray());
+        }
+
+        private static bool ShouldSkipResultEntry(
+            BrawlerController brawler,
+            bool restrictToLocalPlayer,
+            BrawlerController localPlayer)
+        {
+            if (brawler == null)
+                return true;
+
+            return restrictToLocalPlayer && brawler != localPlayer;
         }
 
         private static float ComputeStarScore(

@@ -44,7 +44,7 @@ namespace MOBA.Core.Infrastructure
             bool hasRuntimeEntries = MatchResultBoard.Entries != null &&
                                      MatchResultBoard.Entries.Length > 0;
             string winnerStr = ResolveWinnerText();
-            string scoreStr = $"Blue {MatchResultBoard.BlueScore} — Red {MatchResultBoard.RedScore}";
+            string scoreStr = ResolveScoreText();
 
             if (_winnerTextTmp != null) _winnerTextTmp.text = winnerStr;
             else if (_winnerTextLegacy != null) _winnerTextLegacy.text = winnerStr;
@@ -88,6 +88,22 @@ namespace MOBA.Core.Infrastructure
 
             Transform parent = transform;
             BuildRuntimeModelShowcase(parent, entries);
+
+            if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
+            {
+                CreateTeamPanel(
+                    parent,
+                    MatchResultBoard.LocalPlayerTeam,
+                    CollectSoloEntries(entries),
+                    new Vector2(0f, -142f),
+                    MatchResultBoard.LocalPlayerWon,
+                    "YOUR STATS",
+                    string.Empty);
+
+                MoveButton(_continueButton, new Vector2(-170f, -482f));
+                MoveButton(_rematchButton, new Vector2(170f, -482f));
+                return;
+            }
 
             CreateTeamPanel(
                 parent,
@@ -146,19 +162,40 @@ namespace MOBA.Core.Infrastructure
             return result;
         }
 
+        private static List<MatchResultEntry> CollectSoloEntries(MatchResultEntry[] entries)
+        {
+            List<MatchResultEntry> localEntries = new List<MatchResultEntry>(1);
+            if (entries == null)
+                return localEntries;
+
+            for (int i = 0; i < entries.Length; i++)
+            {
+                if (entries[i].IsLocalPlayer)
+                    localEntries.Add(entries[i]);
+            }
+
+            if (localEntries.Count > 0)
+                return localEntries;
+
+            for (int i = 0; i < entries.Length; i++)
+                localEntries.Add(entries[i]);
+
+            return localEntries;
+        }
+
         private static void CreateTeamPanel(
             Transform parent,
             TeamType team,
             List<MatchResultEntry> entries,
             Vector2 anchoredPosition,
-            bool isWinner)
+            bool isWinner,
+            string titleOverride = null,
+            string scoreOverride = null)
         {
             GameObject panel = CreatePanel(
                 parent,
                 team + "ResultPanel",
-                team == TeamType.Blue
-                    ? new Color(0.035f, 0.090f, 0.230f, 0.94f)
-                    : new Color(0.235f, 0.035f, 0.055f, 0.94f));
+                ResolvePanelColor(team));
 
             RectTransform panelRect = panel.GetComponent<RectTransform>();
             panelRect.anchorMin = new Vector2(0.5f, 0.5f);
@@ -175,7 +212,7 @@ namespace MOBA.Core.Infrastructure
             layout.childForceExpandWidth = true;
             layout.childForceExpandHeight = false;
 
-            CreateTeamPanelHeader(panel.transform, team, isWinner);
+            CreateTeamPanelHeader(panel.transform, team, isWinner, titleOverride, scoreOverride);
             CreateTeamStatsHeader(panel.transform);
 
             if (entries == null || entries.Count == 0)
@@ -199,7 +236,9 @@ namespace MOBA.Core.Infrastructure
         private static void CreateTeamPanelHeader(
             Transform parent,
             TeamType team,
-            bool isWinner)
+            bool isWinner,
+            string titleOverride = null,
+            string scoreOverride = null)
         {
             GameObject header = CreatePanel(parent, "TeamHeader", new Color(0f, 0f, 0f, 0.26f));
             LayoutElement headerLayout = header.AddComponent<LayoutElement>();
@@ -215,7 +254,9 @@ namespace MOBA.Core.Infrastructure
             Text title = CreateText(
                 header.transform,
                 "TeamName",
-                team == TeamType.Blue ? "BLUE TEAM" : "RED TEAM",
+                string.IsNullOrWhiteSpace(titleOverride)
+                    ? (team == TeamType.Blue ? "BLUE TEAM" : "RED TEAM")
+                    : titleOverride,
                 28,
                 TextAnchor.MiddleLeft,
                 ResolveTeamColor(team),
@@ -226,7 +267,7 @@ namespace MOBA.Core.Infrastructure
             Text score = CreateText(
                 header.transform,
                 "TeamScore",
-                ResolveTeamScoreLabel(team),
+                scoreOverride ?? ResolveTeamScoreLabel(team),
                 22,
                 TextAnchor.MiddleCenter,
                 Color.white,
@@ -417,6 +458,12 @@ namespace MOBA.Core.Infrastructure
 
         private void SpawnResultModels(MatchResultEntry[] entries)
         {
+            if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
+            {
+                SpawnTeamModels(CollectSoloEntries(entries), MatchResultBoard.LocalPlayerTeam, 0f);
+                return;
+            }
+
             List<MatchResultEntry> blue = CollectTeamEntries(entries, TeamType.Blue);
             List<MatchResultEntry> red = CollectTeamEntries(entries, TeamType.Red);
 
@@ -649,6 +696,14 @@ namespace MOBA.Core.Infrastructure
             return "-";
         }
 
+        private static string ResolveScoreText()
+        {
+            if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
+                return "Solo Showdown";
+
+            return $"Blue {MatchResultBoard.BlueScore} — Red {MatchResultBoard.RedScore}";
+        }
+
         private static Color ResolveTeamColor(TeamType team)
         {
             if (team == TeamType.Blue)
@@ -658,6 +713,17 @@ namespace MOBA.Core.Infrastructure
                 return new Color(1f, 0.42f, 0.46f, 1f);
 
             return Color.white;
+        }
+
+        private static Color ResolvePanelColor(TeamType team)
+        {
+            if (team == TeamType.Blue)
+                return new Color(0.035f, 0.090f, 0.230f, 0.94f);
+
+            if (team == TeamType.Red)
+                return new Color(0.235f, 0.035f, 0.055f, 0.94f);
+
+            return new Color(0.040f, 0.055f, 0.095f, 0.94f);
         }
 
         private static Color ResolveRowColor(MatchResultEntry entry)
@@ -835,6 +901,7 @@ namespace MOBA.Core.Infrastructure
         public MatchStats Stats;
         public float StarScore;
         public bool IsStarPlayer;
+        public bool IsLocalPlayer;
     }
 
     internal struct ResultModelView
