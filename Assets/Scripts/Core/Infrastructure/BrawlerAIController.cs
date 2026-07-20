@@ -36,6 +36,36 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private bool _drawSceneDebugMoveVector = true;
         [Tooltip("Height above the bot for Scene view debug labels.")]
         [SerializeField] private float _sceneDebugLabelHeight = 2.15f;
+
+        [Header("AI Runtime Debug (Read Only)")]
+        [Tooltip("Mirrors the current AI decision state into inspector fields during Play Mode.")]
+        [SerializeField] private bool _mirrorRuntimeDebugToInspector = true;
+        [SerializeField] private uint _inspectorDebugTick;
+        [SerializeField] private string _inspectorDebugBrawler;
+        [SerializeField] private AIActionType _inspectorCurrentAction;
+        [SerializeField] private float _inspectorCurrentActionScore;
+        [SerializeField] private AITacticalMovementIntent _inspectorTacticalIntent;
+        [SerializeField] private string _inspectorTarget;
+        [SerializeField] private string _inspectorRouteState;
+        [SerializeField] private Vector3 _inspectorDestination;
+        [SerializeField] private Vector3 _inspectorWaypoint;
+        [SerializeField] private Vector3 _inspectorMoveDirection;
+        [SerializeField] private float _inspectorDistanceToDestination;
+        [SerializeField] private int _inspectorPathIndex;
+        [SerializeField] private int _inspectorPathNodeCount;
+        [SerializeField] private bool _inspectorRouteBlocked;
+        [SerializeField] private int _inspectorStuckSamples;
+        [SerializeField] private int _inspectorPathBudgetDeferrals;
+        [TextArea(2, 5)]
+        [SerializeField] private string _inspectorDecisionDetails;
+        [TextArea(2, 5)]
+        [SerializeField] private string _inspectorMovementDetails;
+        [TextArea(2, 5)]
+        [SerializeField] private string _inspectorObjectiveDetails;
+        [TextArea(2, 5)]
+        [SerializeField] private string _inspectorTeamDetails;
+        [TextArea(2, 5)]
+        [SerializeField] private string _inspectorRecoveryAndPerfDetails;
 #endif
 
         private static AIObjectivePoint[] _cachedObjectivePoints;
@@ -302,6 +332,9 @@ _actionExecutor != null
                 if (_profile != null && _profile.LogDecisionTicks && currentTick % 30 == 0)
                     Debug.Log($"[AI-{(_brawler != null ? _brawler.name : "?")}] CanRunAI=false brain={_brainInitialized} brawlerNull={_brawler == null} stateNull={(_brawler == null ? "?" : (_brawler.State == null).ToString())} dead={(_brawler == null || _brawler.State == null ? "?" : _brawler.State.IsDead.ToString())} gridNull={SimulationClock.Grid == null}");
 
+#if UNITY_EDITOR
+                UpdateInspectorRuntimeDebug(currentTick, "CanRunAI=false");
+#endif
                 return;
             }
 
@@ -319,6 +352,9 @@ _actionExecutor != null
                 _teamCoordinator?.ClearActionIntent();
                 _teamCoordinator?.ClearLaneOwnership();
                 _commandSource?.QueueMove(Vector3.zero);
+#if UNITY_EDITOR
+                UpdateInspectorRuntimeDebug(currentTick, "Stunned");
+#endif
                 return;
             }
 
@@ -385,6 +421,9 @@ _actionExecutor != null
 
             UpdateProductionBudget(currentTick);
             UpdateDebugSnapshotIfDue(currentTick);
+#if UNITY_EDITOR
+            UpdateInspectorRuntimeDebug(currentTick);
+#endif
         }
 
         private void UpdateOpponentModel(uint currentTick)
@@ -1268,9 +1307,167 @@ $"Map={LastMapRouteDebug}";
         private static readonly Color SceneDestinationColor = new Color(0.18f, 0.95f, 1f, 0.95f);
         private static readonly Color SceneWaypointColor = new Color(0.25f, 1f, 0.35f, 0.95f);
         private static readonly Color SceneBlockedColor = new Color(1f, 0.20f, 0.15f, 0.95f);
+        private static readonly Color SceneHighPriorityColor = new Color(1f, 0.55f, 0.08f, 0.98f);
+        private static readonly Color ScenePathColor = new Color(0.30f, 0.72f, 1f, 0.72f);
+        private static readonly Color SceneFacingColor = new Color(0.88f, 0.88f, 1f, 0.78f);
+        private static readonly Color ScenePreferredRangeColor = new Color(0.22f, 0.68f, 1f, 0.42f);
+        private static readonly Color SceneTooCloseRangeColor = new Color(1f, 0.18f, 0.08f, 0.36f);
         private static readonly Color SceneMoveColor = new Color(0.55f, 0.90f, 1f, 0.95f);
         private static readonly Color SceneTargetColor = new Color(1f, 0.30f, 0.75f, 0.88f);
+        private const int SceneDebugMaxPathNodes = 28;
         private static GUIStyle _sceneDebugLabelStyle;
+        private static readonly System.Collections.Generic.List<Vector3> SceneDebugPathNodes =
+            new System.Collections.Generic.List<Vector3>(SceneDebugMaxPathNodes);
+
+        private void UpdateInspectorRuntimeDebug(uint currentTick, string forcedState = null)
+        {
+            if (!_mirrorRuntimeDebugToInspector)
+                return;
+
+            _inspectorDebugTick = currentTick;
+            _inspectorDebugBrawler = _brawler != null && _brawler.Definition != null
+                ? _brawler.Definition.BrawlerName
+                : _brawler != null ? _brawler.name : name;
+            _inspectorCurrentAction = _lastChosenAction.ActionType;
+            _inspectorCurrentActionScore = _lastChosenAction.Score;
+            _inspectorTacticalIntent = LastTacticalMovementIntent;
+            _inspectorTarget = ResolveTargetDebugName();
+            _inspectorRouteState = string.IsNullOrWhiteSpace(forcedState)
+                ? ResolveNavigationSceneDebugState()
+                : forcedState;
+
+            if (_navAgent != null && _navAgent.HasDestination)
+            {
+                _inspectorDestination = _navAgent.Destination;
+                _inspectorWaypoint = _navAgent.DebugHasSteeringTarget
+                    ? _navAgent.DebugSteeringTarget
+                    : _navAgent.Destination;
+                _inspectorDistanceToDestination = _brawler != null
+                    ? PlanarDistance(_brawler.Position, _navAgent.Destination)
+                    : 0f;
+                _inspectorPathIndex = _navAgent.DebugPathIndex;
+                _inspectorPathNodeCount = _navAgent.DebugPathNodeCount;
+                _inspectorRouteBlocked = _navAgent.IsRouteBlocked;
+                _inspectorStuckSamples = _navAgent.ConsecutiveStuckSamples;
+                _inspectorPathBudgetDeferrals = _navAgent.ConsecutivePathBudgetDeferrals;
+            }
+            else
+            {
+                _inspectorDestination = Vector3.zero;
+                _inspectorWaypoint = Vector3.zero;
+                _inspectorDistanceToDestination = 0f;
+                _inspectorPathIndex = 0;
+                _inspectorPathNodeCount = 0;
+                _inspectorRouteBlocked = false;
+                _inspectorStuckSamples = 0;
+                _inspectorPathBudgetDeferrals = 0;
+            }
+
+            _inspectorMoveDirection = _navAgent != null
+                ? _navAgent.LastQueuedMoveDirection
+                : Vector3.zero;
+            _inspectorDecisionDetails = BuildInspectorDecisionDetails(forcedState);
+            _inspectorMovementDetails = BuildInspectorMovementDetails();
+            _inspectorObjectiveDetails = BuildInspectorObjectiveDetails();
+            _inspectorTeamDetails = BuildInspectorTeamDetails();
+            _inspectorRecoveryAndPerfDetails = BuildInspectorRecoveryAndPerfDetails(currentTick);
+        }
+
+        private string BuildInspectorDecisionDetails(string forcedState)
+        {
+            return
+                $"State={(!string.IsNullOrWhiteSpace(forcedState) ? forcedState : "Running")}\n" +
+                $"Action={_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.00}\n" +
+                $"Scores={BuildTopActionScoreSummary(5)}\n" +
+                $"Difficulty={Difficulty} Personality={Personality} Human={HumanizationDebug}\n" +
+                $"Tuning={TuningDebug}";
+        }
+
+        private string BuildInspectorMovementDetails()
+        {
+            return
+                $"{BuildNavigationDebug()}\n" +
+                $"Tactical={LastTacticalMovementIntent} Reason={LastTacticalMoveReason}\n" +
+                $"Range target={LastTacticalTargetDistance:0.0} preferred={LastTacticalPreferredRange:0.0} tooClose={LastTacticalTooCloseDistance:0.0}\n" +
+                $"Retarget={LastTacticalRetargetTick}->{NextTacticalMoveRetargetTick} Stop={LastTacticalStopDebug}\n" +
+                $"Map={LastMapRouteDebug}";
+        }
+
+        private string BuildInspectorObjectiveDetails()
+        {
+            return
+                $"Objective={LastObjectiveType} {LastObjectiveName} runtime={LastObjectiveIsRuntime}\n" +
+                $"Center={FormatVector(LastObjectiveCenter)} Slot={FormatVector(LastObjectiveSlot)} Dest={FormatVector(LastObjectiveDestination)}\n" +
+                $"Radius={LastObjectiveRadius:0.0} Control={LastObjectiveControlState} Presence={LastObjectiveFriendlyPresence}:{LastObjectiveEnemyPresence}\n" +
+                $"Role={LastObjectiveSlotRole}->{LastObjectiveDesiredSlotRole} Pressure={LastObjectiveAllyPressure:0.00} Penalty={LastObjectiveCrowdingPenalty:0.0}\n" +
+                $"Score raw={LastObjectiveRawScore:0.0} final={LastObjectiveFinalScore:0.0} Reason={LastObjectiveScoreReason}";
+        }
+
+        private string BuildInspectorTeamDetails()
+        {
+            return
+                $"Target={ResolveTargetDebugName()} Focus={CurrentTargetFocusCount} AllyFocus={CurrentTargetAllyFocusCount} OverFocusPenalty={CurrentTargetOverFocusPenalty:0.0}\n" +
+                $"{TeamRoleDebug}\n" +
+                $"{MacroDebug}\n" +
+                $"{PlaybookDebug}\n" +
+                $"{ChaseDebug}\n" +
+                $"{GemPickupDebug}";
+        }
+
+        private string BuildInspectorRecoveryAndPerfDetails(uint currentTick)
+        {
+            string budget = _profile != null
+                ? BuildBudgetSummary(currentTick)
+                : "Budget=NoProfile";
+
+            return
+                $"{FailureRecoveryDebug}\n" +
+                $"{ReactiveDebug}\n" +
+                $"{DangerDebug}\n" +
+                $"{budget}\n" +
+                $"Incident={(_brawler != null ? AIIncidentLogger.GetDebugSummary(_brawler.EntityID) : "Incident=None")}";
+        }
+
+        private string BuildTopActionScoreSummary(int maxCount)
+        {
+            if (_debugScores == null || _debugScores.Count == 0 || maxCount <= 0)
+                return "None";
+
+            string summary = string.Empty;
+            for (int rank = 0; rank < maxCount; rank++)
+            {
+                int bestIndex = -1;
+                float bestScore = float.NegativeInfinity;
+                for (int i = 0; i < _debugScores.Count; i++)
+                {
+                    if (IsScoreIndexAlreadyUsed(summary, _debugScores[i].ActionType))
+                        continue;
+
+                    if (_debugScores[i].Score <= bestScore)
+                        continue;
+
+                    bestScore = _debugScores[i].Score;
+                    bestIndex = i;
+                }
+
+                if (bestIndex < 0)
+                    break;
+
+                if (!string.IsNullOrEmpty(summary))
+                    summary += " | ";
+
+                AIActionScore score = _debugScores[bestIndex];
+                summary += $"{score.ActionType}:{score.Score:0.0}";
+            }
+
+            return string.IsNullOrEmpty(summary) ? "None" : summary;
+        }
+
+        private static bool IsScoreIndexAlreadyUsed(string summary, AIActionType actionType)
+        {
+            return !string.IsNullOrEmpty(summary) &&
+                   summary.Contains(actionType.ToString());
+        }
 
         private void OnDrawGizmos()
         {
@@ -1296,6 +1493,10 @@ $"Map={LastMapRouteDebug}";
         private void DrawAISceneDebug(bool selected)
         {
             Vector3 origin = ResolveDebugOrigin();
+            Color actionColor = ResolveActionColor(_lastChosenAction.ActionType);
+            DrawActionHalo(origin, selected, actionColor);
+            DrawRangeSceneDebug(origin, selected);
+            DrawFacingRaySceneDebug(origin, selected, actionColor);
             DrawObjectiveSceneDebug(selected);
             DrawNavigationSceneDebug(origin, selected);
 
@@ -1336,11 +1537,15 @@ $"Map={LastMapRouteDebug}";
 
             Color destinationColor = _navAgent.IsRouteBlocked
                 ? SceneBlockedColor
-                : SceneDestinationColor;
+                : _navAgent.DebugDestinationHighPriority
+                    ? SceneHighPriorityColor
+                    : SceneDestinationColor;
             Vector3 destination = _navAgent.Destination;
             Vector3 waypoint = _navAgent.DebugHasSteeringTarget
                 ? _navAgent.DebugSteeringTarget
                 : destination;
+
+            DrawPathBreadcrumbs(selected, destinationColor);
 
             Gizmos.color = _navAgent.DebugHasSteeringTarget ? SceneWaypointColor : destinationColor;
             Gizmos.DrawLine(origin + Vector3.up * 0.12f, waypoint + Vector3.up * 0.12f);
@@ -1380,6 +1585,95 @@ $"Map={LastMapRouteDebug}";
             Gizmos.DrawLine(origin + Vector3.up * 0.35f, targetPosition + Vector3.up * 0.35f);
             if (selected)
                 Gizmos.DrawWireSphere(targetPosition + Vector3.up * 0.10f, 0.42f);
+        }
+
+        private void DrawActionHalo(Vector3 origin, bool selected, Color actionColor)
+        {
+            Handles.color = WithAlpha(actionColor, selected ? 0.92f : 0.52f);
+            Handles.DrawWireDisc(origin + Vector3.up * 0.04f, Vector3.up, selected ? 0.78f : 0.58f);
+            if (selected)
+            {
+                Handles.color = WithAlpha(actionColor, 0.32f);
+                Handles.DrawWireDisc(origin + Vector3.up * 0.045f, Vector3.up, 1.02f);
+            }
+        }
+
+        private void DrawRangeSceneDebug(Vector3 origin, bool selected)
+        {
+            if (!selected)
+                return;
+
+            if (LastTacticalPreferredRange > 0.05f)
+            {
+                Handles.color = ScenePreferredRangeColor;
+                Handles.DrawWireDisc(origin + Vector3.up * 0.035f, Vector3.up, LastTacticalPreferredRange);
+            }
+
+            if (LastTacticalTooCloseDistance > 0.05f)
+            {
+                Handles.color = SceneTooCloseRangeColor;
+                Handles.DrawWireDisc(origin + Vector3.up * 0.04f, Vector3.up, LastTacticalTooCloseDistance);
+            }
+        }
+
+        private void DrawFacingRaySceneDebug(Vector3 origin, bool selected, Color actionColor)
+        {
+            Vector3 forward = _brawler != null ? _brawler.transform.forward : transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude <= 0.0001f)
+                return;
+
+            DrawArrow(
+                origin + Vector3.up * 0.42f,
+                forward.normalized * (selected ? 1.65f : 1.05f),
+                WithAlpha(SceneFacingColor, selected ? 0.92f : 0.58f));
+
+            if (selected && LastTacticalPreferredRange > 0.05f)
+            {
+                Handles.color = WithAlpha(actionColor, 0.42f);
+                Handles.DrawDottedLine(
+                    origin + Vector3.up * 0.16f,
+                    origin + forward.normalized * LastTacticalPreferredRange + Vector3.up * 0.16f,
+                    4f);
+            }
+        }
+
+        private void DrawPathBreadcrumbs(bool selected, Color destinationColor)
+        {
+            if (_navAgent == null ||
+                !_navAgent.DebugHasPath ||
+                _navAgent.CopyDebugPathNodesNonAlloc(SceneDebugPathNodes, SceneDebugMaxPathNodes) <= 0)
+            {
+                return;
+            }
+
+            Color pathColor = _navAgent.IsRouteBlocked
+                ? WithAlpha(SceneBlockedColor, selected ? 0.78f : 0.45f)
+                : WithAlpha(ScenePathColor, selected ? 0.86f : 0.48f);
+            Gizmos.color = pathColor;
+
+            Vector3 previous = SceneDebugPathNodes[0] + Vector3.up * 0.07f;
+            for (int i = 0; i < SceneDebugPathNodes.Count; i++)
+            {
+                Vector3 current = SceneDebugPathNodes[i] + Vector3.up * 0.07f;
+                if (i > 0)
+                    Gizmos.DrawLine(previous, current);
+
+                float radius = i == 0
+                    ? selected ? 0.18f : 0.12f
+                    : selected ? 0.12f : 0.08f;
+                Gizmos.DrawWireSphere(current, radius);
+                previous = current;
+            }
+
+            if (selected && SceneDebugPathNodes.Count >= SceneDebugMaxPathNodes)
+            {
+                Handles.color = WithAlpha(destinationColor, 0.62f);
+                Handles.Label(
+                    SceneDebugPathNodes[SceneDebugPathNodes.Count - 1] + Vector3.up * 0.35f,
+                    "+",
+                    ResolveSceneDebugLabelStyle());
+            }
         }
 
         private void DrawMoveVectorSceneDebug(Vector3 origin, bool selected)
@@ -1431,6 +1725,7 @@ $"Map={LastMapRouteDebug}";
             return
                 $"{brawlerName} [{(_brawler != null ? _brawler.Team.ToString() : "?")}]\n" +
                 $"Action {_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}\n" +
+                $"Top {BuildTopActionScoreSummary(4)}\n" +
                 $"Target {targetName} focus={CurrentTargetFocusCount}/{CurrentTargetAllyFocusCount} penalty={CurrentTargetOverFocusPenalty:0.0}\n" +
                 $"Move {LastTacticalMovementIntent} reason={LastTacticalMoveReason}\n" +
                 $"{navState} | {LastTacticalStopDebug}\n" +
@@ -1484,6 +1779,48 @@ $"Map={LastMapRouteDebug}";
                 return _brawler.Position;
 
             return transform.position;
+        }
+
+        private static Color ResolveActionColor(AIActionType actionType)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return new Color(1f, 0.46f, 0.18f, 0.95f);
+
+                case AIActionType.HoldRange:
+                    return new Color(0.28f, 0.76f, 1f, 0.95f);
+
+                case AIActionType.Reposition:
+                    return new Color(0.55f, 0.96f, 0.70f, 0.95f);
+
+                case AIActionType.Retreat:
+                    return new Color(1f, 0.18f, 0.16f, 0.95f);
+
+                case AIActionType.Evade:
+                    return new Color(1f, 0.88f, 0.12f, 0.95f);
+
+                case AIActionType.UseSuper:
+                    return new Color(0.82f, 0.28f, 1f, 0.95f);
+
+                case AIActionType.Regroup:
+                    return new Color(0.38f, 0.62f, 1f, 0.95f);
+
+                case AIActionType.Peel:
+                    return new Color(0.16f, 1f, 0.96f, 0.95f);
+
+                case AIActionType.Objective:
+                    return new Color(1f, 0.72f, 0.16f, 0.95f);
+
+                case AIActionType.Search:
+                    return new Color(0.62f, 0.82f, 1f, 0.95f);
+
+                case AIActionType.Wander:
+                    return new Color(0.72f, 0.72f, 0.72f, 0.86f);
+
+                default:
+                    return new Color(0.92f, 0.92f, 0.92f, 0.86f);
+            }
         }
 
         private static void DrawArrow(Vector3 origin, Vector3 vector, Color color)

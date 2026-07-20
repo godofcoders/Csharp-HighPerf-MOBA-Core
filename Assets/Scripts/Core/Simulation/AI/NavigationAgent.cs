@@ -75,6 +75,22 @@ namespace MOBA.Core.Simulation.AI
         public bool IsActiveDestinationMovementSuppressed =>
             _hasDestination && _consecutiveActiveZeroMoveTicks > 0;
 
+        public int CopyDebugPathNodesNonAlloc(List<Vector3> results, int maxNodes)
+        {
+            if (results == null)
+                return 0;
+
+            results.Clear();
+            if (_path == null || _pathIndex >= _path.Count || maxNodes <= 0)
+                return 0;
+
+            int last = Mathf.Min(_path.Count, _pathIndex + maxNodes);
+            for (int i = _pathIndex; i < last; i++)
+                results.Add(GetPathNodeWorld(i));
+
+            return results.Count;
+        }
+
         public NavigationAgent(
             BrawlerController brawler,
             AICommandSource commandSource,
