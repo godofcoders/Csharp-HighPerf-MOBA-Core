@@ -82,7 +82,8 @@ namespace MOBA.Core.Infrastructure
                     _capturedWinner = blue >= red ? TeamType.Blue : TeamType.Red;
             }
 
-            MatchResultBoard.Capture(_capturedWinner, blue, red);
+            TeamType localPlayerTeam = ResolveLocalPlayerTeam();
+            MatchResultBoard.Capture(_capturedWinner, blue, red, localPlayerTeam);
 
             CaptureMatchStats(_capturedWinner, blue, red);
 
@@ -290,6 +291,34 @@ namespace MOBA.Core.Infrastructure
                 return TeamType.Red;
 
             return TeamType.Neutral;
+        }
+
+        private static TeamType ResolveLocalPlayerTeam()
+        {
+            BrawlerController localPlayer = ResolveLocalPlayerBrawler();
+            if (localPlayer != null)
+                return localPlayer.Team;
+
+            return BrawlerController.TryGetLocalObserverTeam(out TeamType team)
+                ? team
+                : TeamType.Neutral;
+        }
+
+        private static BrawlerController ResolveLocalPlayerBrawler()
+        {
+            PlayerCommandSource[] sources = FindObjectsOfType<PlayerCommandSource>();
+            for (int i = 0; i < sources.Length; i++)
+            {
+                PlayerCommandSource source = sources[i];
+                if (source == null)
+                    continue;
+
+                BrawlerController brawler = source.GetComponent<BrawlerController>();
+                if (brawler != null)
+                    return brawler;
+            }
+
+            return null;
         }
 
         private void GoToResults()

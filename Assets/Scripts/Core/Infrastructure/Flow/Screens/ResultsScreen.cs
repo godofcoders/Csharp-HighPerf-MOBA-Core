@@ -43,9 +43,7 @@ namespace MOBA.Core.Infrastructure
         {
             bool hasRuntimeEntries = MatchResultBoard.Entries != null &&
                                      MatchResultBoard.Entries.Length > 0;
-            string winnerStr = MatchResultBoard.WinnerKnown
-                ? $"{MatchResultBoard.Winner} wins!"
-                : (MatchResultBoard.Draw ? "Draw" : "Match Over");
+            string winnerStr = ResolveWinnerText();
             string scoreStr = $"Blue {MatchResultBoard.BlueScore} — Red {MatchResultBoard.RedScore}";
 
             if (_winnerTextTmp != null) _winnerTextTmp.text = winnerStr;
@@ -717,6 +715,19 @@ namespace MOBA.Core.Infrastructure
 
         private void OnContinue() => SceneFlow.Instance?.ReturnToMainMenu();
         private void OnRematch() => SceneFlow.Instance?.LoadScene(SceneId.Match);
+
+        private static string ResolveWinnerText()
+        {
+            if (MatchResultBoard.LocalResultKnown)
+                return MatchResultBoard.LocalPlayerWon ? "You win!" : "You lose!";
+
+            if (MatchResultBoard.Draw)
+                return "Draw";
+
+            return MatchResultBoard.WinnerKnown
+                ? $"{MatchResultBoard.Winner} wins!"
+                : "Match Over";
+        }
     }
 
     /// <summary>Static carrier for last-match outcome. The Match scene
@@ -731,6 +742,10 @@ namespace MOBA.Core.Infrastructure
         public static TeamType Winner;
         public static int BlueScore;
         public static int RedScore;
+        public static bool LocalPlayerKnown;
+        public static TeamType LocalPlayerTeam;
+        public static bool LocalResultKnown;
+        public static bool LocalPlayerWon;
 
         // MVP snapshot, written by MatchEndRouter from MatchStatsTracker.
         // Empty / 0 if no stats tracker was in the scene.
@@ -739,13 +754,21 @@ namespace MOBA.Core.Infrastructure
         public static MatchResultEntry[] Entries = EmptyEntries;
         public static MatchResultEntry StarPlayer;
 
-        public static void Capture(TeamType winner, int blue, int red)
+        public static void Capture(
+            TeamType winner,
+            int blue,
+            int red,
+            TeamType localPlayerTeam = TeamType.Neutral)
         {
             WinnerKnown = winner != TeamType.Neutral;
             Draw = winner == TeamType.Neutral;
             Winner = winner;
             BlueScore = blue;
             RedScore = red;
+            LocalPlayerKnown = localPlayerTeam != TeamType.Neutral;
+            LocalPlayerTeam = localPlayerTeam;
+            LocalResultKnown = LocalPlayerKnown && WinnerKnown;
+            LocalPlayerWon = LocalResultKnown && localPlayerTeam == winner;
         }
 
         /// <summary>Optional MVP snapshot — call alongside Capture when a
@@ -793,6 +816,10 @@ namespace MOBA.Core.Infrastructure
             Winner = TeamType.Blue;
             BlueScore = 0;
             RedScore = 0;
+            LocalPlayerKnown = false;
+            LocalPlayerTeam = TeamType.Neutral;
+            LocalResultKnown = false;
+            LocalPlayerWon = false;
             MvpName = string.Empty;
             MvpStats = default;
             Entries = EmptyEntries;
