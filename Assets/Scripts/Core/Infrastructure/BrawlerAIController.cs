@@ -65,6 +65,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private string _inspectorDecisionDetails;
         [TextArea(2, 4)]
         [SerializeField] private string _inspectorDecisionPerformanceBreakdown;
+        [TextArea(2, 4)]
+        [SerializeField] private string _inspectorPerformanceTierDetails;
         [TextArea(2, 5)]
         [SerializeField] private string _inspectorMovementDetails;
         [TextArea(2, 5)]
@@ -834,7 +836,8 @@ $"Map={LastMapRouteDebug}";
                 runtimeProfile,
                 _difficulty,
                 _personality,
-                _activeTuningCatalog);
+                _activeTuningCatalog,
+                _performanceTier);
             _runtimeTuningVersion = AITuningRuntimeOverrides.Version;
             _appliedPerformanceTier = _performanceTier;
             _appliedDifficulty = _difficulty;
@@ -1046,7 +1049,8 @@ $"Map={LastMapRouteDebug}";
                 _profile,
                 _difficulty,
                 _personality,
-                _activeTuningCatalog);
+                _activeTuningCatalog,
+                _performanceTier);
             _runtimeTuningVersion = AITuningRuntimeOverrides.Version;
             _appliedPerformanceTier = _performanceTier;
             _appliedDifficulty = _difficulty;
@@ -1289,7 +1293,8 @@ $"Map={LastMapRouteDebug}";
                 : "Catalog=None";
 
             return
-                $"Tier={_performanceTier} Difficulty={_difficulty} Personality={_personality} " +
+                $"{AIProfileTuningUtility.GetPerformanceTierDebugSummary(_performanceTier, _profile)} " +
+                $"Difficulty={_difficulty} Personality={_personality} " +
                 $"Tuning {catalog} " +
                 $"{AITuningRuntimeOverrides.GetDebugSummary()}";
         }
@@ -1450,6 +1455,8 @@ $"Map={LastMapRouteDebug}";
                 ? _navAgent.LastQueuedMoveDirection
                 : Vector3.zero;
             _inspectorDecisionDetails = BuildInspectorDecisionDetails(forcedState);
+            _inspectorPerformanceTierDetails =
+                AIProfileTuningUtility.GetPerformanceTierDebugSummary(_performanceTier, _profile);
             _inspectorMovementDetails = BuildInspectorMovementDetails();
             _inspectorObjectiveDetails = BuildInspectorObjectiveDetails();
             _inspectorTeamDetails = BuildInspectorTeamDetails();
@@ -1495,6 +1502,10 @@ $"Map={LastMapRouteDebug}";
                 score += confidenceBonus;
                 details += $" Confidence={confidenceBonus:+0.0;-0.0;0.0}";
             }
+
+            float profileDelta = EvaluateProfileSkillSignal(out string profileSkillDetails);
+            score += profileDelta;
+            details += profileSkillDetails;
 
             if (_navAgent != null)
             {
@@ -1591,6 +1602,34 @@ $"Map={LastMapRouteDebug}";
             rank = ResolveDecisionPerformanceRank(score);
             breakdown = $"{rank} ({score:0.0}/100)\n{details}";
             return score;
+        }
+
+        private float EvaluateProfileSkillSignal(out string details)
+        {
+            details = string.Empty;
+            if (_profile == null)
+                return 0f;
+
+            float reactionQuality = Mathf.InverseLerp(18f, 0f, _profile.ReactionDelayTicks + _profile.HumanizationReactionJitterTicks);
+            float aimQuality = Mathf.InverseLerp(12f, 1f, _profile.AimErrorDegrees);
+            float senseQuality = Mathf.InverseLerp(8f, 2f, _profile.CombatSenseIntervalTicks);
+            float teamQuality = Mathf.InverseLerp(0.65f, 1.45f, _profile.TeamRoleCoordinationWeight);
+            float objectiveQuality = Mathf.InverseLerp(0.70f, 1.45f, _profile.ObjectiveWeight * _profile.MacroActionBiasWeight);
+            float mistakeLoad = Mathf.Clamp01(_profile.HumanizationPressureMistakeChance / 0.14f);
+
+            float delta =
+                Mathf.Lerp(-8f, 7f, reactionQuality) +
+                Mathf.Lerp(-7f, 6f, aimQuality) +
+                Mathf.Lerp(-5f, 5f, senseQuality) +
+                Mathf.Lerp(-4f, 5f, teamQuality) +
+                Mathf.Lerp(-4f, 5f, objectiveQuality) -
+                Mathf.Lerp(0f, 6f, mistakeLoad);
+
+            delta = Mathf.Clamp(delta, -18f, 18f);
+            details =
+                $" ProfileSkill={delta:+0.0;-0.0;0.0}" +
+                $"(react={reactionQuality:0.0} aim={aimQuality:0.0} sense={senseQuality:0.0} team={teamQuality:0.0} obj={objectiveQuality:0.0})";
+            return delta;
         }
 
         private bool TryGetTopTwoActionScores(out float bestScore, out float secondScore)
@@ -2055,6 +2094,7 @@ $"Map={LastMapRouteDebug}";
             return
                 $"{SceneRich(brawlerName, Color.white)} [{SceneRich(_brawler != null ? _brawler.Team.ToString() : "?", SceneLabelMutedColor)}]\n" +
                 $"{SceneRich("Tier", SceneLabelMutedColor)} {_performanceTier} {Difficulty}/{Personality}\n" +
+                $"{SceneRich("Perf", SceneLabelMutedColor)} {BuildScenePerformanceSummary()}\n" +
                 $"{SceneRich("Action", ResolveActionColor(_lastChosenAction.ActionType))} {_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}\n" +
                 $"{SceneRich("Rank", ResolveDecisionPerformanceColor(decisionPerformance))} {decisionRank} {decisionPerformance:0}/100\n" +
                 $"{SceneRich("Top", SceneObjectiveColor)} {BuildTopActionScoreSummary(4)}\n" +
@@ -2083,6 +2123,18 @@ $"Map={LastMapRouteDebug}";
             return
                 $"Nav={state} d={distance:0.0} path={_navAgent.DebugPathIndex}/{_navAgent.DebugPathNodeCount} " +
                 $"stuck={_navAgent.ConsecutiveStuckSamples} def={_navAgent.ConsecutivePathBudgetDeferrals}";
+        }
+
+        private string BuildScenePerformanceSummary()
+        {
+            if (_profile == null)
+                return "Profile=None";
+
+            return
+                $"R={_profile.ReactionDelayTicks}+{_profile.HumanizationReactionJitterTicks} " +
+                $"Aim={_profile.AimErrorDegrees:0.0} " +
+                $"Obj={(_profile.ObjectiveWeight * _profile.MacroActionBiasWeight):0.00} " +
+                $"Team={_profile.TeamRoleCoordinationWeight:0.00}";
         }
 
         private string ResolveTargetDebugName()

@@ -17,7 +17,8 @@ namespace MOBA.Core.Simulation.AI
             BrawlerAIProfile profile,
             AIDifficultyLevel difficulty,
             AIPersonalityType personality,
-            AITuningCatalog tuningCatalog)
+            AITuningCatalog tuningCatalog,
+            AIBotPerformanceTier performanceTier = AIBotPerformanceTier.Custom)
         {
             if (profile == null)
                 return;
@@ -42,6 +43,11 @@ namespace MOBA.Core.Simulation.AI
             Normalize(profile);
             ApplyFairPlayGuardrails(profile);
             Normalize(profile);
+
+            ApplyPerformanceTierOverlay(profile, performanceTier);
+            Normalize(profile);
+            ApplyFairPlayGuardrails(profile);
+            Normalize(profile);
         }
 
         public static void RebuildRuntimeTuning(
@@ -49,7 +55,8 @@ namespace MOBA.Core.Simulation.AI
             BrawlerAIProfile runtimeProfile,
             AIDifficultyLevel difficulty,
             AIPersonalityType personality,
-            AITuningCatalog tuningCatalog)
+            AITuningCatalog tuningCatalog,
+            AIBotPerformanceTier performanceTier = AIBotPerformanceTier.Custom)
         {
             if (sourceProfile == null || runtimeProfile == null)
                 return;
@@ -64,7 +71,172 @@ namespace MOBA.Core.Simulation.AI
                 runtimeProfile,
                 difficulty,
                 personality,
-                tuningCatalog);
+                tuningCatalog,
+                performanceTier);
+        }
+
+        public static string GetPerformanceTierDebugSummary(
+            AIBotPerformanceTier performanceTier,
+            BrawlerAIProfile profile)
+        {
+            if (profile == null)
+                return $"Tier={performanceTier} Profile=None";
+
+            return
+                $"Tier={performanceTier} " +
+                $"React={profile.ReactionDelayTicks}+{profile.HumanizationReactionJitterTicks}t " +
+                $"AimErr={profile.AimErrorDegrees:0.0} " +
+                $"Sense={profile.IdleSenseIntervalTicks}/{profile.CombatSenseIntervalTicks} " +
+                $"Obj={profile.ObjectiveWeight:0.00} Team={profile.TeamRoleCoordinationWeight:0.00} " +
+                $"Focus={profile.FocusFireWeight:0.0} Map={profile.MapOpenShotPreference:0.0}/{profile.MapCoverDancePreference:0.0} " +
+                $"Move={profile.AIMoveSpeedScale:0.00}/{profile.AIMoveInputTurnRateDegreesPerTick:0} " +
+                $"Mistake={profile.HumanizationPressureMistakeChance:0.00}";
+        }
+
+        private static void ApplyPerformanceTierOverlay(
+            BrawlerAIProfile profile,
+            AIBotPerformanceTier performanceTier)
+        {
+            switch (performanceTier)
+            {
+                case AIBotPerformanceTier.Amateur:
+                    profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks + 4u, 8u, 24u);
+                    profile.AimErrorDegrees = Mathf.Max(profile.AimErrorDegrees, 11.5f);
+                    profile.IdleSenseIntervalTicks = ScaleTicks(profile.IdleSenseIntervalTicks, 1.20f, 4u);
+                    profile.CombatSenseIntervalTicks = ScaleTicks(profile.CombatSenseIntervalTicks, 1.25f, 2u);
+                    profile.AttackCadenceTicks = ScaleTicks(profile.AttackCadenceTicks, 1.12f, 1u);
+                    profile.SuperDecisionCooldownTicks = ScaleTicks(profile.SuperDecisionCooldownTicks, 1.20f, 1u);
+                    profile.MinimumCommittedActionScore *= 1.12f;
+                    profile.ActionSwitchScoreMargin *= 1.18f;
+                    profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 1.15f, 1u);
+                    profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 1.18f, 1u);
+                    profile.ObjectiveWeight *= 0.78f;
+                    profile.MacroActionBiasWeight *= 0.75f;
+                    profile.FocusFireWeight *= 0.78f;
+                    profile.LowHealthTargetBias *= 0.76f;
+                    profile.FinisherBonus *= 0.75f;
+                    profile.GemPickupMinimumScore *= 1.18f;
+                    profile.GemPickupSecureThresholdBonus *= 0.76f;
+                    profile.GemPickupDenyThresholdBonus *= 0.76f;
+                    profile.LaneDisciplineWeight *= 0.78f;
+                    profile.TeamRoleCoordinationWeight *= 0.72f;
+                    profile.TeamActionCrowdingPenalty *= 0.72f;
+                    profile.OverFocusedTargetPenaltyPerAlly *= 0.70f;
+                    profile.TacticalMoveRetargetTicks = ScaleTicks(profile.TacticalMoveRetargetTicks, 1.25f, 1u);
+                    profile.TacticalMoveHeartbeatTicks = ScaleTicks(profile.TacticalMoveHeartbeatTicks, 1.20f, 1u);
+                    profile.TacticalDestinationBlend *= 0.82f;
+                    profile.TacticalDestinationSwitchDistance *= 1.18f;
+                    profile.AIMoveInputTurnRateDegreesPerTick *= 0.78f;
+                    profile.AIHighPriorityMoveInputTurnRateDegreesPerTick *= 0.82f;
+                    profile.AIMoveSpeedScale *= 0.88f;
+                    profile.AIHighPriorityMoveSpeedScale *= 0.90f;
+                    profile.DangerScanRadius *= 0.82f;
+                    profile.DangerEvadeScoreBonus *= 0.78f;
+                    profile.DangerRefreshIntervalTicks = ScaleTicks(profile.DangerRefreshIntervalTicks, 1.25f, 1u);
+                    profile.MapOpenShotPreference *= 0.74f;
+                    profile.MapCoverDancePreference *= 0.72f;
+                    profile.MapEscapeSpacePreference *= 0.74f;
+                    profile.MapFireLanePressurePreference *= 0.74f;
+                    profile.MapThrowerSpacingPreference *= 0.74f;
+                    if (profile.HumanizationReactionJitterTicks < 6u)
+                        profile.HumanizationReactionJitterTicks = 6u;
+                    profile.HumanizationActionScoreJitter = Mathf.Max(profile.HumanizationActionScoreJitter, 4.8f);
+                    profile.HumanizationFakeOutChance = Mathf.Max(profile.HumanizationFakeOutChance, 0.16f);
+                    profile.HumanizationPressureMistakeChance = Mathf.Max(profile.HumanizationPressureMistakeChance, 0.14f);
+                    profile.HumanizationPressureMistakePenalty *= 1.25f;
+                    break;
+
+                case AIBotPerformanceTier.Veteran:
+                    if (profile.ReactionDelayTicks > 1u)
+                        profile.ReactionDelayTicks = 1u;
+                    profile.AimErrorDegrees = Mathf.Min(profile.AimErrorDegrees, 1.25f);
+                    profile.IdleSenseIntervalTicks = ScaleTicks(profile.IdleSenseIntervalTicks, 0.85f, 2u);
+                    profile.CombatSenseIntervalTicks = ScaleTicks(profile.CombatSenseIntervalTicks, 0.85f, 2u);
+                    profile.AttackCadenceTicks = ScaleTicks(profile.AttackCadenceTicks, 0.95f, 1u);
+                    profile.SuperDecisionCooldownTicks = ScaleTicks(profile.SuperDecisionCooldownTicks, 0.90f, 1u);
+                    profile.MinimumCommittedActionScore *= 0.92f;
+                    profile.ActionSwitchScoreMargin *= 0.92f;
+                    profile.ObjectiveWeight *= 1.14f;
+                    profile.MacroActionBiasWeight *= 1.12f;
+                    profile.FocusFireWeight *= 1.12f;
+                    profile.LowHealthTargetBias *= 1.10f;
+                    profile.FinisherBonus *= 1.10f;
+                    profile.GemPickupMinimumScore *= 0.92f;
+                    profile.GemPickupSecureThresholdBonus *= 1.12f;
+                    profile.GemPickupDenyThresholdBonus *= 1.12f;
+                    profile.LaneDisciplineWeight *= 1.10f;
+                    profile.TeamRoleCoordinationWeight *= 1.14f;
+                    profile.TeamActionCrowdingPenalty *= 1.08f;
+                    profile.OverFocusedTargetPenaltyPerAlly *= 1.10f;
+                    profile.TacticalMoveRetargetTicks = ScaleTicks(profile.TacticalMoveRetargetTicks, 0.88f, 1u);
+                    profile.TacticalMoveHeartbeatTicks = ScaleTicks(profile.TacticalMoveHeartbeatTicks, 0.90f, 1u);
+                    profile.TacticalDestinationBlend *= 1.08f;
+                    profile.AIMoveInputTurnRateDegreesPerTick *= 1.06f;
+                    profile.AIHighPriorityMoveInputTurnRateDegreesPerTick *= 1.06f;
+                    profile.DangerScanRadius *= 1.08f;
+                    profile.DangerEvadeScoreBonus *= 1.08f;
+                    profile.DangerRefreshIntervalTicks = ScaleTicks(profile.DangerRefreshIntervalTicks, 0.90f, 1u);
+                    profile.MapOpenShotPreference *= 1.12f;
+                    profile.MapCoverDancePreference *= 1.12f;
+                    profile.MapEscapeSpacePreference *= 1.10f;
+                    profile.MapFireLanePressurePreference *= 1.12f;
+                    profile.MapThrowerSpacingPreference *= 1.10f;
+                    if (profile.HumanizationReactionJitterTicks > 1u)
+                        profile.HumanizationReactionJitterTicks = 1u;
+                    profile.HumanizationActionScoreJitter = Mathf.Min(profile.HumanizationActionScoreJitter, 0.8f);
+                    profile.HumanizationFakeOutChance *= 0.72f;
+                    profile.HumanizationPressureMistakeChance *= 0.68f;
+                    break;
+
+                case AIBotPerformanceTier.Elite:
+                    profile.ReactionDelayTicks = 0u;
+                    profile.AimErrorDegrees = Mathf.Min(profile.AimErrorDegrees, 1.0f);
+                    profile.IdleSenseIntervalTicks = ScaleTicks(profile.IdleSenseIntervalTicks, 0.72f, 1u);
+                    profile.CombatSenseIntervalTicks = ScaleTicks(profile.CombatSenseIntervalTicks, 0.72f, 2u);
+                    profile.AttackCadenceTicks = ScaleTicks(profile.AttackCadenceTicks, 0.88f, 1u);
+                    profile.SuperDecisionCooldownTicks = ScaleTicks(profile.SuperDecisionCooldownTicks, 0.78f, 1u);
+                    profile.MinimumCommittedActionScore *= 0.84f;
+                    profile.ActionSwitchScoreMargin *= 0.82f;
+                    profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 0.82f, 1u);
+                    profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 0.86f, 1u);
+                    profile.ObjectiveWeight *= 1.18f;
+                    profile.MacroActionBiasWeight *= 1.16f;
+                    profile.FocusFireWeight *= 1.22f;
+                    profile.LowHealthTargetBias *= 1.20f;
+                    profile.FinisherBonus *= 1.22f;
+                    profile.GemPickupMinimumScore *= 0.86f;
+                    profile.GemPickupSecureThresholdBonus *= 1.18f;
+                    profile.GemPickupDenyThresholdBonus *= 1.18f;
+                    profile.LaneDisciplineWeight *= 1.04f;
+                    profile.TeamRoleCoordinationWeight *= 1.08f;
+                    profile.TeamActionCrowdingPenalty *= 1.05f;
+                    profile.OverFocusedTargetPenaltyPerAlly *= 1.16f;
+                    profile.TacticalMoveRetargetTicks = ScaleTicks(profile.TacticalMoveRetargetTicks, 0.78f, 1u);
+                    profile.TacticalMoveHeartbeatTicks = ScaleTicks(profile.TacticalMoveHeartbeatTicks, 0.82f, 1u);
+                    profile.TacticalDestinationBlend *= 1.14f;
+                    profile.TacticalDestinationSwitchDistance *= 0.90f;
+                    profile.AIMoveInputTurnRateDegreesPerTick *= 1.12f;
+                    profile.AIHighPriorityMoveInputTurnRateDegreesPerTick *= 1.12f;
+                    profile.DangerScanRadius *= 1.14f;
+                    profile.DangerEvadePressureThreshold *= 0.90f;
+                    profile.DangerEvadeScoreBonus *= 1.16f;
+                    profile.DangerRefreshIntervalTicks = ScaleTicks(profile.DangerRefreshIntervalTicks, 0.82f, 1u);
+                    profile.MapOpenShotPreference *= 1.20f;
+                    profile.MapCoverDancePreference *= 1.18f;
+                    profile.MapEscapeSpacePreference *= 1.16f;
+                    profile.MapFireLanePressurePreference *= 1.20f;
+                    profile.MapThrowerSpacingPreference *= 1.16f;
+                    profile.HumanizationReactionJitterTicks = 0u;
+                    profile.HumanizationActionScoreJitter = Mathf.Min(profile.HumanizationActionScoreJitter, 0.45f);
+                    profile.HumanizationFakeOutChance *= 0.55f;
+                    profile.HumanizationPressureMistakeChance *= 0.45f;
+                    break;
+
+                case AIBotPerformanceTier.Regular:
+                case AIBotPerformanceTier.Custom:
+                default:
+                    break;
+            }
         }
 
         private static void ApplyDifficulty(BrawlerAIProfile profile, AIDifficultyLevel difficulty)
