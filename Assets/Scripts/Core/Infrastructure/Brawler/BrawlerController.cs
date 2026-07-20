@@ -2154,7 +2154,8 @@ namespace MOBA.Core.Infrastructure
             Vector3 takeoffPosition,
             Vector3 landingPosition,
             float durationSeconds,
-            float jumpHeight)
+            float jumpHeight,
+            float apexHangPower = 1f)
         {
             CancelPresentationLeap();
 
@@ -2166,14 +2167,16 @@ namespace MOBA.Core.Infrastructure
                 takeoffPosition,
                 landingPosition,
                 duration,
-                Mathf.Max(0f, jumpHeight)));
+                Mathf.Max(0f, jumpHeight),
+                Mathf.Max(0.35f, apexHangPower)));
         }
 
         private IEnumerator PresentationLeapArcRoutine(
             Vector3 takeoffPosition,
             Vector3 landingPosition,
             float durationSeconds,
-            float jumpHeight)
+            float jumpHeight,
+            float apexHangPower)
         {
             float elapsed = 0f;
             while (elapsed < durationSeconds)
@@ -2181,8 +2184,9 @@ namespace MOBA.Core.Infrastructure
                 elapsed += Time.deltaTime;
                 float t = Mathf.Clamp01(elapsed / durationSeconds);
                 float easedTravel = Mathf.SmoothStep(0f, 1f, t);
+                float arc = Mathf.Pow(Mathf.Sin(t * Mathf.PI), apexHangPower);
                 Vector3 visualPosition = Vector3.Lerp(takeoffPosition, landingPosition, easedTravel);
-                visualPosition.y += Mathf.Sin(t * Mathf.PI) * jumpHeight;
+                visualPosition.y += arc * jumpHeight;
                 _presentationWorldOffset = visualPosition - transform.position;
                 yield return null;
             }

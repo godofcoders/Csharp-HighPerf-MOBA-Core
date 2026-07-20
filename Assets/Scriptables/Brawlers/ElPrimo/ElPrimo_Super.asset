@@ -46,5 +46,10 @@ MonoBehaviour:
   LandingRadius: 1.8
   Damage: 990
   LandingSearchRadius: 1.25
-  TravelDurationSeconds: 0.66
-  JumpHeight: 3.15
+  TravelDurationSeconds: 0.74
+  TravelDurationPerUnit: 0.035
+  MaxTravelDurationSeconds: 1.04
+  JumpHeight: 4.85
+  DistanceHeightBonus: 0.32
+  MaxJumpHeight: 7.15
+  ApexHangPower: 0.68

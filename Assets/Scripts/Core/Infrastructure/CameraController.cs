@@ -50,6 +50,12 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Half-extents of the dead zone box on the XZ plane (world units). Target moves within this box before the camera re-engages follow.")]
         [SerializeField] private Vector2 _deadZoneHalfExtents = new Vector2(0.85f, 0.75f);
 
+        [Header("Vertical Follow")]
+        [Tooltip("Camera ignores short-lived vertical target movement within this range, so leap arcs remain visible instead of being cancelled by camera follow.")]
+        [SerializeField] private float _verticalDeadZone = 1.15f;
+        [Tooltip("How quickly the camera anchor catches up to sustained vertical target movement beyond the dead zone.")]
+        [SerializeField] private float _verticalFollowSpeed = 1.8f;
+
         [Header("Bounds")]
         [Tooltip("If true, the camera anchor is clamped to a designer-set XZ rectangle so the camera never frames outside the map.")]
         [SerializeField] private bool _clampToBounds = false;
@@ -149,9 +155,7 @@ namespace MOBA.Core.Infrastructure
             if (dz > _deadZoneHalfExtents.y) _anchor.z += dz - _deadZoneHalfExtents.y;
             else if (dz < -_deadZoneHalfExtents.y) _anchor.z += dz + _deadZoneHalfExtents.y;
 
-            // Y always tracks the target — vertical movement is rare in a
-            // top-down arena and the dead zone is XZ-only.
-            _anchor.y = targetPos.y;
+            UpdateVerticalAnchor(targetPos.y);
 
             // Bounds clamp: keep the anchor inside the designer-set XZ
             // rectangle so the camera doesn't frame past the map edges.
@@ -168,6 +172,25 @@ namespace MOBA.Core.Infrastructure
                 if (_anchor.z < minZ) _anchor.z = minZ;
                 else if (_anchor.z > maxZ) _anchor.z = maxZ;
             }
+        }
+
+        private void UpdateVerticalAnchor(float targetY)
+        {
+            float deadZone = Mathf.Max(0f, _verticalDeadZone);
+            float deltaY = targetY - _anchor.y;
+            float followSpeed = Mathf.Max(0f, _verticalFollowSpeed);
+            if (Mathf.Abs(deltaY) <= deadZone)
+            {
+                _anchor.y = followSpeed <= 0f
+                    ? targetY
+                    : Mathf.MoveTowards(_anchor.y, targetY, followSpeed * Time.deltaTime);
+                return;
+            }
+
+            float targetAnchorY = targetY - Mathf.Sign(deltaY) * deadZone;
+            _anchor.y = followSpeed <= 0f
+                ? targetAnchorY
+                : Mathf.MoveTowards(_anchor.y, targetAnchorY, followSpeed * Time.deltaTime);
         }
 
         private Vector3 ComputeShakeOffset()

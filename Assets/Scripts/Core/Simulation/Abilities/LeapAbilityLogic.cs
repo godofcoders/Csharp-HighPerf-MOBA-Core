@@ -39,13 +39,16 @@ namespace MOBA.Core.Simulation.Abilities
             if (!TryResolveLanding(owner, origin, requestedLanding, out Vector3 landing))
                 return AbilityExecutionResult.Failed(context.AbilityDefinition, context.SlotType);
 
-            float travelDuration = Mathf.Max(0f, _definition.TravelDurationSeconds);
+            float horizontalDistance = ResolveHorizontalDistance(origin, landing);
+            float travelDuration = ResolveTravelDuration(horizontalDistance);
+            float jumpHeight = ResolveJumpHeight(horizontalDistance);
             owner.WarpTo(landing);
             owner.PlayPresentationLeapArc(
                 origin,
                 landing,
                 travelDuration,
-                Mathf.Max(0f, _definition.JumpHeight));
+                jumpHeight,
+                Mathf.Max(0.35f, _definition.ApexHangPower));
 
             AbilityExecutionResult result = AbilityExecutionResult.Succeeded(
                 context.AbilityDefinition,
@@ -60,6 +63,37 @@ namespace MOBA.Core.Simulation.Abilities
         }
 
         public void Tick(uint currentTick) { }
+
+        private float ResolveTravelDuration(float horizontalDistance)
+        {
+            float duration = Mathf.Max(0f, _definition.TravelDurationSeconds);
+            if (_definition.TravelDurationPerUnit > 0f)
+                duration += Mathf.Max(0f, horizontalDistance) * _definition.TravelDurationPerUnit;
+
+            if (_definition.MaxTravelDurationSeconds > 0f)
+                duration = Mathf.Min(duration, _definition.MaxTravelDurationSeconds);
+
+            return duration;
+        }
+
+        private float ResolveJumpHeight(float horizontalDistance)
+        {
+            float height = Mathf.Max(0f, _definition.JumpHeight);
+            if (_definition.DistanceHeightBonus > 0f)
+                height += Mathf.Max(0f, horizontalDistance) * _definition.DistanceHeightBonus;
+
+            if (_definition.MaxJumpHeight > 0f)
+                height = Mathf.Min(height, _definition.MaxJumpHeight);
+
+            return height;
+        }
+
+        private static float ResolveHorizontalDistance(Vector3 from, Vector3 to)
+        {
+            Vector3 offset = to - from;
+            offset.y = 0f;
+            return offset.magnitude;
+        }
 
         private IEnumerator ResolveLandingRoutine(
             BrawlerController owner,
