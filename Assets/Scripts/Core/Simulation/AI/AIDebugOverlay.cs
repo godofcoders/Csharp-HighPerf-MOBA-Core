@@ -65,6 +65,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Objective: {snapshot.ObjectiveName}");
             GUILayout.Label($"Objective Debug: {snapshot.ObjectiveDebug}");
             GUILayout.Label($"Tactical/Map: {snapshot.TacticalMovementDebug}");
+            GUILayout.Label($"Navigation: {snapshot.NavigationDebug}");
             GUILayout.Label($"AI Incident: {snapshot.IncidentDebug}");
             GUILayout.Label($"AI Perf: {snapshot.PerformanceDebug}");
             GUILayout.Label($"AI Budget: {snapshot.ProductionBudgetDebug}");
@@ -149,6 +150,7 @@ namespace MOBA.Core.Simulation.AI
                     $"Opponent={snapshot.OpponentModelDebug} | " +
                     $"Objective={snapshot.ObjectiveDebug} | " +
                     $"Tactical={snapshot.TacticalMovementDebug} | " +
+                    $"Navigation={snapshot.NavigationDebug} | " +
                     $"Incident={snapshot.IncidentDebug} | " +
                     $"Perf={snapshot.PerformanceDebug} | " +
                     $"Budget={snapshot.ProductionBudgetDebug} | " +

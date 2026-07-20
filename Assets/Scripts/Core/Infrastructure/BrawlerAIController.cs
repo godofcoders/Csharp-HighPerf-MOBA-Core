@@ -3,6 +3,9 @@ using UnityEngine.SceneManagement;
 using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
 using MOBA.Core.Simulation.AI;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace MOBA.Core.Infrastructure
 {
@@ -18,6 +21,22 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private AIDifficultyLevel _difficulty = AIDifficultyLevel.Normal;
         [SerializeField] private AIPersonalityType _personality = AIPersonalityType.Balanced;
         [SerializeField] private AITuningCatalog _tuningCatalog;
+
+#if UNITY_EDITOR
+        [Header("AI Scene Debug")]
+        [Tooltip("Draw editor-only AI decision/movement gizmos while the game is running.")]
+        [SerializeField] private bool _drawSceneDebug = true;
+        [Tooltip("If true, every bot draws concise debug markers in Scene view without selecting it.")]
+        [SerializeField] private bool _drawSceneDebugWhenNotSelected = true;
+        [Tooltip("Draw compact labels with action, target, objective, and navigation state.")]
+        [SerializeField] private bool _drawSceneDebugLabels = true;
+        [Tooltip("Draw a line from the bot to its current combat target.")]
+        [SerializeField] private bool _drawSceneDebugTargetLinks = true;
+        [Tooltip("Draw the actual queued movement vector after smoothing/avoidance.")]
+        [SerializeField] private bool _drawSceneDebugMoveVector = true;
+        [Tooltip("Height above the bot for Scene view debug labels.")]
+        [SerializeField] private float _sceneDebugLabelHeight = 2.15f;
+#endif
 
         private static AIObjectivePoint[] _cachedObjectivePoints;
         private static int _cachedObjectiveSceneHandle = -1;
@@ -592,6 +611,7 @@ $"NavZero={(_navAgent != null ? _navAgent.ConsecutiveActiveZeroMoveTicks : 0)} "
 $"PathDefers={(_navAgent != null ? _navAgent.ConsecutivePathBudgetDeferrals : 0)} " +
 $"{LastTacticalStopDebug} " +
 $"Map={LastMapRouteDebug}";
+            _debugSnapshot.NavigationDebug = BuildNavigationDebug();
 
             _debugSnapshot.PerformanceDebug = AIPerformanceTracker.GetDebugSummary(currentTick);
             _debugSnapshot.IncidentDebug = AIIncidentLogger.GetDebugSummary(_brawler.EntityID);
@@ -1204,32 +1224,317 @@ $"Map={LastMapRouteDebug}";
                 $"{AITuningRuntimeOverrides.GetDebugSummary()}";
         }
 
+        private string BuildNavigationDebug()
+        {
+            if (_navAgent == null)
+                return "Nav=None";
+
+            if (!_navAgent.HasDestination)
+            {
+                return
+                    $"Nav=Idle " +
+                    $"Move={FormatVector(_navAgent.LastQueuedMoveDirection)} " +
+                    $"Zero={_navAgent.ConsecutiveActiveZeroMoveTicks}";
+            }
+
+            float distance = _brawler != null
+                ? PlanarDistance(_brawler.Position, _navAgent.Destination)
+                : 0f;
+            string state = _navAgent.IsRouteBlocked
+                ? "Blocked"
+                : _navAgent.DebugHasPath ? "Path" : "Direct";
+            string waypoint = _navAgent.DebugHasSteeringTarget
+                ? FormatVector(_navAgent.DebugSteeringTarget)
+                : "None";
+
+            return
+                $"Nav={state} " +
+                $"Dest={FormatVector(_navAgent.Destination)} " +
+                $"Waypoint={waypoint} " +
+                $"Dist={distance:0.0} " +
+                $"Arrival={_navAgent.DebugArrivalDistance:0.0} " +
+                $"Path={_navAgent.DebugPathIndex}/{_navAgent.DebugPathNodeCount} " +
+                $"Age={_navAgent.DebugDestinationAgeTicks} " +
+                $"High={_navAgent.DebugDestinationHighPriority} " +
+                $"Blocked={_navAgent.IsRouteBlocked} " +
+                $"Stuck={_navAgent.ConsecutiveStuckSamples} " +
+                $"RouteFail={_navAgent.ConsecutiveRouteFailures} " +
+                $"Defers={_navAgent.ConsecutivePathBudgetDeferrals} " +
+                $"Move={FormatVector(_navAgent.LastQueuedMoveDirection)}";
+        }
+
 #if UNITY_EDITOR
+        private static readonly Color SceneObjectiveColor = new Color(1f, 0.84f, 0.18f, 0.85f);
+        private static readonly Color SceneDestinationColor = new Color(0.18f, 0.95f, 1f, 0.95f);
+        private static readonly Color SceneWaypointColor = new Color(0.25f, 1f, 0.35f, 0.95f);
+        private static readonly Color SceneBlockedColor = new Color(1f, 0.20f, 0.15f, 0.95f);
+        private static readonly Color SceneMoveColor = new Color(0.55f, 0.90f, 1f, 0.95f);
+        private static readonly Color SceneTargetColor = new Color(1f, 0.30f, 0.75f, 0.88f);
+        private static GUIStyle _sceneDebugLabelStyle;
+
+        private void OnDrawGizmos()
+        {
+            if (!Application.isPlaying ||
+                !_drawSceneDebug ||
+                !_drawSceneDebugWhenNotSelected ||
+                Selection.Contains(gameObject))
+            {
+                return;
+            }
+
+            DrawAISceneDebug(false);
+        }
+
         private void OnDrawGizmosSelected()
         {
-            if (!Application.isPlaying)
+            if (!Application.isPlaying || !_drawSceneDebug)
                 return;
 
+            DrawAISceneDebug(true);
+        }
+
+        private void DrawAISceneDebug(bool selected)
+        {
+            Vector3 origin = ResolveDebugOrigin();
+            DrawObjectiveSceneDebug(selected);
+            DrawNavigationSceneDebug(origin, selected);
+
+            if (_drawSceneDebugTargetLinks)
+                DrawTargetSceneDebug(origin, selected);
+
+            if (_drawSceneDebugMoveVector)
+                DrawMoveVectorSceneDebug(origin, selected);
+
+            if (_drawSceneDebugLabels)
+                DrawSceneDebugLabel(origin, selected);
+        }
+
+        private void DrawObjectiveSceneDebug(bool selected)
+        {
             if (HasObjectiveDebug)
             {
+                Gizmos.color = SceneObjectiveColor;
                 Gizmos.DrawWireSphere(
                     LastObjectiveCenter,
                     Mathf.Max(0.35f, LastObjectiveRadius));
-                Gizmos.DrawWireSphere(LastObjectiveSlot, 0.45f);
+                Gizmos.DrawWireSphere(LastObjectiveSlot + Vector3.up * 0.05f, selected ? 0.48f : 0.34f);
                 Gizmos.DrawLine(LastObjectiveCenter, LastObjectiveSlot);
+
+                if (selected)
+                {
+                    Gizmos.DrawWireCube(
+                        LastObjectiveDestination + Vector3.up * 0.06f,
+                        new Vector3(0.55f, 0.12f, 0.55f));
+                }
+            }
+        }
+
+        private void DrawNavigationSceneDebug(Vector3 origin, bool selected)
+        {
+            if (_navAgent == null || !_navAgent.HasDestination)
+                return;
+
+            Color destinationColor = _navAgent.IsRouteBlocked
+                ? SceneBlockedColor
+                : SceneDestinationColor;
+            Vector3 destination = _navAgent.Destination;
+            Vector3 waypoint = _navAgent.DebugHasSteeringTarget
+                ? _navAgent.DebugSteeringTarget
+                : destination;
+
+            Gizmos.color = _navAgent.DebugHasSteeringTarget ? SceneWaypointColor : destinationColor;
+            Gizmos.DrawLine(origin + Vector3.up * 0.12f, waypoint + Vector3.up * 0.12f);
+            Gizmos.DrawWireSphere(waypoint + Vector3.up * 0.08f, selected ? 0.32f : 0.24f);
+
+            if (PlanarDistance(waypoint, destination) > 0.2f)
+            {
+                Gizmos.color = destinationColor;
+                Gizmos.DrawLine(waypoint + Vector3.up * 0.10f, destination + Vector3.up * 0.10f);
             }
 
-            if (LastTacticalMovementIntent != AITacticalMovementIntent.None)
+            Gizmos.color = destinationColor;
+            Gizmos.DrawWireCube(
+                destination + Vector3.up * 0.08f,
+                new Vector3(selected ? 0.55f : 0.42f, 0.14f, selected ? 0.55f : 0.42f));
+
+            if (LastTacticalMovementIntent != AITacticalMovementIntent.None &&
+                PlanarDistance(origin, LastTacticalMoveDestination) > 0.2f)
             {
-                Gizmos.DrawWireSphere(LastTacticalMoveDestination, 0.3f);
-                Gizmos.DrawLine(transform.position, LastTacticalMoveDestination);
+                Gizmos.color = WithAlpha(SceneDestinationColor, selected ? 0.58f : 0.36f);
+                Gizmos.DrawLine(origin + Vector3.up * 0.20f, LastTacticalMoveDestination + Vector3.up * 0.20f);
+                Gizmos.DrawWireSphere(LastTacticalMoveDestination + Vector3.up * 0.12f, selected ? 0.24f : 0.18f);
             }
+        }
+
+        private void DrawTargetSceneDebug(Vector3 origin, bool selected)
+        {
+            if (_targetInfo == null ||
+                !_targetInfo.HasLiveTarget ||
+                _targetInfo.Target == null)
+            {
+                return;
+            }
+
+            Vector3 targetPosition = _targetInfo.Target.Position;
+            Gizmos.color = WithAlpha(SceneTargetColor, selected ? 0.92f : 0.48f);
+            Gizmos.DrawLine(origin + Vector3.up * 0.35f, targetPosition + Vector3.up * 0.35f);
+            if (selected)
+                Gizmos.DrawWireSphere(targetPosition + Vector3.up * 0.10f, 0.42f);
+        }
+
+        private void DrawMoveVectorSceneDebug(Vector3 origin, bool selected)
+        {
+            if (_navAgent == null)
+                return;
+
+            Vector3 move = _navAgent.LastQueuedMoveDirection;
+            move.y = 0f;
+            if (move.sqrMagnitude <= 0.0001f)
+                return;
+
+            float length = selected ? 1.35f : 0.92f;
+            DrawArrow(
+                origin + Vector3.up * 0.26f,
+                move.normalized * length,
+                SceneMoveColor);
+        }
+
+        private void DrawSceneDebugLabel(Vector3 origin, bool selected)
+        {
+            GUIStyle style = ResolveSceneDebugLabelStyle();
+            style.normal.textColor = _navAgent != null && _navAgent.IsRouteBlocked
+                ? SceneBlockedColor
+                : selected ? Color.white : new Color(0.82f, 0.95f, 1f, 0.95f);
+
+            Handles.Label(
+                origin + Vector3.up * Mathf.Max(0.6f, _sceneDebugLabelHeight),
+                BuildSceneDebugLabel(selected),
+                style);
+        }
+
+        private string BuildSceneDebugLabel(bool selected)
+        {
+            string brawlerName = _brawler != null && _brawler.Definition != null
+                ? _brawler.Definition.BrawlerName
+                : _brawler != null ? _brawler.name : name;
+            string targetName = ResolveTargetDebugName();
+            string navState = ResolveNavigationSceneDebugState();
+
+            if (!selected)
+            {
+                return
+                    $"{brawlerName} | {_lastChosenAction.ActionType} {_lastChosenAction.Score:0.0}\n" +
+                    $"Move {LastTacticalMovementIntent} | {navState}\n" +
+                    $"Target {targetName}";
+            }
+
+            return
+                $"{brawlerName} [{(_brawler != null ? _brawler.Team.ToString() : "?")}]\n" +
+                $"Action {_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}\n" +
+                $"Target {targetName} focus={CurrentTargetFocusCount}/{CurrentTargetAllyFocusCount} penalty={CurrentTargetOverFocusPenalty:0.0}\n" +
+                $"Move {LastTacticalMovementIntent} reason={LastTacticalMoveReason}\n" +
+                $"{navState} | {LastTacticalStopDebug}\n" +
+                $"Obj {LastObjectiveType} {LastObjectiveName} role={LastObjectiveSlotRole}->{LastObjectiveDesiredSlotRole}\n" +
+                $"{FailureRecoveryDebug}";
+        }
+
+        private string ResolveNavigationSceneDebugState()
+        {
+            if (_navAgent == null)
+                return "Nav=None";
+
+            if (!_navAgent.HasDestination)
+                return $"Nav=Idle zero={_navAgent.ConsecutiveActiveZeroMoveTicks}";
+
+            float distance = _brawler != null
+                ? PlanarDistance(_brawler.Position, _navAgent.Destination)
+                : 0f;
+            string state = _navAgent.IsRouteBlocked
+                ? "Blocked"
+                : _navAgent.DebugHasPath ? "Path" : "Direct";
+
+            return
+                $"Nav={state} d={distance:0.0} path={_navAgent.DebugPathIndex}/{_navAgent.DebugPathNodeCount} " +
+                $"stuck={_navAgent.ConsecutiveStuckSamples} def={_navAgent.ConsecutivePathBudgetDeferrals}";
+        }
+
+        private string ResolveTargetDebugName()
+        {
+            if (_targetInfo == null ||
+                !_targetInfo.HasLiveTarget ||
+                _targetInfo.Target == null)
+            {
+                return "None";
+            }
+
+            if (_targetInfo.Target is BrawlerController targetBrawler)
+            {
+                string nameLabel = targetBrawler.Definition != null
+                    ? targetBrawler.Definition.BrawlerName
+                    : targetBrawler.name;
+                return $"{nameLabel}#{targetBrawler.EntityID}";
+            }
+
+            return $"Entity#{_targetInfo.Target.EntityID}";
+        }
+
+        private Vector3 ResolveDebugOrigin()
+        {
+            if (_brawler != null)
+                return _brawler.Position;
+
+            return transform.position;
+        }
+
+        private static void DrawArrow(Vector3 origin, Vector3 vector, Color color)
+        {
+            if (vector.sqrMagnitude <= 0.0001f)
+                return;
+
+            Vector3 end = origin + vector;
+            Vector3 direction = vector.normalized;
+            Vector3 right = Quaternion.AngleAxis(28f, Vector3.up) * -direction;
+            Vector3 left = Quaternion.AngleAxis(-28f, Vector3.up) * -direction;
+            float headLength = Mathf.Min(0.35f, vector.magnitude * 0.35f);
+
+            Gizmos.color = color;
+            Gizmos.DrawLine(origin, end);
+            Gizmos.DrawLine(end, end + right * headLength);
+            Gizmos.DrawLine(end, end + left * headLength);
+        }
+
+        private static GUIStyle ResolveSceneDebugLabelStyle()
+        {
+            if (_sceneDebugLabelStyle != null)
+                return _sceneDebugLabelStyle;
+
+            _sceneDebugLabelStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                richText = false,
+                fontSize = 11,
+                alignment = TextAnchor.UpperLeft
+            };
+            _sceneDebugLabelStyle.normal.textColor = Color.white;
+            return _sceneDebugLabelStyle;
+        }
+
+        private static Color WithAlpha(Color color, float alpha)
+        {
+            color.a = Mathf.Clamp01(alpha);
+            return color;
         }
 #endif
 
         private string FormatVector(Vector3 value)
         {
             return $"({value.x:0.0},{value.y:0.0},{value.z:0.0})";
+        }
+
+        private static float PlanarDistance(Vector3 a, Vector3 b)
+        {
+            Vector3 offset = a - b;
+            offset.y = 0f;
+            return offset.magnitude;
         }
 
         private void ReportCurrentTargetFocus()

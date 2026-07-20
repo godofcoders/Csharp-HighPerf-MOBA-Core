@@ -45,6 +45,8 @@ namespace MOBA.Core.Simulation.AI
         private uint _lastQueuedMoveTick;
         private int _consecutiveActiveZeroMoveTicks;
         private int _consecutivePathBudgetDeferrals;
+        private Vector3 _debugSteeringTarget;
+        private bool _hasDebugSteeringTarget;
         private Vector3 _lastAvoidanceDirection;
         private uint _avoidanceDirectionLockUntilTick;
         private bool _hasAvoidanceDirection;
@@ -59,6 +61,17 @@ namespace MOBA.Core.Simulation.AI
         public Vector3 LastQueuedMoveDirection => _lastQueuedMoveDirection;
         public int ConsecutiveActiveZeroMoveTicks => _consecutiveActiveZeroMoveTicks;
         public int ConsecutivePathBudgetDeferrals => _consecutivePathBudgetDeferrals;
+        public bool DebugHasSteeringTarget => _hasDebugSteeringTarget;
+        public Vector3 DebugSteeringTarget => _debugSteeringTarget;
+        public int DebugPathIndex => _pathIndex;
+        public int DebugPathNodeCount => _path != null ? _path.Count : 0;
+        public bool DebugHasPath => _path != null && _pathIndex < _path.Count;
+        public float DebugArrivalDistance => _arrivalDistance;
+        public bool DebugDestinationHighPriority => _currentDestinationHighPriority;
+        public uint DebugDestinationAgeTicks =>
+            _hasDestination && _clock != null && _clock.CurrentTick >= _destinationRequestTick
+                ? _clock.CurrentTick - _destinationRequestTick
+                : 0u;
         public bool IsActiveDestinationMovementSuppressed =>
             _hasDestination && _consecutiveActiveZeroMoveTicks > 0;
 
@@ -257,6 +270,7 @@ namespace MOBA.Core.Simulation.AI
             _consecutiveRouteFailures = 0;
             _consecutiveActiveZeroMoveTicks = 0;
             _consecutivePathBudgetDeferrals = 0;
+            _hasDebugSteeringTarget = false;
             _hasAvoidanceDirection = false;
             _movementSmoothingState = AIMovementSmoothingState.None;
             QueueMove(Vector3.zero);
@@ -274,6 +288,7 @@ namespace MOBA.Core.Simulation.AI
             _consecutiveActiveZeroMoveTicks = 0;
             _consecutivePathBudgetDeferrals = 0;
             _lastQueuedMoveDirection = Vector3.zero;
+            _hasDebugSteeringTarget = false;
             _hasAvoidanceDirection = false;
             _movementSmoothingState = AIMovementSmoothingState.None;
         }
@@ -282,6 +297,7 @@ namespace MOBA.Core.Simulation.AI
         {
             if (!_hasDestination)
             {
+                _hasDebugSteeringTarget = false;
                 QueueMove(Vector3.zero);
                 return;
             }
@@ -303,6 +319,7 @@ namespace MOBA.Core.Simulation.AI
 
                 if (_routeBlocked)
                 {
+                    _hasDebugSteeringTarget = false;
                     QueueMove(Vector3.zero);
                     return;
                 }
@@ -313,6 +330,7 @@ namespace MOBA.Core.Simulation.AI
                 Vector3 directDir = GetPlanarDelta(_destination);
                 if (directDir.sqrMagnitude > 0.0001f)
                 {
+                    SetDebugSteeringTarget(_destination);
                     if (ShouldWaitForPathBeforeDirectMove(directDir))
                     {
                         QueueMove(Vector3.zero);
@@ -323,6 +341,7 @@ namespace MOBA.Core.Simulation.AI
                 }
                 else
                 {
+                    _hasDebugSteeringTarget = false;
                     QueueMove(Vector3.zero);
                 }
 
@@ -330,9 +349,16 @@ namespace MOBA.Core.Simulation.AI
             }
 
             Vector3 nodeWorld = ResolvePathSteeringTarget();
+            SetDebugSteeringTarget(nodeWorld);
 
             Vector3 dir = GetPlanarDelta(nodeWorld);
             QueueMove(dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.zero);
+        }
+
+        private void SetDebugSteeringTarget(Vector3 target)
+        {
+            _debugSteeringTarget = FlattenToMovementPlane(target);
+            _hasDebugSteeringTarget = true;
         }
 
         private bool ShouldWaitForPathBeforeDirectMove(Vector3 directDir)
