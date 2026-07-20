@@ -18,6 +18,9 @@ namespace MOBA.Core.Infrastructure
         protected override TickPhase Phase => TickPhase.InputApply;
 
         [SerializeField] private BrawlerController _brawler;
+        [Header("Runtime Performance")]
+        [Tooltip("Custom uses the explicit difficulty/personality below. Named tiers can be changed in Play Mode and rebuild AI tuning immediately.")]
+        [SerializeField] private AIBotPerformanceTier _performanceTier = AIBotPerformanceTier.Custom;
         [SerializeField] private AIDifficultyLevel _difficulty = AIDifficultyLevel.Normal;
         [SerializeField] private AIPersonalityType _personality = AIPersonalityType.Balanced;
         [SerializeField] private AITuningCatalog _tuningCatalog;
@@ -99,6 +102,9 @@ namespace MOBA.Core.Infrastructure
         private BrawlerAIProfile _profile;
         private AITuningCatalog _activeTuningCatalog;
         private int _runtimeTuningVersion = -1;
+        private AIBotPerformanceTier _appliedPerformanceTier = AIBotPerformanceTier.Custom;
+        private AIDifficultyLevel _appliedDifficulty = AIDifficultyLevel.Normal;
+        private AIPersonalityType _appliedPersonality = AIPersonalityType.Balanced;
 
         private uint _nextSenseTick;
         private uint _nextDangerRefreshTick;
@@ -232,6 +238,7 @@ _actionExecutor != null
 
         public AIDifficultyLevel Difficulty => _profile != null ? _profile.Difficulty : _difficulty;
         public AIPersonalityType Personality => _profile != null ? _profile.Personality : _personality;
+        public AIBotPerformanceTier PerformanceTier => _performanceTier;
         public string ReactiveDebug => _lastReactiveDebug;
         public string DangerDebug => _lastDangerDebug;
         public string FailureRecoveryDebug => $"{_lastFailureRecoveryDebug} {_lastIdleHesitationDebug}";
@@ -345,6 +352,7 @@ _actionExecutor != null
             if (_profile.LogDecisionTicks && currentTick % 30 == 0)
                 Debug.Log($"[AI-{_brawler.name}] tick ok hasTarget={_targetInfo.HasLiveTarget} action={_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}");
 
+            ApplyPerformanceTierSelection();
             RefreshRuntimeTuningIfNeeded(currentTick);
 
             if (_brawler.State.HasStatus(StatusEffectType.Stun))
@@ -800,6 +808,8 @@ $"Map={LastMapRouteDebug}";
 
         private BrawlerAIProfile ResolveAIProfile(BrawlerDefinition definition)
         {
+            ApplyPerformanceTierSelection();
+
             BrawlerAIProfile baseProfile = null;
 
             if (definition != null && definition.AIProfile != null)
@@ -826,6 +836,9 @@ $"Map={LastMapRouteDebug}";
                 _personality,
                 _activeTuningCatalog);
             _runtimeTuningVersion = AITuningRuntimeOverrides.Version;
+            _appliedPerformanceTier = _performanceTier;
+            _appliedDifficulty = _difficulty;
+            _appliedPersonality = _personality;
             _lastTuningDebug = BuildTuningSummary();
 
             return runtimeProfile;
@@ -1010,9 +1023,19 @@ $"Map={LastMapRouteDebug}";
         {
             AITuningCatalog resolvedCatalog = AITuningCatalogProvider.Resolve(_tuningCatalog);
             if (_profile == null ||
-                _baseProfileSource == null ||
-                (_runtimeTuningVersion == AITuningRuntimeOverrides.Version &&
-                 _activeTuningCatalog == resolvedCatalog))
+                _baseProfileSource == null)
+            {
+                return;
+            }
+
+            bool tuningCurrent =
+                _runtimeTuningVersion == AITuningRuntimeOverrides.Version &&
+                _activeTuningCatalog == resolvedCatalog &&
+                _appliedPerformanceTier == _performanceTier &&
+                _appliedDifficulty == _difficulty &&
+                _appliedPersonality == _personality;
+
+            if (tuningCurrent)
             {
                 return;
             }
@@ -1025,6 +1048,9 @@ $"Map={LastMapRouteDebug}";
                 _personality,
                 _activeTuningCatalog);
             _runtimeTuningVersion = AITuningRuntimeOverrides.Version;
+            _appliedPerformanceTier = _performanceTier;
+            _appliedDifficulty = _difficulty;
+            _appliedPersonality = _personality;
             _lastTuningDebug = BuildTuningSummary();
 
             _perception = new AIPerception(
@@ -1263,8 +1289,57 @@ $"Map={LastMapRouteDebug}";
                 : "Catalog=None";
 
             return
+                $"Tier={_performanceTier} Difficulty={_difficulty} Personality={_personality} " +
                 $"Tuning {catalog} " +
                 $"{AITuningRuntimeOverrides.GetDebugSummary()}";
+        }
+
+        private void ApplyPerformanceTierSelection()
+        {
+            if (_performanceTier == AIBotPerformanceTier.Custom)
+                return;
+
+            ResolvePerformanceTier(
+                _performanceTier,
+                out AIDifficultyLevel tierDifficulty,
+                out AIPersonalityType tierPersonality);
+
+            _difficulty = tierDifficulty;
+            _personality = tierPersonality;
+        }
+
+        private static void ResolvePerformanceTier(
+            AIBotPerformanceTier tier,
+            out AIDifficultyLevel difficulty,
+            out AIPersonalityType personality)
+        {
+            switch (tier)
+            {
+                case AIBotPerformanceTier.Amateur:
+                    difficulty = AIDifficultyLevel.Easy;
+                    personality = AIPersonalityType.Cautious;
+                    return;
+
+                case AIBotPerformanceTier.Regular:
+                    difficulty = AIDifficultyLevel.Normal;
+                    personality = AIPersonalityType.Balanced;
+                    return;
+
+                case AIBotPerformanceTier.Veteran:
+                    difficulty = AIDifficultyLevel.Hard;
+                    personality = AIPersonalityType.TeamPlayer;
+                    return;
+
+                case AIBotPerformanceTier.Elite:
+                    difficulty = AIDifficultyLevel.Hard;
+                    personality = AIPersonalityType.Aggressive;
+                    return;
+
+                default:
+                    difficulty = AIDifficultyLevel.Normal;
+                    personality = AIPersonalityType.Balanced;
+                    return;
+            }
         }
 
         private string BuildNavigationDebug()
@@ -1388,7 +1463,7 @@ $"Map={LastMapRouteDebug}";
                 $"Action={_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.00}\n" +
                 $"DecisionRank={_inspectorDecisionPerformanceRank} score={_inspectorDecisionPerformanceScore:0.0}\n" +
                 $"Scores={BuildTopActionScoreSummary(5)}\n" +
-                $"Difficulty={Difficulty} Personality={Personality} Human={HumanizationDebug}\n" +
+                $"Tier={_performanceTier} Difficulty={Difficulty} Personality={Personality} Human={HumanizationDebug}\n" +
                 $"Tuning={TuningDebug}";
         }
 
@@ -1979,6 +2054,7 @@ $"Map={LastMapRouteDebug}";
 
             return
                 $"{SceneRich(brawlerName, Color.white)} [{SceneRich(_brawler != null ? _brawler.Team.ToString() : "?", SceneLabelMutedColor)}]\n" +
+                $"{SceneRich("Tier", SceneLabelMutedColor)} {_performanceTier} {Difficulty}/{Personality}\n" +
                 $"{SceneRich("Action", ResolveActionColor(_lastChosenAction.ActionType))} {_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}\n" +
                 $"{SceneRich("Rank", ResolveDecisionPerformanceColor(decisionPerformance))} {decisionRank} {decisionPerformance:0}/100\n" +
                 $"{SceneRich("Top", SceneObjectiveColor)} {BuildTopActionScoreSummary(4)}\n" +
