@@ -44,6 +44,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private string _inspectorDebugBrawler;
         [SerializeField] private AIActionType _inspectorCurrentAction;
         [SerializeField] private float _inspectorCurrentActionScore;
+        [SerializeField] private string _inspectorDecisionPerformanceRank;
+        [SerializeField] private float _inspectorDecisionPerformanceScore;
         [SerializeField] private AITacticalMovementIntent _inspectorTacticalIntent;
         [SerializeField] private string _inspectorTarget;
         [SerializeField] private string _inspectorRouteState;
@@ -58,6 +60,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private int _inspectorPathBudgetDeferrals;
         [TextArea(2, 5)]
         [SerializeField] private string _inspectorDecisionDetails;
+        [TextArea(2, 4)]
+        [SerializeField] private string _inspectorDecisionPerformanceBreakdown;
         [TextArea(2, 5)]
         [SerializeField] private string _inspectorMovementDetails;
         [TextArea(2, 5)]
@@ -1331,6 +1335,9 @@ $"Map={LastMapRouteDebug}";
                 : _brawler != null ? _brawler.name : name;
             _inspectorCurrentAction = _lastChosenAction.ActionType;
             _inspectorCurrentActionScore = _lastChosenAction.Score;
+            _inspectorDecisionPerformanceScore = EvaluateDecisionPerformance(
+                out _inspectorDecisionPerformanceRank,
+                out _inspectorDecisionPerformanceBreakdown);
             _inspectorTacticalIntent = LastTacticalMovementIntent;
             _inspectorTarget = ResolveTargetDebugName();
             _inspectorRouteState = string.IsNullOrWhiteSpace(forcedState)
@@ -1379,9 +1386,231 @@ $"Map={LastMapRouteDebug}";
             return
                 $"State={(!string.IsNullOrWhiteSpace(forcedState) ? forcedState : "Running")}\n" +
                 $"Action={_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.00}\n" +
+                $"DecisionRank={_inspectorDecisionPerformanceRank} score={_inspectorDecisionPerformanceScore:0.0}\n" +
                 $"Scores={BuildTopActionScoreSummary(5)}\n" +
                 $"Difficulty={Difficulty} Personality={Personality} Human={HumanizationDebug}\n" +
                 $"Tuning={TuningDebug}";
+        }
+
+        private float EvaluateDecisionPerformance(out string rank, out string breakdown)
+        {
+            float score = 50f;
+            string details = "Base=50";
+
+            if (_lastChosenAction.ActionType == AIActionType.None)
+            {
+                score -= 18f;
+                details += " NoAction=-18";
+            }
+            else if (_lastChosenAction.Score > 0.01f)
+            {
+                score += 8f;
+                details += " ValidAction=+8";
+            }
+            else
+            {
+                score -= 8f;
+                details += " WeakAction=-8";
+            }
+
+            if (TryGetTopTwoActionScores(out float bestScore, out float secondScore))
+            {
+                float margin = bestScore - secondScore;
+                float confidenceBonus = Mathf.Clamp(margin * 0.4f, -10f, 18f);
+                score += confidenceBonus;
+                details += $" Confidence={confidenceBonus:+0.0;-0.0;0.0}";
+            }
+
+            if (_navAgent != null)
+            {
+                if (_navAgent.IsRouteBlocked)
+                {
+                    score -= 22f;
+                    details += " Blocked=-22";
+                }
+                else if (_navAgent.HasDestination && _navAgent.ConsecutiveStuckSamples == 0)
+                {
+                    score += 7f;
+                    details += " RouteHealthy=+7";
+                }
+
+                if (_navAgent.ConsecutiveStuckSamples > 0)
+                {
+                    float stuckPenalty = Mathf.Min(20f, _navAgent.ConsecutiveStuckSamples * 4f);
+                    score -= stuckPenalty;
+                    details += $" Stuck=-{stuckPenalty:0.0}";
+                }
+
+                if (_navAgent.ConsecutivePathBudgetDeferrals > 0)
+                {
+                    float deferralPenalty = Mathf.Min(12f, _navAgent.ConsecutivePathBudgetDeferrals * 3f);
+                    score -= deferralPenalty;
+                    details += $" PathBudget=-{deferralPenalty:0.0}";
+                }
+
+                if (RequiresDestination(_lastChosenAction.ActionType) && !_navAgent.HasDestination)
+                {
+                    score -= 8f;
+                    details += " NoDestination=-8";
+                }
+            }
+
+            if (RequiresTarget(_lastChosenAction.ActionType))
+            {
+                if (_targetInfo != null && _targetInfo.HasLiveTarget && _targetInfo.Target != null)
+                {
+                    score += 8f;
+                    details += " TargetLive=+8";
+                }
+                else
+                {
+                    score -= 10f;
+                    details += " MissingTarget=-10";
+                }
+
+                if (CurrentTargetOverFocusPenalty > 0.01f)
+                {
+                    float focusPenalty = Mathf.Min(10f, CurrentTargetOverFocusPenalty * 0.35f);
+                    score -= focusPenalty;
+                    details += $" OverFocus=-{focusPenalty:0.0}";
+                }
+            }
+
+            if (_lastChosenAction.ActionType == AIActionType.Objective)
+            {
+                if (HasObjectiveDebug)
+                {
+                    score += 8f;
+                    details += " ObjectiveValid=+8";
+                }
+                else
+                {
+                    score -= 8f;
+                    details += " ObjectiveMissing=-8";
+                }
+
+                if (LastObjectiveCrowdingPenalty > 0.01f)
+                {
+                    float crowdPenalty = Mathf.Min(10f, LastObjectiveCrowdingPenalty * 0.2f);
+                    score -= crowdPenalty;
+                    details += $" Crowded=-{crowdPenalty:0.0}";
+                }
+            }
+
+            float healthRatio = GetHealthRatio();
+            if (healthRatio < 0.35f)
+            {
+                if (IsSurvivalAction(_lastChosenAction.ActionType))
+                {
+                    score += 8f;
+                    details += " LowHpSafe=+8";
+                }
+                else
+                {
+                    score -= 8f;
+                    details += " LowHpRisk=-8";
+                }
+            }
+
+            score = Mathf.Clamp(score, 0f, 100f);
+            rank = ResolveDecisionPerformanceRank(score);
+            breakdown = $"{rank} ({score:0.0}/100)\n{details}";
+            return score;
+        }
+
+        private bool TryGetTopTwoActionScores(out float bestScore, out float secondScore)
+        {
+            bestScore = float.NegativeInfinity;
+            secondScore = float.NegativeInfinity;
+
+            if (_debugScores == null || _debugScores.Count == 0)
+                return false;
+
+            for (int i = 0; i < _debugScores.Count; i++)
+            {
+                float score = _debugScores[i].Score;
+                if (score > bestScore)
+                {
+                    secondScore = bestScore;
+                    bestScore = score;
+                }
+                else if (score > secondScore)
+                {
+                    secondScore = score;
+                }
+            }
+
+            if (float.IsNegativeInfinity(secondScore))
+                secondScore = 0f;
+
+            return !float.IsNegativeInfinity(bestScore);
+        }
+
+        private static bool RequiresDestination(AIActionType actionType)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                case AIActionType.Retreat:
+                case AIActionType.Evade:
+                case AIActionType.Regroup:
+                case AIActionType.Peel:
+                case AIActionType.Objective:
+                case AIActionType.Search:
+                case AIActionType.Wander:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool RequiresTarget(AIActionType actionType)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                case AIActionType.Retreat:
+                case AIActionType.Evade:
+                case AIActionType.UseSuper:
+                case AIActionType.Peel:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsSurvivalAction(AIActionType actionType)
+        {
+            return actionType == AIActionType.Retreat ||
+                   actionType == AIActionType.Evade ||
+                   actionType == AIActionType.Regroup ||
+                   actionType == AIActionType.Peel;
+        }
+
+        private static string ResolveDecisionPerformanceRank(float score)
+        {
+            if (score >= 90f)
+                return "S - Excellent";
+
+            if (score >= 78f)
+                return "A - Strong";
+
+            if (score >= 64f)
+                return "B - Good";
+
+            if (score >= 50f)
+                return "C - Watch";
+
+            if (score >= 35f)
+                return "D - Weak";
+
+            return "F - Critical";
         }
 
         private string BuildInspectorMovementDetails()
@@ -1733,12 +1962,17 @@ $"Map={LastMapRouteDebug}";
                 : _brawler != null ? _brawler.name : name;
             string targetName = ResolveTargetDebugName();
             string navState = ResolveNavigationSceneDebugState();
+            string decisionBreakdown;
+            float decisionPerformance = EvaluateDecisionPerformance(
+                out string decisionRank,
+                out decisionBreakdown);
 
             if (!selected)
             {
                 return
                     $"{SceneRich(brawlerName, Color.white)} | {SceneRich(_lastChosenAction.ActionType.ToString(), ResolveActionColor(_lastChosenAction.ActionType))} " +
                     $"{SceneRich(_lastChosenAction.Score.ToString("0.0"), SceneLabelMutedColor)}\n" +
+                    $"{SceneRich("Rank", ResolveDecisionPerformanceColor(decisionPerformance))} {decisionRank} {decisionPerformance:0}\n" +
                     $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} | {SceneRich(navState, ResolveNavigationColor())}\n" +
                     $"{SceneRich("Target", SceneTargetColor)} {targetName}";
             }
@@ -1746,6 +1980,7 @@ $"Map={LastMapRouteDebug}";
             return
                 $"{SceneRich(brawlerName, Color.white)} [{SceneRich(_brawler != null ? _brawler.Team.ToString() : "?", SceneLabelMutedColor)}]\n" +
                 $"{SceneRich("Action", ResolveActionColor(_lastChosenAction.ActionType))} {_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}\n" +
+                $"{SceneRich("Rank", ResolveDecisionPerformanceColor(decisionPerformance))} {decisionRank} {decisionPerformance:0}/100\n" +
                 $"{SceneRich("Top", SceneObjectiveColor)} {BuildTopActionScoreSummary(4)}\n" +
                 $"{SceneRich("Target", SceneTargetColor)} {targetName} focus={CurrentTargetFocusCount}/{CurrentTargetAllyFocusCount} penalty={CurrentTargetOverFocusPenalty:0.0}\n" +
                 $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} reason={LastTacticalMoveReason}\n" +
@@ -1853,6 +2088,20 @@ $"Map={LastMapRouteDebug}";
                 default:
                     return new Color(0.92f, 0.92f, 0.92f, 0.86f);
             }
+        }
+
+        private static Color ResolveDecisionPerformanceColor(float score)
+        {
+            if (score >= 78f)
+                return new Color(0.12f, 1f, 0.46f, 0.98f);
+
+            if (score >= 50f)
+                return new Color(0.00f, 0.92f, 1f, 0.98f);
+
+            if (score >= 35f)
+                return new Color(0.92f, 0.18f, 1f, 0.98f);
+
+            return SceneBlockedColor;
         }
 
         private static void DrawArrow(Vector3 origin, Vector3 vector, Color color)
