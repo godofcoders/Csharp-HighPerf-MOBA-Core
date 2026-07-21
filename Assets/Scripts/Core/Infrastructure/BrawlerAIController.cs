@@ -258,6 +258,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastChaseDebug : "Chase=None";
         public string GemPickupDebug =>
             _utilityScorer != null ? _utilityScorer.LastGemPickupDebug : "GemPickup=None";
+        public string ResourceAwarenessDebug =>
+            _utilityScorer != null ? _utilityScorer.LastResourceAwarenessDebug : "ResAware=None";
         public string OpponentModelDebug => _lastOpponentModelDebug;
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
@@ -589,6 +591,7 @@ _actionExecutor != null
                 _debugSnapshot.PlaybookDebug = PlaybookDebug;
                 _debugSnapshot.ChaseDebug = ChaseDebug;
                 _debugSnapshot.GemPickupDebug = GemPickupDebug;
+                _debugSnapshot.ResourceAwarenessDebug = ResourceAwarenessDebug;
             }
             else
             {
@@ -599,6 +602,7 @@ _actionExecutor != null
                 _debugSnapshot.PlaybookDebug = "Playbook=None";
                 _debugSnapshot.ChaseDebug = "Chase=None";
                 _debugSnapshot.GemPickupDebug = "GemPickup=None";
+                _debugSnapshot.ResourceAwarenessDebug = "ResAware=None";
             }
 
             _lastReactiveDebug = _reactiveMemory != null && _profile != null
@@ -1940,6 +1944,7 @@ $"Map={LastMapRouteDebug}";
                 $"{MacroDebug}\n" +
                 $"{PlaybookDebug}\n" +
                 $"{ChaseDebug}\n" +
+                $"{ResourceAwarenessDebug}\n" +
                 $"{GemPickupDebug}";
         }
 
@@ -2321,7 +2326,8 @@ $"Map={LastMapRouteDebug}";
                 $"R={_profile.ReactionDelayTicks}+{_profile.HumanizationReactionJitterTicks} " +
                 $"Aim={_profile.AimErrorDegrees:0.0} " +
                 $"Obj={(_profile.ObjectiveWeight * _profile.MacroActionBiasWeight):0.00} " +
-                $"Team={_profile.TeamRoleCoordinationWeight:0.00}";
+                $"Team={_profile.TeamRoleCoordinationWeight:0.00} " +
+                $"Res={_profile.OpponentResourceAwarenessWeight:0.00}";
         }
 
         private string ResolveTargetDebugName()

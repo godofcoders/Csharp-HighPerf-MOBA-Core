@@ -31,6 +31,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureLaneDisciplineDefaults(profile);
             EnsureMapGeometryDefaults(profile);
             EnsureDangerAvoidanceDefaults(profile);
+            EnsureOpponentResourceAwarenessDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -89,6 +90,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Sense={profile.IdleSenseIntervalTicks}/{profile.CombatSenseIntervalTicks} " +
                 $"Obj={profile.ObjectiveWeight:0.00} Team={profile.TeamRoleCoordinationWeight:0.00} " +
                 $"Focus={profile.FocusFireWeight:0.0} Map={profile.MapOpenShotPreference:0.0}/{profile.MapCoverDancePreference:0.0} " +
+                $"Res={profile.OpponentResourceAwarenessWeight:0.00} " +
                 $"Move={profile.AIMoveSpeedScale:0.00}/{profile.AIMoveInputTurnRateDegreesPerTick:0} " +
                 $"Mistake={profile.HumanizationPressureMistakeChance:0.00}";
         }
@@ -144,6 +146,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationFakeOutChance = Mathf.Max(profile.HumanizationFakeOutChance, 0.16f);
                     profile.HumanizationPressureMistakeChance = Mathf.Max(profile.HumanizationPressureMistakeChance, 0.14f);
                     profile.HumanizationPressureMistakePenalty *= 1.25f;
+                    profile.OpponentResourceAwarenessWeight *= 0.42f;
+                    profile.EnemyLowAmmoOpportunityBonus *= 0.62f;
+                    profile.EnemyNoAttackApproachBonus *= 0.58f;
+                    profile.EnemySuperReadyThreatPenalty *= 0.62f;
+                    profile.EnemyNearlySuperThreatPenalty *= 0.58f;
+                    profile.EnemySuperRespectBonus *= 0.62f;
                     break;
 
                 case AIBotPerformanceTier.Veteran:
@@ -186,6 +194,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationActionScoreJitter = Mathf.Min(profile.HumanizationActionScoreJitter, 0.8f);
                     profile.HumanizationFakeOutChance *= 0.72f;
                     profile.HumanizationPressureMistakeChance *= 0.68f;
+                    profile.OpponentResourceAwarenessWeight *= 1.24f;
+                    profile.EnemyLowAmmoOpportunityBonus *= 1.16f;
+                    profile.EnemyNoAttackApproachBonus *= 1.16f;
+                    profile.EnemySuperReadyThreatPenalty *= 1.16f;
+                    profile.EnemyNearlySuperThreatPenalty *= 1.12f;
+                    profile.EnemySuperRespectBonus *= 1.18f;
                     break;
 
                 case AIBotPerformanceTier.Elite:
@@ -230,6 +244,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.HumanizationActionScoreJitter = Mathf.Min(profile.HumanizationActionScoreJitter, 0.45f);
                     profile.HumanizationFakeOutChance *= 0.55f;
                     profile.HumanizationPressureMistakeChance *= 0.45f;
+                    profile.OpponentResourceAwarenessWeight *= 1.45f;
+                    profile.EnemyLowAmmoOpportunityBonus *= 1.28f;
+                    profile.EnemyNoAttackApproachBonus *= 1.30f;
+                    profile.EnemySuperReadyThreatPenalty *= 1.28f;
+                    profile.EnemyNearlySuperThreatPenalty *= 1.20f;
+                    profile.EnemySuperRespectBonus *= 1.30f;
                     break;
 
                 case AIBotPerformanceTier.Regular:
@@ -321,6 +341,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.ChaseCommitScoreBonus *= 0.85f;
                     profile.ChaseDisengageScorePenalty *= 1.12f;
                     profile.BadMapChasePenalty *= 1.15f;
+                    profile.OpponentResourceAwarenessWeight *= 0.58f;
+                    profile.EnemyLowAmmoOpportunityBonus *= 0.72f;
+                    profile.EnemyNoAttackApproachBonus *= 0.70f;
+                    profile.EnemySuperReadyThreatPenalty *= 0.72f;
+                    profile.EnemyNearlySuperThreatPenalty *= 0.70f;
+                    profile.EnemySuperRespectBonus *= 0.75f;
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -402,6 +428,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.ChaseCommitScoreBonus *= 1.12f;
                     profile.ChaseDisengageScorePenalty *= 0.92f;
                     profile.BadMapChasePenalty *= 0.90f;
+                    profile.OpponentResourceAwarenessWeight *= 1.15f;
+                    profile.EnemyLowAmmoOpportunityBonus *= 1.10f;
+                    profile.EnemyNoAttackApproachBonus *= 1.12f;
+                    profile.EnemySuperReadyThreatPenalty *= 1.12f;
+                    profile.EnemyNearlySuperThreatPenalty *= 1.10f;
+                    profile.EnemySuperRespectBonus *= 1.12f;
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -467,6 +499,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.ChaseCommitScoreBonus *= 1.18f;
                     profile.ChaseDisengageScorePenalty *= 0.85f;
                     profile.BadMapChasePenalty *= 0.85f;
+                    profile.EnemyLowAmmoOpportunityBonus *= 1.15f;
+                    profile.EnemyNoAttackApproachBonus *= 1.18f;
+                    profile.EnemySuperReadyThreatPenalty *= 0.82f;
+                    profile.EnemyNearlySuperThreatPenalty *= 0.85f;
+                    profile.EnemySuperRespectBonus *= 0.85f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -520,6 +557,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.ChaseCommitScoreBonus *= 0.85f;
                     profile.ChaseDisengageScorePenalty *= 1.15f;
                     profile.BadMapChasePenalty *= 1.15f;
+                    profile.OpponentResourceAwarenessWeight *= 1.08f;
+                    profile.EnemyLowAmmoOpportunityBonus *= 0.88f;
+                    profile.EnemyNoAttackApproachBonus *= 0.88f;
+                    profile.EnemySuperReadyThreatPenalty *= 1.18f;
+                    profile.EnemyNearlySuperThreatPenalty *= 1.15f;
+                    profile.EnemySuperRespectBonus *= 1.18f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -556,6 +599,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.LaneHoldSearchScore *= 1.08f;
                     profile.ChaseDisengageScorePenalty *= 1.08f;
                     profile.BadMapChasePenalty *= 1.08f;
+                    profile.OpponentResourceAwarenessWeight *= 1.12f;
+                    profile.EnemyLowAmmoOpportunityBonus *= 1.06f;
+                    profile.EnemyNoAttackApproachBonus *= 1.04f;
+                    profile.EnemySuperReadyThreatPenalty *= 1.08f;
+                    profile.EnemyNearlySuperThreatPenalty *= 1.08f;
+                    profile.EnemySuperRespectBonus *= 1.12f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -571,6 +620,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureLaneDisciplineDefaults(profile);
             EnsureMapGeometryDefaults(profile);
             EnsureDangerAvoidanceDefaults(profile);
+            EnsureOpponentResourceAwarenessDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
@@ -623,6 +673,18 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Clamp(profile.CloseRangeCoverRepositionBonus, 0f, 70f);
             profile.CloseRangeEvasivePressureBonus =
                 Mathf.Clamp(profile.CloseRangeEvasivePressureBonus, 0f, 40f);
+            profile.OpponentResourceAwarenessWeight =
+                Mathf.Clamp(profile.OpponentResourceAwarenessWeight, 0f, 2.5f);
+            profile.EnemyLowAmmoOpportunityBonus =
+                Mathf.Clamp(profile.EnemyLowAmmoOpportunityBonus, 0f, 45f);
+            profile.EnemyNoAttackApproachBonus =
+                Mathf.Clamp(profile.EnemyNoAttackApproachBonus, 0f, 35f);
+            profile.EnemySuperReadyThreatPenalty =
+                Mathf.Clamp(profile.EnemySuperReadyThreatPenalty, 0f, 55f);
+            profile.EnemyNearlySuperThreatPenalty =
+                Mathf.Clamp(profile.EnemyNearlySuperThreatPenalty, 0f, 30f);
+            profile.EnemySuperRespectBonus =
+                Mathf.Clamp(profile.EnemySuperRespectBonus, 0f, 45f);
 
             profile.TacticalMoveRetargetTicks = ClampTicks(profile.TacticalMoveRetargetTicks, 1, 45);
             profile.TacticalMoveHeartbeatTicks = ClampTicks(profile.TacticalMoveHeartbeatTicks, 1, 60);
@@ -796,6 +858,27 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.DangerMapSearchRadius <= 0f)
                 profile.DangerMapSearchRadius = 1.2f;
+        }
+
+        private static void EnsureOpponentResourceAwarenessDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.OpponentResourceAwarenessWeight <= 0f)
+                profile.OpponentResourceAwarenessWeight = 1f;
+
+            if (profile.EnemyLowAmmoOpportunityBonus <= 0f)
+                profile.EnemyLowAmmoOpportunityBonus = 18f;
+
+            if (profile.EnemyNoAttackApproachBonus <= 0f)
+                profile.EnemyNoAttackApproachBonus = 12f;
+
+            if (profile.EnemySuperReadyThreatPenalty <= 0f)
+                profile.EnemySuperReadyThreatPenalty = 20f;
+
+            if (profile.EnemyNearlySuperThreatPenalty <= 0f)
+                profile.EnemyNearlySuperThreatPenalty = 8f;
+
+            if (profile.EnemySuperRespectBonus <= 0f)
+                profile.EnemySuperRespectBonus = 14f;
         }
 
         private static void EnsureMapGeometryDefaults(BrawlerAIProfile profile)

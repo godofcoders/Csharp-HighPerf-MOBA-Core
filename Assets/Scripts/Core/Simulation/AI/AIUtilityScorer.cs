@@ -43,6 +43,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastPlaybookDebug = "Playbook=None";
         private string _lastChaseDebug = "Chase=None";
         private string _lastGemPickupDebug = "GemPickup=None";
+        private string _lastResourceAwarenessDebug = "ResAware=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
         private string _lastWinConditionDebug = "Win=None";
         private uint _lastLaneEvaluationTick;
@@ -64,6 +65,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastPlaybookDebug => _lastPlaybookDebug;
         public string LastChaseDebug => _lastChaseDebug;
         public string LastGemPickupDebug => _lastGemPickupDebug;
+        public string LastResourceAwarenessDebug => _lastResourceAwarenessDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
         public string LastWinConditionDebug => _lastWinConditionDebug;
 
@@ -125,6 +127,7 @@ namespace MOBA.Core.Simulation.AI
                 playbookState,
                 results);
             ApplyWinConditionPressure(targetInfo, macroState, results);
+            ApplyOpponentResourceAwareness(targetInfo, currentTick, results);
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
             ApplyPlaybookCoordination(targetInfo, playbookState, results);
         }
@@ -439,6 +442,150 @@ namespace MOBA.Core.Simulation.AI
 
             if (!string.IsNullOrEmpty(deltaDebug))
                 _lastWinConditionDebug = $"Win={deltaDebug}";
+        }
+
+        private void ApplyOpponentResourceAwareness(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            List<AIActionScore> results)
+        {
+            _lastResourceAwarenessDebug = "ResAware=None";
+
+            if (_profile == null ||
+                results == null ||
+                results.Count == 0 ||
+                targetInfo == null ||
+                !targetInfo.HasLiveTarget ||
+                !(targetInfo.Target is BrawlerController targetBrawler) ||
+                targetBrawler.State == null)
+            {
+                return;
+            }
+
+            AIOpponentResourceSnapshot snapshot =
+                AIOpponentResourceUtility.Evaluate(targetBrawler, currentTick);
+            if (!snapshot.HasTarget)
+                return;
+
+            float awareness = Mathf.Max(0f, _profile.OpponentResourceAwarenessWeight);
+            if (awareness <= 0.01f)
+            {
+                _lastResourceAwarenessDebug = $"{snapshot.GetDebugSummary()} weight=0";
+                return;
+            }
+
+            float ammoOpportunity =
+                snapshot.AmmoPressure * _profile.EnemyLowAmmoOpportunityBonus;
+            if (!snapshot.CanUseMainAttack || snapshot.AvailableAmmo <= 0)
+                ammoOpportunity += _profile.EnemyNoAttackApproachBonus;
+
+            float superThreat = 0f;
+            if (snapshot.SuperReady)
+                superThreat = _profile.EnemySuperReadyThreatPenalty;
+            else if (snapshot.SuperChargePercent >= 0.75f)
+                superThreat = _profile.EnemyNearlySuperThreatPenalty * snapshot.SuperChargePercent;
+
+            float superRespect =
+                snapshot.SuperReady
+                    ? _profile.EnemySuperRespectBonus
+                    : snapshot.SuperChargePercent >= 0.75f
+                        ? _profile.EnemySuperRespectBonus * 0.55f * snapshot.SuperChargePercent
+                        : 0f;
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = GetResourceAwarenessDelta(
+                    actionScore.ActionType,
+                    ammoOpportunity,
+                    superThreat,
+                    superRespect);
+
+                delta *= awareness;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreateResourceAwarenessScore(actionScore.ActionType))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastResourceAwarenessDebug =
+                $"{snapshot.GetDebugSummary()} weight={awareness:0.00} " +
+                $"ammoOpp={ammoOpportunity:0.0} superThreat={superThreat:0.0}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastResourceAwarenessDebug += $" Delta={deltaDebug}";
+        }
+
+        private static float GetResourceAwarenessDelta(
+            AIActionType actionType,
+            float ammoOpportunity,
+            float superThreat,
+            float superRespect)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return ammoOpportunity - superThreat;
+
+                case AIActionType.HoldRange:
+                    return superRespect - ammoOpportunity * 0.20f;
+
+                case AIActionType.Reposition:
+                    return superRespect * 0.85f - ammoOpportunity * 0.10f;
+
+                case AIActionType.Retreat:
+                    return superRespect * 0.45f;
+
+                case AIActionType.Evade:
+                    return superRespect * 0.35f;
+
+                case AIActionType.UseSuper:
+                    return ammoOpportunity * 0.30f + superThreat * 0.25f;
+
+                case AIActionType.Objective:
+                case AIActionType.Search:
+                    return ammoOpportunity * 0.18f;
+
+                default:
+                    return 0f;
+            }
+        }
+
+        private static bool CanCreateResourceAwarenessScore(AIActionType actionType)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                case AIActionType.Retreat:
+                case AIActionType.Evade:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
 
         private bool CanCreateWinConditionScore(

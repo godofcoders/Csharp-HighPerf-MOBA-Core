@@ -36,6 +36,7 @@ namespace MOBA.Core.Simulation.AI
         public string PlaybookDebug;
         public string ChaseDebug;
         public string GemPickupDebug;
+        public string ResourceAwarenessDebug;
         public string ReactiveDebug;
         public string DangerDebug;
         public string FailureRecoveryDebug;

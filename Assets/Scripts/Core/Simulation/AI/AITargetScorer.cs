@@ -76,6 +76,7 @@ namespace MOBA.Core.Simulation.AI
             bool isTeamFocusTarget = false;
             bool hasBrawlerTarget = false;
             bool isEnemyBrawlBallCarrier = false;
+            BrawlerController targetBrawlerRef = null;
             int targetCarriedGems = 0;
             float targetHealthRatio = 1f;
 
@@ -92,6 +93,7 @@ namespace MOBA.Core.Simulation.AI
             if (target is BrawlerController targetBrawler && targetBrawler.State != null)
             {
                 hasBrawlerTarget = true;
+                targetBrawlerRef = targetBrawler;
                 targetCarriedGems = targetBrawler.State.CarriedGemCount;
                 float maxHealth = Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
                 targetHealthRatio = Mathf.Clamp01(targetBrawler.State.CurrentHealth / maxHealth);
@@ -229,7 +231,18 @@ namespace MOBA.Core.Simulation.AI
             // close to the carrier or entering the carrier-to-pressure lane.
             score += ScoreCarrierThreatTarget(target, currentTick, targetEntityId);
 
-            // 8. Ability-aware bonus
+            // 8. Opponent resource windows: higher-tier bots punish enemies
+            // who have no ammo, but respect ready supers.
+            if (targetBrawlerRef != null)
+            {
+                score += AIOpponentResourceUtility.GetTargetOpportunityScore(
+                    targetBrawlerRef,
+                    currentTick,
+                    _profile,
+                    out _);
+            }
+
+            // 9. Ability-aware bonus
             score += ScoreByAbilityShape(target);
 
             return score;

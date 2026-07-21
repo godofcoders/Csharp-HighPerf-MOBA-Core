@@ -147,6 +147,20 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Approach score removed when a chase would enter bad map geometry without a valuable target.")]
         public float BadMapChasePenalty = 24f;
 
+        [Header("Opponent Resource Awareness")]
+        [Tooltip("Scales how strongly this bot reads enemy ammo and super windows. Higher tiers increase this at runtime.")]
+        public float OpponentResourceAwarenessWeight = 1f;
+        [Tooltip("Target/action score added when an enemy is low on ammo.")]
+        public float EnemyLowAmmoOpportunityBonus = 18f;
+        [Tooltip("Approach score added when an enemy currently cannot fire.")]
+        public float EnemyNoAttackApproachBonus = 12f;
+        [Tooltip("Approach pressure removed when an enemy has a ready super.")]
+        public float EnemySuperReadyThreatPenalty = 20f;
+        [Tooltip("Smaller caution penalty when an enemy is close to a ready super.")]
+        public float EnemyNearlySuperThreatPenalty = 8f;
+        [Tooltip("Hold/reposition score added when an enemy has a ready or nearly ready super.")]
+        public float EnemySuperRespectBonus = 14f;
+
         [Header("Close Range Role Strategy")]
         [Tooltip("Short-range roles can freely chase until this multiple of their own attack range. Past this, they need a finisher, objective, super, or team-collapse reason.")]
         public float CloseRangeCatchDistanceMultiplier = 2.35f;
