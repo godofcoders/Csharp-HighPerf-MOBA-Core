@@ -262,6 +262,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastResourceAwarenessDebug : "ResAware=None";
         public string TeamFightDebug =>
             _utilityScorer != null ? _utilityScorer.LastTeamFightDebug : "TeamFight=None";
+        public string RoleMacroDebug =>
+            _utilityScorer != null ? _utilityScorer.LastRoleMacroDebug : "RoleMacro=None";
         public string OpponentModelDebug => _lastOpponentModelDebug;
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
@@ -595,6 +597,7 @@ _actionExecutor != null
                 _debugSnapshot.GemPickupDebug = GemPickupDebug;
                 _debugSnapshot.ResourceAwarenessDebug = ResourceAwarenessDebug;
                 _debugSnapshot.TeamFightDebug = TeamFightDebug;
+                _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
             }
             else
             {
@@ -607,6 +610,7 @@ _actionExecutor != null
                 _debugSnapshot.GemPickupDebug = "GemPickup=None";
                 _debugSnapshot.ResourceAwarenessDebug = "ResAware=None";
                 _debugSnapshot.TeamFightDebug = "TeamFight=None";
+                _debugSnapshot.RoleMacroDebug = "RoleMacro=None";
             }
 
             _lastReactiveDebug = _reactiveMemory != null && _profile != null
@@ -731,6 +735,7 @@ $"Map={LastMapRouteDebug}";
             }
             _debugSnapshot.MacroDebug = MacroDebug;
             _debugSnapshot.PlaybookDebug = PlaybookDebug;
+            _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }
@@ -1950,6 +1955,7 @@ $"Map={LastMapRouteDebug}";
                 $"{ChaseDebug}\n" +
                 $"{ResourceAwarenessDebug}\n" +
                 $"{TeamFightDebug}\n" +
+                $"{RoleMacroDebug}\n" +
                 $"{GemPickupDebug}";
         }
 
@@ -2333,7 +2339,8 @@ $"Map={LastMapRouteDebug}";
                 $"Obj={(_profile.ObjectiveWeight * _profile.MacroActionBiasWeight):0.00} " +
                 $"Team={_profile.TeamRoleCoordinationWeight:0.00} " +
                 $"Res={_profile.OpponentResourceAwarenessWeight:0.00} " +
-                $"Fight={_profile.TeamFightCoordinationWeight:0.00}";
+                $"Fight={_profile.TeamFightCoordinationWeight:0.00} " +
+                $"Role={_profile.RoleMacroBehaviorWeight:0.00}";
         }
 
         private string ResolveTargetDebugName()

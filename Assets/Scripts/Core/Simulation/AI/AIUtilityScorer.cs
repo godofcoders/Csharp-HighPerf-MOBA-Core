@@ -45,6 +45,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastGemPickupDebug = "GemPickup=None";
         private string _lastResourceAwarenessDebug = "ResAware=None";
         private string _lastTeamFightDebug = "TeamFight=None";
+        private string _lastRoleMacroDebug = "RoleMacro=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
         private string _lastWinConditionDebug = "Win=None";
         private uint _lastLaneEvaluationTick;
@@ -68,6 +69,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastGemPickupDebug => _lastGemPickupDebug;
         public string LastResourceAwarenessDebug => _lastResourceAwarenessDebug;
         public string LastTeamFightDebug => _lastTeamFightDebug;
+        public string LastRoleMacroDebug => _lastRoleMacroDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
         public string LastWinConditionDebug => _lastWinConditionDebug;
 
@@ -133,6 +135,12 @@ namespace MOBA.Core.Simulation.AI
             ApplyAdvancedTeamFightCoordination(
                 targetInfo,
                 currentTick,
+                playbookState,
+                results);
+            ApplyRoleSpecificMacroBehavior(
+                targetInfo,
+                currentTick,
+                macroState,
                 playbookState,
                 results);
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
@@ -808,6 +816,538 @@ namespace MOBA.Core.Simulation.AI
 
                 case AIActionType.Peel:
                     return allyUnderThreat;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void ApplyRoleSpecificMacroBehavior(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState,
+            AITeamPlaybookState playbookState,
+            List<AIActionScore> results)
+        {
+            _lastRoleMacroDebug = "RoleMacro=None";
+
+            if (_profile == null ||
+                results == null ||
+                results.Count == 0)
+            {
+                return;
+            }
+
+            float weight = Mathf.Max(0f, _profile.RoleMacroBehaviorWeight);
+            if (weight <= 0.01f)
+            {
+                _lastRoleMacroDebug = "RoleMacro=Off";
+                return;
+            }
+
+            AIRoleMacroContext context = BuildRoleMacroContext(
+                targetInfo,
+                currentTick,
+                macroState,
+                playbookState);
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculateRoleMacroDelta(
+                    actionScore.ActionType,
+                    context);
+                delta *= weight;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreateRoleMacroScore(actionScore.ActionType, context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastRoleMacroDebug =
+                $"RoleMacro={context.Archetype} " +
+                $"macro={macroState.Call}/{macroState.Phase} " +
+                $"play={playbookState.Call} " +
+                $"pick={context.TargetPickWindow} " +
+                $"value={context.HighValueTarget} " +
+                $"carrier={context.SelfCarriedGems} " +
+                $"peel={context.AllyUnderThreat} " +
+                $"w={weight:0.00}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastRoleMacroDebug += $" Delta={deltaDebug}";
+        }
+
+        private AIRoleMacroContext BuildRoleMacroContext(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState,
+            AITeamPlaybookState playbookState)
+        {
+            AIRoleMacroContext context = new AIRoleMacroContext
+            {
+                Archetype = _self != null && _self.Definition != null
+                    ? _self.Definition.Archetype
+                    : _profile.Archetype,
+                SelfCarriedGems = _self != null && _self.State != null
+                    ? _self.State.CarriedGemCount
+                    : 0,
+                MacroPush = macroState.Call == AIGameModeMacroCall.Push ||
+                            playbookState.Call == AITeamPlaybookCall.Push ||
+                            playbookState.Call == AITeamPlaybookCall.PinchPressure ||
+                            playbookState.Call == AITeamPlaybookCall.BaitAndCollapse,
+                MacroHold = macroState.Call == AIGameModeMacroCall.Hold ||
+                            playbookState.Call == AITeamPlaybookCall.Hold ||
+                            playbookState.Call == AITeamPlaybookCall.EscortCarrier,
+                MacroReset = macroState.Call == AIGameModeMacroCall.Reset ||
+                             playbookState.Call == AITeamPlaybookCall.Reset,
+                ObjectivePressure = macroState.Phase == AIGameModeObjectivePhase.Opening ||
+                                    macroState.Phase == AIGameModeObjectivePhase.Contest ||
+                                    macroState.Phase == AIGameModeObjectivePhase.Countdown ||
+                                    macroState.Phase == AIGameModeObjectivePhase.FinalPressure ||
+                                    playbookState.HasAnchorPoint ||
+                                    playbookState.HasPressurePoint ||
+                                    playbookState.HasEscortTargetPoint
+            };
+
+            if (targetInfo != null &&
+                targetInfo.HasLiveTarget &&
+                targetInfo.Target is BrawlerController targetBrawler &&
+                targetBrawler.State != null)
+            {
+                context.HasTarget = true;
+                context.TargetHealthRatio = Mathf.Clamp01(
+                    targetBrawler.State.CurrentHealth /
+                    Mathf.Max(1f, targetBrawler.State.MaxHealth.Value));
+                context.TargetCarriedGems = targetBrawler.State.CarriedGemCount;
+                context.TargetDisabled =
+                    targetBrawler.State.HasStatus(StatusEffectType.Stun) ||
+                    targetBrawler.State.HasStatus(StatusEffectType.Slow);
+                context.TargetDistance = _self != null
+                    ? Vector3.Distance(_self.Position, targetBrawler.Position)
+                    : 0f;
+            }
+            else
+            {
+                context.TargetHealthRatio = 1f;
+                context.TargetDistance = 0f;
+            }
+
+            context.HighValueTarget =
+                context.TargetCarriedGems >= 3 ||
+                (macroState.EnemyTeamHasCountdown &&
+                 context.TargetCarriedGems > 0);
+            context.TargetPickWindow =
+                context.HasTarget &&
+                (context.TargetHealthRatio <= Mathf.Max(0.22f, _profile.LowHealthChaseHealthThreshold) ||
+                 context.TargetDisabled ||
+                 context.HighValueTarget);
+            context.SelfCarrier =
+                context.SelfCarriedGems > 0;
+            context.CarrierSafety =
+                context.SelfCarrier &&
+                (macroState.OwnTeamHasCountdown ||
+                 context.MacroHold ||
+                 context.MacroReset);
+
+            if (_teamCoordinator != null &&
+                _teamCoordinator.TryGetAllyUnderThreat(currentTick, out BrawlerController threatenedAlly) &&
+                threatenedAlly != null &&
+                threatenedAlly != _self)
+            {
+                context.AllyUnderThreat = true;
+            }
+
+            return context;
+        }
+
+        private float CalculateRoleMacroDelta(
+            AIActionType actionType,
+            AIRoleMacroContext context)
+        {
+            float delta = 0f;
+
+            if (context.CarrierSafety)
+                delta += GetCarrierSafetyRoleDelta(actionType);
+
+            switch (context.Archetype)
+            {
+                case BrawlerArchetype.Tank:
+                    delta += GetTankRoleMacroDelta(actionType, context);
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    delta += GetAssassinRoleMacroDelta(actionType, context);
+                    break;
+
+                case BrawlerArchetype.Sniper:
+                    delta += GetBacklineRoleMacroDelta(
+                        actionType,
+                        context,
+                        _profile.RoleBacklineAnchorMacroBonus,
+                        "sniper");
+                    break;
+
+                case BrawlerArchetype.Support:
+                    delta += GetSupportRoleMacroDelta(actionType, context);
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    delta += GetControllerRoleMacroDelta(actionType, context);
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    delta += GetArtilleryRoleMacroDelta(actionType, context);
+                    break;
+
+                case BrawlerArchetype.Fighter:
+                default:
+                    delta += GetFighterRoleMacroDelta(actionType, context);
+                    break;
+            }
+
+            return delta;
+        }
+
+        private float GetCarrierSafetyRoleDelta(AIActionType actionType)
+        {
+            float bonus = Mathf.Max(0f, _profile.RoleSupportPeelMacroBonus);
+
+            switch (actionType)
+            {
+                case AIActionType.Retreat:
+                    return bonus * 0.45f;
+                case AIActionType.Regroup:
+                    return bonus * 0.55f;
+                case AIActionType.HoldRange:
+                    return bonus * 0.35f;
+                case AIActionType.Reposition:
+                    return bonus * 0.30f;
+                case AIActionType.Approach:
+                    return -bonus * 0.55f;
+                case AIActionType.Search:
+                case AIActionType.Objective:
+                    return -bonus * 0.30f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetTankRoleMacroDelta(
+            AIActionType actionType,
+            AIRoleMacroContext context)
+        {
+            float bonus = Mathf.Max(0f, _profile.RoleTankSpaceCreationBonus);
+            float delta = 0f;
+
+            if (context.ObjectivePressure || context.MacroPush || context.MacroHold)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Objective:
+                        delta += bonus;
+                        break;
+                    case AIActionType.Approach:
+                        delta += bonus * 0.70f;
+                        break;
+                    case AIActionType.Peel:
+                        delta += bonus * 0.45f;
+                        break;
+                    case AIActionType.HoldRange:
+                        delta -= bonus * 0.30f;
+                        break;
+                }
+            }
+
+            if (context.MacroReset || context.AllyUnderThreat)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Peel:
+                        delta += bonus * 0.80f;
+                        break;
+                    case AIActionType.Regroup:
+                        delta += bonus * 0.45f;
+                        break;
+                    case AIActionType.Reposition:
+                        delta += bonus * 0.35f;
+                        break;
+                }
+            }
+
+            if (context.TargetPickWindow && actionType == AIActionType.Approach)
+                delta += bonus * 0.40f;
+
+            return delta;
+        }
+
+        private float GetAssassinRoleMacroDelta(
+            AIActionType actionType,
+            AIRoleMacroContext context)
+        {
+            float bonus = Mathf.Max(0f, _profile.RoleAssassinPickPressureBonus);
+
+            if (context.TargetPickWindow)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        return bonus;
+                    case AIActionType.UseSuper:
+                        return bonus * 0.60f;
+                    case AIActionType.Reposition:
+                        return bonus * 0.30f;
+                    case AIActionType.Objective:
+                        return -bonus * 0.25f;
+                }
+            }
+
+            if (!context.HasTarget || context.MacroHold || context.MacroReset)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Reposition:
+                        return bonus * 0.55f;
+                    case AIActionType.Search:
+                        return bonus * 0.35f;
+                    case AIActionType.HoldRange:
+                        return bonus * 0.25f;
+                    case AIActionType.Approach:
+                        return -bonus * 0.45f;
+                }
+            }
+
+            return context.HighValueTarget && actionType == AIActionType.Approach
+                ? bonus * 0.45f
+                : 0f;
+        }
+
+        private float GetBacklineRoleMacroDelta(
+            AIActionType actionType,
+            AIRoleMacroContext context,
+            float bonus,
+            string roleLabel)
+        {
+            bonus = Mathf.Max(0f, bonus);
+            float delta = 0f;
+
+            if (context.MacroHold || context.MacroReset || context.ObjectivePressure)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.HoldRange:
+                        delta += bonus;
+                        break;
+                    case AIActionType.Reposition:
+                        delta += bonus * 0.60f;
+                        break;
+                    case AIActionType.Approach:
+                        delta -= bonus * (roleLabel == "artillery" ? 0.65f : 0.50f);
+                        break;
+                    case AIActionType.Objective:
+                        delta += !context.HasTarget ? bonus * 0.35f : bonus * 0.20f;
+                        break;
+                }
+            }
+
+            if (context.TargetPickWindow)
+            {
+                if (actionType == AIActionType.HoldRange)
+                    delta += bonus * 0.35f;
+                else if (actionType == AIActionType.UseSuper)
+                    delta += bonus * 0.25f;
+            }
+
+            return delta;
+        }
+
+        private float GetSupportRoleMacroDelta(
+            AIActionType actionType,
+            AIRoleMacroContext context)
+        {
+            float bonus = Mathf.Max(0f, _profile.RoleSupportPeelMacroBonus);
+            float delta = GetBacklineRoleMacroDelta(
+                actionType,
+                context,
+                _profile.RoleBacklineAnchorMacroBonus * 0.65f,
+                "support");
+
+            if (context.AllyUnderThreat || context.MacroHold || context.MacroReset)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Peel:
+                        delta += bonus;
+                        break;
+                    case AIActionType.Regroup:
+                        delta += bonus * 0.55f;
+                        break;
+                    case AIActionType.Reposition:
+                        delta += bonus * 0.35f;
+                        break;
+                    case AIActionType.Approach:
+                        if (!context.TargetPickWindow)
+                            delta -= bonus * 0.30f;
+                        break;
+                }
+            }
+
+            if (context.HighValueTarget && actionType == AIActionType.UseSuper)
+                delta += bonus * 0.25f;
+
+            return delta;
+        }
+
+        private float GetControllerRoleMacroDelta(
+            AIActionType actionType,
+            AIRoleMacroContext context)
+        {
+            float bonus = Mathf.Max(0f, _profile.RoleControllerZoneMacroBonus);
+
+            if (context.ObjectivePressure || context.MacroPush || context.MacroHold)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Objective:
+                        return bonus;
+                    case AIActionType.Search:
+                        return bonus * 0.55f;
+                    case AIActionType.HoldRange:
+                        return bonus * 0.45f;
+                    case AIActionType.Reposition:
+                        return bonus * 0.45f;
+                    case AIActionType.UseSuper:
+                        return context.HasTarget ? bonus * 0.35f : 0f;
+                    case AIActionType.Approach:
+                        return -bonus * 0.15f;
+                }
+            }
+
+            if (context.AllyUnderThreat && actionType == AIActionType.Peel)
+                return bonus * 0.45f;
+
+            return 0f;
+        }
+
+        private float GetArtilleryRoleMacroDelta(
+            AIActionType actionType,
+            AIRoleMacroContext context)
+        {
+            float bonus = Mathf.Max(0f, _profile.RoleArtilleryDenialMacroBonus);
+            float delta = GetBacklineRoleMacroDelta(
+                actionType,
+                context,
+                bonus,
+                "artillery");
+
+            if (context.ObjectivePressure || context.HasTarget)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Reposition:
+                        delta += bonus * 0.30f;
+                        break;
+                    case AIActionType.Objective:
+                        delta += bonus * 0.25f;
+                        break;
+                    case AIActionType.UseSuper:
+                        delta += context.HasTarget ? bonus * 0.35f : 0f;
+                        break;
+                    case AIActionType.Approach:
+                        delta -= bonus * 0.20f;
+                        break;
+                }
+            }
+
+            return delta;
+        }
+
+        private float GetFighterRoleMacroDelta(
+            AIActionType actionType,
+            AIRoleMacroContext context)
+        {
+            float bonus = Mathf.Max(0f, _profile.RoleFighterFlexMacroBonus);
+            float delta = 0f;
+
+            if (context.MacroPush && context.TargetPickWindow)
+            {
+                if (actionType == AIActionType.Approach)
+                    delta += bonus * 0.90f;
+                else if (actionType == AIActionType.UseSuper)
+                    delta += bonus * 0.35f;
+            }
+
+            if (context.ObjectivePressure)
+            {
+                if (actionType == AIActionType.Objective)
+                    delta += bonus * 0.70f;
+                else if (actionType == AIActionType.Reposition)
+                    delta += bonus * 0.35f;
+                else if (actionType == AIActionType.HoldRange)
+                    delta += bonus * 0.25f;
+            }
+
+            if (context.MacroReset)
+            {
+                if (actionType == AIActionType.Regroup)
+                    delta += bonus * 0.60f;
+                else if (actionType == AIActionType.HoldRange)
+                    delta += bonus * 0.35f;
+                else if (actionType == AIActionType.Approach)
+                    delta -= bonus * 0.30f;
+            }
+
+            if (context.AllyUnderThreat && actionType == AIActionType.Peel)
+                delta += bonus * 0.45f;
+
+            return delta;
+        }
+
+        private static bool CanCreateRoleMacroScore(
+            AIActionType actionType,
+            AIRoleMacroContext context)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                    return context.HasTarget;
+
+                case AIActionType.Objective:
+                    return context.ObjectivePressure || !context.HasTarget;
+
+                case AIActionType.Search:
+                    return !context.HasTarget || context.ObjectivePressure;
+
+                case AIActionType.Peel:
+                    return context.AllyUnderThreat;
+
+                case AIActionType.Regroup:
+                case AIActionType.Retreat:
+                    return context.CarrierSafety || context.MacroReset;
 
                 default:
                     return false;
@@ -2444,6 +2984,26 @@ namespace MOBA.Core.Simulation.AI
 
             reason = $"{stateReason}_{laneReason}";
             return baseBonus * laneWeight * multiplier;
+        }
+
+        private struct AIRoleMacroContext
+        {
+            public BrawlerArchetype Archetype;
+            public bool HasTarget;
+            public bool TargetPickWindow;
+            public bool HighValueTarget;
+            public bool TargetDisabled;
+            public bool SelfCarrier;
+            public bool CarrierSafety;
+            public bool AllyUnderThreat;
+            public bool MacroPush;
+            public bool MacroHold;
+            public bool MacroReset;
+            public bool ObjectivePressure;
+            public int SelfCarriedGems;
+            public int TargetCarriedGems;
+            public float TargetHealthRatio;
+            public float TargetDistance;
         }
 
         private CloseRangeMatchupEvaluation EvaluateCloseRangeMatchup(

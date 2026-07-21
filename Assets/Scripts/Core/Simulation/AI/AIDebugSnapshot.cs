@@ -38,6 +38,7 @@ namespace MOBA.Core.Simulation.AI
         public string GemPickupDebug;
         public string ResourceAwarenessDebug;
         public string TeamFightDebug;
+        public string RoleMacroDebug;
         public string ReactiveDebug;
         public string DangerDebug;
         public string FailureRecoveryDebug;

@@ -220,6 +220,24 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Approach score removed when the team is already overcommitted and the target is not clearly finishable.")]
         public float TeamOvercommitApproachPenalty = 14f;
 
+        [Header("Role Macro Intelligence")]
+        [Tooltip("Scales archetype-specific macro behavior. Runtime performance tiers make this visibly weaker or stronger.")]
+        public float RoleMacroBehaviorWeight = 1f;
+        [Tooltip("Tank score added for creating space around objectives, carriers, and team pushes.")]
+        public float RoleTankSpaceCreationBonus = 16f;
+        [Tooltip("Backline score added for anchoring lanes, holding safe angles, and avoiding needless dives.")]
+        public float RoleBacklineAnchorMacroBonus = 14f;
+        [Tooltip("Support score added for peel, regroup, and carrier-protection macro calls.")]
+        public float RoleSupportPeelMacroBonus = 14f;
+        [Tooltip("Assassin score added for pick windows on low-health, disabled, or high-value targets.")]
+        public float RoleAssassinPickPressureBonus = 16f;
+        [Tooltip("Controller score added for objective zones, lane ownership, and choke control.")]
+        public float RoleControllerZoneMacroBonus = 15f;
+        [Tooltip("Artillery score added for denial, safe angles, and anti-clump pressure.")]
+        public float RoleArtilleryDenialMacroBonus = 14f;
+        [Tooltip("Fighter score added for flexible objective pressure and fight-to-objective transitions.")]
+        public float RoleFighterFlexMacroBonus = 10f;
+
         [Header("Spacing / Anti-Clump")]
         public float AllyAvoidanceRadius = 2.5f;
         public float AllyAvoidanceWeight = 1.5f;
@@ -857,6 +875,57 @@ namespace MOBA.Core.Simulation.AI
             ApplyDangerAvoidanceDefaults(archetype);
             ApplyFailureRecoveryDefaults(archetype);
             ApplyProductionBudgetDefaults(archetype);
+            ApplyRoleMacroDefaults(archetype);
+        }
+
+        private void ApplyRoleMacroDefaults(BrawlerArchetype archetype)
+        {
+            RoleMacroBehaviorWeight = 1f;
+            RoleTankSpaceCreationBonus = 14f;
+            RoleBacklineAnchorMacroBonus = 13f;
+            RoleSupportPeelMacroBonus = 13f;
+            RoleAssassinPickPressureBonus = 14f;
+            RoleControllerZoneMacroBonus = 14f;
+            RoleArtilleryDenialMacroBonus = 13f;
+            RoleFighterFlexMacroBonus = 10f;
+
+            switch (archetype)
+            {
+                case BrawlerArchetype.Tank:
+                    RoleTankSpaceCreationBonus = 18f;
+                    RoleFighterFlexMacroBonus = 8f;
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    RoleAssassinPickPressureBonus = 20f;
+                    RoleBacklineAnchorMacroBonus = 9f;
+                    break;
+
+                case BrawlerArchetype.Sniper:
+                    RoleBacklineAnchorMacroBonus = 18f;
+                    RoleAssassinPickPressureBonus = 10f;
+                    break;
+
+                case BrawlerArchetype.Support:
+                    RoleSupportPeelMacroBonus = 18f;
+                    RoleBacklineAnchorMacroBonus = 15f;
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    RoleControllerZoneMacroBonus = 19f;
+                    RoleSupportPeelMacroBonus = 12f;
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    RoleArtilleryDenialMacroBonus = 19f;
+                    RoleBacklineAnchorMacroBonus = 16f;
+                    break;
+
+                case BrawlerArchetype.Fighter:
+                default:
+                    RoleFighterFlexMacroBonus = 14f;
+                    break;
+            }
         }
 
         private void ApplyGemGrabObjectiveDefaults(BrawlerArchetype archetype)

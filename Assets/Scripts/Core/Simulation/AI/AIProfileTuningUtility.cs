@@ -33,6 +33,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureDangerAvoidanceDefaults(profile);
             EnsureOpponentResourceAwarenessDefaults(profile);
             EnsureAdvancedTeamFightDefaults(profile);
+            EnsureRoleMacroDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -93,6 +94,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Focus={profile.FocusFireWeight:0.0} Map={profile.MapOpenShotPreference:0.0}/{profile.MapCoverDancePreference:0.0} " +
                 $"Res={profile.OpponentResourceAwarenessWeight:0.00} " +
                 $"Fight={profile.TeamFightCoordinationWeight:0.00} " +
+                $"Role={profile.RoleMacroBehaviorWeight:0.00} " +
                 $"Move={profile.AIMoveSpeedScale:0.00}/{profile.AIMoveInputTurnRateDegreesPerTick:0} " +
                 $"Mistake={profile.HumanizationPressureMistakeChance:0.00}";
         }
@@ -160,6 +162,14 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBaitHoldBonus *= 0.70f;
                     profile.TeamPeelAssistBonus *= 0.68f;
                     profile.TeamOvercommitApproachPenalty *= 0.58f;
+                    profile.RoleMacroBehaviorWeight *= 0.48f;
+                    profile.RoleTankSpaceCreationBonus *= 0.62f;
+                    profile.RoleBacklineAnchorMacroBonus *= 0.62f;
+                    profile.RoleSupportPeelMacroBonus *= 0.62f;
+                    profile.RoleAssassinPickPressureBonus *= 0.60f;
+                    profile.RoleControllerZoneMacroBonus *= 0.62f;
+                    profile.RoleArtilleryDenialMacroBonus *= 0.62f;
+                    profile.RoleFighterFlexMacroBonus *= 0.64f;
                     break;
 
                 case AIBotPerformanceTier.Veteran:
@@ -214,6 +224,14 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBaitHoldBonus *= 1.10f;
                     profile.TeamPeelAssistBonus *= 1.12f;
                     profile.TeamOvercommitApproachPenalty *= 1.12f;
+                    profile.RoleMacroBehaviorWeight *= 1.18f;
+                    profile.RoleTankSpaceCreationBonus *= 1.12f;
+                    profile.RoleBacklineAnchorMacroBonus *= 1.12f;
+                    profile.RoleSupportPeelMacroBonus *= 1.12f;
+                    profile.RoleAssassinPickPressureBonus *= 1.12f;
+                    profile.RoleControllerZoneMacroBonus *= 1.12f;
+                    profile.RoleArtilleryDenialMacroBonus *= 1.12f;
+                    profile.RoleFighterFlexMacroBonus *= 1.10f;
                     break;
 
                 case AIBotPerformanceTier.Elite:
@@ -270,6 +288,14 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBaitHoldBonus *= 1.18f;
                     profile.TeamPeelAssistBonus *= 1.20f;
                     profile.TeamOvercommitApproachPenalty *= 1.22f;
+                    profile.RoleMacroBehaviorWeight *= 1.34f;
+                    profile.RoleTankSpaceCreationBonus *= 1.24f;
+                    profile.RoleBacklineAnchorMacroBonus *= 1.22f;
+                    profile.RoleSupportPeelMacroBonus *= 1.24f;
+                    profile.RoleAssassinPickPressureBonus *= 1.25f;
+                    profile.RoleControllerZoneMacroBonus *= 1.24f;
+                    profile.RoleArtilleryDenialMacroBonus *= 1.22f;
+                    profile.RoleFighterFlexMacroBonus *= 1.18f;
                     break;
 
                 case AIBotPerformanceTier.Regular:
@@ -371,6 +397,13 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamCollapseFocusBonus *= 0.78f;
                     profile.TeamFlankRepositionBonus *= 0.80f;
                     profile.TeamPeelAssistBonus *= 0.80f;
+                    profile.RoleMacroBehaviorWeight *= 0.70f;
+                    profile.RoleTankSpaceCreationBonus *= 0.78f;
+                    profile.RoleBacklineAnchorMacroBonus *= 0.78f;
+                    profile.RoleSupportPeelMacroBonus *= 0.78f;
+                    profile.RoleAssassinPickPressureBonus *= 0.76f;
+                    profile.RoleControllerZoneMacroBonus *= 0.78f;
+                    profile.RoleArtilleryDenialMacroBonus *= 0.78f;
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -463,6 +496,14 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamFlankRepositionBonus *= 1.08f;
                     profile.TeamPeelAssistBonus *= 1.10f;
                     profile.TeamOvercommitApproachPenalty *= 1.08f;
+                    profile.RoleMacroBehaviorWeight *= 1.10f;
+                    profile.RoleTankSpaceCreationBonus *= 1.08f;
+                    profile.RoleBacklineAnchorMacroBonus *= 1.08f;
+                    profile.RoleSupportPeelMacroBonus *= 1.10f;
+                    profile.RoleAssassinPickPressureBonus *= 1.10f;
+                    profile.RoleControllerZoneMacroBonus *= 1.10f;
+                    profile.RoleArtilleryDenialMacroBonus *= 1.08f;
+                    profile.RoleFighterFlexMacroBonus *= 1.08f;
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -536,6 +577,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamCollapseFocusBonus *= 1.16f;
                     profile.TeamFlankRepositionBonus *= 1.08f;
                     profile.TeamOvercommitApproachPenalty *= 0.82f;
+                    profile.RoleTankSpaceCreationBonus *= 1.12f;
+                    profile.RoleAssassinPickPressureBonus *= 1.16f;
+                    profile.RoleFighterFlexMacroBonus *= 1.10f;
+                    profile.RoleBacklineAnchorMacroBonus *= 0.88f;
+                    profile.RoleSupportPeelMacroBonus *= 0.90f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -598,6 +644,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBaitHoldBonus *= 1.18f;
                     profile.TeamPeelAssistBonus *= 1.16f;
                     profile.TeamOvercommitApproachPenalty *= 1.14f;
+                    profile.RoleBacklineAnchorMacroBonus *= 1.16f;
+                    profile.RoleSupportPeelMacroBonus *= 1.14f;
+                    profile.RoleControllerZoneMacroBonus *= 1.08f;
+                    profile.RoleArtilleryDenialMacroBonus *= 1.10f;
+                    profile.RoleAssassinPickPressureBonus *= 0.82f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -646,6 +697,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBaitHoldBonus *= 1.12f;
                     profile.TeamPeelAssistBonus *= 1.22f;
                     profile.TeamOvercommitApproachPenalty *= 1.14f;
+                    profile.RoleMacroBehaviorWeight *= 1.12f;
+                    profile.RoleSupportPeelMacroBonus *= 1.20f;
+                    profile.RoleControllerZoneMacroBonus *= 1.14f;
+                    profile.RoleBacklineAnchorMacroBonus *= 1.12f;
+                    profile.RoleTankSpaceCreationBonus *= 1.08f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -663,6 +719,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureDangerAvoidanceDefaults(profile);
             EnsureOpponentResourceAwarenessDefaults(profile);
             EnsureAdvancedTeamFightDefaults(profile);
+            EnsureRoleMacroDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
@@ -739,6 +796,22 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Clamp(profile.TeamPeelAssistBonus, 0f, 45f);
             profile.TeamOvercommitApproachPenalty =
                 Mathf.Clamp(profile.TeamOvercommitApproachPenalty, 0f, 45f);
+            profile.RoleMacroBehaviorWeight =
+                Mathf.Clamp(profile.RoleMacroBehaviorWeight, 0f, 2.5f);
+            profile.RoleTankSpaceCreationBonus =
+                Mathf.Clamp(profile.RoleTankSpaceCreationBonus, 0f, 45f);
+            profile.RoleBacklineAnchorMacroBonus =
+                Mathf.Clamp(profile.RoleBacklineAnchorMacroBonus, 0f, 45f);
+            profile.RoleSupportPeelMacroBonus =
+                Mathf.Clamp(profile.RoleSupportPeelMacroBonus, 0f, 45f);
+            profile.RoleAssassinPickPressureBonus =
+                Mathf.Clamp(profile.RoleAssassinPickPressureBonus, 0f, 45f);
+            profile.RoleControllerZoneMacroBonus =
+                Mathf.Clamp(profile.RoleControllerZoneMacroBonus, 0f, 45f);
+            profile.RoleArtilleryDenialMacroBonus =
+                Mathf.Clamp(profile.RoleArtilleryDenialMacroBonus, 0f, 45f);
+            profile.RoleFighterFlexMacroBonus =
+                Mathf.Clamp(profile.RoleFighterFlexMacroBonus, 0f, 45f);
 
             profile.TacticalMoveRetargetTicks = ClampTicks(profile.TacticalMoveRetargetTicks, 1, 45);
             profile.TacticalMoveHeartbeatTicks = ClampTicks(profile.TacticalMoveHeartbeatTicks, 1, 60);
@@ -954,6 +1027,42 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.TeamOvercommitApproachPenalty <= 0f)
                 profile.TeamOvercommitApproachPenalty = 14f;
+        }
+
+        private static void EnsureRoleMacroDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.RoleMacroBehaviorWeight <= 0f)
+                profile.RoleMacroBehaviorWeight = 1f;
+
+            if (profile.RoleTankSpaceCreationBonus <= 0f)
+                profile.RoleTankSpaceCreationBonus = profile.Archetype == BrawlerArchetype.Tank ? 18f : 14f;
+
+            if (profile.RoleBacklineAnchorMacroBonus <= 0f)
+                profile.RoleBacklineAnchorMacroBonus =
+                    profile.Archetype == BrawlerArchetype.Sniper ||
+                    profile.Archetype == BrawlerArchetype.Artillery
+                        ? 18f
+                        : 13f;
+
+            if (profile.RoleSupportPeelMacroBonus <= 0f)
+                profile.RoleSupportPeelMacroBonus =
+                    profile.Archetype == BrawlerArchetype.Support ? 18f : 13f;
+
+            if (profile.RoleAssassinPickPressureBonus <= 0f)
+                profile.RoleAssassinPickPressureBonus =
+                    profile.Archetype == BrawlerArchetype.Assassin ? 20f : 14f;
+
+            if (profile.RoleControllerZoneMacroBonus <= 0f)
+                profile.RoleControllerZoneMacroBonus =
+                    profile.Archetype == BrawlerArchetype.Controller ? 19f : 14f;
+
+            if (profile.RoleArtilleryDenialMacroBonus <= 0f)
+                profile.RoleArtilleryDenialMacroBonus =
+                    profile.Archetype == BrawlerArchetype.Artillery ? 19f : 13f;
+
+            if (profile.RoleFighterFlexMacroBonus <= 0f)
+                profile.RoleFighterFlexMacroBonus =
+                    profile.Archetype == BrawlerArchetype.Fighter ? 14f : 10f;
         }
 
         private static void EnsureMapGeometryDefaults(BrawlerAIProfile profile)
