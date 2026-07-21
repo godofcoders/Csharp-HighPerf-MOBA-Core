@@ -45,6 +45,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private bool _mirrorRuntimeDebugToInspector = true;
         [SerializeField] private uint _inspectorDebugTick;
         [SerializeField] private string _inspectorDebugBrawler;
+        [SerializeField] private string _inspectorTacticalIntentSummary;
         [SerializeField] private AIActionType _inspectorCurrentAction;
         [SerializeField] private float _inspectorCurrentActionScore;
         [SerializeField] private string _inspectorDecisionPerformanceRank;
@@ -120,6 +121,7 @@ namespace MOBA.Core.Infrastructure
         private string _lastTuningDebug = "Tuning=None";
         private string _lastOpponentModelDebug = "Opponent=None";
         private string _lastBudgetDebug = "Budget=OK map=0/0 paths=0/0 nodes=0/0 maxNodes=0";
+        private string _lastTacticalIntentSummary = "Intent=None";
         private readonly AIDebugSnapshot _debugSnapshot = new AIDebugSnapshot();
         private readonly System.Collections.Generic.List<AIActionScore> _debugScores = new System.Collections.Generic.List<AIActionScore>(16);
         private AIActionScore _lastChosenAction;
@@ -260,6 +262,7 @@ _actionExecutor != null
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
         public string TuningDebug => _lastTuningDebug;
+        public string TacticalIntentSummary => _lastTacticalIntentSummary;
 
         public int CurrentTargetFocusCount =>
             _teamCoordinator != null &&
@@ -429,6 +432,7 @@ _actionExecutor != null
                 GetSuperMaxRange());
 
             _navAgent.Tick();
+            UpdateTacticalIntentSummary();
 
             UpdateIdleHesitation(currentTick);
             UpdateFailureRecovery(currentTick);
@@ -514,6 +518,7 @@ _actionExecutor != null
 
             _debugSnapshot.BrawlerName = _brawler.Definition != null ? _brawler.Definition.BrawlerName : _brawler.name;
             _debugSnapshot.CurrentAction = $"{_lastChosenAction.ActionType} ({_lastChosenAction.Score:0.0})";
+            _debugSnapshot.TacticalIntentSummary = TacticalIntentSummary;
             _debugSnapshot.Difficulty = Difficulty.ToString();
             _debugSnapshot.Personality = Personality.ToString();
             _debugSnapshot.ReactionDelayTicks = _profile != null ? _profile.ReactionDelayTicks : 0u;
@@ -1347,6 +1352,183 @@ $"Map={LastMapRouteDebug}";
             }
         }
 
+        private void UpdateTacticalIntentSummary()
+        {
+            if (_brawler == null)
+            {
+                _lastTacticalIntentSummary = "Intent=None";
+                return;
+            }
+
+            string role = _profile != null
+                ? _profile.Archetype.ToString()
+                : _brawler.Definition != null ? _brawler.Definition.Archetype.ToString() : "Unknown";
+            string tier = _performanceTier.ToString();
+            string phrase = ResolveIntentPhrase();
+
+            _lastTacticalIntentSummary =
+                $"Intent={phrase} Role={role} Tier={tier}";
+        }
+
+        private string ResolveIntentPhrase()
+        {
+            if (_brawler != null &&
+                _brawler.State != null &&
+                _brawler.State.HasStatus(StatusEffectType.Stun))
+            {
+                return "stunned_waiting";
+            }
+
+            switch (_lastChosenAction.ActionType)
+            {
+                case AIActionType.Evade:
+                    return "dodging_immediate_danger";
+
+                case AIActionType.Retreat:
+                    return "surviving_and_resetting";
+
+                case AIActionType.Peel:
+                    return "protecting_threatened_ally";
+
+                case AIActionType.Regroup:
+                    return "regrouping_with_team";
+
+                case AIActionType.UseSuper:
+                    return "looking_for_super_value";
+
+                case AIActionType.Objective:
+                    return ResolveObjectiveIntentPhrase();
+
+                case AIActionType.Approach:
+                    return ResolveApproachIntentPhrase();
+
+                case AIActionType.HoldRange:
+                    return ResolveHoldIntentPhrase();
+
+                case AIActionType.Reposition:
+                    return ResolveRepositionIntentPhrase();
+
+                case AIActionType.Search:
+                    return ResolveSearchIntentPhrase();
+
+                case AIActionType.Wander:
+                    return "fallback_patrol";
+
+                default:
+                    return "evaluating";
+            }
+        }
+
+        private string ResolveObjectiveIntentPhrase()
+        {
+            if (LastObjectiveType == AIObjectiveType.GemMine ||
+                TextContains(LastObjectiveName, "gem"))
+            {
+                return "controlling_gem_area";
+            }
+
+            if (LastObjectiveType == AIObjectiveType.LanePressure)
+                return "holding_or_breaking_lane";
+
+            if (LastObjectiveType == AIObjectiveType.HotZone)
+                return "anchoring_control_zone";
+
+            if (LastObjectiveType == AIObjectiveType.MidControl)
+                return "taking_mid_control";
+
+            return "playing_objective";
+        }
+
+        private string ResolveApproachIntentPhrase()
+        {
+            if (TryGetLiveBrawlerTarget(out BrawlerController target))
+            {
+                float healthRatio = target.State.CurrentHealth /
+                                    Mathf.Max(1f, target.State.MaxHealth.Value);
+
+                if (healthRatio <= 0.35f)
+                    return "collapsing_on_low_health_target";
+
+                if (CurrentTargetAllyFocusCount > 0)
+                    return "joining_focus_fire";
+
+                if (target.State.CarriedGemCount > 0)
+                    return "pressuring_gem_carrier";
+            }
+
+            return "closing_pressure";
+        }
+
+        private string ResolveHoldIntentPhrase()
+        {
+            if (TextContains(PlaybookDebug, "Lane") ||
+                TextContains(TeamRoleDebug, "Lane"))
+            {
+                return "holding_lane_angle";
+            }
+
+            if (TryGetLiveBrawlerTarget(out _))
+                return "maintaining_best_range";
+
+            return "holding_safe_position";
+        }
+
+        private string ResolveRepositionIntentPhrase()
+        {
+            if (TextContains(LastMapRouteDebug, "cover") ||
+                TextContains(LastTacticalMoveReason, "cover"))
+            {
+                return "rotating_to_cover";
+            }
+
+            if (TextContains(LastMapRouteDebug, "lane"))
+                return "rotating_to_lane_angle";
+
+            return "finding_better_angle";
+        }
+
+        private string ResolveSearchIntentPhrase()
+        {
+            if (TextContains(GemPickupDebug, "gem") &&
+                !TextContains(GemPickupDebug, "none"))
+            {
+                return "rotating_to_loose_gems";
+            }
+
+            if (TextContains(MacroDebug, "push"))
+                return "rotating_for_push";
+
+            if (TextContains(MacroDebug, "reset"))
+                return "resetting_map_position";
+
+            return "scouting_next_pressure";
+        }
+
+        private bool TryGetLiveBrawlerTarget(out BrawlerController target)
+        {
+            target = null;
+
+            if (_targetInfo == null ||
+                !_targetInfo.HasLiveTarget ||
+                _targetInfo.Target == null ||
+                !SpatialEntityUtility.IsAlive(_targetInfo.Target) ||
+                !(_targetInfo.Target is BrawlerController brawlerTarget) ||
+                brawlerTarget.State == null)
+            {
+                return false;
+            }
+
+            target = brawlerTarget;
+            return true;
+        }
+
+        private static bool TextContains(string text, string value)
+        {
+            return !string.IsNullOrEmpty(text) &&
+                   !string.IsNullOrEmpty(value) &&
+                   text.IndexOf(value, System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         private string BuildNavigationDebug()
         {
             if (_navAgent == null)
@@ -1413,6 +1595,7 @@ $"Map={LastMapRouteDebug}";
             _inspectorDebugBrawler = _brawler != null && _brawler.Definition != null
                 ? _brawler.Definition.BrawlerName
                 : _brawler != null ? _brawler.name : name;
+            _inspectorTacticalIntentSummary = TacticalIntentSummary;
             _inspectorCurrentAction = _lastChosenAction.ActionType;
             _inspectorCurrentActionScore = _lastChosenAction.Score;
             _inspectorDecisionPerformanceScore = EvaluateDecisionPerformance(
@@ -1467,6 +1650,7 @@ $"Map={LastMapRouteDebug}";
         {
             return
                 $"State={(!string.IsNullOrWhiteSpace(forcedState) ? forcedState : "Running")}\n" +
+                $"{TacticalIntentSummary}\n" +
                 $"Action={_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.00}\n" +
                 $"DecisionRank={_inspectorDecisionPerformanceRank} score={_inspectorDecisionPerformanceScore:0.0}\n" +
                 $"Scores={BuildTopActionScoreSummary(5)}\n" +
@@ -1750,6 +1934,7 @@ $"Map={LastMapRouteDebug}";
         private string BuildInspectorTeamDetails()
         {
             return
+                $"{TacticalIntentSummary}\n" +
                 $"Target={ResolveTargetDebugName()} Focus={CurrentTargetFocusCount} AllyFocus={CurrentTargetAllyFocusCount} OverFocusPenalty={CurrentTargetOverFocusPenalty:0.0}\n" +
                 $"{TeamRoleDebug}\n" +
                 $"{MacroDebug}\n" +
@@ -2086,6 +2271,7 @@ $"Map={LastMapRouteDebug}";
                 return
                     $"{SceneRich(brawlerName, Color.white)} | {SceneRich(_lastChosenAction.ActionType.ToString(), ResolveActionColor(_lastChosenAction.ActionType))} " +
                     $"{SceneRich(_lastChosenAction.Score.ToString("0.0"), SceneLabelMutedColor)}\n" +
+                    $"{SceneRich("Intent", SceneObjectiveColor)} {TacticalIntentSummary}\n" +
                     $"{SceneRich("Rank", ResolveDecisionPerformanceColor(decisionPerformance))} {decisionRank} {decisionPerformance:0}\n" +
                     $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} | {SceneRich(navState, ResolveNavigationColor())}\n" +
                     $"{SceneRich("Target", SceneTargetColor)} {targetName}";
@@ -2094,6 +2280,7 @@ $"Map={LastMapRouteDebug}";
             return
                 $"{SceneRich(brawlerName, Color.white)} [{SceneRich(_brawler != null ? _brawler.Team.ToString() : "?", SceneLabelMutedColor)}]\n" +
                 $"{SceneRich("Tier", SceneLabelMutedColor)} {_performanceTier} {Difficulty}/{Personality}\n" +
+                $"{SceneRich("Intent", SceneObjectiveColor)} {TacticalIntentSummary}\n" +
                 $"{SceneRich("Perf", SceneLabelMutedColor)} {BuildScenePerformanceSummary()}\n" +
                 $"{SceneRich("Action", ResolveActionColor(_lastChosenAction.ActionType))} {_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}\n" +
                 $"{SceneRich("Rank", ResolveDecisionPerformanceColor(decisionPerformance))} {decisionRank} {decisionPerformance:0}/100\n" +

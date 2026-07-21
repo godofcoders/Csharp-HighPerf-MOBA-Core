@@ -7,6 +7,7 @@ namespace MOBA.Core.Simulation.AI
     {
         public string BrawlerName;
         public string CurrentAction;
+        public string TacticalIntentSummary;
         public string Difficulty;
         public string Personality;
         public uint ReactionDelayTicks;
