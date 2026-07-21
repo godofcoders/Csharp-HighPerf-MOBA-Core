@@ -260,6 +260,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastGemPickupDebug : "GemPickup=None";
         public string ResourceAwarenessDebug =>
             _utilityScorer != null ? _utilityScorer.LastResourceAwarenessDebug : "ResAware=None";
+        public string TeamFightDebug =>
+            _utilityScorer != null ? _utilityScorer.LastTeamFightDebug : "TeamFight=None";
         public string OpponentModelDebug => _lastOpponentModelDebug;
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
@@ -592,6 +594,7 @@ _actionExecutor != null
                 _debugSnapshot.ChaseDebug = ChaseDebug;
                 _debugSnapshot.GemPickupDebug = GemPickupDebug;
                 _debugSnapshot.ResourceAwarenessDebug = ResourceAwarenessDebug;
+                _debugSnapshot.TeamFightDebug = TeamFightDebug;
             }
             else
             {
@@ -603,6 +606,7 @@ _actionExecutor != null
                 _debugSnapshot.ChaseDebug = "Chase=None";
                 _debugSnapshot.GemPickupDebug = "GemPickup=None";
                 _debugSnapshot.ResourceAwarenessDebug = "ResAware=None";
+                _debugSnapshot.TeamFightDebug = "TeamFight=None";
             }
 
             _lastReactiveDebug = _reactiveMemory != null && _profile != null
@@ -1945,6 +1949,7 @@ $"Map={LastMapRouteDebug}";
                 $"{PlaybookDebug}\n" +
                 $"{ChaseDebug}\n" +
                 $"{ResourceAwarenessDebug}\n" +
+                $"{TeamFightDebug}\n" +
                 $"{GemPickupDebug}";
         }
 
@@ -2327,7 +2332,8 @@ $"Map={LastMapRouteDebug}";
                 $"Aim={_profile.AimErrorDegrees:0.0} " +
                 $"Obj={(_profile.ObjectiveWeight * _profile.MacroActionBiasWeight):0.00} " +
                 $"Team={_profile.TeamRoleCoordinationWeight:0.00} " +
-                $"Res={_profile.OpponentResourceAwarenessWeight:0.00}";
+                $"Res={_profile.OpponentResourceAwarenessWeight:0.00} " +
+                $"Fight={_profile.TeamFightCoordinationWeight:0.00}";
         }
 
         private string ResolveTargetDebugName()

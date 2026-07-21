@@ -32,6 +32,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureMapGeometryDefaults(profile);
             EnsureDangerAvoidanceDefaults(profile);
             EnsureOpponentResourceAwarenessDefaults(profile);
+            EnsureAdvancedTeamFightDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -91,6 +92,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Obj={profile.ObjectiveWeight:0.00} Team={profile.TeamRoleCoordinationWeight:0.00} " +
                 $"Focus={profile.FocusFireWeight:0.0} Map={profile.MapOpenShotPreference:0.0}/{profile.MapCoverDancePreference:0.0} " +
                 $"Res={profile.OpponentResourceAwarenessWeight:0.00} " +
+                $"Fight={profile.TeamFightCoordinationWeight:0.00} " +
                 $"Move={profile.AIMoveSpeedScale:0.00}/{profile.AIMoveInputTurnRateDegreesPerTick:0} " +
                 $"Mistake={profile.HumanizationPressureMistakeChance:0.00}";
         }
@@ -152,6 +154,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 0.62f;
                     profile.EnemyNearlySuperThreatPenalty *= 0.58f;
                     profile.EnemySuperRespectBonus *= 0.62f;
+                    profile.TeamFightCoordinationWeight *= 0.50f;
+                    profile.TeamCollapseFocusBonus *= 0.62f;
+                    profile.TeamFlankRepositionBonus *= 0.62f;
+                    profile.TeamBaitHoldBonus *= 0.70f;
+                    profile.TeamPeelAssistBonus *= 0.68f;
+                    profile.TeamOvercommitApproachPenalty *= 0.58f;
                     break;
 
                 case AIBotPerformanceTier.Veteran:
@@ -200,6 +208,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.16f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.12f;
                     profile.EnemySuperRespectBonus *= 1.18f;
+                    profile.TeamFightCoordinationWeight *= 1.20f;
+                    profile.TeamCollapseFocusBonus *= 1.14f;
+                    profile.TeamFlankRepositionBonus *= 1.14f;
+                    profile.TeamBaitHoldBonus *= 1.10f;
+                    profile.TeamPeelAssistBonus *= 1.12f;
+                    profile.TeamOvercommitApproachPenalty *= 1.12f;
                     break;
 
                 case AIBotPerformanceTier.Elite:
@@ -250,6 +264,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.28f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.20f;
                     profile.EnemySuperRespectBonus *= 1.30f;
+                    profile.TeamFightCoordinationWeight *= 1.36f;
+                    profile.TeamCollapseFocusBonus *= 1.24f;
+                    profile.TeamFlankRepositionBonus *= 1.22f;
+                    profile.TeamBaitHoldBonus *= 1.18f;
+                    profile.TeamPeelAssistBonus *= 1.20f;
+                    profile.TeamOvercommitApproachPenalty *= 1.22f;
                     break;
 
                 case AIBotPerformanceTier.Regular:
@@ -347,6 +367,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 0.72f;
                     profile.EnemyNearlySuperThreatPenalty *= 0.70f;
                     profile.EnemySuperRespectBonus *= 0.75f;
+                    profile.TeamFightCoordinationWeight *= 0.72f;
+                    profile.TeamCollapseFocusBonus *= 0.78f;
+                    profile.TeamFlankRepositionBonus *= 0.80f;
+                    profile.TeamPeelAssistBonus *= 0.80f;
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -434,6 +458,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.12f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.10f;
                     profile.EnemySuperRespectBonus *= 1.12f;
+                    profile.TeamFightCoordinationWeight *= 1.10f;
+                    profile.TeamCollapseFocusBonus *= 1.08f;
+                    profile.TeamFlankRepositionBonus *= 1.08f;
+                    profile.TeamPeelAssistBonus *= 1.10f;
+                    profile.TeamOvercommitApproachPenalty *= 1.08f;
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -504,6 +533,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 0.82f;
                     profile.EnemyNearlySuperThreatPenalty *= 0.85f;
                     profile.EnemySuperRespectBonus *= 0.85f;
+                    profile.TeamCollapseFocusBonus *= 1.16f;
+                    profile.TeamFlankRepositionBonus *= 1.08f;
+                    profile.TeamOvercommitApproachPenalty *= 0.82f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -563,6 +595,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.18f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.15f;
                     profile.EnemySuperRespectBonus *= 1.18f;
+                    profile.TeamBaitHoldBonus *= 1.18f;
+                    profile.TeamPeelAssistBonus *= 1.16f;
+                    profile.TeamOvercommitApproachPenalty *= 1.14f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -605,6 +640,12 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.08f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.08f;
                     profile.EnemySuperRespectBonus *= 1.12f;
+                    profile.TeamFightCoordinationWeight *= 1.18f;
+                    profile.TeamCollapseFocusBonus *= 1.12f;
+                    profile.TeamFlankRepositionBonus *= 1.12f;
+                    profile.TeamBaitHoldBonus *= 1.12f;
+                    profile.TeamPeelAssistBonus *= 1.22f;
+                    profile.TeamOvercommitApproachPenalty *= 1.14f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -621,6 +662,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureMapGeometryDefaults(profile);
             EnsureDangerAvoidanceDefaults(profile);
             EnsureOpponentResourceAwarenessDefaults(profile);
+            EnsureAdvancedTeamFightDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
@@ -685,6 +727,18 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Clamp(profile.EnemyNearlySuperThreatPenalty, 0f, 30f);
             profile.EnemySuperRespectBonus =
                 Mathf.Clamp(profile.EnemySuperRespectBonus, 0f, 45f);
+            profile.TeamFightCoordinationWeight =
+                Mathf.Clamp(profile.TeamFightCoordinationWeight, 0f, 2.5f);
+            profile.TeamCollapseFocusBonus =
+                Mathf.Clamp(profile.TeamCollapseFocusBonus, 0f, 45f);
+            profile.TeamFlankRepositionBonus =
+                Mathf.Clamp(profile.TeamFlankRepositionBonus, 0f, 40f);
+            profile.TeamBaitHoldBonus =
+                Mathf.Clamp(profile.TeamBaitHoldBonus, 0f, 35f);
+            profile.TeamPeelAssistBonus =
+                Mathf.Clamp(profile.TeamPeelAssistBonus, 0f, 45f);
+            profile.TeamOvercommitApproachPenalty =
+                Mathf.Clamp(profile.TeamOvercommitApproachPenalty, 0f, 45f);
 
             profile.TacticalMoveRetargetTicks = ClampTicks(profile.TacticalMoveRetargetTicks, 1, 45);
             profile.TacticalMoveHeartbeatTicks = ClampTicks(profile.TacticalMoveHeartbeatTicks, 1, 60);
@@ -879,6 +933,27 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.EnemySuperRespectBonus <= 0f)
                 profile.EnemySuperRespectBonus = 14f;
+        }
+
+        private static void EnsureAdvancedTeamFightDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.TeamFightCoordinationWeight <= 0f)
+                profile.TeamFightCoordinationWeight = 1f;
+
+            if (profile.TeamCollapseFocusBonus <= 0f)
+                profile.TeamCollapseFocusBonus = 16f;
+
+            if (profile.TeamFlankRepositionBonus <= 0f)
+                profile.TeamFlankRepositionBonus = 12f;
+
+            if (profile.TeamBaitHoldBonus <= 0f)
+                profile.TeamBaitHoldBonus = 10f;
+
+            if (profile.TeamPeelAssistBonus <= 0f)
+                profile.TeamPeelAssistBonus = 14f;
+
+            if (profile.TeamOvercommitApproachPenalty <= 0f)
+                profile.TeamOvercommitApproachPenalty = 14f;
         }
 
         private static void EnsureMapGeometryDefaults(BrawlerAIProfile profile)

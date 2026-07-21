@@ -44,6 +44,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastChaseDebug = "Chase=None";
         private string _lastGemPickupDebug = "GemPickup=None";
         private string _lastResourceAwarenessDebug = "ResAware=None";
+        private string _lastTeamFightDebug = "TeamFight=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
         private string _lastWinConditionDebug = "Win=None";
         private uint _lastLaneEvaluationTick;
@@ -66,6 +67,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastChaseDebug => _lastChaseDebug;
         public string LastGemPickupDebug => _lastGemPickupDebug;
         public string LastResourceAwarenessDebug => _lastResourceAwarenessDebug;
+        public string LastTeamFightDebug => _lastTeamFightDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
         public string LastWinConditionDebug => _lastWinConditionDebug;
 
@@ -128,6 +130,11 @@ namespace MOBA.Core.Simulation.AI
                 results);
             ApplyWinConditionPressure(targetInfo, macroState, results);
             ApplyOpponentResourceAwareness(targetInfo, currentTick, results);
+            ApplyAdvancedTeamFightCoordination(
+                targetInfo,
+                currentTick,
+                playbookState,
+                results);
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
             ApplyPlaybookCoordination(targetInfo, playbookState, results);
         }
@@ -582,6 +589,225 @@ namespace MOBA.Core.Simulation.AI
                 case AIActionType.Retreat:
                 case AIActionType.Evade:
                     return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void ApplyAdvancedTeamFightCoordination(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AITeamPlaybookState playbookState,
+            List<AIActionScore> results)
+        {
+            _lastTeamFightDebug = "TeamFight=None";
+
+            if (_profile == null ||
+                _teamCoordinator == null ||
+                results == null ||
+                results.Count == 0)
+            {
+                return;
+            }
+
+            float weight = Mathf.Max(0f, _profile.TeamFightCoordinationWeight);
+            if (weight <= 0.01f)
+                return;
+
+            BrawlerController targetBrawler = null;
+            bool hasTarget = false;
+            if (targetInfo != null &&
+                targetInfo.HasLiveTarget &&
+                targetInfo.Target is BrawlerController candidateTarget &&
+                candidateTarget.State != null)
+            {
+                targetBrawler = candidateTarget;
+                hasTarget = true;
+            }
+            float targetHealthRatio = 1f;
+            int alliedFocusCount = 0;
+            bool targetIsVulnerable = false;
+
+            if (hasTarget)
+            {
+                targetHealthRatio = targetBrawler.State.CurrentHealth /
+                                    Mathf.Max(1f, targetBrawler.State.MaxHealth.Value);
+                alliedFocusCount = AITeamBlackboard.GetTargetFocusCountExcluding(
+                    _self.Team,
+                    targetBrawler.EntityID,
+                    _self.EntityID);
+                targetIsVulnerable =
+                    targetHealthRatio <= _profile.LowHealthChaseHealthThreshold ||
+                    targetBrawler.State.HasStatus(StatusEffectType.Stun) ||
+                    targetBrawler.State.HasStatus(StatusEffectType.Slow);
+            }
+
+            bool allyUnderThreat =
+                _teamCoordinator.TryGetAllyUnderThreat(
+                    currentTick,
+                    out BrawlerController threatenedAlly) &&
+                threatenedAlly != null &&
+                threatenedAlly != _self;
+            bool baitAndCollapse =
+                playbookState.IsActive &&
+                playbookState.Call == AITeamPlaybookCall.BaitAndCollapse;
+            bool overCommittedApproach =
+                hasTarget &&
+                alliedFocusCount >= Mathf.Max(1, _profile.MaxTeamApproachers) &&
+                !targetIsVulnerable;
+            bool collapseWindow =
+                hasTarget &&
+                alliedFocusCount > 0 &&
+                targetIsVulnerable;
+
+            if (!hasTarget && !allyUnderThreat && !baitAndCollapse)
+                return;
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = GetTeamFightDelta(
+                    actionScore.ActionType,
+                    collapseWindow,
+                    overCommittedApproach,
+                    allyUnderThreat,
+                    baitAndCollapse);
+                delta *= weight;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreateTeamFightScore(actionScore.ActionType, hasTarget, allyUnderThreat))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastTeamFightDebug =
+                $"TeamFight=focus:{alliedFocusCount} hp:{targetHealthRatio:0.00} " +
+                $"collapse:{collapseWindow} over:{overCommittedApproach} " +
+                $"peel:{allyUnderThreat} bait:{baitAndCollapse} w:{weight:0.00}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastTeamFightDebug += $" Delta={deltaDebug}";
+        }
+
+        private float GetTeamFightDelta(
+            AIActionType actionType,
+            bool collapseWindow,
+            bool overCommittedApproach,
+            bool allyUnderThreat,
+            bool baitAndCollapse)
+        {
+            float delta = 0f;
+
+            if (collapseWindow)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        delta += _profile.TeamCollapseFocusBonus;
+                        break;
+
+                    case AIActionType.UseSuper:
+                        delta += _profile.TeamCollapseFocusBonus * 0.55f;
+                        break;
+
+                    case AIActionType.HoldRange:
+                        delta += _profile.TeamBaitHoldBonus * 0.50f;
+                        break;
+                }
+            }
+
+            if (overCommittedApproach)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        delta -= _profile.TeamOvercommitApproachPenalty;
+                        break;
+
+                    case AIActionType.Reposition:
+                        delta += _profile.TeamFlankRepositionBonus;
+                        break;
+
+                    case AIActionType.HoldRange:
+                        delta += _profile.TeamBaitHoldBonus;
+                        break;
+                }
+            }
+
+            if (allyUnderThreat)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Peel:
+                        delta += _profile.TeamPeelAssistBonus;
+                        break;
+
+                    case AIActionType.Reposition:
+                        delta += _profile.TeamPeelAssistBonus * 0.35f;
+                        break;
+
+                    case AIActionType.Approach:
+                        delta += _profile.TeamPeelAssistBonus * 0.25f;
+                        break;
+                }
+            }
+
+            if (baitAndCollapse)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.HoldRange:
+                        delta += _profile.TeamBaitHoldBonus;
+                        break;
+
+                    case AIActionType.Reposition:
+                        delta += _profile.TeamFlankRepositionBonus;
+                        break;
+
+                    case AIActionType.Approach:
+                        delta += _profile.TeamCollapseFocusBonus * 0.45f;
+                        break;
+                }
+            }
+
+            return delta;
+        }
+
+        private static bool CanCreateTeamFightScore(
+            AIActionType actionType,
+            bool hasTarget,
+            bool allyUnderThreat)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                    return hasTarget;
+
+                case AIActionType.Peel:
+                    return allyUnderThreat;
 
                 default:
                     return false;

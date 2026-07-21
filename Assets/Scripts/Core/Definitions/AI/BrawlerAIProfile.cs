@@ -206,6 +206,20 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Soft cap for allies already moving to objective before duplicate objective movement is discouraged.")]
         public int MaxTeamObjectiveMovers = 1;
 
+        [Header("Advanced Team Fight")]
+        [Tooltip("Scales coordinated collapse, flank, bait, and peel adjustments during active fights.")]
+        public float TeamFightCoordinationWeight = 1f;
+        [Tooltip("Action score added when an ally has already created a focus-fire collapse on a vulnerable target.")]
+        public float TeamCollapseFocusBonus = 16f;
+        [Tooltip("Reposition score added when this bot should take a flank/angle instead of dogpiling a target.")]
+        public float TeamFlankRepositionBonus = 12f;
+        [Tooltip("Hold-range score added when this bot should bait pressure while allies collapse.")]
+        public float TeamBaitHoldBonus = 10f;
+        [Tooltip("Peel score added when a nearby ally is under threat.")]
+        public float TeamPeelAssistBonus = 14f;
+        [Tooltip("Approach score removed when the team is already overcommitted and the target is not clearly finishable.")]
+        public float TeamOvercommitApproachPenalty = 14f;
+
         [Header("Spacing / Anti-Clump")]
         public float AllyAvoidanceRadius = 2.5f;
         public float AllyAvoidanceWeight = 1.5f;
