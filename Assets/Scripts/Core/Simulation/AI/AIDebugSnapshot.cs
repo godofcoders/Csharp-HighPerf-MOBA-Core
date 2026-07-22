@@ -18,6 +18,7 @@ namespace MOBA.Core.Simulation.AI
         public int CurrentTargetAllyFocusCount;
         public float CurrentTargetOverFocusPenalty;
         public string TargetContextDebug;
+        public string DecisionConfidenceDebug;
 
         public float Health;
         public float MaxHealth;

@@ -37,6 +37,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureRoleMacroDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
             EnsurePressureRotationDefaults(profile);
+            EnsureDecisionConfidenceDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -101,6 +102,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Role={profile.RoleMacroBehaviorWeight:0.00} " +
                 $"Risk={profile.EngagementRiskAwarenessWeight:0.00} " +
                 $"Rot={profile.PressureRotationAwarenessWeight:0.00} " +
+                $"Conf={profile.DecisionAmbiguityScoreWindow:0.0}/{profile.DecisionAmbiguitySwitchPenalty:0.0} " +
                 $"Move={profile.AIMoveSpeedScale:0.00}/{profile.AIMoveInputTurnRateDegreesPerTick:0} " +
                 $"Mistake={profile.HumanizationPressureMistakeChance:0.00}";
         }
@@ -120,6 +122,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.SuperDecisionCooldownTicks = ScaleTicks(profile.SuperDecisionCooldownTicks, 1.20f, 1u);
                     profile.MinimumCommittedActionScore *= 1.12f;
                     profile.ActionSwitchScoreMargin *= 1.18f;
+                    profile.DecisionAmbiguityScoreWindow *= 1.35f;
+                    profile.DecisionAmbiguitySwitchPenalty *= 1.35f;
+                    profile.DecisionAmbiguityExtraHoldTicks =
+                        ScaleTicks(profile.DecisionAmbiguityExtraHoldTicks, 1.45f, 1u);
                     profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 1.15f, 1u);
                     profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 1.18f, 1u);
                     profile.ObjectiveWeight *= 0.78f;
@@ -201,6 +207,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.SuperDecisionCooldownTicks = ScaleTicks(profile.SuperDecisionCooldownTicks, 0.90f, 1u);
                     profile.MinimumCommittedActionScore *= 0.92f;
                     profile.ActionSwitchScoreMargin *= 0.92f;
+                    profile.DecisionAmbiguityScoreWindow *= 0.82f;
+                    profile.DecisionAmbiguitySwitchPenalty *= 0.82f;
+                    profile.DecisionAmbiguityExtraHoldTicks =
+                        ScaleTicks(profile.DecisionAmbiguityExtraHoldTicks, 0.75f, 1u);
                     profile.ObjectiveWeight *= 1.14f;
                     profile.MacroActionBiasWeight *= 1.12f;
                     profile.FocusFireWeight *= 1.12f;
@@ -275,6 +285,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.SuperDecisionCooldownTicks = ScaleTicks(profile.SuperDecisionCooldownTicks, 0.78f, 1u);
                     profile.MinimumCommittedActionScore *= 0.84f;
                     profile.ActionSwitchScoreMargin *= 0.82f;
+                    profile.DecisionAmbiguityScoreWindow *= 0.65f;
+                    profile.DecisionAmbiguitySwitchPenalty *= 0.60f;
+                    profile.DecisionAmbiguityExtraHoldTicks =
+                        ScaleTicks(profile.DecisionAmbiguityExtraHoldTicks, 0.55f, 1u);
                     profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 0.82f, 1u);
                     profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 0.86f, 1u);
                     profile.ObjectiveWeight *= 1.18f;
@@ -364,6 +378,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.GadgetCooldownTicks = ScaleTicks(profile.GadgetCooldownTicks, 1.25f, 1);
                     profile.MinimumCommittedActionScore *= 1.10f;
                     profile.ActionSwitchScoreMargin *= 1.25f;
+                    profile.DecisionAmbiguityScoreWindow *= 1.20f;
+                    profile.DecisionAmbiguitySwitchPenalty *= 1.20f;
+                    profile.DecisionAmbiguityExtraHoldTicks =
+                        ScaleTicks(profile.DecisionAmbiguityExtraHoldTicks, 1.25f, 1);
                     profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 1.25f, 1);
                     profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 1.20f, 1);
                     profile.CurrentTargetStickiness *= 1.25f;
@@ -473,6 +491,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.GadgetCooldownTicks = ScaleTicks(profile.GadgetCooldownTicks, 0.85f, 1);
                     profile.MinimumCommittedActionScore *= 0.90f;
                     profile.ActionSwitchScoreMargin *= 0.85f;
+                    profile.DecisionAmbiguityScoreWindow *= 0.78f;
+                    profile.DecisionAmbiguitySwitchPenalty *= 0.78f;
+                    profile.DecisionAmbiguityExtraHoldTicks =
+                        ScaleTicks(profile.DecisionAmbiguityExtraHoldTicks, 0.75f, 1);
                     profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 0.85f, 1);
                     profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 0.90f, 1);
                     profile.EmergencyOverrideScore *= 0.96f;
@@ -597,6 +619,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.InRangeTargetBonus *= 1.10f;
                     profile.MinimumCommittedActionScore *= 0.95f;
                     profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 0.90f, 1);
+                    profile.DecisionAmbiguitySwitchPenalty *= 0.88f;
+                    profile.DecisionAmbiguityExtraHoldTicks =
+                        ScaleTicks(profile.DecisionAmbiguityExtraHoldTicks, 0.85f, 1);
                     profile.EmergencyOverrideScore *= 0.97f;
                     profile.RetreatWeight *= 0.80f;
                     profile.RegroupWeight *= 0.85f;
@@ -669,6 +694,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RepositionWeight *= 1.20f;
                     profile.ApproachWeight *= 0.82f;
                     profile.ActionSwitchScoreMargin *= 1.10f;
+                    profile.DecisionAmbiguityScoreWindow *= 1.10f;
+                    profile.DecisionAmbiguitySwitchPenalty *= 1.16f;
+                    profile.DecisionAmbiguityExtraHoldTicks =
+                        ScaleTicks(profile.DecisionAmbiguityExtraHoldTicks, 1.15f, 1);
                     profile.CombatActionCommitmentTicks = ScaleTicks(profile.CombatActionCommitmentTicks, 1.10f, 1);
                     profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 1.08f, 1);
                     profile.CurrentTargetStickiness *= 0.90f;
@@ -749,6 +778,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.ObjectiveWeight *= 1.10f;
                     profile.MinimumCommittedActionScore *= 0.96f;
                     profile.ActionSwitchScoreMargin *= 0.95f;
+                    profile.DecisionAmbiguitySwitchPenalty *= 0.92f;
+                    profile.DecisionAmbiguityExtraHoldTicks =
+                        ScaleTicks(profile.DecisionAmbiguityExtraHoldTicks, 0.90f, 1);
                     profile.OverFocusedTargetPenaltyPerAlly *= 1.20f;
                     profile.AllyAvoidanceWeight *= 1.15f;
                     profile.AllySupportRange *= 1.12f;
@@ -824,6 +856,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureRoleMacroDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
             EnsurePressureRotationDefaults(profile);
+            EnsureDecisionConfidenceDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
@@ -966,6 +999,12 @@ namespace MOBA.Core.Simulation.AI
 
             profile.MinimumCommittedActionScore = Mathf.Clamp(profile.MinimumCommittedActionScore, 0f, 40f);
             profile.ActionSwitchScoreMargin = Mathf.Clamp(profile.ActionSwitchScoreMargin, 4f, 35f);
+            profile.DecisionAmbiguityScoreWindow =
+                Mathf.Clamp(profile.DecisionAmbiguityScoreWindow, 0f, 20f);
+            profile.DecisionAmbiguitySwitchPenalty =
+                Mathf.Clamp(profile.DecisionAmbiguitySwitchPenalty, 0f, 25f);
+            profile.DecisionAmbiguityExtraHoldTicks =
+                ClampTicks(profile.DecisionAmbiguityExtraHoldTicks, 0, 30);
             profile.CombatActionCommitmentTicks = ClampTicks(profile.CombatActionCommitmentTicks, 1, 60);
             profile.NonCombatActionCommitmentTicks = ClampTicks(profile.NonCombatActionCommitmentTicks, 1, 120);
             profile.EmergencyOverrideScore = Mathf.Clamp(profile.EmergencyOverrideScore, 60f, 120f);
@@ -1256,6 +1295,18 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.PressureRotationRadius <= 0f)
                 profile.PressureRotationRadius = 7f;
+        }
+
+        private static void EnsureDecisionConfidenceDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.DecisionAmbiguityScoreWindow <= 0f)
+                profile.DecisionAmbiguityScoreWindow = 6f;
+
+            if (profile.DecisionAmbiguitySwitchPenalty <= 0f)
+                profile.DecisionAmbiguitySwitchPenalty = 7f;
+
+            if (profile.DecisionAmbiguityExtraHoldTicks == 0u)
+                profile.DecisionAmbiguityExtraHoldTicks = 5u;
         }
 
         private static void EnsureMapGeometryDefaults(BrawlerAIProfile profile)

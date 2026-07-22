@@ -23,6 +23,9 @@ namespace MOBA.Core.Simulation.AI
         private AIActionScore _committedAction;
         private uint _committedSinceTick;
         private bool _hasCommittedAction;
+        private string _lastDecisionConfidenceDebug = "DecisionConf=None";
+
+        public string LastDecisionConfidenceDebug => _lastDecisionConfidenceDebug;
 
         public AIActionCommitment(BrawlerAIProfile profile)
         {
@@ -38,9 +41,20 @@ namespace MOBA.Core.Simulation.AI
             string ownerName = null)
         {
             AIActionScore rawBest = GetBestAction(scores);
+            AIActionScore runnerUp = GetRunnerUpAction(scores, rawBest.ActionType);
+            float bestGap = runnerUp.ActionType == AIActionType.None
+                ? float.PositiveInfinity
+                : rawBest.Score - runnerUp.Score;
+            bool ambiguousDecision = IsAmbiguousDecision(rawBest, runnerUp, bestGap);
             AIActionScore currentScore = _hasCommittedAction
                 ? FindScore(scores, _committedAction.ActionType)
                 : new AIActionScore(AIActionType.None, 0f);
+
+            _lastDecisionConfidenceDebug =
+                $"DecisionConf=best:{rawBest.ActionType}/{rawBest.Score:0.0} " +
+                $"next:{runnerUp.ActionType}/{runnerUp.Score:0.0} " +
+                $"gap:{(float.IsPositiveInfinity(bestGap) ? 999f : bestGap):0.0} " +
+                $"amb:{ambiguousDecision}";
 
             if (!_hasCommittedAction)
                 return Commit(rawBest, currentTick, ownerName, "first_action");
@@ -62,20 +76,34 @@ namespace MOBA.Core.Simulation.AI
 
             uint heldTicks = currentTick - _committedSinceTick;
             uint requiredHoldTicks = GetRequiredCommitmentTicks(_committedAction.ActionType);
+            float switchMargin = _profile.ActionSwitchScoreMargin;
+
+            if (ambiguousDecision && _profile.UseDecisionConfidenceDampening)
+            {
+                requiredHoldTicks += _profile.DecisionAmbiguityExtraHoldTicks;
+                switchMargin += _profile.DecisionAmbiguitySwitchPenalty;
+            }
 
             bool heldLongEnough = heldTicks >= requiredHoldTicks;
             bool newActionClearlyBetter =
-                rawBest.Score >= currentScore.Score + _profile.ActionSwitchScoreMargin;
+                rawBest.Score >= currentScore.Score + switchMargin;
 
             if (newActionClearlyBetter && heldLongEnough)
                 return Commit(rawBest, currentTick, ownerName, "better_after_commitment");
 
-            if (newActionClearlyBetter && IsSoftSwitchAllowed(_committedAction.ActionType, rawBest.ActionType))
+            if (newActionClearlyBetter &&
+                !ambiguousDecision &&
+                IsSoftSwitchAllowed(_committedAction.ActionType, rawBest.ActionType))
+            {
                 return Commit(rawBest, currentTick, ownerName, "soft_switch_allowed");
+            }
 
             // Keep the old action, but update its score to the current score
             // from this tick. This keeps debug output honest.
             _committedAction = currentScore;
+            if (ambiguousDecision && _profile.UseDecisionConfidenceDampening)
+                _lastDecisionConfidenceDebug += $" held:{heldTicks}/{requiredHoldTicks} margin:{switchMargin:0.0}";
+
             return _committedAction;
         }
 
@@ -84,6 +112,7 @@ namespace MOBA.Core.Simulation.AI
             _committedAction = new AIActionScore(AIActionType.None, 0f);
             _committedSinceTick = 0;
             _hasCommittedAction = false;
+            _lastDecisionConfidenceDebug = "DecisionConf=None";
         }
 
         private AIActionScore Commit(
@@ -120,6 +149,27 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return best;
+        }
+
+        private AIActionScore GetRunnerUpAction(
+            IReadOnlyList<AIActionScore> scores,
+            AIActionType bestActionType)
+        {
+            AIActionScore runnerUp = new AIActionScore(AIActionType.None, 0f);
+
+            if (scores == null)
+                return runnerUp;
+
+            for (int i = 0; i < scores.Count; i++)
+            {
+                if (scores[i].ActionType == bestActionType)
+                    continue;
+
+                if (scores[i].Score > runnerUp.Score)
+                    runnerUp = scores[i];
+            }
+
+            return runnerUp;
         }
 
         private AIActionScore FindScore(
@@ -162,6 +212,28 @@ namespace MOBA.Core.Simulation.AI
                 default:
                     return false;
             }
+        }
+
+        private bool IsAmbiguousDecision(
+            AIActionScore best,
+            AIActionScore runnerUp,
+            float bestGap)
+        {
+            if (_profile == null ||
+                !_profile.UseDecisionConfidenceDampening ||
+                runnerUp.ActionType == AIActionType.None ||
+                float.IsPositiveInfinity(bestGap))
+            {
+                return false;
+            }
+
+            if (IsEmergencyOverride(best))
+                return false;
+
+            if (best.Score < _profile.MinimumCommittedActionScore)
+                return false;
+
+            return bestGap <= Mathf.Max(0f, _profile.DecisionAmbiguityScoreWindow);
         }
 
         private uint GetRequiredCommitmentTicks(AIActionType actionType)

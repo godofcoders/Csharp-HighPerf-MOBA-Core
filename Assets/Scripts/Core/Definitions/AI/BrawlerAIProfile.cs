@@ -301,6 +301,16 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("If true, prints action switch decisions for AI debugging.")]
         public bool LogActionCommitment = false;
 
+        [Header("Decision Confidence")]
+        [Tooltip("If true, action commitment becomes more conservative when top action scores are nearly tied.")]
+        public bool UseDecisionConfidenceDampening = true;
+        [Tooltip("Top-two score gap at or below this value is treated as an ambiguous decision.")]
+        public float DecisionAmbiguityScoreWindow = 6f;
+        [Tooltip("Extra score margin required before switching away from a valid committed action during ambiguity.")]
+        public float DecisionAmbiguitySwitchPenalty = 7f;
+        [Tooltip("Extra commitment ticks added during ambiguous decisions.")]
+        public uint DecisionAmbiguityExtraHoldTicks = 5;
+
         [Header("Objective Debug")]
         public bool LogObjectiveDebug = false;
 

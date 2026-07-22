@@ -270,6 +270,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastPressureRotationDebug : "PressureRot=None";
         public string TargetContextDebug =>
             _targetScorer != null ? _targetScorer.LastTargetContextDebug : "TargetCtx=None";
+        public string DecisionConfidenceDebug =>
+            _actionCommitment != null ? _actionCommitment.LastDecisionConfidenceDebug : "DecisionConf=None";
         public string OpponentModelDebug => _lastOpponentModelDebug;
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
@@ -563,6 +565,7 @@ _actionExecutor != null
             _debugSnapshot.CurrentTargetAllyFocusCount = CurrentTargetAllyFocusCount;
             _debugSnapshot.CurrentTargetOverFocusPenalty = CurrentTargetOverFocusPenalty;
             _debugSnapshot.TargetContextDebug = TargetContextDebug;
+            _debugSnapshot.DecisionConfidenceDebug = DecisionConfidenceDebug;
 
             if (_teamCoordinator != null)
             {
@@ -1680,6 +1683,7 @@ $"Map={LastMapRouteDebug}";
                 $"Action={_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.00}\n" +
                 $"DecisionRank={_inspectorDecisionPerformanceRank} score={_inspectorDecisionPerformanceScore:0.0}\n" +
                 $"Scores={BuildTopActionScoreSummary(5)}\n" +
+                $"{DecisionConfidenceDebug}\n" +
                 $"Tier={_performanceTier} Difficulty={Difficulty} Personality={Personality} Human={HumanizationDebug}\n" +
                 $"Tuning={TuningDebug}";
         }
@@ -2305,6 +2309,7 @@ $"Map={LastMapRouteDebug}";
                     $"{SceneRich(_lastChosenAction.Score.ToString("0.0"), SceneLabelMutedColor)}\n" +
                     $"{SceneRich("Intent", SceneObjectiveColor)} {TacticalIntentSummary}\n" +
                     $"{SceneRich("Rank", ResolveDecisionPerformanceColor(decisionPerformance))} {decisionRank} {decisionPerformance:0}\n" +
+                    $"{SceneRich("Conf", SceneLabelMutedColor)} {DecisionConfidenceDebug}\n" +
                     $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} | {SceneRich(navState, ResolveNavigationColor())}\n" +
                     $"{SceneRich("Target", SceneTargetColor)} {targetName}";
             }
@@ -2317,6 +2322,7 @@ $"Map={LastMapRouteDebug}";
                 $"{SceneRich("Action", ResolveActionColor(_lastChosenAction.ActionType))} {_lastChosenAction.ActionType} score={_lastChosenAction.Score:0.0}\n" +
                 $"{SceneRich("Rank", ResolveDecisionPerformanceColor(decisionPerformance))} {decisionRank} {decisionPerformance:0}/100\n" +
                 $"{SceneRich("Top", SceneObjectiveColor)} {BuildTopActionScoreSummary(4)}\n" +
+                $"{SceneRich("Conf", SceneLabelMutedColor)} {DecisionConfidenceDebug}\n" +
                 $"{SceneRich("Target", SceneTargetColor)} {targetName} focus={CurrentTargetFocusCount}/{CurrentTargetAllyFocusCount} penalty={CurrentTargetOverFocusPenalty:0.0}\n" +
                 $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} reason={LastTacticalMoveReason}\n" +
                 $"{SceneRich(navState, ResolveNavigationColor())} | {LastTacticalStopDebug}\n" +
@@ -2358,7 +2364,8 @@ $"Map={LastMapRouteDebug}";
                 $"Fight={_profile.TeamFightCoordinationWeight:0.00} " +
                 $"Role={_profile.RoleMacroBehaviorWeight:0.00} " +
                 $"Risk={_profile.EngagementRiskAwarenessWeight:0.00} " +
-                $"Rot={_profile.PressureRotationAwarenessWeight:0.00}";
+                $"Rot={_profile.PressureRotationAwarenessWeight:0.00} " +
+                $"Conf={_profile.DecisionAmbiguityScoreWindow:0.0}/{_profile.DecisionAmbiguitySwitchPenalty:0.0}";
         }
 
         private string ResolveTargetDebugName()
