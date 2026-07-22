@@ -34,6 +34,18 @@ namespace MOBA.Core.Simulation.AI
         public float ClusterTargetBonus = 10f;
         public float InRangeTargetBonus = 12f;
 
+        [Header("Target Context Awareness")]
+        [Tooltip("Scales target selection awareness for isolated enemies, protected enemies, and team collapse support.")]
+        public float TargetContextAwarenessWeight = 1f;
+        [Tooltip("Target score added when an enemy is isolated from their allies.")]
+        public float IsolatedTargetBonus = 16f;
+        [Tooltip("Target score removed when an enemy is protected by nearby allies and our team has no collapse pressure.")]
+        public float ProtectedTargetPenalty = 18f;
+        [Tooltip("Target score added when allies are already close enough to collapse on the target.")]
+        public float AllyCollapseTargetBonus = 14f;
+        [Tooltip("How far around a target to evaluate nearby ally/enemy support.")]
+        public float TargetContextRadius = 4.75f;
+
         [Header("Combat Distances")]
         public float AttackRangeBuffer = 0.75f;
         public float PreferredAttackRangeRatio = 0.85f;

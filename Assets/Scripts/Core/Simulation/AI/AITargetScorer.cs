@@ -16,6 +16,8 @@ namespace MOBA.Core.Simulation.AI
         private bool _hasWinMacroCache;
         private uint _lastWinMacroTick;
         private AIGameModeMacroState _lastWinMacroState;
+        private string _lastTargetContextDebug = "TargetCtx=None";
+        private string _candidateTargetContextDebug = "TargetCtx=None";
 
         private const float CarrierThreatRadius = 5.5f;
         private const float CarrierThreatCorridorWidth = 2.15f;
@@ -25,6 +27,8 @@ namespace MOBA.Core.Simulation.AI
         private const float BrawlBallCarrierBaseBonus = 92f;
         private const float BrawlBallCarrierNearBonus = 34f;
         private const float BrawlBallCarrierPressureRadius = 13f;
+
+        public string LastTargetContextDebug => _lastTargetContextDebug;
 
         public AITargetScorer(BrawlerController self, BrawlerAIProfile profile, int initialCapacity = 16)
         {
@@ -42,6 +46,7 @@ namespace MOBA.Core.Simulation.AI
         {
             ISpatialEntity best = null;
             float bestScore = float.MinValue;
+            string bestTargetContextDebug = "TargetCtx=None";
 
             for (int i = 0; i < candidates.Count; i++)
             {
@@ -52,14 +57,18 @@ namespace MOBA.Core.Simulation.AI
                 {
                     bestScore = score;
                     best = candidate;
+                    bestTargetContextDebug = _candidateTargetContextDebug;
                 }
             }
 
+            _lastTargetContextDebug = bestTargetContextDebug;
             return best;
         }
 
         public float ScoreTarget(ISpatialEntity target, AITargetInfo memory, uint currentTick)
         {
+            _candidateTargetContextDebug = "TargetCtx=None";
+
             if (!SpatialEntityUtility.IsAlive(target))
                 return float.MinValue;
 
@@ -223,6 +232,17 @@ namespace MOBA.Core.Simulation.AI
 
                 if (winEvaluation.ShouldCollapse)
                     overFocusPenalty *= 0.25f;
+            }
+
+            if (targetBrawlerRef != null)
+            {
+                score += ScoreTargetContext(
+                    targetBrawlerRef,
+                    distance,
+                    isTeamFocusTarget,
+                    targetCarriedGems,
+                    targetHealthRatio,
+                    alliedFocusCount);
             }
 
             score -= overFocusPenalty;
@@ -389,6 +409,118 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return Mathf.Clamp(bonus, 0f, CarrierThreatMaxBonus + 8f);
+        }
+
+        private float ScoreTargetContext(
+            BrawlerController target,
+            float distance,
+            bool isTeamFocusTarget,
+            int targetCarriedGems,
+            float targetHealthRatio,
+            int alliedFocusCount)
+        {
+            if (_profile == null ||
+                SimulationClock.Grid == null ||
+                !SpatialEntityUtility.IsAlive(target))
+            {
+                _candidateTargetContextDebug = "TargetCtx=None";
+                return 0f;
+            }
+
+            float weight = Mathf.Max(0f, _profile.TargetContextAwarenessWeight);
+            if (weight <= 0.01f)
+            {
+                _candidateTargetContextDebug = "TargetCtx=Off";
+                return 0f;
+            }
+
+            float radius = Mathf.Max(2f, _profile.TargetContextRadius);
+            _clusterBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                target.Position,
+                radius,
+                _clusterBuffer);
+
+            float allyCollapsePressure = 0f;
+            float protectorPressure = 0f;
+            int allyCollapseCount = 0;
+            int protectorCount = 0;
+
+            for (int i = 0; i < _clusterBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _clusterBuffer[i];
+                if (!SpatialEntityUtility.IsAlive(entity) ||
+                    entity.EntityID == target.EntityID)
+                {
+                    continue;
+                }
+
+                float proximity =
+                    1f - Mathf.Clamp01(XZDistance(entity.Position, target.Position) / radius);
+                if (proximity <= 0f)
+                    continue;
+
+                if (entity.Team == _self.Team)
+                {
+                    allyCollapseCount++;
+                    allyCollapsePressure += 0.35f + proximity;
+                }
+                else if (entity.Team == target.Team)
+                {
+                    protectorCount++;
+                    protectorPressure += 0.35f + proximity;
+                }
+            }
+
+            if (distance <= radius)
+            {
+                float selfProximity = 1f - Mathf.Clamp01(distance / radius);
+                allyCollapsePressure += 0.50f + selfProximity;
+            }
+
+            bool highValueTarget = targetCarriedGems >= 3;
+            bool vulnerableTarget =
+                targetHealthRatio <= Mathf.Max(0.25f, _profile.FinisherHealthThreshold) ||
+                target.State.HasStatus(StatusEffectType.Stun) ||
+                target.State.HasStatus(StatusEffectType.Slow);
+            float isolation = Mathf.Clamp01(1f - protectorPressure / 2.2f);
+            float collapseAdvantage = allyCollapsePressure - protectorPressure;
+            float score = 0f;
+
+            if (isolation > 0.25f && (vulnerableTarget || highValueTarget || isTeamFocusTarget))
+            {
+                score += isolation * _profile.IsolatedTargetBonus;
+            }
+
+            if (collapseAdvantage > 0.15f)
+            {
+                score += Mathf.Clamp01(collapseAdvantage / 2.4f) *
+                         _profile.AllyCollapseTargetBonus;
+            }
+
+            if (protectorPressure > allyCollapsePressure + 0.25f &&
+                !isTeamFocusTarget &&
+                !highValueTarget)
+            {
+                float protectedPressure =
+                    Mathf.Clamp01((protectorPressure - allyCollapsePressure) / 2.5f);
+                score -= protectedPressure * _profile.ProtectedTargetPenalty;
+            }
+
+            if (alliedFocusCount > 0 && vulnerableTarget)
+            {
+                score += Mathf.Min(1.5f, alliedFocusCount * 0.45f) *
+                         _profile.AllyCollapseTargetBonus;
+            }
+
+            float weightedScore = score * weight;
+            _candidateTargetContextDebug =
+                $"TargetCtx=ally:{allyCollapseCount}/{allyCollapsePressure:0.0} " +
+                $"protect:{protectorCount}/{protectorPressure:0.0} " +
+                $"iso:{isolation:0.00} value:{highValueTarget} vuln:{vulnerableTarget} " +
+                $"w:{weight:0.00} delta:{weightedScore:+0.0;-0.0}";
+
+            return weightedScore;
         }
 
         private static float CalculatePressureCorridorThreat(

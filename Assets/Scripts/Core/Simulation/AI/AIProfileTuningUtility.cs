@@ -27,6 +27,7 @@ namespace MOBA.Core.Simulation.AI
             profile.Personality = personality;
 
             EnsureTacticalStabilizationDefaults(profile);
+            EnsureTargetContextDefaults(profile);
             EnsureGemGrabObjectiveDefaults(profile);
             EnsureLaneDisciplineDefaults(profile);
             EnsureMapGeometryDefaults(profile);
@@ -91,6 +92,7 @@ namespace MOBA.Core.Simulation.AI
                 $"AimErr={profile.AimErrorDegrees:0.0} " +
                 $"Sense={profile.IdleSenseIntervalTicks}/{profile.CombatSenseIntervalTicks} " +
                 $"Obj={profile.ObjectiveWeight:0.00} Team={profile.TeamRoleCoordinationWeight:0.00} " +
+                $"TgtCtx={profile.TargetContextAwarenessWeight:0.00} " +
                 $"Focus={profile.FocusFireWeight:0.0} Map={profile.MapOpenShotPreference:0.0}/{profile.MapCoverDancePreference:0.0} " +
                 $"Res={profile.OpponentResourceAwarenessWeight:0.00} " +
                 $"Fight={profile.TeamFightCoordinationWeight:0.00} " +
@@ -162,6 +164,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBaitHoldBonus *= 0.70f;
                     profile.TeamPeelAssistBonus *= 0.68f;
                     profile.TeamOvercommitApproachPenalty *= 0.58f;
+                    profile.TargetContextAwarenessWeight *= 0.42f;
+                    profile.IsolatedTargetBonus *= 0.62f;
+                    profile.ProtectedTargetPenalty *= 0.62f;
+                    profile.AllyCollapseTargetBonus *= 0.62f;
                     profile.RoleMacroBehaviorWeight *= 0.48f;
                     profile.RoleTankSpaceCreationBonus *= 0.62f;
                     profile.RoleBacklineAnchorMacroBonus *= 0.62f;
@@ -224,6 +230,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBaitHoldBonus *= 1.10f;
                     profile.TeamPeelAssistBonus *= 1.12f;
                     profile.TeamOvercommitApproachPenalty *= 1.12f;
+                    profile.TargetContextAwarenessWeight *= 1.18f;
+                    profile.IsolatedTargetBonus *= 1.12f;
+                    profile.ProtectedTargetPenalty *= 1.12f;
+                    profile.AllyCollapseTargetBonus *= 1.12f;
                     profile.RoleMacroBehaviorWeight *= 1.18f;
                     profile.RoleTankSpaceCreationBonus *= 1.12f;
                     profile.RoleBacklineAnchorMacroBonus *= 1.12f;
@@ -288,6 +298,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamBaitHoldBonus *= 1.18f;
                     profile.TeamPeelAssistBonus *= 1.20f;
                     profile.TeamOvercommitApproachPenalty *= 1.22f;
+                    profile.TargetContextAwarenessWeight *= 1.34f;
+                    profile.IsolatedTargetBonus *= 1.22f;
+                    profile.ProtectedTargetPenalty *= 1.22f;
+                    profile.AllyCollapseTargetBonus *= 1.24f;
                     profile.RoleMacroBehaviorWeight *= 1.34f;
                     profile.RoleTankSpaceCreationBonus *= 1.24f;
                     profile.RoleBacklineAnchorMacroBonus *= 1.22f;
@@ -397,6 +411,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamCollapseFocusBonus *= 0.78f;
                     profile.TeamFlankRepositionBonus *= 0.80f;
                     profile.TeamPeelAssistBonus *= 0.80f;
+                    profile.TargetContextAwarenessWeight *= 0.58f;
+                    profile.IsolatedTargetBonus *= 0.70f;
+                    profile.ProtectedTargetPenalty *= 0.68f;
+                    profile.AllyCollapseTargetBonus *= 0.72f;
                     profile.RoleMacroBehaviorWeight *= 0.70f;
                     profile.RoleTankSpaceCreationBonus *= 0.78f;
                     profile.RoleBacklineAnchorMacroBonus *= 0.78f;
@@ -496,6 +514,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.TeamFlankRepositionBonus *= 1.08f;
                     profile.TeamPeelAssistBonus *= 1.10f;
                     profile.TeamOvercommitApproachPenalty *= 1.08f;
+                    profile.TargetContextAwarenessWeight *= 1.12f;
+                    profile.IsolatedTargetBonus *= 1.10f;
+                    profile.ProtectedTargetPenalty *= 1.10f;
+                    profile.AllyCollapseTargetBonus *= 1.12f;
                     profile.RoleMacroBehaviorWeight *= 1.10f;
                     profile.RoleTankSpaceCreationBonus *= 1.08f;
                     profile.RoleBacklineAnchorMacroBonus *= 1.08f;
@@ -574,6 +596,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 0.82f;
                     profile.EnemyNearlySuperThreatPenalty *= 0.85f;
                     profile.EnemySuperRespectBonus *= 0.85f;
+                    profile.IsolatedTargetBonus *= 1.10f;
+                    profile.ProtectedTargetPenalty *= 0.85f;
+                    profile.AllyCollapseTargetBonus *= 1.08f;
                     profile.TeamCollapseFocusBonus *= 1.16f;
                     profile.TeamFlankRepositionBonus *= 1.08f;
                     profile.TeamOvercommitApproachPenalty *= 0.82f;
@@ -641,6 +666,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.18f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.15f;
                     profile.EnemySuperRespectBonus *= 1.18f;
+                    profile.TargetContextAwarenessWeight *= 1.08f;
+                    profile.IsolatedTargetBonus *= 0.86f;
+                    profile.ProtectedTargetPenalty *= 1.14f;
+                    profile.AllyCollapseTargetBonus *= 0.92f;
                     profile.TeamBaitHoldBonus *= 1.18f;
                     profile.TeamPeelAssistBonus *= 1.16f;
                     profile.TeamOvercommitApproachPenalty *= 1.14f;
@@ -691,6 +720,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.08f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.08f;
                     profile.EnemySuperRespectBonus *= 1.12f;
+                    profile.TargetContextAwarenessWeight *= 1.12f;
+                    profile.AllyCollapseTargetBonus *= 1.16f;
+                    profile.ProtectedTargetPenalty *= 1.06f;
                     profile.TeamFightCoordinationWeight *= 1.18f;
                     profile.TeamCollapseFocusBonus *= 1.12f;
                     profile.TeamFlankRepositionBonus *= 1.12f;
@@ -713,6 +745,7 @@ namespace MOBA.Core.Simulation.AI
         private static void Normalize(BrawlerAIProfile profile)
         {
             EnsureTacticalStabilizationDefaults(profile);
+            EnsureTargetContextDefaults(profile);
             EnsureGemGrabObjectiveDefaults(profile);
             EnsureLaneDisciplineDefaults(profile);
             EnsureMapGeometryDefaults(profile);
@@ -746,6 +779,16 @@ namespace MOBA.Core.Simulation.AI
             profile.GemPickupCarrierSafetyPenalty = Mathf.Clamp(profile.GemPickupCarrierSafetyPenalty, 0f, 40f);
             profile.GemPickupThreatRadius = Mathf.Clamp(profile.GemPickupThreatRadius, 1f, 10f);
             profile.GemPickupThreatPenalty = Mathf.Clamp(profile.GemPickupThreatPenalty, 0f, 70f);
+            profile.TargetContextAwarenessWeight =
+                Mathf.Clamp(profile.TargetContextAwarenessWeight, 0f, 2.5f);
+            profile.IsolatedTargetBonus =
+                Mathf.Clamp(profile.IsolatedTargetBonus, 0f, 45f);
+            profile.ProtectedTargetPenalty =
+                Mathf.Clamp(profile.ProtectedTargetPenalty, 0f, 55f);
+            profile.AllyCollapseTargetBonus =
+                Mathf.Clamp(profile.AllyCollapseTargetBonus, 0f, 45f);
+            profile.TargetContextRadius =
+                Mathf.Clamp(profile.TargetContextRadius, 2f, 8f);
             profile.LaneDisciplineWeight = Mathf.Clamp(profile.LaneDisciplineWeight, 0f, 2f);
             profile.LaneHoldObjectiveBonus = Mathf.Clamp(profile.LaneHoldObjectiveBonus, 0f, 35f);
             profile.LaneHoldSearchScore = Mathf.Clamp(profile.LaneHoldSearchScore, 0f, 45f);
@@ -952,6 +995,24 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.NavigationStuckMoveThreshold <= 0f)
                 profile.NavigationStuckMoveThreshold = 0.08f;
+        }
+
+        private static void EnsureTargetContextDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.TargetContextAwarenessWeight <= 0f)
+                profile.TargetContextAwarenessWeight = 1f;
+
+            if (profile.IsolatedTargetBonus <= 0f)
+                profile.IsolatedTargetBonus = 16f;
+
+            if (profile.ProtectedTargetPenalty <= 0f)
+                profile.ProtectedTargetPenalty = 18f;
+
+            if (profile.AllyCollapseTargetBonus <= 0f)
+                profile.AllyCollapseTargetBonus = 14f;
+
+            if (profile.TargetContextRadius <= 0f)
+                profile.TargetContextRadius = 4.75f;
         }
 
         private static void EnsureDangerAvoidanceDefaults(BrawlerAIProfile profile)

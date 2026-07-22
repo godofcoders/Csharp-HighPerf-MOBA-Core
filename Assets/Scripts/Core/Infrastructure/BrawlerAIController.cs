@@ -264,6 +264,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastTeamFightDebug : "TeamFight=None";
         public string RoleMacroDebug =>
             _utilityScorer != null ? _utilityScorer.LastRoleMacroDebug : "RoleMacro=None";
+        public string TargetContextDebug =>
+            _targetScorer != null ? _targetScorer.LastTargetContextDebug : "TargetCtx=None";
         public string OpponentModelDebug => _lastOpponentModelDebug;
         public string HumanizationDebug =>
             _humanization != null ? _humanization.DebugSummary : "Human=None";
@@ -556,6 +558,7 @@ _actionExecutor != null
             _debugSnapshot.CurrentTargetFocusCount = CurrentTargetFocusCount;
             _debugSnapshot.CurrentTargetAllyFocusCount = CurrentTargetAllyFocusCount;
             _debugSnapshot.CurrentTargetOverFocusPenalty = CurrentTargetOverFocusPenalty;
+            _debugSnapshot.TargetContextDebug = TargetContextDebug;
 
             if (_teamCoordinator != null)
             {
@@ -1949,6 +1952,7 @@ $"Map={LastMapRouteDebug}";
             return
                 $"{TacticalIntentSummary}\n" +
                 $"Target={ResolveTargetDebugName()} Focus={CurrentTargetFocusCount} AllyFocus={CurrentTargetAllyFocusCount} OverFocusPenalty={CurrentTargetOverFocusPenalty:0.0}\n" +
+                $"{TargetContextDebug}\n" +
                 $"{TeamRoleDebug}\n" +
                 $"{MacroDebug}\n" +
                 $"{PlaybookDebug}\n" +
