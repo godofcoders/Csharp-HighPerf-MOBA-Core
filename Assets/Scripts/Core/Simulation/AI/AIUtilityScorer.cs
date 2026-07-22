@@ -47,6 +47,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastTeamFightDebug = "TeamFight=None";
         private string _lastRoleMacroDebug = "RoleMacro=None";
         private string _lastEngagementRiskDebug = "EngageRisk=None";
+        private string _lastPressureRotationDebug = "PressureRot=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
         private string _lastWinConditionDebug = "Win=None";
         private uint _lastLaneEvaluationTick;
@@ -72,6 +73,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastTeamFightDebug => _lastTeamFightDebug;
         public string LastRoleMacroDebug => _lastRoleMacroDebug;
         public string LastEngagementRiskDebug => _lastEngagementRiskDebug;
+        public string LastPressureRotationDebug => _lastPressureRotationDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
         public string LastWinConditionDebug => _lastWinConditionDebug;
 
@@ -148,6 +150,10 @@ namespace MOBA.Core.Simulation.AI
             ApplyEngagementRiskAwareness(
                 targetInfo,
                 macroState,
+                currentTick,
+                results);
+            ApplyPressureRotationAwareness(
+                targetInfo,
                 currentTick,
                 results);
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
@@ -1620,6 +1626,225 @@ namespace MOBA.Core.Simulation.AI
                 case AIActionType.Regroup:
                 case AIActionType.Retreat:
                     return context.BadDive || context.SelfCarrier;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void ApplyPressureRotationAwareness(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            List<AIActionScore> results)
+        {
+            _lastPressureRotationDebug = "PressureRot=None";
+
+            if (_profile == null ||
+                _teamCoordinator == null ||
+                results == null ||
+                results.Count == 0)
+            {
+                return;
+            }
+
+            float weight = Mathf.Max(0f, _profile.PressureRotationAwarenessWeight);
+            if (weight <= 0.01f)
+            {
+                _lastPressureRotationDebug = "PressureRot=Off";
+                return;
+            }
+
+            AIPressureRotationContext context = BuildPressureRotationContext(
+                targetInfo,
+                currentTick);
+
+            if (!context.HasEnemyHotspot && !context.HasThreatCenter)
+                return;
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculatePressureRotationDelta(
+                    actionScore.ActionType,
+                    context);
+                delta *= weight;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreatePressureRotationScore(actionScore.ActionType, context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastPressureRotationDebug =
+                $"PressureRot=hot:{context.HotspotRelevance:0.00}/{context.HotspotPressure:0.0} " +
+                $"threat:{context.ThreatRelevance:0.00}/{context.ThreatPressure:0.0} " +
+                $"targetHot:{context.TargetNearHotspot} targetThreat:{context.TargetNearThreatCenter} " +
+                $"w:{weight:0.00}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastPressureRotationDebug += $" Delta={deltaDebug}";
+        }
+
+        private AIPressureRotationContext BuildPressureRotationContext(
+            AITargetInfo targetInfo,
+            uint currentTick)
+        {
+            float radius = Mathf.Max(3f, _profile.PressureRotationRadius);
+            AIPressureRotationContext context = new AIPressureRotationContext
+            {
+                HasTarget = targetInfo != null &&
+                            targetInfo.HasLiveTarget &&
+                            SpatialEntityUtility.IsAlive(targetInfo.Target)
+            };
+
+            if (context.HasTarget)
+            {
+                context.TargetPosition = targetInfo.Target.Position;
+            }
+
+            if (_teamCoordinator.TryGetEnemyHotspot(
+                    currentTick,
+                    out Vector3 hotspot,
+                    out float hotspotPressure))
+            {
+                context.HasEnemyHotspot = true;
+                context.HotspotPosition = hotspot;
+                context.HotspotPressure = hotspotPressure;
+                float distance = Vector3.Distance(_self.Position, hotspot);
+                context.HotspotRelevance = 1f - Mathf.Clamp01(distance / radius);
+                context.TargetNearHotspot =
+                    context.HasTarget &&
+                    Vector3.Distance(context.TargetPosition, hotspot) <= radius * 0.70f;
+            }
+
+            if (_teamCoordinator.TryGetThreatCenter(
+                    currentTick,
+                    out Vector3 threatCenter,
+                    out float threatPressure))
+            {
+                context.HasThreatCenter = true;
+                context.ThreatCenterPosition = threatCenter;
+                context.ThreatPressure = threatPressure;
+                float distance = Vector3.Distance(_self.Position, threatCenter);
+                context.ThreatRelevance = 1f - Mathf.Clamp01(distance / radius);
+                context.TargetNearThreatCenter =
+                    context.HasTarget &&
+                    Vector3.Distance(context.TargetPosition, threatCenter) <= radius * 0.75f;
+            }
+
+            return context;
+        }
+
+        private float CalculatePressureRotationDelta(
+            AIActionType actionType,
+            AIPressureRotationContext context)
+        {
+            float delta = 0f;
+
+            if (context.HasEnemyHotspot)
+            {
+                float hotspotStrength =
+                    Mathf.Clamp01(context.HotspotPressure / 5f) *
+                    Mathf.Max(0.25f, context.HotspotRelevance);
+
+                switch (actionType)
+                {
+                    case AIActionType.Search:
+                        delta += _profile.EnemyHotspotRotationBonus *
+                                 hotspotStrength *
+                                 (context.HasTarget ? 0.35f : 1f);
+                        break;
+                    case AIActionType.Objective:
+                        delta += _profile.EnemyHotspotRotationBonus *
+                                 hotspotStrength *
+                                 (context.HasTarget ? 0.25f : 0.70f);
+                        break;
+                    case AIActionType.Reposition:
+                        delta += _profile.EnemyHotspotRotationBonus *
+                                 hotspotStrength *
+                                 (context.HasTarget ? 0.45f : 0.60f);
+                        break;
+                    case AIActionType.Approach:
+                        if (context.HasTarget && context.TargetNearHotspot)
+                            delta += _profile.EnemyHotspotRotationBonus *
+                                     hotspotStrength * 0.35f;
+                        break;
+                }
+            }
+
+            if (context.HasThreatCenter)
+            {
+                float threatStrength =
+                    Mathf.Clamp01(context.ThreatPressure / 5f) *
+                    Mathf.Max(0.25f, context.ThreatRelevance);
+
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        if (!context.TargetNearThreatCenter)
+                            delta -= _profile.ThreatCenterDivePenalty * threatStrength;
+                        break;
+                    case AIActionType.Objective:
+                        delta -= _profile.ThreatCenterDivePenalty *
+                                 threatStrength *
+                                 (context.HasTarget ? 0.25f : 0.45f);
+                        break;
+                    case AIActionType.Reposition:
+                        delta += _profile.ThreatCenterRotationBonus *
+                                 threatStrength;
+                        break;
+                    case AIActionType.HoldRange:
+                        delta += _profile.ThreatCenterRotationBonus *
+                                 threatStrength * 0.60f;
+                        break;
+                    case AIActionType.Retreat:
+                    case AIActionType.Regroup:
+                        delta += _profile.ThreatCenterRotationBonus *
+                                 threatStrength * 0.35f;
+                        break;
+                }
+            }
+
+            return delta;
+        }
+
+        private static bool CanCreatePressureRotationScore(
+            AIActionType actionType,
+            AIPressureRotationContext context)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Search:
+                case AIActionType.Objective:
+                    return !context.HasTarget || context.HasEnemyHotspot;
+
+                case AIActionType.Reposition:
+                case AIActionType.HoldRange:
+                    return context.HasTarget || context.HasThreatCenter;
+
+                case AIActionType.Retreat:
+                case AIActionType.Regroup:
+                    return context.HasThreatCenter;
 
                 default:
                     return false;
@@ -3295,6 +3520,22 @@ namespace MOBA.Core.Simulation.AI
             public float RiskPressure;
             public float TargetHealthRatio;
             public float TargetDistance;
+        }
+
+        private struct AIPressureRotationContext
+        {
+            public bool HasTarget;
+            public bool HasEnemyHotspot;
+            public bool HasThreatCenter;
+            public bool TargetNearHotspot;
+            public bool TargetNearThreatCenter;
+            public Vector3 TargetPosition;
+            public Vector3 HotspotPosition;
+            public Vector3 ThreatCenterPosition;
+            public float HotspotPressure;
+            public float ThreatPressure;
+            public float HotspotRelevance;
+            public float ThreatRelevance;
         }
 
         private CloseRangeMatchupEvaluation EvaluateCloseRangeMatchup(

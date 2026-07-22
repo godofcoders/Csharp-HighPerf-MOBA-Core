@@ -41,6 +41,7 @@ namespace MOBA.Core.Simulation.AI
         public string TeamFightDebug;
         public string RoleMacroDebug;
         public string EngagementRiskDebug;
+        public string PressureRotationDebug;
         public string ReactiveDebug;
         public string DangerDebug;
         public string FailureRecoveryDebug;

@@ -36,6 +36,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
+            EnsurePressureRotationDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -99,6 +100,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Fight={profile.TeamFightCoordinationWeight:0.00} " +
                 $"Role={profile.RoleMacroBehaviorWeight:0.00} " +
                 $"Risk={profile.EngagementRiskAwarenessWeight:0.00} " +
+                $"Rot={profile.PressureRotationAwarenessWeight:0.00} " +
                 $"Move={profile.AIMoveSpeedScale:0.00}/{profile.AIMoveInputTurnRateDegreesPerTick:0} " +
                 $"Mistake={profile.HumanizationPressureMistakeChance:0.00}";
         }
@@ -183,6 +185,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.SupportedFightCommitBonus *= 0.62f;
                     profile.BadDiveRepositionBonus *= 0.58f;
                     profile.EngagementRiskSafetyBonus *= 0.58f;
+                    profile.PressureRotationAwarenessWeight *= 0.45f;
+                    profile.EnemyHotspotRotationBonus *= 0.62f;
+                    profile.ThreatCenterRotationBonus *= 0.62f;
+                    profile.ThreatCenterDivePenalty *= 0.58f;
                     break;
 
                 case AIBotPerformanceTier.Veteran:
@@ -254,6 +260,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.SupportedFightCommitBonus *= 1.12f;
                     profile.BadDiveRepositionBonus *= 1.12f;
                     profile.EngagementRiskSafetyBonus *= 1.10f;
+                    profile.PressureRotationAwarenessWeight *= 1.16f;
+                    profile.EnemyHotspotRotationBonus *= 1.12f;
+                    profile.ThreatCenterRotationBonus *= 1.12f;
+                    profile.ThreatCenterDivePenalty *= 1.10f;
                     break;
 
                 case AIBotPerformanceTier.Elite:
@@ -327,6 +337,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.SupportedFightCommitBonus *= 1.22f;
                     profile.BadDiveRepositionBonus *= 1.24f;
                     profile.EngagementRiskSafetyBonus *= 1.20f;
+                    profile.PressureRotationAwarenessWeight *= 1.32f;
+                    profile.EnemyHotspotRotationBonus *= 1.22f;
+                    profile.ThreatCenterRotationBonus *= 1.24f;
+                    profile.ThreatCenterDivePenalty *= 1.20f;
                     break;
 
                 case AIBotPerformanceTier.Regular:
@@ -443,6 +457,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.OutnumberedApproachPenalty *= 0.75f;
                     profile.SupportedFightCommitBonus *= 0.78f;
                     profile.BadDiveRepositionBonus *= 0.75f;
+                    profile.PressureRotationAwarenessWeight *= 0.70f;
+                    profile.EnemyHotspotRotationBonus *= 0.78f;
+                    profile.ThreatCenterRotationBonus *= 0.78f;
+                    profile.ThreatCenterDivePenalty *= 0.74f;
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -552,6 +570,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.SupportedFightCommitBonus *= 1.10f;
                     profile.BadDiveRepositionBonus *= 1.08f;
                     profile.EngagementRiskSafetyBonus *= 1.08f;
+                    profile.PressureRotationAwarenessWeight *= 1.10f;
+                    profile.EnemyHotspotRotationBonus *= 1.10f;
+                    profile.ThreatCenterRotationBonus *= 1.10f;
+                    profile.ThreatCenterDivePenalty *= 1.08f;
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -637,6 +659,8 @@ namespace MOBA.Core.Simulation.AI
                     profile.SupportedFightCommitBonus *= 1.16f;
                     profile.BadDiveRepositionBonus *= 0.86f;
                     profile.EngagementRiskSafetyBonus *= 0.88f;
+                    profile.EnemyHotspotRotationBonus *= 1.12f;
+                    profile.ThreatCenterDivePenalty *= 0.86f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -713,6 +737,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.BadDiveRepositionBonus *= 1.16f;
                     profile.EngagementRiskSafetyBonus *= 1.14f;
                     profile.SupportedFightCommitBonus *= 0.88f;
+                    profile.PressureRotationAwarenessWeight *= 1.08f;
+                    profile.ThreatCenterRotationBonus *= 1.16f;
+                    profile.ThreatCenterDivePenalty *= 1.18f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -773,6 +800,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.SupportedFightCommitBonus *= 1.16f;
                     profile.BadDiveRepositionBonus *= 1.08f;
                     profile.EngagementRiskSafetyBonus *= 1.08f;
+                    profile.PressureRotationAwarenessWeight *= 1.12f;
+                    profile.EnemyHotspotRotationBonus *= 1.14f;
+                    profile.ThreatCenterRotationBonus *= 1.10f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -793,6 +823,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
+            EnsurePressureRotationDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
@@ -907,6 +938,16 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Clamp(profile.BadDiveRepositionBonus, 0f, 55f);
             profile.EngagementRiskSafetyBonus =
                 Mathf.Clamp(profile.EngagementRiskSafetyBonus, 0f, 45f);
+            profile.PressureRotationAwarenessWeight =
+                Mathf.Clamp(profile.PressureRotationAwarenessWeight, 0f, 2.5f);
+            profile.EnemyHotspotRotationBonus =
+                Mathf.Clamp(profile.EnemyHotspotRotationBonus, 0f, 45f);
+            profile.ThreatCenterRotationBonus =
+                Mathf.Clamp(profile.ThreatCenterRotationBonus, 0f, 55f);
+            profile.ThreatCenterDivePenalty =
+                Mathf.Clamp(profile.ThreatCenterDivePenalty, 0f, 60f);
+            profile.PressureRotationRadius =
+                Mathf.Clamp(profile.PressureRotationRadius, 3f, 14f);
 
             profile.TacticalMoveRetargetTicks = ClampTicks(profile.TacticalMoveRetargetTicks, 1, 45);
             profile.TacticalMoveHeartbeatTicks = ClampTicks(profile.TacticalMoveHeartbeatTicks, 1, 60);
@@ -1197,6 +1238,24 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.EngagementRiskSafetyBonus <= 0f)
                 profile.EngagementRiskSafetyBonus = 12f;
+        }
+
+        private static void EnsurePressureRotationDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.PressureRotationAwarenessWeight <= 0f)
+                profile.PressureRotationAwarenessWeight = 1f;
+
+            if (profile.EnemyHotspotRotationBonus <= 0f)
+                profile.EnemyHotspotRotationBonus = 16f;
+
+            if (profile.ThreatCenterRotationBonus <= 0f)
+                profile.ThreatCenterRotationBonus = 18f;
+
+            if (profile.ThreatCenterDivePenalty <= 0f)
+                profile.ThreatCenterDivePenalty = 20f;
+
+            if (profile.PressureRotationRadius <= 0f)
+                profile.PressureRotationRadius = 7f;
         }
 
         private static void EnsureMapGeometryDefaults(BrawlerAIProfile profile)

@@ -264,6 +264,18 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Regroup/retreat score added when local pressure is unsafe or the bot is carrying objective value.")]
         public float EngagementRiskSafetyBonus = 12f;
 
+        [Header("Pressure Rotation Awareness")]
+        [Tooltip("Scales response to team enemy-hotspot and threat-center blackboard signals.")]
+        public float PressureRotationAwarenessWeight = 1f;
+        [Tooltip("Search/objective score added when the team has identified a useful enemy hotspot.")]
+        public float EnemyHotspotRotationBonus = 16f;
+        [Tooltip("Reposition/hold score added when the bot should rotate around a threat center instead of diving through it.")]
+        public float ThreatCenterRotationBonus = 18f;
+        [Tooltip("Approach/objective score removed when the chosen action would ignore nearby threat-center pressure.")]
+        public float ThreatCenterDivePenalty = 20f;
+        [Tooltip("Distance around a team pressure signal where this bot treats the signal as locally relevant.")]
+        public float PressureRotationRadius = 7f;
+
         [Header("Spacing / Anti-Clump")]
         public float AllyAvoidanceRadius = 2.5f;
         public float AllyAvoidanceWeight = 1.5f;
