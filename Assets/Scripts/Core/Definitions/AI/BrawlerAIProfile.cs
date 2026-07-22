@@ -250,6 +250,20 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Fighter score added for flexible objective pressure and fight-to-objective transitions.")]
         public float RoleFighterFlexMacroBonus = 10f;
 
+        [Header("Engagement Risk Awareness")]
+        [Tooltip("Scales local fight odds evaluation. Higher tiers avoid bad dives and capitalize on supported fights more strongly.")]
+        public float EngagementRiskAwarenessWeight = 1f;
+        [Tooltip("Radius used to compare nearby ally and enemy pressure around this bot.")]
+        public float EngagementRiskRadius = 5.25f;
+        [Tooltip("Approach score removed when this bot is locally outnumbered without a clear pick reason.")]
+        public float OutnumberedApproachPenalty = 24f;
+        [Tooltip("Approach/use-super score added when allies can support a collapse.")]
+        public float SupportedFightCommitBonus = 14f;
+        [Tooltip("Reposition/hold score added when a fight should be reset before re-engaging.")]
+        public float BadDiveRepositionBonus = 18f;
+        [Tooltip("Regroup/retreat score added when local pressure is unsafe or the bot is carrying objective value.")]
+        public float EngagementRiskSafetyBonus = 12f;
+
         [Header("Spacing / Anti-Clump")]
         public float AllyAvoidanceRadius = 2.5f;
         public float AllyAvoidanceWeight = 1.5f;

@@ -264,6 +264,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastTeamFightDebug : "TeamFight=None";
         public string RoleMacroDebug =>
             _utilityScorer != null ? _utilityScorer.LastRoleMacroDebug : "RoleMacro=None";
+        public string EngagementRiskDebug =>
+            _utilityScorer != null ? _utilityScorer.LastEngagementRiskDebug : "EngageRisk=None";
         public string TargetContextDebug =>
             _targetScorer != null ? _targetScorer.LastTargetContextDebug : "TargetCtx=None";
         public string OpponentModelDebug => _lastOpponentModelDebug;
@@ -601,6 +603,7 @@ _actionExecutor != null
                 _debugSnapshot.ResourceAwarenessDebug = ResourceAwarenessDebug;
                 _debugSnapshot.TeamFightDebug = TeamFightDebug;
                 _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
+                _debugSnapshot.EngagementRiskDebug = EngagementRiskDebug;
             }
             else
             {
@@ -614,6 +617,7 @@ _actionExecutor != null
                 _debugSnapshot.ResourceAwarenessDebug = "ResAware=None";
                 _debugSnapshot.TeamFightDebug = "TeamFight=None";
                 _debugSnapshot.RoleMacroDebug = "RoleMacro=None";
+                _debugSnapshot.EngagementRiskDebug = "EngageRisk=None";
             }
 
             _lastReactiveDebug = _reactiveMemory != null && _profile != null
@@ -739,6 +743,7 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.MacroDebug = MacroDebug;
             _debugSnapshot.PlaybookDebug = PlaybookDebug;
             _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
+            _debugSnapshot.EngagementRiskDebug = EngagementRiskDebug;
 
             AIDebugTracker.UpdateSnapshot(_brawler, _debugSnapshot);
         }
@@ -1960,6 +1965,7 @@ $"Map={LastMapRouteDebug}";
                 $"{ResourceAwarenessDebug}\n" +
                 $"{TeamFightDebug}\n" +
                 $"{RoleMacroDebug}\n" +
+                $"{EngagementRiskDebug}\n" +
                 $"{GemPickupDebug}";
         }
 
@@ -2344,7 +2350,8 @@ $"Map={LastMapRouteDebug}";
                 $"Team={_profile.TeamRoleCoordinationWeight:0.00} " +
                 $"Res={_profile.OpponentResourceAwarenessWeight:0.00} " +
                 $"Fight={_profile.TeamFightCoordinationWeight:0.00} " +
-                $"Role={_profile.RoleMacroBehaviorWeight:0.00}";
+                $"Role={_profile.RoleMacroBehaviorWeight:0.00} " +
+                $"Risk={_profile.EngagementRiskAwarenessWeight:0.00}";
         }
 
         private string ResolveTargetDebugName()

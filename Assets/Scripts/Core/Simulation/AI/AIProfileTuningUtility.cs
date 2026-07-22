@@ -35,6 +35,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureOpponentResourceAwarenessDefaults(profile);
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
+            EnsureEngagementRiskDefaults(profile);
             ApplyDifficulty(profile, difficulty);
             ApplyPersonality(profile, personality);
 
@@ -97,6 +98,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Res={profile.OpponentResourceAwarenessWeight:0.00} " +
                 $"Fight={profile.TeamFightCoordinationWeight:0.00} " +
                 $"Role={profile.RoleMacroBehaviorWeight:0.00} " +
+                $"Risk={profile.EngagementRiskAwarenessWeight:0.00} " +
                 $"Move={profile.AIMoveSpeedScale:0.00}/{profile.AIMoveInputTurnRateDegreesPerTick:0} " +
                 $"Mistake={profile.HumanizationPressureMistakeChance:0.00}";
         }
@@ -176,6 +178,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 0.62f;
                     profile.RoleArtilleryDenialMacroBonus *= 0.62f;
                     profile.RoleFighterFlexMacroBonus *= 0.64f;
+                    profile.EngagementRiskAwarenessWeight *= 0.42f;
+                    profile.OutnumberedApproachPenalty *= 0.58f;
+                    profile.SupportedFightCommitBonus *= 0.62f;
+                    profile.BadDiveRepositionBonus *= 0.58f;
+                    profile.EngagementRiskSafetyBonus *= 0.58f;
                     break;
 
                 case AIBotPerformanceTier.Veteran:
@@ -242,6 +249,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.12f;
                     profile.RoleArtilleryDenialMacroBonus *= 1.12f;
                     profile.RoleFighterFlexMacroBonus *= 1.10f;
+                    profile.EngagementRiskAwarenessWeight *= 1.18f;
+                    profile.OutnumberedApproachPenalty *= 1.12f;
+                    profile.SupportedFightCommitBonus *= 1.12f;
+                    profile.BadDiveRepositionBonus *= 1.12f;
+                    profile.EngagementRiskSafetyBonus *= 1.10f;
                     break;
 
                 case AIBotPerformanceTier.Elite:
@@ -310,6 +322,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.24f;
                     profile.RoleArtilleryDenialMacroBonus *= 1.22f;
                     profile.RoleFighterFlexMacroBonus *= 1.18f;
+                    profile.EngagementRiskAwarenessWeight *= 1.34f;
+                    profile.OutnumberedApproachPenalty *= 1.24f;
+                    profile.SupportedFightCommitBonus *= 1.22f;
+                    profile.BadDiveRepositionBonus *= 1.24f;
+                    profile.EngagementRiskSafetyBonus *= 1.20f;
                     break;
 
                 case AIBotPerformanceTier.Regular:
@@ -422,6 +439,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleAssassinPickPressureBonus *= 0.76f;
                     profile.RoleControllerZoneMacroBonus *= 0.78f;
                     profile.RoleArtilleryDenialMacroBonus *= 0.78f;
+                    profile.EngagementRiskAwarenessWeight *= 0.68f;
+                    profile.OutnumberedApproachPenalty *= 0.75f;
+                    profile.SupportedFightCommitBonus *= 0.78f;
+                    profile.BadDiveRepositionBonus *= 0.75f;
                     break;
 
                 case AIDifficultyLevel.Hard:
@@ -526,6 +547,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.10f;
                     profile.RoleArtilleryDenialMacroBonus *= 1.08f;
                     profile.RoleFighterFlexMacroBonus *= 1.08f;
+                    profile.EngagementRiskAwarenessWeight *= 1.10f;
+                    profile.OutnumberedApproachPenalty *= 1.10f;
+                    profile.SupportedFightCommitBonus *= 1.10f;
+                    profile.BadDiveRepositionBonus *= 1.08f;
+                    profile.EngagementRiskSafetyBonus *= 1.08f;
                     break;
 
                 case AIDifficultyLevel.Normal:
@@ -607,6 +633,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleFighterFlexMacroBonus *= 1.10f;
                     profile.RoleBacklineAnchorMacroBonus *= 0.88f;
                     profile.RoleSupportPeelMacroBonus *= 0.90f;
+                    profile.OutnumberedApproachPenalty *= 0.82f;
+                    profile.SupportedFightCommitBonus *= 1.16f;
+                    profile.BadDiveRepositionBonus *= 0.86f;
+                    profile.EngagementRiskSafetyBonus *= 0.88f;
                     break;
 
                 case AIPersonalityType.Cautious:
@@ -678,6 +708,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.08f;
                     profile.RoleArtilleryDenialMacroBonus *= 1.10f;
                     profile.RoleAssassinPickPressureBonus *= 0.82f;
+                    profile.EngagementRiskAwarenessWeight *= 1.10f;
+                    profile.OutnumberedApproachPenalty *= 1.18f;
+                    profile.BadDiveRepositionBonus *= 1.16f;
+                    profile.EngagementRiskSafetyBonus *= 1.14f;
+                    profile.SupportedFightCommitBonus *= 0.88f;
                     break;
 
                 case AIPersonalityType.TeamPlayer:
@@ -734,6 +769,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.14f;
                     profile.RoleBacklineAnchorMacroBonus *= 1.12f;
                     profile.RoleTankSpaceCreationBonus *= 1.08f;
+                    profile.EngagementRiskAwarenessWeight *= 1.12f;
+                    profile.SupportedFightCommitBonus *= 1.16f;
+                    profile.BadDiveRepositionBonus *= 1.08f;
+                    profile.EngagementRiskSafetyBonus *= 1.08f;
                     break;
 
                 case AIPersonalityType.Balanced:
@@ -753,6 +792,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureOpponentResourceAwarenessDefaults(profile);
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
+            EnsureEngagementRiskDefaults(profile);
 
             profile.ReactionDelayTicks = ClampTicks(profile.ReactionDelayTicks, 0, 24);
             profile.AimErrorDegrees = Mathf.Clamp(profile.AimErrorDegrees, 0f, 15f);
@@ -855,6 +895,18 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Clamp(profile.RoleArtilleryDenialMacroBonus, 0f, 45f);
             profile.RoleFighterFlexMacroBonus =
                 Mathf.Clamp(profile.RoleFighterFlexMacroBonus, 0f, 45f);
+            profile.EngagementRiskAwarenessWeight =
+                Mathf.Clamp(profile.EngagementRiskAwarenessWeight, 0f, 2.5f);
+            profile.EngagementRiskRadius =
+                Mathf.Clamp(profile.EngagementRiskRadius, 2.5f, 9f);
+            profile.OutnumberedApproachPenalty =
+                Mathf.Clamp(profile.OutnumberedApproachPenalty, 0f, 70f);
+            profile.SupportedFightCommitBonus =
+                Mathf.Clamp(profile.SupportedFightCommitBonus, 0f, 45f);
+            profile.BadDiveRepositionBonus =
+                Mathf.Clamp(profile.BadDiveRepositionBonus, 0f, 55f);
+            profile.EngagementRiskSafetyBonus =
+                Mathf.Clamp(profile.EngagementRiskSafetyBonus, 0f, 45f);
 
             profile.TacticalMoveRetargetTicks = ClampTicks(profile.TacticalMoveRetargetTicks, 1, 45);
             profile.TacticalMoveHeartbeatTicks = ClampTicks(profile.TacticalMoveHeartbeatTicks, 1, 60);
@@ -1124,6 +1176,27 @@ namespace MOBA.Core.Simulation.AI
             if (profile.RoleFighterFlexMacroBonus <= 0f)
                 profile.RoleFighterFlexMacroBonus =
                     profile.Archetype == BrawlerArchetype.Fighter ? 14f : 10f;
+        }
+
+        private static void EnsureEngagementRiskDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.EngagementRiskAwarenessWeight <= 0f)
+                profile.EngagementRiskAwarenessWeight = 1f;
+
+            if (profile.EngagementRiskRadius <= 0f)
+                profile.EngagementRiskRadius = 5.25f;
+
+            if (profile.OutnumberedApproachPenalty <= 0f)
+                profile.OutnumberedApproachPenalty = 24f;
+
+            if (profile.SupportedFightCommitBonus <= 0f)
+                profile.SupportedFightCommitBonus = 14f;
+
+            if (profile.BadDiveRepositionBonus <= 0f)
+                profile.BadDiveRepositionBonus = 18f;
+
+            if (profile.EngagementRiskSafetyBonus <= 0f)
+                profile.EngagementRiskSafetyBonus = 12f;
         }
 
         private static void EnsureMapGeometryDefaults(BrawlerAIProfile profile)

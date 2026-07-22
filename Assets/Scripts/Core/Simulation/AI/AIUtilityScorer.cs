@@ -46,6 +46,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastResourceAwarenessDebug = "ResAware=None";
         private string _lastTeamFightDebug = "TeamFight=None";
         private string _lastRoleMacroDebug = "RoleMacro=None";
+        private string _lastEngagementRiskDebug = "EngageRisk=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
         private string _lastWinConditionDebug = "Win=None";
         private uint _lastLaneEvaluationTick;
@@ -70,6 +71,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastResourceAwarenessDebug => _lastResourceAwarenessDebug;
         public string LastTeamFightDebug => _lastTeamFightDebug;
         public string LastRoleMacroDebug => _lastRoleMacroDebug;
+        public string LastEngagementRiskDebug => _lastEngagementRiskDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
         public string LastWinConditionDebug => _lastWinConditionDebug;
 
@@ -142,6 +144,11 @@ namespace MOBA.Core.Simulation.AI
                 currentTick,
                 macroState,
                 playbookState,
+                results);
+            ApplyEngagementRiskAwareness(
+                targetInfo,
+                macroState,
+                currentTick,
                 results);
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
             ApplyPlaybookCoordination(targetInfo, playbookState, results);
@@ -1348,6 +1355,271 @@ namespace MOBA.Core.Simulation.AI
                 case AIActionType.Regroup:
                 case AIActionType.Retreat:
                     return context.CarrierSafety || context.MacroReset;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void ApplyEngagementRiskAwareness(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState,
+            uint currentTick,
+            List<AIActionScore> results)
+        {
+            _lastEngagementRiskDebug = "EngageRisk=None";
+
+            if (_profile == null ||
+                results == null ||
+                results.Count == 0 ||
+                targetInfo == null ||
+                !targetInfo.HasLiveTarget ||
+                !(targetInfo.Target is BrawlerController targetBrawler) ||
+                targetBrawler.State == null ||
+                _self == null ||
+                _self.State == null)
+            {
+                return;
+            }
+
+            float weight = Mathf.Max(0f, _profile.EngagementRiskAwarenessWeight);
+            if (weight <= 0.01f)
+            {
+                _lastEngagementRiskDebug = "EngageRisk=Off";
+                return;
+            }
+
+            AIEngagementRiskContext context = BuildEngagementRiskContext(
+                targetBrawler,
+                macroState,
+                currentTick);
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculateEngagementRiskDelta(
+                    actionScore.ActionType,
+                    context);
+                delta *= weight;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreateEngagementRiskScore(actionScore.ActionType, context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastEngagementRiskDebug =
+                $"EngageRisk=ally:{context.AllyPressure:0.0} enemy:{context.EnemyPressure:0.0} " +
+                $"risk:{context.RiskPressure:0.00} support:{context.SupportedFight} " +
+                $"pick:{context.PickWindow} carrier:{context.SelfCarrier} " +
+                $"w:{weight:0.00}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastEngagementRiskDebug += $" Delta={deltaDebug}";
+        }
+
+        private AIEngagementRiskContext BuildEngagementRiskContext(
+            BrawlerController target,
+            AIGameModeMacroState macroState,
+            uint currentTick)
+        {
+            float radius = Mathf.Max(2.5f, _profile.EngagementRiskRadius);
+            AIEngagementRiskContext context = new AIEngagementRiskContext
+            {
+                HasTarget = true,
+                TargetHealthRatio = target.State != null
+                    ? Mathf.Clamp01(target.State.CurrentHealth /
+                                    Mathf.Max(1f, target.State.MaxHealth.Value))
+                    : 1f,
+                TargetCarriedGems = target.State != null ? target.State.CarriedGemCount : 0,
+                SelfCarriedGems = _self.State != null ? _self.State.CarriedGemCount : 0,
+                TargetDistance = Vector3.Distance(_self.Position, target.Position)
+            };
+
+            _nearbyAllyBuffer.Clear();
+            if (SimulationClock.Grid != null)
+            {
+                SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                    _self.Position,
+                    radius,
+                    _nearbyAllyBuffer);
+            }
+
+            for (int i = 0; i < _nearbyAllyBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _nearbyAllyBuffer[i];
+                if (!SpatialEntityUtility.IsAlive(entity) ||
+                    entity.EntityID == _self.EntityID)
+                {
+                    continue;
+                }
+
+                float distance = Vector3.Distance(_self.Position, entity.Position);
+                float pressure = 0.35f + (1f - Mathf.Clamp01(distance / radius));
+
+                if (entity.Team == _self.Team)
+                {
+                    context.AllyPressure += pressure;
+                    context.AllyCount++;
+                }
+                else
+                {
+                    context.EnemyPressure += pressure;
+                    context.EnemyCount++;
+                }
+            }
+
+            if (context.TargetDistance <= radius)
+                context.EnemyPressure += 0.50f + (1f - Mathf.Clamp01(context.TargetDistance / radius));
+
+            if (_teamCoordinator != null)
+            {
+                int approachAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(
+                    AIActionType.Approach,
+                    currentTick);
+                int holdAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(
+                    AIActionType.HoldRange,
+                    currentTick);
+                int peelAllies = _teamCoordinator.GetActionIntentCountExcludingSelf(
+                    AIActionType.Peel,
+                    currentTick);
+
+                context.AllyPressure += approachAllies * 0.45f;
+                context.AllyPressure += holdAllies * 0.25f;
+                context.AllyPressure += peelAllies * 0.20f;
+                context.TeamActionSupport = approachAllies + holdAllies + peelAllies;
+            }
+
+            context.PickWindow =
+                context.TargetHealthRatio <= Mathf.Max(0.24f, _profile.FinisherHealthThreshold) ||
+                context.TargetCarriedGems >= 3 ||
+                (macroState.EnemyTeamHasCountdown && context.TargetCarriedGems > 0) ||
+                target.State.HasStatus(StatusEffectType.Stun) ||
+                target.State.HasStatus(StatusEffectType.Slow);
+            context.SelfCarrier = context.SelfCarriedGems > 0;
+            context.SupportedFight =
+                context.AllyPressure >= context.EnemyPressure * 0.82f ||
+                context.TeamActionSupport > 0;
+            context.RiskPressure =
+                Mathf.Clamp01((context.EnemyPressure - context.AllyPressure) / 2.75f);
+            context.BadDive =
+                context.RiskPressure >= 0.22f &&
+                !context.PickWindow &&
+                !context.SupportedFight;
+
+            return context;
+        }
+
+        private float CalculateEngagementRiskDelta(
+            AIActionType actionType,
+            AIEngagementRiskContext context)
+        {
+            float delta = 0f;
+
+            if (context.BadDive)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        delta -= _profile.OutnumberedApproachPenalty *
+                                 (0.60f + context.RiskPressure);
+                        break;
+                    case AIActionType.UseSuper:
+                        delta -= _profile.OutnumberedApproachPenalty *
+                                 context.RiskPressure * 0.35f;
+                        break;
+                    case AIActionType.Reposition:
+                        delta += _profile.BadDiveRepositionBonus *
+                                 (0.65f + context.RiskPressure);
+                        break;
+                    case AIActionType.HoldRange:
+                        delta += _profile.BadDiveRepositionBonus *
+                                 (0.35f + context.RiskPressure * 0.45f);
+                        break;
+                    case AIActionType.Regroup:
+                        delta += _profile.EngagementRiskSafetyBonus *
+                                 (0.40f + context.RiskPressure);
+                        break;
+                    case AIActionType.Retreat:
+                        delta += _profile.EngagementRiskSafetyBonus *
+                                 context.RiskPressure * 0.70f;
+                        break;
+                }
+            }
+
+            if (context.SupportedFight && context.PickWindow)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        delta += _profile.SupportedFightCommitBonus;
+                        break;
+                    case AIActionType.UseSuper:
+                        delta += _profile.SupportedFightCommitBonus * 0.55f;
+                        break;
+                    case AIActionType.HoldRange:
+                        delta += _profile.SupportedFightCommitBonus * 0.30f;
+                        break;
+                }
+            }
+
+            if (context.SelfCarrier && context.RiskPressure > 0.10f)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        delta -= _profile.OutnumberedApproachPenalty *
+                                 Mathf.Max(0.35f, context.RiskPressure);
+                        break;
+                    case AIActionType.Regroup:
+                    case AIActionType.Retreat:
+                        delta += _profile.EngagementRiskSafetyBonus *
+                                 (0.45f + context.RiskPressure);
+                        break;
+                    case AIActionType.HoldRange:
+                    case AIActionType.Reposition:
+                        delta += _profile.BadDiveRepositionBonus *
+                                 context.RiskPressure * 0.55f;
+                        break;
+                }
+            }
+
+            return delta;
+        }
+
+        private static bool CanCreateEngagementRiskScore(
+            AIActionType actionType,
+            AIEngagementRiskContext context)
+        {
+            switch (actionType)
+            {
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                    return context.HasTarget;
+
+                case AIActionType.Regroup:
+                case AIActionType.Retreat:
+                    return context.BadDive || context.SelfCarrier;
 
                 default:
                     return false;
@@ -3002,6 +3274,25 @@ namespace MOBA.Core.Simulation.AI
             public bool ObjectivePressure;
             public int SelfCarriedGems;
             public int TargetCarriedGems;
+            public float TargetHealthRatio;
+            public float TargetDistance;
+        }
+
+        private struct AIEngagementRiskContext
+        {
+            public bool HasTarget;
+            public bool PickWindow;
+            public bool SupportedFight;
+            public bool BadDive;
+            public bool SelfCarrier;
+            public int AllyCount;
+            public int EnemyCount;
+            public int TeamActionSupport;
+            public int SelfCarriedGems;
+            public int TargetCarriedGems;
+            public float AllyPressure;
+            public float EnemyPressure;
+            public float RiskPressure;
             public float TargetHealthRatio;
             public float TargetDistance;
         }
