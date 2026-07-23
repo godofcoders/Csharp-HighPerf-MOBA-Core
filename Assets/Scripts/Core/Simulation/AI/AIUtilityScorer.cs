@@ -49,6 +49,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastRoleMatchupDebug = "Matchup=None";
         private string _lastCoverPeekDebug = "CoverPeek=None";
         private string _lastModeClutchDebug = "Clutch=None";
+        private string _lastSpacingDebug = "Spacing=None";
         private string _lastEngagementRiskDebug = "EngageRisk=None";
         private string _lastPressureRotationDebug = "PressureRot=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
@@ -78,6 +79,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastRoleMatchupDebug => _lastRoleMatchupDebug;
         public string LastCoverPeekDebug => _lastCoverPeekDebug;
         public string LastModeClutchDebug => _lastModeClutchDebug;
+        public string LastSpacingDebug => _lastSpacingDebug;
         public string LastEngagementRiskDebug => _lastEngagementRiskDebug;
         public string LastPressureRotationDebug => _lastPressureRotationDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
@@ -169,6 +171,11 @@ namespace MOBA.Core.Simulation.AI
                 results);
             ApplyPressureRotationAwareness(
                 targetInfo,
+                currentTick,
+                results);
+            ApplyAntiClumpSpacing(
+                targetInfo,
+                macroState,
                 currentTick,
                 results);
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
@@ -2361,6 +2368,206 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
+        private void ApplyAntiClumpSpacing(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState,
+            uint currentTick,
+            List<AIActionScore> results)
+        {
+            _lastSpacingDebug = "Spacing=None";
+
+            if (_profile == null ||
+                results == null ||
+                results.Count == 0 ||
+                _self == null ||
+                SimulationClock.Grid == null)
+            {
+                return;
+            }
+
+            float weight = Mathf.Max(0f, _profile.SpacingAwarenessWeight);
+            if (weight <= 0.01f)
+            {
+                _lastSpacingDebug = "Spacing=Off";
+                return;
+            }
+
+            AISpacingContext context = BuildSpacingContext(
+                targetInfo,
+                macroState,
+                currentTick);
+            if (!context.HasClumpPressure)
+                return;
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculateSpacingDelta(
+                    actionScore.ActionType,
+                    context);
+                delta *= weight;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreateSpacingScore(actionScore.ActionType, context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastSpacingDebug =
+                $"Spacing=allies:{context.NearbyAllyCount} pressure:{context.ClumpPressure:0.00} " +
+                $"collapse:{context.IntentionalCollapse} carrier:{context.SelfCarrier} " +
+                $"same:{context.SameTargetAllies} w:{weight:0.00}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastSpacingDebug += $" Delta={deltaDebug}";
+        }
+
+        private AISpacingContext BuildSpacingContext(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState,
+            uint currentTick)
+        {
+            float radius = Mathf.Max(1f, _profile.LocalAllyClumpRadius);
+            AISpacingContext context = new AISpacingContext
+            {
+                SelfCarrier =
+                    _self.State != null &&
+                    _self.State.CarriedGemCount > 0
+            };
+
+            BrawlerController targetBrawler = null;
+            if (targetInfo != null &&
+                targetInfo.HasLiveTarget &&
+                targetInfo.Target is BrawlerController candidateTarget &&
+                candidateTarget.State != null)
+            {
+                targetBrawler = candidateTarget;
+                context.HasTarget = true;
+                context.TargetHealthRatio = Mathf.Clamp01(
+                    candidateTarget.State.CurrentHealth /
+                    Mathf.Max(1f, candidateTarget.State.MaxHealth.Value));
+            }
+
+            _nearbyAllyBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                _self.Position,
+                radius,
+                _nearbyAllyBuffer);
+
+            for (int i = 0; i < _nearbyAllyBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _nearbyAllyBuffer[i];
+                if (!SpatialEntityUtility.IsAlive(entity) ||
+                    entity.EntityID == _self.EntityID ||
+                    entity.Team != _self.Team)
+                {
+                    continue;
+                }
+
+                context.NearbyAllyCount++;
+                float distance = Vector3.Distance(_self.Position, entity.Position);
+                context.ClumpPressure += 0.35f + (1f - Mathf.Clamp01(distance / radius));
+            }
+
+            if (context.HasTarget && targetBrawler != null)
+            {
+                context.SameTargetAllies = AITeamBlackboard.GetTargetFocusCountExcluding(
+                    _self.Team,
+                    targetBrawler.EntityID,
+                    _self.EntityID);
+            }
+
+            bool targetFinishable =
+                context.HasTarget &&
+                context.TargetHealthRatio <= Mathf.Max(0.24f, _profile.FinisherHealthThreshold);
+            bool pushCollapse =
+                macroState.Call == AIGameModeMacroCall.Push &&
+                context.HasTarget &&
+                context.SameTargetAllies > 0;
+            bool playbookCollapse =
+                _teamCoordinator != null &&
+                _teamCoordinator.GetActionIntentCountExcludingSelf(
+                    AIActionType.Approach,
+                    currentTick) > 0 &&
+                targetFinishable;
+
+            context.IntentionalCollapse =
+                targetFinishable ||
+                pushCollapse ||
+                playbookCollapse;
+            context.ClumpPressure = Mathf.Clamp01(context.ClumpPressure / 2.25f);
+            context.HasClumpPressure =
+                context.NearbyAllyCount > 0 &&
+                context.ClumpPressure >= 0.25f;
+
+            return context;
+        }
+
+        private float CalculateSpacingDelta(
+            AIActionType actionType,
+            AISpacingContext context)
+        {
+            float pressure = Mathf.Clamp01(context.ClumpPressure);
+            float collapseFactor = context.IntentionalCollapse ? 0.35f : 1f;
+            float delta = 0f;
+
+            switch (actionType)
+            {
+                case AIActionType.Reposition:
+                    delta += _profile.LocalClumpRepositionBonus * pressure;
+                    break;
+
+                case AIActionType.HoldRange:
+                    delta += _profile.LocalClumpRepositionBonus * pressure * 0.35f;
+                    break;
+
+                case AIActionType.Approach:
+                    delta -= _profile.ClumpedApproachPenalty * pressure * collapseFactor;
+                    break;
+
+                case AIActionType.Objective:
+                case AIActionType.Search:
+                    delta -= _profile.ClumpedObjectivePenalty * pressure *
+                             (context.SelfCarrier ? 1.15f : collapseFactor);
+                    break;
+
+                case AIActionType.UseSuper:
+                    if (!context.IntentionalCollapse)
+                        delta -= _profile.ClumpedApproachPenalty * pressure * 0.30f;
+                    break;
+            }
+
+            return delta;
+        }
+
+        private static bool CanCreateSpacingScore(
+            AIActionType actionType,
+            AISpacingContext context)
+        {
+            return actionType == AIActionType.Reposition ||
+                   actionType == AIActionType.HoldRange;
+        }
+
         private bool CanCreateWinConditionScore(
             AIActionType actionType,
             AIWinConditionActionContext context)
@@ -4371,6 +4578,18 @@ namespace MOBA.Core.Simulation.AI
             public GameModeId Mode;
             public int SelfObjectiveValue;
             public int TargetObjectiveValue;
+        }
+
+        private struct AISpacingContext
+        {
+            public bool HasClumpPressure;
+            public bool HasTarget;
+            public bool IntentionalCollapse;
+            public bool SelfCarrier;
+            public int NearbyAllyCount;
+            public int SameTargetAllies;
+            public float ClumpPressure;
+            public float TargetHealthRatio;
         }
 
         private CloseRangeMatchupEvaluation EvaluateCloseRangeMatchup(

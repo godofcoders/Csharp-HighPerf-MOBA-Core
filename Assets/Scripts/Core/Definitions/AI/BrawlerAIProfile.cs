@@ -311,6 +311,16 @@ namespace MOBA.Core.Simulation.AI
         [Header("Spacing / Anti-Clump")]
         public float AllyAvoidanceRadius = 2.5f;
         public float AllyAvoidanceWeight = 1.5f;
+        [Tooltip("Scales action score shaping when bots are physically clumped with allies.")]
+        public float SpacingAwarenessWeight = 1f;
+        [Tooltip("Radius used for local anti-clump action decisions.")]
+        public float LocalAllyClumpRadius = 2.25f;
+        [Tooltip("Reposition score added when this bot is stacked too tightly with allies.")]
+        public float LocalClumpRepositionBonus = 22f;
+        [Tooltip("Approach score removed when adding another body would create bad clump pressure.")]
+        public float ClumpedApproachPenalty = 18f;
+        [Tooltip("Objective/search score removed when too many allies are already occupying the same local space.")]
+        public float ClumpedObjectivePenalty = 14f;
         public float HoldRangePositionRefreshTicks = 20f;
         public float PreferredCombatOffset = 0.75f;
 
@@ -625,6 +635,11 @@ namespace MOBA.Core.Simulation.AI
 
                     AllyAvoidanceRadius = 3.5f;
                     AllyAvoidanceWeight = 2.0f;
+                    SpacingAwarenessWeight = 1.20f;
+                    LocalAllyClumpRadius = 2.75f;
+                    LocalClumpRepositionBonus = 28f;
+                    ClumpedApproachPenalty = 24f;
+                    ClumpedObjectivePenalty = 18f;
                     PreferredCombatOffset = 1.2f;
 
                     AttackCadenceTicks = 14;
@@ -674,6 +689,11 @@ namespace MOBA.Core.Simulation.AI
 
                     AllyAvoidanceRadius = 2.0f;
                     AllyAvoidanceWeight = 0.8f;
+                    SpacingAwarenessWeight = 0.75f;
+                    LocalAllyClumpRadius = 1.90f;
+                    LocalClumpRepositionBonus = 16f;
+                    ClumpedApproachPenalty = 10f;
+                    ClumpedObjectivePenalty = 10f;
                     PreferredCombatOffset = 0.3f;
 
                     AttackCadenceTicks = 8;
@@ -723,6 +743,11 @@ namespace MOBA.Core.Simulation.AI
 
                     AllyAvoidanceRadius = 2.3f;
                     AllyAvoidanceWeight = 1.1f;
+                    SpacingAwarenessWeight = 0.90f;
+                    LocalAllyClumpRadius = 2.10f;
+                    LocalClumpRepositionBonus = 18f;
+                    ClumpedApproachPenalty = 12f;
+                    ClumpedObjectivePenalty = 10f;
                     PreferredCombatOffset = 0.5f;
 
                     AttackCadenceTicks = 6;
@@ -772,6 +797,11 @@ namespace MOBA.Core.Simulation.AI
 
                     AllyAvoidanceRadius = 3.0f;
                     AllyAvoidanceWeight = 1.8f;
+                    SpacingAwarenessWeight = 1.15f;
+                    LocalAllyClumpRadius = 2.65f;
+                    LocalClumpRepositionBonus = 26f;
+                    ClumpedApproachPenalty = 22f;
+                    ClumpedObjectivePenalty = 18f;
                     PreferredCombatOffset = 1.0f;
 
                     AttackCadenceTicks = 12;
@@ -823,6 +853,11 @@ namespace MOBA.Core.Simulation.AI
 
                     AllyAvoidanceRadius = 2.5f;
                     AllyAvoidanceWeight = 1.5f;
+                    SpacingAwarenessWeight = 1.05f;
+                    LocalAllyClumpRadius = 2.35f;
+                    LocalClumpRepositionBonus = 22f;
+                    ClumpedApproachPenalty = 17f;
+                    ClumpedObjectivePenalty = 14f;
                     PreferredCombatOffset = 0.75f;
 
                     AttackCadenceTicks = 11;
@@ -879,6 +914,11 @@ namespace MOBA.Core.Simulation.AI
 
                     AllyAvoidanceRadius = 3f;
                     AllyAvoidanceWeight = 1.7f;
+                    SpacingAwarenessWeight = 1.20f;
+                    LocalAllyClumpRadius = 2.70f;
+                    LocalClumpRepositionBonus = 28f;
+                    ClumpedApproachPenalty = 24f;
+                    ClumpedObjectivePenalty = 18f;
                     PreferredCombatOffset = 1f;
 
                     AttackCadenceTicks = 16;
@@ -929,6 +969,11 @@ namespace MOBA.Core.Simulation.AI
 
                     AllyAvoidanceRadius = 2.5f;
                     AllyAvoidanceWeight = 1.5f;
+                    SpacingAwarenessWeight = 1f;
+                    LocalAllyClumpRadius = 2.25f;
+                    LocalClumpRepositionBonus = 22f;
+                    ClumpedApproachPenalty = 18f;
+                    ClumpedObjectivePenalty = 14f;
                     PreferredCombatOffset = 0.75f;
 
                     AttackCadenceTicks = 10;
