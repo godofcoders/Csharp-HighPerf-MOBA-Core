@@ -35,6 +35,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureOpponentResourceAwarenessDefaults(profile);
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
+            EnsureRoleMatchupDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
             EnsurePressureRotationDefaults(profile);
             EnsureDecisionConfidenceDefaults(profile);
@@ -100,6 +101,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Res={profile.OpponentResourceAwarenessWeight:0.00} " +
                 $"Fight={profile.TeamFightCoordinationWeight:0.00} " +
                 $"Role={profile.RoleMacroBehaviorWeight:0.00} " +
+                $"Match={profile.RoleMatchupAwarenessWeight:0.00} " +
                 $"Risk={profile.EngagementRiskAwarenessWeight:0.00} " +
                 $"Rot={profile.PressureRotationAwarenessWeight:0.00} " +
                 $"Conf={profile.DecisionAmbiguityScoreWindow:0.0}/{profile.DecisionAmbiguitySwitchPenalty:0.0} " +
@@ -186,6 +188,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 0.62f;
                     profile.RoleArtilleryDenialMacroBonus *= 0.62f;
                     profile.RoleFighterFlexMacroBonus *= 0.64f;
+                    profile.RoleMatchupAwarenessWeight *= 0.42f;
+                    profile.MatchupKiteShortRangeBonus *= 0.62f;
+                    profile.MatchupPunishShortRangeBonus *= 0.58f;
+                    profile.MatchupObjectiveOverrideBonus *= 0.70f;
                     profile.EngagementRiskAwarenessWeight *= 0.42f;
                     profile.OutnumberedApproachPenalty *= 0.58f;
                     profile.SupportedFightCommitBonus *= 0.62f;
@@ -265,6 +271,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.12f;
                     profile.RoleArtilleryDenialMacroBonus *= 1.12f;
                     profile.RoleFighterFlexMacroBonus *= 1.10f;
+                    profile.RoleMatchupAwarenessWeight *= 1.18f;
+                    profile.MatchupKiteShortRangeBonus *= 1.12f;
+                    profile.MatchupPunishShortRangeBonus *= 1.12f;
+                    profile.MatchupObjectiveOverrideBonus *= 1.10f;
                     profile.EngagementRiskAwarenessWeight *= 1.18f;
                     profile.OutnumberedApproachPenalty *= 1.12f;
                     profile.SupportedFightCommitBonus *= 1.12f;
@@ -346,6 +356,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.24f;
                     profile.RoleArtilleryDenialMacroBonus *= 1.22f;
                     profile.RoleFighterFlexMacroBonus *= 1.18f;
+                    profile.RoleMatchupAwarenessWeight *= 1.34f;
+                    profile.MatchupKiteShortRangeBonus *= 1.24f;
+                    profile.MatchupPunishShortRangeBonus *= 1.22f;
+                    profile.MatchupObjectiveOverrideBonus *= 1.18f;
                     profile.EngagementRiskAwarenessWeight *= 1.34f;
                     profile.OutnumberedApproachPenalty *= 1.24f;
                     profile.SupportedFightCommitBonus *= 1.22f;
@@ -471,6 +485,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleAssassinPickPressureBonus *= 0.76f;
                     profile.RoleControllerZoneMacroBonus *= 0.78f;
                     profile.RoleArtilleryDenialMacroBonus *= 0.78f;
+                    profile.RoleMatchupAwarenessWeight *= 0.68f;
+                    profile.MatchupKiteShortRangeBonus *= 0.76f;
+                    profile.MatchupPunishShortRangeBonus *= 0.72f;
+                    profile.MatchupObjectiveOverrideBonus *= 0.78f;
                     profile.EngagementRiskAwarenessWeight *= 0.68f;
                     profile.OutnumberedApproachPenalty *= 0.75f;
                     profile.SupportedFightCommitBonus *= 0.78f;
@@ -587,6 +605,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.10f;
                     profile.RoleArtilleryDenialMacroBonus *= 1.08f;
                     profile.RoleFighterFlexMacroBonus *= 1.08f;
+                    profile.RoleMatchupAwarenessWeight *= 1.10f;
+                    profile.MatchupKiteShortRangeBonus *= 1.10f;
+                    profile.MatchupPunishShortRangeBonus *= 1.10f;
+                    profile.MatchupObjectiveOverrideBonus *= 1.08f;
                     profile.EngagementRiskAwarenessWeight *= 1.10f;
                     profile.OutnumberedApproachPenalty *= 1.10f;
                     profile.SupportedFightCommitBonus *= 1.10f;
@@ -680,6 +702,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleFighterFlexMacroBonus *= 1.10f;
                     profile.RoleBacklineAnchorMacroBonus *= 0.88f;
                     profile.RoleSupportPeelMacroBonus *= 0.90f;
+                    profile.MatchupKiteShortRangeBonus *= 0.85f;
+                    profile.MatchupPunishShortRangeBonus *= 1.12f;
+                    profile.MatchupObjectiveOverrideBonus *= 1.18f;
                     profile.OutnumberedApproachPenalty *= 0.82f;
                     profile.SupportedFightCommitBonus *= 1.16f;
                     profile.BadDiveRepositionBonus *= 0.86f;
@@ -761,6 +786,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.08f;
                     profile.RoleArtilleryDenialMacroBonus *= 1.10f;
                     profile.RoleAssassinPickPressureBonus *= 0.82f;
+                    profile.RoleMatchupAwarenessWeight *= 1.08f;
+                    profile.MatchupKiteShortRangeBonus *= 1.16f;
+                    profile.MatchupPunishShortRangeBonus *= 0.90f;
+                    profile.MatchupObjectiveOverrideBonus *= 0.85f;
                     profile.EngagementRiskAwarenessWeight *= 1.10f;
                     profile.OutnumberedApproachPenalty *= 1.18f;
                     profile.BadDiveRepositionBonus *= 1.16f;
@@ -828,6 +857,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.RoleControllerZoneMacroBonus *= 1.14f;
                     profile.RoleBacklineAnchorMacroBonus *= 1.12f;
                     profile.RoleTankSpaceCreationBonus *= 1.08f;
+                    profile.RoleMatchupAwarenessWeight *= 1.10f;
+                    profile.MatchupKiteShortRangeBonus *= 1.08f;
+                    profile.MatchupPunishShortRangeBonus *= 1.06f;
+                    profile.MatchupObjectiveOverrideBonus *= 1.06f;
                     profile.EngagementRiskAwarenessWeight *= 1.12f;
                     profile.SupportedFightCommitBonus *= 1.16f;
                     profile.BadDiveRepositionBonus *= 1.08f;
@@ -854,6 +887,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureOpponentResourceAwarenessDefaults(profile);
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
+            EnsureRoleMatchupDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
             EnsurePressureRotationDefaults(profile);
             EnsureDecisionConfidenceDefaults(profile);
@@ -959,6 +993,14 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Clamp(profile.RoleArtilleryDenialMacroBonus, 0f, 45f);
             profile.RoleFighterFlexMacroBonus =
                 Mathf.Clamp(profile.RoleFighterFlexMacroBonus, 0f, 45f);
+            profile.RoleMatchupAwarenessWeight =
+                Mathf.Clamp(profile.RoleMatchupAwarenessWeight, 0f, 2.5f);
+            profile.MatchupKiteShortRangeBonus =
+                Mathf.Clamp(profile.MatchupKiteShortRangeBonus, 0f, 55f);
+            profile.MatchupPunishShortRangeBonus =
+                Mathf.Clamp(profile.MatchupPunishShortRangeBonus, 0f, 45f);
+            profile.MatchupObjectiveOverrideBonus =
+                Mathf.Clamp(profile.MatchupObjectiveOverrideBonus, 0f, 45f);
             profile.EngagementRiskAwarenessWeight =
                 Mathf.Clamp(profile.EngagementRiskAwarenessWeight, 0f, 2.5f);
             profile.EngagementRiskRadius =
@@ -1256,6 +1298,30 @@ namespace MOBA.Core.Simulation.AI
             if (profile.RoleFighterFlexMacroBonus <= 0f)
                 profile.RoleFighterFlexMacroBonus =
                     profile.Archetype == BrawlerArchetype.Fighter ? 14f : 10f;
+        }
+
+        private static void EnsureRoleMatchupDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.RoleMatchupAwarenessWeight <= 0f)
+                profile.RoleMatchupAwarenessWeight = 1f;
+
+            if (profile.MatchupKiteShortRangeBonus <= 0f)
+                profile.MatchupKiteShortRangeBonus =
+                    profile.Archetype == BrawlerArchetype.Sniper ||
+                    profile.Archetype == BrawlerArchetype.Artillery
+                        ? 22f
+                        : 18f;
+
+            if (profile.MatchupPunishShortRangeBonus <= 0f)
+                profile.MatchupPunishShortRangeBonus =
+                    profile.Archetype == BrawlerArchetype.Sniper ||
+                    profile.Archetype == BrawlerArchetype.Controller
+                        ? 18f
+                        : 14f;
+
+            if (profile.MatchupObjectiveOverrideBonus <= 0f)
+                profile.MatchupObjectiveOverrideBonus =
+                    profile.Archetype == BrawlerArchetype.Assassin ? 22f : 16f;
         }
 
         private static void EnsureEngagementRiskDefaults(BrawlerAIProfile profile)

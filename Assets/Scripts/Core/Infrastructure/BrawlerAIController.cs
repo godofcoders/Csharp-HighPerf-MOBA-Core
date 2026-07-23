@@ -264,6 +264,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastTeamFightDebug : "TeamFight=None";
         public string RoleMacroDebug =>
             _utilityScorer != null ? _utilityScorer.LastRoleMacroDebug : "RoleMacro=None";
+        public string RoleMatchupDebug =>
+            _utilityScorer != null ? _utilityScorer.LastRoleMatchupDebug : "Matchup=None";
         public string EngagementRiskDebug =>
             _utilityScorer != null ? _utilityScorer.LastEngagementRiskDebug : "EngageRisk=None";
         public string PressureRotationDebug =>
@@ -608,6 +610,7 @@ _actionExecutor != null
                 _debugSnapshot.ResourceAwarenessDebug = ResourceAwarenessDebug;
                 _debugSnapshot.TeamFightDebug = TeamFightDebug;
                 _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
+                _debugSnapshot.RoleMatchupDebug = RoleMatchupDebug;
                 _debugSnapshot.EngagementRiskDebug = EngagementRiskDebug;
                 _debugSnapshot.PressureRotationDebug = PressureRotationDebug;
             }
@@ -623,6 +626,7 @@ _actionExecutor != null
                 _debugSnapshot.ResourceAwarenessDebug = "ResAware=None";
                 _debugSnapshot.TeamFightDebug = "TeamFight=None";
                 _debugSnapshot.RoleMacroDebug = "RoleMacro=None";
+                _debugSnapshot.RoleMatchupDebug = "Matchup=None";
                 _debugSnapshot.EngagementRiskDebug = "EngageRisk=None";
                 _debugSnapshot.PressureRotationDebug = "PressureRot=None";
             }
@@ -750,6 +754,7 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.MacroDebug = MacroDebug;
             _debugSnapshot.PlaybookDebug = PlaybookDebug;
             _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
+            _debugSnapshot.RoleMatchupDebug = RoleMatchupDebug;
             _debugSnapshot.EngagementRiskDebug = EngagementRiskDebug;
             _debugSnapshot.PressureRotationDebug = PressureRotationDebug;
 
@@ -1974,6 +1979,7 @@ $"Map={LastMapRouteDebug}";
                 $"{ResourceAwarenessDebug}\n" +
                 $"{TeamFightDebug}\n" +
                 $"{RoleMacroDebug}\n" +
+                $"{RoleMatchupDebug}\n" +
                 $"{EngagementRiskDebug}\n" +
                 $"{PressureRotationDebug}\n" +
                 $"{GemPickupDebug}";
@@ -2323,6 +2329,7 @@ $"Map={LastMapRouteDebug}";
                 $"{SceneRich("Rank", ResolveDecisionPerformanceColor(decisionPerformance))} {decisionRank} {decisionPerformance:0}/100\n" +
                 $"{SceneRich("Top", SceneObjectiveColor)} {BuildTopActionScoreSummary(4)}\n" +
                 $"{SceneRich("Conf", SceneLabelMutedColor)} {DecisionConfidenceDebug}\n" +
+                $"{SceneRich("Match", SceneTargetColor)} {RoleMatchupDebug}\n" +
                 $"{SceneRich("Target", SceneTargetColor)} {targetName} focus={CurrentTargetFocusCount}/{CurrentTargetAllyFocusCount} penalty={CurrentTargetOverFocusPenalty:0.0}\n" +
                 $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} reason={LastTacticalMoveReason}\n" +
                 $"{SceneRich(navState, ResolveNavigationColor())} | {LastTacticalStopDebug}\n" +
@@ -2363,6 +2370,7 @@ $"Map={LastMapRouteDebug}";
                 $"Res={_profile.OpponentResourceAwarenessWeight:0.00} " +
                 $"Fight={_profile.TeamFightCoordinationWeight:0.00} " +
                 $"Role={_profile.RoleMacroBehaviorWeight:0.00} " +
+                $"Match={_profile.RoleMatchupAwarenessWeight:0.00} " +
                 $"Risk={_profile.EngagementRiskAwarenessWeight:0.00} " +
                 $"Rot={_profile.PressureRotationAwarenessWeight:0.00} " +
                 $"Conf={_profile.DecisionAmbiguityScoreWindow:0.0}/{_profile.DecisionAmbiguitySwitchPenalty:0.0}";

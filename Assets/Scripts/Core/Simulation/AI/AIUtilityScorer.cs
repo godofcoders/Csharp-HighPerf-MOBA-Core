@@ -46,6 +46,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastResourceAwarenessDebug = "ResAware=None";
         private string _lastTeamFightDebug = "TeamFight=None";
         private string _lastRoleMacroDebug = "RoleMacro=None";
+        private string _lastRoleMatchupDebug = "Matchup=None";
         private string _lastEngagementRiskDebug = "EngageRisk=None";
         private string _lastPressureRotationDebug = "PressureRot=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
@@ -72,6 +73,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastResourceAwarenessDebug => _lastResourceAwarenessDebug;
         public string LastTeamFightDebug => _lastTeamFightDebug;
         public string LastRoleMacroDebug => _lastRoleMacroDebug;
+        public string LastRoleMatchupDebug => _lastRoleMatchupDebug;
         public string LastEngagementRiskDebug => _lastEngagementRiskDebug;
         public string LastPressureRotationDebug => _lastPressureRotationDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
@@ -146,6 +148,11 @@ namespace MOBA.Core.Simulation.AI
                 currentTick,
                 macroState,
                 playbookState,
+                results);
+            ApplyRoleMatchupBrain(
+                targetInfo,
+                currentTick,
+                macroState,
                 results);
             ApplyEngagementRiskAwareness(
                 targetInfo,
@@ -1361,6 +1368,278 @@ namespace MOBA.Core.Simulation.AI
                 case AIActionType.Regroup:
                 case AIActionType.Retreat:
                     return context.CarrierSafety || context.MacroReset;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void ApplyRoleMatchupBrain(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState,
+            List<AIActionScore> results)
+        {
+            _lastRoleMatchupDebug = "Matchup=None";
+
+            if (_profile == null ||
+                results == null ||
+                results.Count == 0 ||
+                targetInfo == null ||
+                !targetInfo.HasLiveTarget ||
+                !(targetInfo.Target is BrawlerController targetBrawler) ||
+                targetBrawler.State == null ||
+                _self == null)
+            {
+                return;
+            }
+
+            float weight = Mathf.Max(0f, _profile.RoleMatchupAwarenessWeight);
+            if (weight <= 0.01f)
+            {
+                _lastRoleMatchupDebug = "Matchup=Off";
+                return;
+            }
+
+            AIRoleMatchupContext context = BuildRoleMatchupContext(
+                targetBrawler,
+                currentTick,
+                macroState);
+
+            if (!context.HasMatchupPressure)
+                return;
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculateRoleMatchupDelta(
+                    actionScore.ActionType,
+                    context);
+                delta *= weight;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreateRoleMatchupScore(actionScore.ActionType, context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastRoleMatchupDebug =
+                $"Matchup=own:{context.OwnArchetype} target:{context.TargetArchetype} " +
+                $"range:{context.OwnRange:0.0}/{context.TargetRange:0.0} " +
+                $"dist:{context.TargetDistance:0.0} " +
+                $"shortBad:{context.ShortRangeBadChase} kite:{context.RangedKiteWindow} " +
+                $"punish:{context.RangedPunishWindow} commit:{context.ObjectiveOverride} " +
+                $"w:{weight:0.00}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastRoleMatchupDebug += $" Delta={deltaDebug}";
+        }
+
+        private AIRoleMatchupContext BuildRoleMatchupContext(
+            BrawlerController target,
+            uint currentTick,
+            AIGameModeMacroState macroState)
+        {
+            BrawlerArchetype ownArchetype = _self != null && _self.Definition != null
+                ? _self.Definition.Archetype
+                : _profile.Archetype;
+            BrawlerArchetype targetArchetype = target != null && target.Definition != null
+                ? target.Definition.Archetype
+                : BrawlerArchetype.Fighter;
+            float ownRange = Mathf.Max(1f, GetAbilityMaxRange());
+            float targetRange = Mathf.Max(1f, GetTargetAbilityMaxRange(target));
+            float targetDistance = Vector3.Distance(_self.Position, target.Position);
+            float rangeGap = targetRange - ownRange;
+            float reverseRangeGap = ownRange - targetRange;
+            float meaningfulGap = Mathf.Max(0.85f, ownRange * 0.30f);
+            bool ownShortRange = IsCloseRangePressureRole();
+            bool targetShortRange = IsShortRangePressureTarget(target, targetRange);
+            bool ownBackline = IsBacklineRole() || ownRange >= 6f;
+            float targetHealthRatio = target.State != null
+                ? Mathf.Clamp01(target.State.CurrentHealth /
+                                Mathf.Max(1f, target.State.MaxHealth.Value))
+                : 1f;
+            int targetCarriedGems = target.State != null
+                ? target.State.CarriedGemCount
+                : 0;
+
+            bool targetLow =
+                targetHealthRatio <= Mathf.Max(0.22f, _profile.LowHealthChaseHealthThreshold);
+            bool highValueTarget =
+                targetCarriedGems >= 3 ||
+                (macroState.EnemyTeamHasCountdown && targetCarriedGems > 0) ||
+                IsModeCriticalTarget(target, macroState);
+            bool selfSuperReady =
+                _self.State != null &&
+                _self.State.SuperCharge.IsReady;
+            bool teamCollapse = HasTeamCollapseOnTarget(target, currentTick);
+            bool objectiveOverride =
+                targetLow ||
+                highValueTarget ||
+                selfSuperReady ||
+                teamCollapse;
+
+            float catchDistance = Mathf.Max(
+                ownRange + _profile.AttackRangeBuffer,
+                ownRange * Mathf.Max(1.25f, _profile.CloseRangeCatchDistanceMultiplier));
+
+            bool shortRangeBadChase =
+                ownShortRange &&
+                rangeGap > meaningfulGap &&
+                targetDistance > catchDistance &&
+                !objectiveOverride;
+            bool rangedKiteWindow =
+                ownBackline &&
+                targetShortRange &&
+                reverseRangeGap > meaningfulGap &&
+                targetDistance <= ownRange * 0.90f;
+            bool rangedPunishWindow =
+                ownBackline &&
+                targetShortRange &&
+                reverseRangeGap > meaningfulGap &&
+                targetDistance > ownRange * 0.45f &&
+                targetDistance <= ownRange + _profile.AttackRangeBuffer &&
+                !AIMapNavigationUtility.HasCoverBetween(
+                    SimulationClock.Pathfinder,
+                    _self.Position,
+                    target.Position);
+
+            return new AIRoleMatchupContext
+            {
+                HasMatchupPressure =
+                    shortRangeBadChase ||
+                    rangedKiteWindow ||
+                    rangedPunishWindow ||
+                    (ownShortRange && objectiveOverride && rangeGap > meaningfulGap),
+                OwnArchetype = ownArchetype,
+                TargetArchetype = targetArchetype,
+                OwnShortRange = ownShortRange,
+                TargetShortRange = targetShortRange,
+                ShortRangeBadChase = shortRangeBadChase,
+                RangedKiteWindow = rangedKiteWindow,
+                RangedPunishWindow = rangedPunishWindow,
+                ObjectiveOverride = objectiveOverride,
+                OwnRange = ownRange,
+                TargetRange = targetRange,
+                TargetDistance = targetDistance
+            };
+        }
+
+        private float CalculateRoleMatchupDelta(
+            AIActionType actionType,
+            AIRoleMatchupContext context)
+        {
+            float delta = 0f;
+
+            if (context.ShortRangeBadChase)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        delta -= Mathf.Max(0f, _profile.CloseRangeOutrangedChasePenalty) * 0.55f;
+                        break;
+                    case AIActionType.Reposition:
+                        delta += Mathf.Max(0f, _profile.CloseRangeCoverRepositionBonus);
+                        break;
+                    case AIActionType.HoldRange:
+                        delta += Mathf.Max(0f, _profile.CloseRangeCoverRepositionBonus) * 0.45f;
+                        break;
+                    case AIActionType.Search:
+                    case AIActionType.Objective:
+                        delta += Mathf.Max(0f, _profile.MatchupKiteShortRangeBonus) * 0.25f;
+                        break;
+                }
+            }
+
+            if (context.RangedKiteWindow)
+            {
+                float kiteBonus = Mathf.Max(0f, _profile.MatchupKiteShortRangeBonus);
+                switch (actionType)
+                {
+                    case AIActionType.Reposition:
+                        delta += kiteBonus;
+                        break;
+                    case AIActionType.HoldRange:
+                        delta += kiteBonus * 0.75f;
+                        break;
+                    case AIActionType.Approach:
+                        delta -= kiteBonus * 0.55f;
+                        break;
+                }
+            }
+
+            if (context.RangedPunishWindow)
+            {
+                float punishBonus = Mathf.Max(0f, _profile.MatchupPunishShortRangeBonus);
+                switch (actionType)
+                {
+                    case AIActionType.HoldRange:
+                        delta += punishBonus;
+                        break;
+                    case AIActionType.UseSuper:
+                        delta += punishBonus * 0.45f;
+                        break;
+                    case AIActionType.Reposition:
+                        delta += punishBonus * 0.35f;
+                        break;
+                }
+            }
+
+            if (context.ObjectiveOverride && context.OwnShortRange)
+            {
+                float overrideBonus = Mathf.Max(0f, _profile.MatchupObjectiveOverrideBonus);
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        delta += overrideBonus;
+                        break;
+                    case AIActionType.UseSuper:
+                        delta += overrideBonus * 0.55f;
+                        break;
+                    case AIActionType.Reposition:
+                        delta += overrideBonus * 0.25f;
+                        break;
+                }
+            }
+
+            return delta;
+        }
+
+        private static bool CanCreateRoleMatchupScore(
+            AIActionType actionType,
+            AIRoleMatchupContext context)
+        {
+            switch (actionType)
+            {
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                    return context.RangedKiteWindow ||
+                           context.RangedPunishWindow ||
+                           context.ShortRangeBadChase;
+
+                case AIActionType.Search:
+                case AIActionType.Objective:
+                    return context.ShortRangeBadChase;
 
                 default:
                     return false;
@@ -3538,6 +3817,22 @@ namespace MOBA.Core.Simulation.AI
             public float ThreatRelevance;
         }
 
+        private struct AIRoleMatchupContext
+        {
+            public bool HasMatchupPressure;
+            public bool OwnShortRange;
+            public bool TargetShortRange;
+            public bool ShortRangeBadChase;
+            public bool RangedKiteWindow;
+            public bool RangedPunishWindow;
+            public bool ObjectiveOverride;
+            public BrawlerArchetype OwnArchetype;
+            public BrawlerArchetype TargetArchetype;
+            public float OwnRange;
+            public float TargetRange;
+            public float TargetDistance;
+        }
+
         private CloseRangeMatchupEvaluation EvaluateCloseRangeMatchup(
             AITargetInfo targetInfo,
             float distance,
@@ -3654,6 +3949,22 @@ namespace MOBA.Core.Simulation.AI
                 return true;
 
             return IsFighter && GetAbilityMaxRange() <= 4.75f;
+        }
+
+        private static bool IsShortRangePressureTarget(
+            BrawlerController target,
+            float targetRange)
+        {
+            if (target == null)
+                return false;
+
+            BrawlerArchetype archetype = target.Definition != null
+                ? target.Definition.Archetype
+                : BrawlerArchetype.Fighter;
+
+            return archetype == BrawlerArchetype.Tank ||
+                   archetype == BrawlerArchetype.Assassin ||
+                   (archetype == BrawlerArchetype.Fighter && targetRange <= 4.75f);
         }
 
         private static float GetTargetAbilityMaxRange(BrawlerController target)

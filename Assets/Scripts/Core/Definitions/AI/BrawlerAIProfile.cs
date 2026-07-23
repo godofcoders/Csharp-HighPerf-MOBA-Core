@@ -183,6 +183,16 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Approach/reposition pressure added when a short-range brawler has a valid engage but should close with evasive footwork.")]
         public float CloseRangeEvasivePressureBonus = 12f;
 
+        [Header("Role Matchup Brain")]
+        [Tooltip("Scales matchup reads such as tank-vs-ranged disengage, ranged kiting, and punish windows.")]
+        public float RoleMatchupAwarenessWeight = 1f;
+        [Tooltip("Hold/reposition score added when a longer-range brawler should kite a short-range threat.")]
+        public float MatchupKiteShortRangeBonus = 18f;
+        [Tooltip("Hold/use-super score added when a ranged brawler has a safe punish window against a short-range target.")]
+        public float MatchupPunishShortRangeBonus = 14f;
+        [Tooltip("Approach score added when objective value, low health, super, or team collapse justifies a risky matchup.")]
+        public float MatchupObjectiveOverrideBonus = 16f;
+
         [Header("Game Mode Macro")]
         [Tooltip("Scales score deltas from mode-level push/hold/reset macro calls.")]
         public float MacroActionBiasWeight = 1f;
@@ -1058,6 +1068,10 @@ namespace MOBA.Core.Simulation.AI
             CloseRangeOutrangedChasePenalty = 52f;
             CloseRangeCoverRepositionBonus = 26f;
             CloseRangeEvasivePressureBonus = 12f;
+            RoleMatchupAwarenessWeight = 1f;
+            MatchupKiteShortRangeBonus = 18f;
+            MatchupPunishShortRangeBonus = 14f;
+            MatchupObjectiveOverrideBonus = 16f;
 
             switch (archetype)
             {
@@ -1073,6 +1087,8 @@ namespace MOBA.Core.Simulation.AI
                     ChaseCommitScoreBonus = 7f;
                     ChaseDisengageScorePenalty = 50f;
                     BadMapChasePenalty = 30f;
+                    MatchupKiteShortRangeBonus = 24f;
+                    MatchupPunishShortRangeBonus = 18f;
                     break;
 
                 case BrawlerArchetype.Tank:
@@ -1089,6 +1105,7 @@ namespace MOBA.Core.Simulation.AI
                     CloseRangeOutrangedChasePenalty = 58f;
                     CloseRangeCoverRepositionBonus = 30f;
                     CloseRangeEvasivePressureBonus = 15f;
+                    MatchupObjectiveOverrideBonus = 18f;
                     break;
 
                 case BrawlerArchetype.Assassin:
@@ -1109,6 +1126,7 @@ namespace MOBA.Core.Simulation.AI
                     CloseRangeOutrangedChasePenalty = 44f;
                     CloseRangeCoverRepositionBonus = 24f;
                     CloseRangeEvasivePressureBonus = 18f;
+                    MatchupObjectiveOverrideBonus = 22f;
                     break;
 
                 case BrawlerArchetype.Support:
