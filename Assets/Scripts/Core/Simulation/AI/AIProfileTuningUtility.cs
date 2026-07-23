@@ -33,6 +33,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureMapGeometryDefaults(profile);
             EnsureDangerAvoidanceDefaults(profile);
             EnsureOpponentResourceAwarenessDefaults(profile);
+            EnsureAbilityThreatPredictionDefaults(profile);
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
             EnsureRoleMatchupDefaults(profile);
@@ -102,6 +103,7 @@ namespace MOBA.Core.Simulation.AI
                 $"TgtCtx={profile.TargetContextAwarenessWeight:0.00} " +
                 $"Focus={profile.FocusFireWeight:0.0} Map={profile.MapOpenShotPreference:0.0}/{profile.MapCoverDancePreference:0.0} " +
                 $"Res={profile.OpponentResourceAwarenessWeight:0.00} " +
+                $"Threat={profile.AbilityThreatPredictionWeight:0.00} " +
                 $"Fight={profile.TeamFightCoordinationWeight:0.00} " +
                 $"Role={profile.RoleMacroBehaviorWeight:0.00} " +
                 $"Match={profile.RoleMatchupAwarenessWeight:0.00} " +
@@ -176,6 +178,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 0.62f;
                     profile.EnemyNearlySuperThreatPenalty *= 0.58f;
                     profile.EnemySuperRespectBonus *= 0.62f;
+                    profile.AbilityThreatPredictionWeight *= 0.42f;
+                    profile.PredictedSuperThreatPenalty *= 0.58f;
+                    profile.PredictedAreaThreatRepositionBonus *= 0.58f;
+                    profile.PredictedThreatEvadeBonus *= 0.55f;
+                    profile.PredictedThreatHoldBonus *= 0.58f;
                     profile.TeamFightCoordinationWeight *= 0.50f;
                     profile.TeamCollapseFocusBonus *= 0.62f;
                     profile.TeamFlankRepositionBonus *= 0.62f;
@@ -272,6 +279,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.16f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.12f;
                     profile.EnemySuperRespectBonus *= 1.18f;
+                    profile.AbilityThreatPredictionWeight *= 1.18f;
+                    profile.PredictedSuperThreatPenalty *= 1.12f;
+                    profile.PredictedAreaThreatRepositionBonus *= 1.12f;
+                    profile.PredictedThreatEvadeBonus *= 1.10f;
+                    profile.PredictedThreatHoldBonus *= 1.10f;
                     profile.TeamFightCoordinationWeight *= 1.20f;
                     profile.TeamCollapseFocusBonus *= 1.14f;
                     profile.TeamFlankRepositionBonus *= 1.14f;
@@ -370,6 +382,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.28f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.20f;
                     profile.EnemySuperRespectBonus *= 1.30f;
+                    profile.AbilityThreatPredictionWeight *= 1.34f;
+                    profile.PredictedSuperThreatPenalty *= 1.24f;
+                    profile.PredictedAreaThreatRepositionBonus *= 1.24f;
+                    profile.PredictedThreatEvadeBonus *= 1.20f;
+                    profile.PredictedThreatHoldBonus *= 1.20f;
                     profile.TeamFightCoordinationWeight *= 1.36f;
                     profile.TeamCollapseFocusBonus *= 1.24f;
                     profile.TeamFlankRepositionBonus *= 1.22f;
@@ -515,6 +532,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 0.72f;
                     profile.EnemyNearlySuperThreatPenalty *= 0.70f;
                     profile.EnemySuperRespectBonus *= 0.75f;
+                    profile.AbilityThreatPredictionWeight *= 0.68f;
+                    profile.PredictedSuperThreatPenalty *= 0.74f;
+                    profile.PredictedAreaThreatRepositionBonus *= 0.72f;
+                    profile.PredictedThreatEvadeBonus *= 0.70f;
+                    profile.PredictedThreatHoldBonus *= 0.72f;
                     profile.TeamFightCoordinationWeight *= 0.72f;
                     profile.TeamCollapseFocusBonus *= 0.78f;
                     profile.TeamFlankRepositionBonus *= 0.80f;
@@ -646,6 +668,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.12f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.10f;
                     profile.EnemySuperRespectBonus *= 1.12f;
+                    profile.AbilityThreatPredictionWeight *= 1.10f;
+                    profile.PredictedSuperThreatPenalty *= 1.10f;
+                    profile.PredictedAreaThreatRepositionBonus *= 1.10f;
+                    profile.PredictedThreatEvadeBonus *= 1.08f;
+                    profile.PredictedThreatHoldBonus *= 1.08f;
                     profile.TeamFightCoordinationWeight *= 1.10f;
                     profile.TeamCollapseFocusBonus *= 1.08f;
                     profile.TeamFlankRepositionBonus *= 1.08f;
@@ -762,6 +789,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 0.82f;
                     profile.EnemyNearlySuperThreatPenalty *= 0.85f;
                     profile.EnemySuperRespectBonus *= 0.85f;
+                    profile.AbilityThreatPredictionWeight *= 0.90f;
+                    profile.PredictedSuperThreatPenalty *= 0.82f;
+                    profile.PredictedAreaThreatRepositionBonus *= 0.88f;
+                    profile.PredictedThreatEvadeBonus *= 0.88f;
+                    profile.PredictedThreatHoldBonus *= 0.85f;
                     profile.IsolatedTargetBonus *= 1.10f;
                     profile.ProtectedTargetPenalty *= 0.85f;
                     profile.AllyCollapseTargetBonus *= 1.08f;
@@ -853,6 +885,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.18f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.15f;
                     profile.EnemySuperRespectBonus *= 1.18f;
+                    profile.AbilityThreatPredictionWeight *= 1.12f;
+                    profile.PredictedSuperThreatPenalty *= 1.16f;
+                    profile.PredictedAreaThreatRepositionBonus *= 1.12f;
+                    profile.PredictedThreatEvadeBonus *= 1.12f;
+                    profile.PredictedThreatHoldBonus *= 1.12f;
                     profile.TargetContextAwarenessWeight *= 1.08f;
                     profile.IsolatedTargetBonus *= 0.86f;
                     profile.ProtectedTargetPenalty *= 1.14f;
@@ -935,6 +972,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.EnemySuperReadyThreatPenalty *= 1.08f;
                     profile.EnemyNearlySuperThreatPenalty *= 1.08f;
                     profile.EnemySuperRespectBonus *= 1.12f;
+                    profile.AbilityThreatPredictionWeight *= 1.10f;
+                    profile.PredictedSuperThreatPenalty *= 1.08f;
+                    profile.PredictedAreaThreatRepositionBonus *= 1.10f;
+                    profile.PredictedThreatEvadeBonus *= 1.08f;
+                    profile.PredictedThreatHoldBonus *= 1.10f;
                     profile.TargetContextAwarenessWeight *= 1.12f;
                     profile.AllyCollapseTargetBonus *= 1.16f;
                     profile.ProtectedTargetPenalty *= 1.06f;
@@ -989,6 +1031,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureMapGeometryDefaults(profile);
             EnsureDangerAvoidanceDefaults(profile);
             EnsureOpponentResourceAwarenessDefaults(profile);
+            EnsureAbilityThreatPredictionDefaults(profile);
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
             EnsureRoleMatchupDefaults(profile);
@@ -1072,6 +1115,18 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Clamp(profile.EnemyNearlySuperThreatPenalty, 0f, 30f);
             profile.EnemySuperRespectBonus =
                 Mathf.Clamp(profile.EnemySuperRespectBonus, 0f, 45f);
+            profile.AbilityThreatPredictionWeight =
+                Mathf.Clamp(profile.AbilityThreatPredictionWeight, 0f, 2.5f);
+            profile.PredictedSuperThreatPenalty =
+                Mathf.Clamp(profile.PredictedSuperThreatPenalty, 0f, 65f);
+            profile.PredictedAreaThreatRepositionBonus =
+                Mathf.Clamp(profile.PredictedAreaThreatRepositionBonus, 0f, 60f);
+            profile.PredictedThreatEvadeBonus =
+                Mathf.Clamp(profile.PredictedThreatEvadeBonus, 0f, 55f);
+            profile.PredictedThreatHoldBonus =
+                Mathf.Clamp(profile.PredictedThreatHoldBonus, 0f, 45f);
+            profile.PredictedThreatRespectRange =
+                Mathf.Clamp(profile.PredictedThreatRespectRange, 3f, 12f);
             profile.TeamFightCoordinationWeight =
                 Mathf.Clamp(profile.TeamFightCoordinationWeight, 0f, 2.5f);
             profile.TeamCollapseFocusBonus =
@@ -1378,6 +1433,29 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.EnemySuperRespectBonus <= 0f)
                 profile.EnemySuperRespectBonus = 14f;
+        }
+
+        private static void EnsureAbilityThreatPredictionDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.AbilityThreatPredictionWeight <= 0f)
+                profile.AbilityThreatPredictionWeight = 1f;
+
+            if (profile.PredictedSuperThreatPenalty <= 0f)
+                profile.PredictedSuperThreatPenalty = 22f;
+
+            if (profile.PredictedAreaThreatRepositionBonus <= 0f)
+                profile.PredictedAreaThreatRepositionBonus =
+                    AIMapNavigationUtility.IsFragileArchetype(profile.Archetype) ? 22f : 18f;
+
+            if (profile.PredictedThreatEvadeBonus <= 0f)
+                profile.PredictedThreatEvadeBonus = 14f;
+
+            if (profile.PredictedThreatHoldBonus <= 0f)
+                profile.PredictedThreatHoldBonus = 12f;
+
+            if (profile.PredictedThreatRespectRange <= 0f)
+                profile.PredictedThreatRespectRange =
+                    AIMapNavigationUtility.IsFragileArchetype(profile.Archetype) ? 8f : 7f;
         }
 
         private static void EnsureAdvancedTeamFightDefaults(BrawlerAIProfile profile)

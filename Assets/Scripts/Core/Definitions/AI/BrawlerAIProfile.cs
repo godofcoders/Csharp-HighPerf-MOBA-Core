@@ -173,6 +173,20 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Hold/reposition score added when an enemy has a ready or nearly ready super.")]
         public float EnemySuperRespectBonus = 14f;
 
+        [Header("Ability Threat Prediction")]
+        [Tooltip("Scales predictive respect for enemy supers, area denial, and incoming firing windows.")]
+        public float AbilityThreatPredictionWeight = 1f;
+        [Tooltip("Approach pressure removed when an enemy has a ready or nearly ready super in a relevant range.")]
+        public float PredictedSuperThreatPenalty = 22f;
+        [Tooltip("Safety score added when a controller, thrower, or area-super threat can punish the current lane.")]
+        public float PredictedAreaThreatRepositionBonus = 18f;
+        [Tooltip("Evade score added before danger memory has already crossed the emergency threshold.")]
+        public float PredictedThreatEvadeBonus = 14f;
+        [Tooltip("Hold-range score added when respecting a threat while still keeping pressure.")]
+        public float PredictedThreatHoldBonus = 12f;
+        [Tooltip("Distance around a target where threat prediction is allowed to shape actions.")]
+        public float PredictedThreatRespectRange = 7f;
+
         [Header("Close Range Role Strategy")]
         [Tooltip("Short-range roles can freely chase until this multiple of their own attack range. Past this, they need a finisher, objective, super, or team-collapse reason.")]
         public float CloseRangeCatchDistanceMultiplier = 2.35f;
@@ -615,6 +629,12 @@ namespace MOBA.Core.Simulation.AI
                     PreferredObjective = AIObjectiveType.MidControl;
                     ObjectiveWeight = 1f;
                     MacroActionBiasWeight = 0.95f;
+                    AbilityThreatPredictionWeight = 1.20f;
+                    PredictedSuperThreatPenalty = 26f;
+                    PredictedAreaThreatRepositionBonus = 20f;
+                    PredictedThreatEvadeBonus = 16f;
+                    PredictedThreatHoldBonus = 15f;
+                    PredictedThreatRespectRange = 8.25f;
 
                     FocusFireWeight = 25f;
                     RegroupWeight = 1.2f;
@@ -669,6 +689,12 @@ namespace MOBA.Core.Simulation.AI
                     PreferredObjective = AIObjectiveType.HotZone;
                     ObjectiveWeight = 1.25f;
                     MacroActionBiasWeight = 1.10f;
+                    AbilityThreatPredictionWeight = 0.75f;
+                    PredictedSuperThreatPenalty = 16f;
+                    PredictedAreaThreatRepositionBonus = 13f;
+                    PredictedThreatEvadeBonus = 10f;
+                    PredictedThreatHoldBonus = 7f;
+                    PredictedThreatRespectRange = 5.5f;
 
                     FocusFireWeight = 18f;
                     RegroupWeight = 0.8f;
@@ -723,6 +749,12 @@ namespace MOBA.Core.Simulation.AI
                     PreferredObjective = AIObjectiveType.LanePressure;
                     ObjectiveWeight = 0.85f;
                     MacroActionBiasWeight = 0.90f;
+                    AbilityThreatPredictionWeight = 0.90f;
+                    PredictedSuperThreatPenalty = 18f;
+                    PredictedAreaThreatRepositionBonus = 14f;
+                    PredictedThreatEvadeBonus = 13f;
+                    PredictedThreatHoldBonus = 8f;
+                    PredictedThreatRespectRange = 6f;
 
                     FocusFireWeight = 25f;
                     RegroupWeight = 0.7f;
@@ -777,6 +809,12 @@ namespace MOBA.Core.Simulation.AI
                     PreferredObjective = AIObjectiveType.GemMine;
                     ObjectiveWeight = 1.0f;
                     MacroActionBiasWeight = 1.10f;
+                    AbilityThreatPredictionWeight = 1.15f;
+                    PredictedSuperThreatPenalty = 24f;
+                    PredictedAreaThreatRepositionBonus = 20f;
+                    PredictedThreatEvadeBonus = 16f;
+                    PredictedThreatHoldBonus = 14f;
+                    PredictedThreatRespectRange = 8f;
 
                     FocusFireWeight = 18f;
                     RegroupWeight = 1.15f;
@@ -833,6 +871,12 @@ namespace MOBA.Core.Simulation.AI
                     PreferredObjective = AIObjectiveType.HotZone;
                     ObjectiveWeight = 1.2f;
                     MacroActionBiasWeight = 1.15f;
+                    AbilityThreatPredictionWeight = 1.10f;
+                    PredictedSuperThreatPenalty = 22f;
+                    PredictedAreaThreatRepositionBonus = 22f;
+                    PredictedThreatEvadeBonus = 14f;
+                    PredictedThreatHoldBonus = 15f;
+                    PredictedThreatRespectRange = 7.5f;
 
                     FocusFireWeight = 24f;
                     RegroupWeight = 0.9f;
@@ -892,6 +936,12 @@ namespace MOBA.Core.Simulation.AI
                     PreferredObjective = AIObjectiveType.HotZone;
                     ObjectiveWeight = 1.15f;
                     MacroActionBiasWeight = 1.05f;
+                    AbilityThreatPredictionWeight = 1.20f;
+                    PredictedSuperThreatPenalty = 24f;
+                    PredictedAreaThreatRepositionBonus = 24f;
+                    PredictedThreatEvadeBonus = 16f;
+                    PredictedThreatHoldBonus = 16f;
+                    PredictedThreatRespectRange = 8f;
 
                     ClusterTargetBonus = 16f;
 
@@ -949,6 +999,12 @@ namespace MOBA.Core.Simulation.AI
                     PreferredObjective = AIObjectiveType.MidControl;
                     ObjectiveWeight = 1.0f;
                     MacroActionBiasWeight = 1.0f;
+                    AbilityThreatPredictionWeight = 1f;
+                    PredictedSuperThreatPenalty = 22f;
+                    PredictedAreaThreatRepositionBonus = 18f;
+                    PredictedThreatEvadeBonus = 14f;
+                    PredictedThreatHoldBonus = 12f;
+                    PredictedThreatRespectRange = 7f;
 
                     FocusFireWeight = 22f;
                     RegroupWeight = 1.0f;

@@ -272,6 +272,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastModeClutchDebug : "Clutch=None";
         public string SpacingDebug =>
             _utilityScorer != null ? _utilityScorer.LastSpacingDebug : "Spacing=None";
+        public string AbilityThreatDebug =>
+            _utilityScorer != null ? _utilityScorer.LastAbilityThreatDebug : "ThreatPred=None";
         public string EngagementRiskDebug =>
             _utilityScorer != null ? _utilityScorer.LastEngagementRiskDebug : "EngageRisk=None";
         public string PressureRotationDebug =>
@@ -620,6 +622,7 @@ _actionExecutor != null
                 _debugSnapshot.CoverPeekDebug = CoverPeekDebug;
                 _debugSnapshot.ModeClutchDebug = ModeClutchDebug;
                 _debugSnapshot.SpacingDebug = SpacingDebug;
+                _debugSnapshot.AbilityThreatDebug = AbilityThreatDebug;
                 _debugSnapshot.EngagementRiskDebug = EngagementRiskDebug;
                 _debugSnapshot.PressureRotationDebug = PressureRotationDebug;
             }
@@ -639,6 +642,7 @@ _actionExecutor != null
                 _debugSnapshot.CoverPeekDebug = "CoverPeek=None";
                 _debugSnapshot.ModeClutchDebug = "Clutch=None";
                 _debugSnapshot.SpacingDebug = "Spacing=None";
+                _debugSnapshot.AbilityThreatDebug = "ThreatPred=None";
                 _debugSnapshot.EngagementRiskDebug = "EngageRisk=None";
                 _debugSnapshot.PressureRotationDebug = "PressureRot=None";
             }
@@ -770,6 +774,7 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.CoverPeekDebug = CoverPeekDebug;
             _debugSnapshot.ModeClutchDebug = ModeClutchDebug;
             _debugSnapshot.SpacingDebug = SpacingDebug;
+            _debugSnapshot.AbilityThreatDebug = AbilityThreatDebug;
             _debugSnapshot.EngagementRiskDebug = EngagementRiskDebug;
             _debugSnapshot.PressureRotationDebug = PressureRotationDebug;
 
@@ -1998,6 +2003,7 @@ $"Map={LastMapRouteDebug}";
                 $"{CoverPeekDebug}\n" +
                 $"{ModeClutchDebug}\n" +
                 $"{SpacingDebug}\n" +
+                $"{AbilityThreatDebug}\n" +
                 $"{EngagementRiskDebug}\n" +
                 $"{PressureRotationDebug}\n" +
                 $"{GemPickupDebug}";
@@ -2351,6 +2357,7 @@ $"Map={LastMapRouteDebug}";
                 $"{SceneRich("Cover", SceneMoveColor)} {CoverPeekDebug}\n" +
                 $"{SceneRich("Clutch", SceneObjectiveColor)} {ModeClutchDebug}\n" +
                 $"{SceneRich("Space", SceneMoveColor)} {SpacingDebug}\n" +
+                $"{SceneRich("Threat", SceneBlockedColor)} {AbilityThreatDebug}\n" +
                 $"{SceneRich("Target", SceneTargetColor)} {targetName} focus={CurrentTargetFocusCount}/{CurrentTargetAllyFocusCount} penalty={CurrentTargetOverFocusPenalty:0.0}\n" +
                 $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} reason={LastTacticalMoveReason}\n" +
                 $"{SceneRich(navState, ResolveNavigationColor())} | {LastTacticalStopDebug}\n" +
@@ -2389,6 +2396,7 @@ $"Map={LastMapRouteDebug}";
                 $"Obj={(_profile.ObjectiveWeight * _profile.MacroActionBiasWeight):0.00} " +
                 $"Team={_profile.TeamRoleCoordinationWeight:0.00} " +
                 $"Res={_profile.OpponentResourceAwarenessWeight:0.00} " +
+                $"Threat={_profile.AbilityThreatPredictionWeight:0.00} " +
                 $"Fight={_profile.TeamFightCoordinationWeight:0.00} " +
                 $"Role={_profile.RoleMacroBehaviorWeight:0.00} " +
                 $"Match={_profile.RoleMatchupAwarenessWeight:0.00} " +

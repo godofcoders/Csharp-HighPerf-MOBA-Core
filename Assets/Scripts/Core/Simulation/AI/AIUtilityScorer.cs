@@ -50,6 +50,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastCoverPeekDebug = "CoverPeek=None";
         private string _lastModeClutchDebug = "Clutch=None";
         private string _lastSpacingDebug = "Spacing=None";
+        private string _lastAbilityThreatDebug = "ThreatPred=None";
         private string _lastEngagementRiskDebug = "EngageRisk=None";
         private string _lastPressureRotationDebug = "PressureRot=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
@@ -80,6 +81,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastCoverPeekDebug => _lastCoverPeekDebug;
         public string LastModeClutchDebug => _lastModeClutchDebug;
         public string LastSpacingDebug => _lastSpacingDebug;
+        public string LastAbilityThreatDebug => _lastAbilityThreatDebug;
         public string LastEngagementRiskDebug => _lastEngagementRiskDebug;
         public string LastPressureRotationDebug => _lastPressureRotationDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
@@ -145,6 +147,7 @@ namespace MOBA.Core.Simulation.AI
             ApplyWinConditionPressure(targetInfo, macroState, results);
             ApplyModeClutchLogic(targetInfo, macroState, results);
             ApplyOpponentResourceAwareness(targetInfo, currentTick, results);
+            ApplyAbilityThreatPrediction(targetInfo, currentTick, results);
             ApplyAdvancedTeamFightCoordination(
                 targetInfo,
                 currentTick,
@@ -636,6 +639,286 @@ namespace MOBA.Core.Simulation.AI
                 default:
                     return false;
             }
+        }
+
+        private void ApplyAbilityThreatPrediction(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            List<AIActionScore> results)
+        {
+            _lastAbilityThreatDebug = "ThreatPred=None";
+
+            if (_profile == null ||
+                results == null ||
+                results.Count == 0 ||
+                targetInfo == null ||
+                !targetInfo.HasLiveTarget ||
+                !(targetInfo.Target is BrawlerController targetBrawler) ||
+                targetBrawler.State == null ||
+                _self == null ||
+                _self.State == null)
+            {
+                return;
+            }
+
+            float weight = Mathf.Max(0f, _profile.AbilityThreatPredictionWeight);
+            if (weight <= 0.01f)
+            {
+                _lastAbilityThreatDebug = "ThreatPred=Off";
+                return;
+            }
+
+            AIAbilityThreatContext context = BuildAbilityThreatContext(
+                targetBrawler,
+                currentTick);
+            if (!context.HasThreatSignal)
+                return;
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculateAbilityThreatDelta(
+                    actionScore.ActionType,
+                    context);
+                delta *= weight;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreateAbilityThreatScore(actionScore.ActionType, context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastAbilityThreatDebug =
+                $"ThreatPred=super:{context.SuperThreatPressure:0.00} " +
+                $"area:{context.AreaThreatPressure:0.00} fire:{context.FiringWindowPressure:0.00} " +
+                $"danger:{context.PendingDangerPressure:0.00} total:{context.TotalThreatPressure:0.00} " +
+                $"cover:{context.HasCoverBetween} high:{context.HighThreat} punish:{context.CanPunish} " +
+                $"type:{context.MainAreaThreat}/{context.SuperAreaThreat}/{context.DirectFireThreat} " +
+                $"range:{context.OwnRange:0.0}/{context.TargetRange:0.0} " +
+                $"dist:{context.TargetDistance:0.0} w:{weight:0.00}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastAbilityThreatDebug += $" Delta={deltaDebug}";
+        }
+
+        private AIAbilityThreatContext BuildAbilityThreatContext(
+            BrawlerController target,
+            uint currentTick)
+        {
+            AIOpponentResourceSnapshot resources =
+                AIOpponentResourceUtility.Evaluate(target, currentTick);
+            AbilityDefinition mainAttack =
+                target.Definition != null ? target.Definition.MainAttack : null;
+            AbilityDefinition superAbility =
+                target.Definition != null ? target.Definition.SuperAbility : null;
+            BrawlerArchetype targetArchetype =
+                target.Definition != null ? target.Definition.Archetype : BrawlerArchetype.Fighter;
+
+            float targetDistance = Vector3.Distance(_self.Position, target.Position);
+            float ownRange = Mathf.Max(1f, GetAbilityMaxRange());
+            float targetRange = Mathf.Max(1f, GetTargetAbilityMaxRange(target));
+            float respectRange = Mathf.Max(
+                _profile.PredictedThreatRespectRange,
+                targetRange + _profile.AttackRangeBuffer);
+            float distancePressure = 1f - Mathf.Clamp01(targetDistance / respectRange);
+            bool inThreatRange = targetDistance <= respectRange;
+            bool hasCoverBetween =
+                SimulationClock.Pathfinder != null &&
+                AIMapNavigationUtility.HasCoverBetween(
+                    SimulationClock.Pathfinder,
+                    _self.Position,
+                    target.Position);
+            bool targetAreaRole =
+                targetArchetype == BrawlerArchetype.Controller ||
+                targetArchetype == BrawlerArchetype.Artillery;
+            bool mainAreaThreat = IsAreaThreatAbility(mainAttack) || targetAreaRole;
+            bool superAreaThreat = IsAreaThreatAbility(superAbility);
+            bool directFireThreat =
+                mainAttack != null &&
+                mainAttack.DeliveryType == AbilityDeliveryType.Projectile &&
+                !hasCoverBetween;
+
+            float superThreat = 0f;
+            if (resources.SuperReady && resources.CanUseSuper)
+                superThreat = 0.72f + distancePressure * 0.45f;
+            else if (resources.SuperChargePercent >= 0.75f)
+                superThreat = (resources.SuperChargePercent - 0.65f) * 0.95f;
+
+            if (superAreaThreat && superThreat > 0f)
+                superThreat *= 1.15f;
+
+            float areaThreat = 0f;
+            if (mainAreaThreat && inThreatRange)
+                areaThreat += 0.28f + distancePressure * 0.45f;
+
+            if (superAreaThreat && superThreat > 0f)
+                areaThreat += superThreat * 0.55f;
+
+            float firingThreat = 0f;
+            if (resources.CanUseMainAttack &&
+                resources.AvailableAmmo > 0 &&
+                targetDistance <= targetRange + _profile.AttackRangeBuffer)
+            {
+                firingThreat =
+                    (directFireThreat ? 0.35f : 0.18f) +
+                    distancePressure * 0.30f;
+            }
+
+            float pendingDanger = 0f;
+            if (_dangerMemory != null && _dangerMemory.HasDanger)
+            {
+                float threshold = Mathf.Max(0.01f, _profile.DangerEvadePressureThreshold);
+                pendingDanger = Mathf.Clamp01(_dangerMemory.Pressure / threshold) * 0.45f;
+            }
+
+            float totalThreat = Mathf.Clamp01(
+                superThreat * 0.55f +
+                areaThreat * 0.35f +
+                firingThreat * 0.25f +
+                pendingDanger);
+            bool targetLow =
+                target.State.CurrentHealth /
+                Mathf.Max(1f, target.State.MaxHealth.Value) <=
+                Mathf.Max(0.22f, _profile.FinisherHealthThreshold);
+            bool selfCanCounter =
+                _self.State.SuperCharge != null &&
+                _self.State.SuperCharge.IsReady &&
+                targetDistance <= ownRange + _profile.AttackRangeBuffer;
+
+            return new AIAbilityThreatContext
+            {
+                HasThreatSignal =
+                    totalThreat >= 0.18f &&
+                    (inThreatRange || pendingDanger > 0f),
+                HighThreat =
+                    superThreat >= 0.55f ||
+                    areaThreat >= 0.60f ||
+                    pendingDanger >= 0.35f,
+                CanPunish = targetLow || selfCanCounter,
+                HasCoverBetween = hasCoverBetween,
+                MainAreaThreat = mainAreaThreat,
+                SuperAreaThreat = superAreaThreat,
+                DirectFireThreat = directFireThreat,
+                TargetDistance = targetDistance,
+                TargetRange = targetRange,
+                OwnRange = ownRange,
+                SuperThreatPressure = Mathf.Clamp01(superThreat),
+                AreaThreatPressure = Mathf.Clamp01(areaThreat),
+                FiringWindowPressure = Mathf.Clamp01(firingThreat),
+                PendingDangerPressure = Mathf.Clamp01(pendingDanger),
+                TotalThreatPressure = totalThreat
+            };
+        }
+
+        private float CalculateAbilityThreatDelta(
+            AIActionType actionType,
+            AIAbilityThreatContext context)
+        {
+            float total = Mathf.Clamp01(context.TotalThreatPressure);
+            float superPenalty =
+                _profile.PredictedSuperThreatPenalty * context.SuperThreatPressure;
+            float areaBonus =
+                _profile.PredictedAreaThreatRepositionBonus *
+                Mathf.Max(context.AreaThreatPressure, context.PendingDangerPressure * 0.75f);
+            float evadeBonus = _profile.PredictedThreatEvadeBonus * total;
+            float holdBonus = _profile.PredictedThreatHoldBonus * total;
+            float punishFactor = context.CanPunish ? 0.45f : 1f;
+
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return -(superPenalty * 0.85f + areaBonus * 0.55f) * punishFactor;
+
+                case AIActionType.Reposition:
+                    return areaBonus +
+                           superPenalty * 0.35f +
+                           (context.HasCoverBetween ? 0f : evadeBonus * 0.45f);
+
+                case AIActionType.HoldRange:
+                    return holdBonus +
+                           (context.HasCoverBetween ? holdBonus * 0.35f : 0f) -
+                           (context.HighThreat && !context.CanPunish ? superPenalty * 0.12f : 0f);
+
+                case AIActionType.Evade:
+                    return context.HighThreat
+                        ? evadeBonus * 1.15f
+                        : evadeBonus * 0.45f;
+
+                case AIActionType.Retreat:
+                    return context.HighThreat && !context.CanPunish
+                        ? evadeBonus * 0.45f
+                        : 0f;
+
+                case AIActionType.UseSuper:
+                    return context.CanPunish
+                        ? (superPenalty + areaBonus) * 0.18f
+                        : 0f;
+
+                case AIActionType.Objective:
+                case AIActionType.Search:
+                    return context.HighThreat && !context.HasCoverBetween
+                        ? -areaBonus * 0.25f
+                        : 0f;
+
+                default:
+                    return 0f;
+            }
+        }
+
+        private static bool CanCreateAbilityThreatScore(
+            AIActionType actionType,
+            AIAbilityThreatContext context)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Reposition:
+                case AIActionType.HoldRange:
+                    return true;
+
+                case AIActionType.Evade:
+                case AIActionType.Retreat:
+                    return context.HighThreat;
+
+                case AIActionType.UseSuper:
+                    return context.CanPunish;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsAreaThreatAbility(AbilityDefinition ability)
+        {
+            if (ability == null)
+                return false;
+
+            return ability.DeliveryType == AbilityDeliveryType.Area ||
+                   ability.TargetingType == AbilityTargetingType.Area ||
+                   ability.Intent == AbilityIntentType.AreaControl ||
+                   ability.HasTag(AbilityTag.AoE) ||
+                   ability is AoEAbilityDefinition ||
+                   ability is MinefieldAbilityDefinition ||
+                   ability is LeapAbilityDefinition;
         }
 
         private void ApplyAdvancedTeamFightCoordination(
@@ -4590,6 +4873,25 @@ namespace MOBA.Core.Simulation.AI
             public int SameTargetAllies;
             public float ClumpPressure;
             public float TargetHealthRatio;
+        }
+
+        private struct AIAbilityThreatContext
+        {
+            public bool HasThreatSignal;
+            public bool HighThreat;
+            public bool CanPunish;
+            public bool HasCoverBetween;
+            public bool MainAreaThreat;
+            public bool SuperAreaThreat;
+            public bool DirectFireThreat;
+            public float TargetDistance;
+            public float TargetRange;
+            public float OwnRange;
+            public float SuperThreatPressure;
+            public float AreaThreatPressure;
+            public float FiringWindowPressure;
+            public float PendingDangerPressure;
+            public float TotalThreatPressure;
         }
 
         private CloseRangeMatchupEvaluation EvaluateCloseRangeMatchup(

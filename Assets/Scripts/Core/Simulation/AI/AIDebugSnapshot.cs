@@ -45,6 +45,7 @@ namespace MOBA.Core.Simulation.AI
         public string CoverPeekDebug;
         public string ModeClutchDebug;
         public string SpacingDebug;
+        public string AbilityThreatDebug;
         public string EngagementRiskDebug;
         public string PressureRotationDebug;
         public string ReactiveDebug;

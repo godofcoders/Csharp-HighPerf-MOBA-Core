@@ -57,6 +57,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Cover Peek: {snapshot.CoverPeekDebug}");
             GUILayout.Label($"Mode Clutch: {snapshot.ModeClutchDebug}");
             GUILayout.Label($"Spacing: {snapshot.SpacingDebug}");
+            GUILayout.Label($"Ability Threat: {snapshot.AbilityThreatDebug}");
             GUILayout.Label($"Macro: {snapshot.MacroDebug}");
             GUILayout.Label($"Playbook: {snapshot.PlaybookDebug}");
             GUILayout.Label($"Chase: {snapshot.ChaseDebug}");
@@ -148,6 +149,7 @@ namespace MOBA.Core.Simulation.AI
                     $"CoverPeek={snapshot.CoverPeekDebug} | " +
                     $"ModeClutch={snapshot.ModeClutchDebug} | " +
                     $"Spacing={snapshot.SpacingDebug} | " +
+                    $"AbilityThreat={snapshot.AbilityThreatDebug} | " +
                     $"Macro={snapshot.MacroDebug} | " +
                     $"Playbook={snapshot.PlaybookDebug} | " +
                     $"Chase={snapshot.ChaseDebug} | " +
