@@ -48,6 +48,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastRoleMacroDebug = "RoleMacro=None";
         private string _lastRoleMatchupDebug = "Matchup=None";
         private string _lastCoverPeekDebug = "CoverPeek=None";
+        private string _lastModeClutchDebug = "Clutch=None";
         private string _lastEngagementRiskDebug = "EngageRisk=None";
         private string _lastPressureRotationDebug = "PressureRot=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
@@ -76,6 +77,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastRoleMacroDebug => _lastRoleMacroDebug;
         public string LastRoleMatchupDebug => _lastRoleMatchupDebug;
         public string LastCoverPeekDebug => _lastCoverPeekDebug;
+        public string LastModeClutchDebug => _lastModeClutchDebug;
         public string LastEngagementRiskDebug => _lastEngagementRiskDebug;
         public string LastPressureRotationDebug => _lastPressureRotationDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
@@ -139,6 +141,7 @@ namespace MOBA.Core.Simulation.AI
                 playbookState,
                 results);
             ApplyWinConditionPressure(targetInfo, macroState, results);
+            ApplyModeClutchLogic(targetInfo, macroState, results);
             ApplyOpponentResourceAwareness(targetInfo, currentTick, results);
             ApplyAdvancedTeamFightCoordination(
                 targetInfo,
@@ -2378,6 +2381,288 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
+        private void ApplyModeClutchLogic(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState,
+            List<AIActionScore> results)
+        {
+            _lastModeClutchDebug = "Clutch=None";
+
+            if (_profile == null ||
+                results == null ||
+                results.Count == 0)
+            {
+                return;
+            }
+
+            float weight = Mathf.Max(0f, _profile.ModeClutchAwarenessWeight);
+            if (weight <= 0.01f)
+            {
+                _lastModeClutchDebug = "Clutch=Off";
+                return;
+            }
+
+            AIModeClutchContext context = BuildModeClutchContext(
+                targetInfo,
+                macroState);
+
+            if (!context.HasClutchSignal)
+                return;
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculateModeClutchDelta(
+                    actionScore.ActionType,
+                    context);
+                delta *= weight;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreateModeClutchScore(actionScore.ActionType, context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastModeClutchDebug =
+                $"Clutch=mode:{context.Mode} lead:{context.ProtectLead} " +
+                $"comeback:{context.ComebackPressure} swing:{context.ObjectiveSwing} " +
+                $"final:{context.FinalPressure} selfValue:{context.SelfObjectiveValue} " +
+                $"targetValue:{context.TargetObjectiveValue} w:{weight:0.00}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastModeClutchDebug += $" Delta={deltaDebug}";
+        }
+
+        private AIModeClutchContext BuildModeClutchContext(
+            AITargetInfo targetInfo,
+            AIGameModeMacroState macroState)
+        {
+            int selfValue = _self != null && _self.State != null
+                ? _self.State.CarriedGemCount
+                : 0;
+            int targetValue = 0;
+            float targetHealthRatio = 1f;
+            BrawlerController targetBrawler = null;
+            bool hasTarget = false;
+
+            if (targetInfo != null &&
+                targetInfo.HasLiveTarget &&
+                targetInfo.Target is BrawlerController candidateTarget &&
+                candidateTarget.State != null)
+            {
+                targetBrawler = candidateTarget;
+                hasTarget = true;
+            }
+
+            if (hasTarget)
+            {
+                targetValue = targetBrawler.State.CarriedGemCount;
+                targetHealthRatio = Mathf.Clamp01(
+                    targetBrawler.State.CurrentHealth /
+                    Mathf.Max(1f, targetBrawler.State.MaxHealth.Value));
+            }
+
+            bool finalPressure =
+                macroState.Phase == AIGameModeObjectivePhase.FinalPressure ||
+                (macroState.MatchTimeRemainingSeconds > 0f &&
+                 macroState.MatchTimeRemainingSeconds <= _profile.ClutchFinalPressureSeconds);
+            bool protectLead =
+                macroState.OwnTeamHasCountdown ||
+                (macroState.IsLeading &&
+                 (finalPressure || IsOneScoreFromWin(macroState.OwnScore, macroState.ScoreToWin)));
+            bool comebackPressure =
+                macroState.EnemyTeamHasCountdown ||
+                (macroState.IsBehind &&
+                 (finalPressure || IsOneScoreFromWin(macroState.EnemyScore, macroState.ScoreToWin)));
+            bool objectiveSwing =
+                macroState.Call == AIGameModeMacroCall.Push ||
+                macroState.Phase == AIGameModeObjectivePhase.Countdown ||
+                (hasTarget &&
+                 (targetValue >= 3 ||
+                  targetHealthRatio <= Mathf.Max(0.25f, _profile.FinisherHealthThreshold)));
+
+            switch (macroState.Mode)
+            {
+                case GameModeId.Knockout:
+                    protectLead |= macroState.IsLeading && macroState.Call == AIGameModeMacroCall.Hold;
+                    comebackPressure |= macroState.IsBehind || macroState.Call == AIGameModeMacroCall.Push;
+                    objectiveSwing |= hasTarget && targetHealthRatio <= 0.45f;
+                    break;
+
+                case GameModeId.BrawlBall:
+                    protectLead |= IsOneScoreFromWin(macroState.EnemyScore, macroState.ScoreToWin) &&
+                                   macroState.Call == AIGameModeMacroCall.Reset;
+                    comebackPressure |= IsOneScoreFromWin(macroState.OwnScore, macroState.ScoreToWin) ||
+                                        macroState.Call == AIGameModeMacroCall.Push;
+                    objectiveSwing |= comebackPressure;
+                    break;
+
+                case GameModeId.SoloShowdown:
+                    protectLead |= finalPressure ||
+                                   (_self != null &&
+                                    _self.State != null &&
+                                    _self.State.CurrentHealth <= _self.State.MaxHealth.Value * 0.45f);
+                    comebackPressure |= hasTarget &&
+                                        targetHealthRatio <= Mathf.Max(0.30f, _profile.FinisherHealthThreshold);
+                    objectiveSwing |= comebackPressure;
+                    break;
+            }
+
+            return new AIModeClutchContext
+            {
+                HasClutchSignal =
+                    protectLead ||
+                    comebackPressure ||
+                    objectiveSwing ||
+                    finalPressure,
+                Mode = macroState.Mode,
+                ProtectLead = protectLead,
+                ComebackPressure = comebackPressure,
+                ObjectiveSwing = objectiveSwing,
+                FinalPressure = finalPressure,
+                HasTarget = hasTarget,
+                SelfObjectiveValue = selfValue,
+                TargetObjectiveValue = targetValue
+            };
+        }
+
+        private float CalculateModeClutchDelta(
+            AIActionType actionType,
+            AIModeClutchContext context)
+        {
+            float delta = 0f;
+
+            if (context.ProtectLead)
+            {
+                float safety = Mathf.Max(0f, _profile.ClutchLeadSafetyBonus);
+                switch (actionType)
+                {
+                    case AIActionType.HoldRange:
+                    case AIActionType.Reposition:
+                        delta += safety;
+                        break;
+                    case AIActionType.Regroup:
+                    case AIActionType.Retreat:
+                    case AIActionType.Peel:
+                        delta += safety * (context.SelfObjectiveValue > 0 ? 0.95f : 0.55f);
+                        break;
+                    case AIActionType.Approach:
+                        delta -= safety * (context.SelfObjectiveValue > 0 ? 0.90f : 0.45f);
+                        break;
+                    case AIActionType.Search:
+                    case AIActionType.Objective:
+                        if (context.SelfObjectiveValue > 0)
+                            delta -= safety * 0.45f;
+                        break;
+                }
+            }
+
+            if (context.ComebackPressure)
+            {
+                float comeback = Mathf.Max(0f, _profile.ClutchComebackPressureBonus);
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                    case AIActionType.UseSuper:
+                        delta += comeback;
+                        break;
+                    case AIActionType.Objective:
+                    case AIActionType.Search:
+                        delta += comeback * 0.75f;
+                        break;
+                    case AIActionType.Retreat:
+                    case AIActionType.Regroup:
+                        delta -= comeback * 0.45f;
+                        break;
+                }
+            }
+
+            if (context.ObjectiveSwing)
+            {
+                float swing = Mathf.Max(0f, _profile.ClutchObjectiveSwingBonus);
+                switch (actionType)
+                {
+                    case AIActionType.Objective:
+                    case AIActionType.Search:
+                        delta += swing;
+                        break;
+                    case AIActionType.Approach:
+                        delta += context.HasTarget ? swing * 0.70f : swing * 0.25f;
+                        break;
+                    case AIActionType.UseSuper:
+                        delta += context.HasTarget ? swing * 0.55f : 0f;
+                        break;
+                    case AIActionType.HoldRange:
+                        delta += swing * 0.35f;
+                        break;
+                }
+            }
+
+            if (context.FinalPressure && !context.ProtectLead && !context.ComebackPressure)
+            {
+                float finalBonus = Mathf.Max(0f, _profile.ClutchObjectiveSwingBonus) * 0.45f;
+                if (actionType == AIActionType.Objective ||
+                    actionType == AIActionType.Search ||
+                    actionType == AIActionType.HoldRange)
+                {
+                    delta += finalBonus;
+                }
+            }
+
+            return delta;
+        }
+
+        private static bool CanCreateModeClutchScore(
+            AIActionType actionType,
+            AIModeClutchContext context)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Objective:
+                case AIActionType.Search:
+                    return context.ObjectiveSwing ||
+                           context.ComebackPressure ||
+                           context.FinalPressure;
+
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                    return context.ProtectLead || context.FinalPressure;
+
+                case AIActionType.Regroup:
+                case AIActionType.Retreat:
+                case AIActionType.Peel:
+                    return context.ProtectLead;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsOneScoreFromWin(int score, int scoreToWin)
+        {
+            return scoreToWin > 0 && score >= Mathf.Max(0, scoreToWin - 1);
+        }
+
         private float CalculatePlaybookDelta(
             AIActionType actionType,
             AITeamPlaybookState playbookState)
@@ -4073,6 +4358,19 @@ namespace MOBA.Core.Simulation.AI
             public bool ExposedDuel;
             public bool ThrowerCoverWindow;
             public float TargetDistance;
+        }
+
+        private struct AIModeClutchContext
+        {
+            public bool HasClutchSignal;
+            public bool ProtectLead;
+            public bool ComebackPressure;
+            public bool ObjectiveSwing;
+            public bool FinalPressure;
+            public bool HasTarget;
+            public GameModeId Mode;
+            public int SelfObjectiveValue;
+            public int TargetObjectiveValue;
         }
 
         private CloseRangeMatchupEvaluation EvaluateCloseRangeMatchup(

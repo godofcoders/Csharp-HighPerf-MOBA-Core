@@ -268,6 +268,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastRoleMatchupDebug : "Matchup=None";
         public string CoverPeekDebug =>
             _utilityScorer != null ? _utilityScorer.LastCoverPeekDebug : "CoverPeek=None";
+        public string ModeClutchDebug =>
+            _utilityScorer != null ? _utilityScorer.LastModeClutchDebug : "Clutch=None";
         public string EngagementRiskDebug =>
             _utilityScorer != null ? _utilityScorer.LastEngagementRiskDebug : "EngageRisk=None";
         public string PressureRotationDebug =>
@@ -614,6 +616,7 @@ _actionExecutor != null
                 _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
                 _debugSnapshot.RoleMatchupDebug = RoleMatchupDebug;
                 _debugSnapshot.CoverPeekDebug = CoverPeekDebug;
+                _debugSnapshot.ModeClutchDebug = ModeClutchDebug;
                 _debugSnapshot.EngagementRiskDebug = EngagementRiskDebug;
                 _debugSnapshot.PressureRotationDebug = PressureRotationDebug;
             }
@@ -631,6 +634,7 @@ _actionExecutor != null
                 _debugSnapshot.RoleMacroDebug = "RoleMacro=None";
                 _debugSnapshot.RoleMatchupDebug = "Matchup=None";
                 _debugSnapshot.CoverPeekDebug = "CoverPeek=None";
+                _debugSnapshot.ModeClutchDebug = "Clutch=None";
                 _debugSnapshot.EngagementRiskDebug = "EngageRisk=None";
                 _debugSnapshot.PressureRotationDebug = "PressureRot=None";
             }
@@ -760,6 +764,7 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
             _debugSnapshot.RoleMatchupDebug = RoleMatchupDebug;
             _debugSnapshot.CoverPeekDebug = CoverPeekDebug;
+            _debugSnapshot.ModeClutchDebug = ModeClutchDebug;
             _debugSnapshot.EngagementRiskDebug = EngagementRiskDebug;
             _debugSnapshot.PressureRotationDebug = PressureRotationDebug;
 
@@ -1986,6 +1991,7 @@ $"Map={LastMapRouteDebug}";
                 $"{RoleMacroDebug}\n" +
                 $"{RoleMatchupDebug}\n" +
                 $"{CoverPeekDebug}\n" +
+                $"{ModeClutchDebug}\n" +
                 $"{EngagementRiskDebug}\n" +
                 $"{PressureRotationDebug}\n" +
                 $"{GemPickupDebug}";
@@ -2337,6 +2343,7 @@ $"Map={LastMapRouteDebug}";
                 $"{SceneRich("Conf", SceneLabelMutedColor)} {DecisionConfidenceDebug}\n" +
                 $"{SceneRich("Match", SceneTargetColor)} {RoleMatchupDebug}\n" +
                 $"{SceneRich("Cover", SceneMoveColor)} {CoverPeekDebug}\n" +
+                $"{SceneRich("Clutch", SceneObjectiveColor)} {ModeClutchDebug}\n" +
                 $"{SceneRich("Target", SceneTargetColor)} {targetName} focus={CurrentTargetFocusCount}/{CurrentTargetAllyFocusCount} penalty={CurrentTargetOverFocusPenalty:0.0}\n" +
                 $"{SceneRich("Move", SceneMoveColor)} {LastTacticalMovementIntent} reason={LastTacticalMoveReason}\n" +
                 $"{SceneRich(navState, ResolveNavigationColor())} | {LastTacticalStopDebug}\n" +
@@ -2379,6 +2386,7 @@ $"Map={LastMapRouteDebug}";
                 $"Role={_profile.RoleMacroBehaviorWeight:0.00} " +
                 $"Match={_profile.RoleMatchupAwarenessWeight:0.00} " +
                 $"Cover={_profile.CoverPeekPlannerWeight:0.00} " +
+                $"Clutch={_profile.ModeClutchAwarenessWeight:0.00} " +
                 $"Risk={_profile.EngagementRiskAwarenessWeight:0.00} " +
                 $"Rot={_profile.PressureRotationAwarenessWeight:0.00} " +
                 $"Conf={_profile.DecisionAmbiguityScoreWindow:0.0}/{_profile.DecisionAmbiguitySwitchPenalty:0.0}";

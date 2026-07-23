@@ -208,6 +208,16 @@ namespace MOBA.Core.Simulation.AI
         [Header("Game Mode Macro")]
         [Tooltip("Scales score deltas from mode-level push/hold/reset macro calls.")]
         public float MacroActionBiasWeight = 1f;
+        [Tooltip("Scales late-game and close-to-win clutch decisions across game modes.")]
+        public float ModeClutchAwarenessWeight = 1f;
+        [Tooltip("Seconds remaining where neutral modes begin treating fights as final pressure.")]
+        public float ClutchFinalPressureSeconds = 25f;
+        [Tooltip("Score added to aggressive/objective actions when the team must swing the match state.")]
+        public float ClutchComebackPressureBonus = 20f;
+        [Tooltip("Score added to safe actions when the team is protecting a lead, countdown, or match point.")]
+        public float ClutchLeadSafetyBonus = 18f;
+        [Tooltip("Score added to objective/fight actions that can immediately secure or deny a win condition.")]
+        public float ClutchObjectiveSwingBonus = 22f;
 
         [Header("Team Tactics")]
         public float FocusFireWeight = 20f;
@@ -1089,6 +1099,11 @@ namespace MOBA.Core.Simulation.AI
             BlockedFireLaneRepositionBonus = 24f;
             ExposedDuelRepositionBonus = 16f;
             CoverPeekApproachPenalty = 14f;
+            ModeClutchAwarenessWeight = 1f;
+            ClutchFinalPressureSeconds = 25f;
+            ClutchComebackPressureBonus = 20f;
+            ClutchLeadSafetyBonus = 18f;
+            ClutchObjectiveSwingBonus = 22f;
 
             switch (archetype)
             {

@@ -43,6 +43,7 @@ namespace MOBA.Core.Simulation.AI
         public string RoleMacroDebug;
         public string RoleMatchupDebug;
         public string CoverPeekDebug;
+        public string ModeClutchDebug;
         public string EngagementRiskDebug;
         public string PressureRotationDebug;
         public string ReactiveDebug;

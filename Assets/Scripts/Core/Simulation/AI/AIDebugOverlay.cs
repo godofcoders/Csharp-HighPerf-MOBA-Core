@@ -55,6 +55,7 @@ namespace MOBA.Core.Simulation.AI
             GUILayout.Label($"Decision Confidence: {snapshot.DecisionConfidenceDebug}");
             GUILayout.Label($"Role Matchup: {snapshot.RoleMatchupDebug}");
             GUILayout.Label($"Cover Peek: {snapshot.CoverPeekDebug}");
+            GUILayout.Label($"Mode Clutch: {snapshot.ModeClutchDebug}");
             GUILayout.Label($"Macro: {snapshot.MacroDebug}");
             GUILayout.Label($"Playbook: {snapshot.PlaybookDebug}");
             GUILayout.Label($"Chase: {snapshot.ChaseDebug}");
@@ -144,6 +145,7 @@ namespace MOBA.Core.Simulation.AI
                     $"DecisionConf={snapshot.DecisionConfidenceDebug} | " +
                     $"RoleMatchup={snapshot.RoleMatchupDebug} | " +
                     $"CoverPeek={snapshot.CoverPeekDebug} | " +
+                    $"ModeClutch={snapshot.ModeClutchDebug} | " +
                     $"Macro={snapshot.MacroDebug} | " +
                     $"Playbook={snapshot.PlaybookDebug} | " +
                     $"Chase={snapshot.ChaseDebug} | " +

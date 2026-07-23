@@ -37,6 +37,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureRoleMacroDefaults(profile);
             EnsureRoleMatchupDefaults(profile);
             EnsureCoverPeekPlannerDefaults(profile);
+            EnsureModeClutchDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
             EnsurePressureRotationDefaults(profile);
             EnsureDecisionConfidenceDefaults(profile);
@@ -104,6 +105,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Role={profile.RoleMacroBehaviorWeight:0.00} " +
                 $"Match={profile.RoleMatchupAwarenessWeight:0.00} " +
                 $"Cover={profile.CoverPeekPlannerWeight:0.00} " +
+                $"Clutch={profile.ModeClutchAwarenessWeight:0.00} " +
                 $"Risk={profile.EngagementRiskAwarenessWeight:0.00} " +
                 $"Rot={profile.PressureRotationAwarenessWeight:0.00} " +
                 $"Conf={profile.DecisionAmbiguityScoreWindow:0.0}/{profile.DecisionAmbiguitySwitchPenalty:0.0} " +
@@ -199,6 +201,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.BlockedFireLaneRepositionBonus *= 0.58f;
                     profile.ExposedDuelRepositionBonus *= 0.60f;
                     profile.CoverPeekApproachPenalty *= 0.58f;
+                    profile.ModeClutchAwarenessWeight *= 0.45f;
+                    profile.ClutchComebackPressureBonus *= 0.62f;
+                    profile.ClutchLeadSafetyBonus *= 0.62f;
+                    profile.ClutchObjectiveSwingBonus *= 0.62f;
                     profile.EngagementRiskAwarenessWeight *= 0.42f;
                     profile.OutnumberedApproachPenalty *= 0.58f;
                     profile.SupportedFightCommitBonus *= 0.62f;
@@ -287,6 +293,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.BlockedFireLaneRepositionBonus *= 1.12f;
                     profile.ExposedDuelRepositionBonus *= 1.10f;
                     profile.CoverPeekApproachPenalty *= 1.10f;
+                    profile.ModeClutchAwarenessWeight *= 1.18f;
+                    profile.ClutchComebackPressureBonus *= 1.12f;
+                    profile.ClutchLeadSafetyBonus *= 1.12f;
+                    profile.ClutchObjectiveSwingBonus *= 1.12f;
                     profile.EngagementRiskAwarenessWeight *= 1.18f;
                     profile.OutnumberedApproachPenalty *= 1.12f;
                     profile.SupportedFightCommitBonus *= 1.12f;
@@ -377,6 +387,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.BlockedFireLaneRepositionBonus *= 1.24f;
                     profile.ExposedDuelRepositionBonus *= 1.20f;
                     profile.CoverPeekApproachPenalty *= 1.18f;
+                    profile.ModeClutchAwarenessWeight *= 1.34f;
+                    profile.ClutchComebackPressureBonus *= 1.24f;
+                    profile.ClutchLeadSafetyBonus *= 1.22f;
+                    profile.ClutchObjectiveSwingBonus *= 1.24f;
                     profile.EngagementRiskAwarenessWeight *= 1.34f;
                     profile.OutnumberedApproachPenalty *= 1.24f;
                     profile.SupportedFightCommitBonus *= 1.22f;
@@ -511,6 +525,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.BlockedFireLaneRepositionBonus *= 0.76f;
                     profile.ExposedDuelRepositionBonus *= 0.76f;
                     profile.CoverPeekApproachPenalty *= 0.72f;
+                    profile.ModeClutchAwarenessWeight *= 0.70f;
+                    profile.ClutchComebackPressureBonus *= 0.78f;
+                    profile.ClutchLeadSafetyBonus *= 0.76f;
+                    profile.ClutchObjectiveSwingBonus *= 0.78f;
                     profile.EngagementRiskAwarenessWeight *= 0.68f;
                     profile.OutnumberedApproachPenalty *= 0.75f;
                     profile.SupportedFightCommitBonus *= 0.78f;
@@ -636,6 +654,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.BlockedFireLaneRepositionBonus *= 1.10f;
                     profile.ExposedDuelRepositionBonus *= 1.08f;
                     profile.CoverPeekApproachPenalty *= 1.08f;
+                    profile.ModeClutchAwarenessWeight *= 1.10f;
+                    profile.ClutchComebackPressureBonus *= 1.12f;
+                    profile.ClutchLeadSafetyBonus *= 1.10f;
+                    profile.ClutchObjectiveSwingBonus *= 1.12f;
                     profile.EngagementRiskAwarenessWeight *= 1.10f;
                     profile.OutnumberedApproachPenalty *= 1.10f;
                     profile.SupportedFightCommitBonus *= 1.10f;
@@ -735,6 +757,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.CoverPeekHoldBonus *= 0.90f;
                     profile.BlockedFireLaneRepositionBonus *= 0.86f;
                     profile.CoverPeekApproachPenalty *= 0.82f;
+                    profile.ClutchComebackPressureBonus *= 1.16f;
+                    profile.ClutchLeadSafetyBonus *= 0.88f;
+                    profile.ClutchObjectiveSwingBonus *= 1.12f;
                     profile.OutnumberedApproachPenalty *= 0.82f;
                     profile.SupportedFightCommitBonus *= 1.16f;
                     profile.BadDiveRepositionBonus *= 0.86f;
@@ -825,6 +850,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.BlockedFireLaneRepositionBonus *= 1.16f;
                     profile.ExposedDuelRepositionBonus *= 1.12f;
                     profile.CoverPeekApproachPenalty *= 1.16f;
+                    profile.ModeClutchAwarenessWeight *= 1.10f;
+                    profile.ClutchComebackPressureBonus *= 0.88f;
+                    profile.ClutchLeadSafetyBonus *= 1.16f;
+                    profile.ClutchObjectiveSwingBonus *= 0.96f;
                     profile.EngagementRiskAwarenessWeight *= 1.10f;
                     profile.OutnumberedApproachPenalty *= 1.18f;
                     profile.BadDiveRepositionBonus *= 1.16f;
@@ -900,6 +929,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.CoverPeekHoldBonus *= 1.06f;
                     profile.BlockedFireLaneRepositionBonus *= 1.08f;
                     profile.ExposedDuelRepositionBonus *= 1.06f;
+                    profile.ModeClutchAwarenessWeight *= 1.12f;
+                    profile.ClutchComebackPressureBonus *= 1.08f;
+                    profile.ClutchLeadSafetyBonus *= 1.10f;
+                    profile.ClutchObjectiveSwingBonus *= 1.12f;
                     profile.EngagementRiskAwarenessWeight *= 1.12f;
                     profile.SupportedFightCommitBonus *= 1.16f;
                     profile.BadDiveRepositionBonus *= 1.08f;
@@ -928,6 +961,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureRoleMacroDefaults(profile);
             EnsureRoleMatchupDefaults(profile);
             EnsureCoverPeekPlannerDefaults(profile);
+            EnsureModeClutchDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
             EnsurePressureRotationDefaults(profile);
             EnsureDecisionConfidenceDefaults(profile);
@@ -1051,6 +1085,16 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Clamp(profile.ExposedDuelRepositionBonus, 0f, 55f);
             profile.CoverPeekApproachPenalty =
                 Mathf.Clamp(profile.CoverPeekApproachPenalty, 0f, 45f);
+            profile.ModeClutchAwarenessWeight =
+                Mathf.Clamp(profile.ModeClutchAwarenessWeight, 0f, 2.5f);
+            profile.ClutchFinalPressureSeconds =
+                Mathf.Clamp(profile.ClutchFinalPressureSeconds, 5f, 90f);
+            profile.ClutchComebackPressureBonus =
+                Mathf.Clamp(profile.ClutchComebackPressureBonus, 0f, 60f);
+            profile.ClutchLeadSafetyBonus =
+                Mathf.Clamp(profile.ClutchLeadSafetyBonus, 0f, 60f);
+            profile.ClutchObjectiveSwingBonus =
+                Mathf.Clamp(profile.ClutchObjectiveSwingBonus, 0f, 70f);
             profile.EngagementRiskAwarenessWeight =
                 Mathf.Clamp(profile.EngagementRiskAwarenessWeight, 0f, 2.5f);
             profile.EngagementRiskRadius =
@@ -1399,6 +1443,24 @@ namespace MOBA.Core.Simulation.AI
                     profile.Archetype == BrawlerArchetype.Assassin
                         ? 10f
                         : 14f;
+        }
+
+        private static void EnsureModeClutchDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.ModeClutchAwarenessWeight <= 0f)
+                profile.ModeClutchAwarenessWeight = 1f;
+
+            if (profile.ClutchFinalPressureSeconds <= 0f)
+                profile.ClutchFinalPressureSeconds = 25f;
+
+            if (profile.ClutchComebackPressureBonus <= 0f)
+                profile.ClutchComebackPressureBonus = 20f;
+
+            if (profile.ClutchLeadSafetyBonus <= 0f)
+                profile.ClutchLeadSafetyBonus = 18f;
+
+            if (profile.ClutchObjectiveSwingBonus <= 0f)
+                profile.ClutchObjectiveSwingBonus = 22f;
         }
 
         private static void EnsureEngagementRiskDefaults(BrawlerAIProfile profile)
