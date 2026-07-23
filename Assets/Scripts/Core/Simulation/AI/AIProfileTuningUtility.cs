@@ -36,6 +36,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
             EnsureRoleMatchupDefaults(profile);
+            EnsureCoverPeekPlannerDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
             EnsurePressureRotationDefaults(profile);
             EnsureDecisionConfidenceDefaults(profile);
@@ -102,6 +103,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Fight={profile.TeamFightCoordinationWeight:0.00} " +
                 $"Role={profile.RoleMacroBehaviorWeight:0.00} " +
                 $"Match={profile.RoleMatchupAwarenessWeight:0.00} " +
+                $"Cover={profile.CoverPeekPlannerWeight:0.00} " +
                 $"Risk={profile.EngagementRiskAwarenessWeight:0.00} " +
                 $"Rot={profile.PressureRotationAwarenessWeight:0.00} " +
                 $"Conf={profile.DecisionAmbiguityScoreWindow:0.0}/{profile.DecisionAmbiguitySwitchPenalty:0.0} " +
@@ -192,6 +194,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MatchupKiteShortRangeBonus *= 0.62f;
                     profile.MatchupPunishShortRangeBonus *= 0.58f;
                     profile.MatchupObjectiveOverrideBonus *= 0.70f;
+                    profile.CoverPeekPlannerWeight *= 0.45f;
+                    profile.CoverPeekHoldBonus *= 0.62f;
+                    profile.BlockedFireLaneRepositionBonus *= 0.58f;
+                    profile.ExposedDuelRepositionBonus *= 0.60f;
+                    profile.CoverPeekApproachPenalty *= 0.58f;
                     profile.EngagementRiskAwarenessWeight *= 0.42f;
                     profile.OutnumberedApproachPenalty *= 0.58f;
                     profile.SupportedFightCommitBonus *= 0.62f;
@@ -275,6 +282,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MatchupKiteShortRangeBonus *= 1.12f;
                     profile.MatchupPunishShortRangeBonus *= 1.12f;
                     profile.MatchupObjectiveOverrideBonus *= 1.10f;
+                    profile.CoverPeekPlannerWeight *= 1.18f;
+                    profile.CoverPeekHoldBonus *= 1.12f;
+                    profile.BlockedFireLaneRepositionBonus *= 1.12f;
+                    profile.ExposedDuelRepositionBonus *= 1.10f;
+                    profile.CoverPeekApproachPenalty *= 1.10f;
                     profile.EngagementRiskAwarenessWeight *= 1.18f;
                     profile.OutnumberedApproachPenalty *= 1.12f;
                     profile.SupportedFightCommitBonus *= 1.12f;
@@ -360,6 +372,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MatchupKiteShortRangeBonus *= 1.24f;
                     profile.MatchupPunishShortRangeBonus *= 1.22f;
                     profile.MatchupObjectiveOverrideBonus *= 1.18f;
+                    profile.CoverPeekPlannerWeight *= 1.34f;
+                    profile.CoverPeekHoldBonus *= 1.24f;
+                    profile.BlockedFireLaneRepositionBonus *= 1.24f;
+                    profile.ExposedDuelRepositionBonus *= 1.20f;
+                    profile.CoverPeekApproachPenalty *= 1.18f;
                     profile.EngagementRiskAwarenessWeight *= 1.34f;
                     profile.OutnumberedApproachPenalty *= 1.24f;
                     profile.SupportedFightCommitBonus *= 1.22f;
@@ -489,6 +506,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MatchupKiteShortRangeBonus *= 0.76f;
                     profile.MatchupPunishShortRangeBonus *= 0.72f;
                     profile.MatchupObjectiveOverrideBonus *= 0.78f;
+                    profile.CoverPeekPlannerWeight *= 0.70f;
+                    profile.CoverPeekHoldBonus *= 0.78f;
+                    profile.BlockedFireLaneRepositionBonus *= 0.76f;
+                    profile.ExposedDuelRepositionBonus *= 0.76f;
+                    profile.CoverPeekApproachPenalty *= 0.72f;
                     profile.EngagementRiskAwarenessWeight *= 0.68f;
                     profile.OutnumberedApproachPenalty *= 0.75f;
                     profile.SupportedFightCommitBonus *= 0.78f;
@@ -609,6 +631,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MatchupKiteShortRangeBonus *= 1.10f;
                     profile.MatchupPunishShortRangeBonus *= 1.10f;
                     profile.MatchupObjectiveOverrideBonus *= 1.08f;
+                    profile.CoverPeekPlannerWeight *= 1.10f;
+                    profile.CoverPeekHoldBonus *= 1.10f;
+                    profile.BlockedFireLaneRepositionBonus *= 1.10f;
+                    profile.ExposedDuelRepositionBonus *= 1.08f;
+                    profile.CoverPeekApproachPenalty *= 1.08f;
                     profile.EngagementRiskAwarenessWeight *= 1.10f;
                     profile.OutnumberedApproachPenalty *= 1.10f;
                     profile.SupportedFightCommitBonus *= 1.10f;
@@ -705,6 +732,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.MatchupKiteShortRangeBonus *= 0.85f;
                     profile.MatchupPunishShortRangeBonus *= 1.12f;
                     profile.MatchupObjectiveOverrideBonus *= 1.18f;
+                    profile.CoverPeekHoldBonus *= 0.90f;
+                    profile.BlockedFireLaneRepositionBonus *= 0.86f;
+                    profile.CoverPeekApproachPenalty *= 0.82f;
                     profile.OutnumberedApproachPenalty *= 0.82f;
                     profile.SupportedFightCommitBonus *= 1.16f;
                     profile.BadDiveRepositionBonus *= 0.86f;
@@ -790,6 +820,11 @@ namespace MOBA.Core.Simulation.AI
                     profile.MatchupKiteShortRangeBonus *= 1.16f;
                     profile.MatchupPunishShortRangeBonus *= 0.90f;
                     profile.MatchupObjectiveOverrideBonus *= 0.85f;
+                    profile.CoverPeekPlannerWeight *= 1.10f;
+                    profile.CoverPeekHoldBonus *= 1.14f;
+                    profile.BlockedFireLaneRepositionBonus *= 1.16f;
+                    profile.ExposedDuelRepositionBonus *= 1.12f;
+                    profile.CoverPeekApproachPenalty *= 1.16f;
                     profile.EngagementRiskAwarenessWeight *= 1.10f;
                     profile.OutnumberedApproachPenalty *= 1.18f;
                     profile.BadDiveRepositionBonus *= 1.16f;
@@ -861,6 +896,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.MatchupKiteShortRangeBonus *= 1.08f;
                     profile.MatchupPunishShortRangeBonus *= 1.06f;
                     profile.MatchupObjectiveOverrideBonus *= 1.06f;
+                    profile.CoverPeekPlannerWeight *= 1.08f;
+                    profile.CoverPeekHoldBonus *= 1.06f;
+                    profile.BlockedFireLaneRepositionBonus *= 1.08f;
+                    profile.ExposedDuelRepositionBonus *= 1.06f;
                     profile.EngagementRiskAwarenessWeight *= 1.12f;
                     profile.SupportedFightCommitBonus *= 1.16f;
                     profile.BadDiveRepositionBonus *= 1.08f;
@@ -888,6 +927,7 @@ namespace MOBA.Core.Simulation.AI
             EnsureAdvancedTeamFightDefaults(profile);
             EnsureRoleMacroDefaults(profile);
             EnsureRoleMatchupDefaults(profile);
+            EnsureCoverPeekPlannerDefaults(profile);
             EnsureEngagementRiskDefaults(profile);
             EnsurePressureRotationDefaults(profile);
             EnsureDecisionConfidenceDefaults(profile);
@@ -1001,6 +1041,16 @@ namespace MOBA.Core.Simulation.AI
                 Mathf.Clamp(profile.MatchupPunishShortRangeBonus, 0f, 45f);
             profile.MatchupObjectiveOverrideBonus =
                 Mathf.Clamp(profile.MatchupObjectiveOverrideBonus, 0f, 45f);
+            profile.CoverPeekPlannerWeight =
+                Mathf.Clamp(profile.CoverPeekPlannerWeight, 0f, 2.5f);
+            profile.CoverPeekHoldBonus =
+                Mathf.Clamp(profile.CoverPeekHoldBonus, 0f, 55f);
+            profile.BlockedFireLaneRepositionBonus =
+                Mathf.Clamp(profile.BlockedFireLaneRepositionBonus, 0f, 70f);
+            profile.ExposedDuelRepositionBonus =
+                Mathf.Clamp(profile.ExposedDuelRepositionBonus, 0f, 55f);
+            profile.CoverPeekApproachPenalty =
+                Mathf.Clamp(profile.CoverPeekApproachPenalty, 0f, 45f);
             profile.EngagementRiskAwarenessWeight =
                 Mathf.Clamp(profile.EngagementRiskAwarenessWeight, 0f, 2.5f);
             profile.EngagementRiskRadius =
@@ -1322,6 +1372,33 @@ namespace MOBA.Core.Simulation.AI
             if (profile.MatchupObjectiveOverrideBonus <= 0f)
                 profile.MatchupObjectiveOverrideBonus =
                     profile.Archetype == BrawlerArchetype.Assassin ? 22f : 16f;
+        }
+
+        private static void EnsureCoverPeekPlannerDefaults(BrawlerAIProfile profile)
+        {
+            if (profile.CoverPeekPlannerWeight <= 0f)
+                profile.CoverPeekPlannerWeight = 1f;
+
+            if (profile.CoverPeekHoldBonus <= 0f)
+                profile.CoverPeekHoldBonus =
+                    profile.Archetype == BrawlerArchetype.Sniper ||
+                    profile.Archetype == BrawlerArchetype.Artillery
+                        ? 22f
+                        : 18f;
+
+            if (profile.BlockedFireLaneRepositionBonus <= 0f)
+                profile.BlockedFireLaneRepositionBonus = 24f;
+
+            if (profile.ExposedDuelRepositionBonus <= 0f)
+                profile.ExposedDuelRepositionBonus =
+                    profile.Archetype == BrawlerArchetype.Tank ? 10f : 16f;
+
+            if (profile.CoverPeekApproachPenalty <= 0f)
+                profile.CoverPeekApproachPenalty =
+                    profile.Archetype == BrawlerArchetype.Tank ||
+                    profile.Archetype == BrawlerArchetype.Assassin
+                        ? 10f
+                        : 14f;
         }
 
         private static void EnsureEngagementRiskDefaults(BrawlerAIProfile profile)

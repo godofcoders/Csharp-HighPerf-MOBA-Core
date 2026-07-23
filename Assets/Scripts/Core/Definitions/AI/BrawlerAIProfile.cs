@@ -193,6 +193,18 @@ namespace MOBA.Core.Simulation.AI
         [Tooltip("Approach score added when objective value, low health, super, or team collapse justifies a risky matchup.")]
         public float MatchupObjectiveOverrideBonus = 16f;
 
+        [Header("Cover / Peek Combat Planner")]
+        [Tooltip("Scales action score shaping from cover, peek lanes, blocked shots, and exposed duels.")]
+        public float CoverPeekPlannerWeight = 1f;
+        [Tooltip("HoldRange score added when this bot has cover-adjacent clear fire on a target.")]
+        public float CoverPeekHoldBonus = 18f;
+        [Tooltip("Reposition score added when a direct-fire lane is blocked by cover.")]
+        public float BlockedFireLaneRepositionBonus = 24f;
+        [Tooltip("Reposition score added when the bot is exposed against an enemy that can punish the lane.")]
+        public float ExposedDuelRepositionBonus = 16f;
+        [Tooltip("Approach score removed while peeking or when a fire lane is blocked.")]
+        public float CoverPeekApproachPenalty = 14f;
+
         [Header("Game Mode Macro")]
         [Tooltip("Scales score deltas from mode-level push/hold/reset macro calls.")]
         public float MacroActionBiasWeight = 1f;
@@ -1072,6 +1084,11 @@ namespace MOBA.Core.Simulation.AI
             MatchupKiteShortRangeBonus = 18f;
             MatchupPunishShortRangeBonus = 14f;
             MatchupObjectiveOverrideBonus = 16f;
+            CoverPeekPlannerWeight = 1f;
+            CoverPeekHoldBonus = 18f;
+            BlockedFireLaneRepositionBonus = 24f;
+            ExposedDuelRepositionBonus = 16f;
+            CoverPeekApproachPenalty = 14f;
 
             switch (archetype)
             {
@@ -1089,6 +1106,9 @@ namespace MOBA.Core.Simulation.AI
                     BadMapChasePenalty = 30f;
                     MatchupKiteShortRangeBonus = 24f;
                     MatchupPunishShortRangeBonus = 18f;
+                    CoverPeekPlannerWeight = 1.2f;
+                    CoverPeekHoldBonus = 24f;
+                    ExposedDuelRepositionBonus = 20f;
                     break;
 
                 case BrawlerArchetype.Tank:
@@ -1106,6 +1126,8 @@ namespace MOBA.Core.Simulation.AI
                     CloseRangeCoverRepositionBonus = 30f;
                     CloseRangeEvasivePressureBonus = 15f;
                     MatchupObjectiveOverrideBonus = 18f;
+                    CoverPeekPlannerWeight = 0.75f;
+                    CoverPeekApproachPenalty = 10f;
                     break;
 
                 case BrawlerArchetype.Assassin:
@@ -1127,6 +1149,8 @@ namespace MOBA.Core.Simulation.AI
                     CloseRangeCoverRepositionBonus = 24f;
                     CloseRangeEvasivePressureBonus = 18f;
                     MatchupObjectiveOverrideBonus = 22f;
+                    CoverPeekPlannerWeight = 0.85f;
+                    CoverPeekApproachPenalty = 9f;
                     break;
 
                 case BrawlerArchetype.Support:

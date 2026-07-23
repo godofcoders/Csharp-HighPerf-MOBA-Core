@@ -47,6 +47,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastTeamFightDebug = "TeamFight=None";
         private string _lastRoleMacroDebug = "RoleMacro=None";
         private string _lastRoleMatchupDebug = "Matchup=None";
+        private string _lastCoverPeekDebug = "CoverPeek=None";
         private string _lastEngagementRiskDebug = "EngageRisk=None";
         private string _lastPressureRotationDebug = "PressureRot=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
@@ -74,6 +75,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastTeamFightDebug => _lastTeamFightDebug;
         public string LastRoleMacroDebug => _lastRoleMacroDebug;
         public string LastRoleMatchupDebug => _lastRoleMatchupDebug;
+        public string LastCoverPeekDebug => _lastCoverPeekDebug;
         public string LastEngagementRiskDebug => _lastEngagementRiskDebug;
         public string LastPressureRotationDebug => _lastPressureRotationDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
@@ -153,6 +155,9 @@ namespace MOBA.Core.Simulation.AI
                 targetInfo,
                 currentTick,
                 macroState,
+                results);
+            ApplyCoverPeekCombatPlanner(
+                targetInfo,
                 results);
             ApplyEngagementRiskAwareness(
                 targetInfo,
@@ -1640,6 +1645,229 @@ namespace MOBA.Core.Simulation.AI
                 case AIActionType.Search:
                 case AIActionType.Objective:
                     return context.ShortRangeBadChase;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void ApplyCoverPeekCombatPlanner(
+            AITargetInfo targetInfo,
+            List<AIActionScore> results)
+        {
+            _lastCoverPeekDebug = "CoverPeek=None";
+
+            if (_profile == null ||
+                results == null ||
+                results.Count == 0 ||
+                targetInfo == null ||
+                !targetInfo.HasLiveTarget ||
+                !(targetInfo.Target is BrawlerController targetBrawler) ||
+                targetBrawler.State == null ||
+                _self == null ||
+                SimulationClock.Pathfinder == null)
+            {
+                return;
+            }
+
+            float weight = Mathf.Max(0f, _profile.CoverPeekPlannerWeight);
+            if (weight <= 0.01f)
+            {
+                _lastCoverPeekDebug = "CoverPeek=Off";
+                return;
+            }
+
+            AICoverPeekContext context = BuildCoverPeekContext(targetBrawler);
+            if (!context.HasCoverSignal)
+                return;
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                float delta = CalculateCoverPeekDelta(
+                    actionScore.ActionType,
+                    context);
+                delta *= weight;
+
+                if (Mathf.Abs(delta) <= 0.01f)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    delta > 0f &&
+                    !CanCreateCoverPeekScore(actionScore.ActionType, context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(
+                    actionScore.ActionType,
+                    adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}");
+            }
+
+            _lastCoverPeekDebug =
+                $"CoverPeek=selfCover:{context.SelfNearCover} targetCover:{context.TargetNearCover} " +
+                $"between:{context.HasCoverBetween} direct:{context.DirectFire} " +
+                $"peek:{context.CoverPeekWindow} blocked:{context.BlockedFireLane} " +
+                $"exposed:{context.ExposedDuel} thrower:{context.ThrowerCoverWindow} " +
+                $"dist:{context.TargetDistance:0.0} w:{weight:0.00}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastCoverPeekDebug += $" Delta={deltaDebug}";
+        }
+
+        private AICoverPeekContext BuildCoverPeekContext(BrawlerController target)
+        {
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            Vector2Int selfCoords = pathfinder.GetGridCoords(_self.Position);
+            Vector2Int targetCoords = pathfinder.GetGridCoords(target.Position);
+            bool selfNearCover = pathfinder.IsNearObstacle(selfCoords);
+            bool targetNearCover = pathfinder.IsNearObstacle(targetCoords);
+            bool hasCoverBetween = AIMapNavigationUtility.HasCoverBetween(
+                pathfinder,
+                selfCoords,
+                targetCoords);
+            float ownRange = Mathf.Max(1f, GetAbilityMaxRange());
+            float targetRange = Mathf.Max(1f, GetTargetAbilityMaxRange(target));
+            float distance = Vector3.Distance(_self.Position, target.Position);
+            bool inOwnRange = distance <= ownRange + _profile.AttackRangeBuffer;
+            bool directFire = IsCurrentMainAttackDirectFire();
+            bool throwerPressure = IsArtillery || !directFire;
+            bool coverPeekWindow =
+                directFire &&
+                selfNearCover &&
+                !hasCoverBetween &&
+                inOwnRange;
+            bool blockedFireLane =
+                directFire &&
+                hasCoverBetween &&
+                distance <= ownRange + _profile.AttackRangeBuffer * 2f;
+            bool exposedDuel =
+                !selfNearCover &&
+                !hasCoverBetween &&
+                distance <= targetRange + _profile.AttackRangeBuffer &&
+                targetRange >= ownRange * 0.85f;
+            bool throwerCoverWindow =
+                throwerPressure &&
+                selfNearCover &&
+                hasCoverBetween &&
+                inOwnRange;
+
+            return new AICoverPeekContext
+            {
+                HasCoverSignal =
+                    coverPeekWindow ||
+                    blockedFireLane ||
+                    exposedDuel ||
+                    throwerCoverWindow,
+                SelfNearCover = selfNearCover,
+                TargetNearCover = targetNearCover,
+                HasCoverBetween = hasCoverBetween,
+                DirectFire = directFire,
+                CoverPeekWindow = coverPeekWindow,
+                BlockedFireLane = blockedFireLane,
+                ExposedDuel = exposedDuel,
+                ThrowerCoverWindow = throwerCoverWindow,
+                TargetDistance = distance
+            };
+        }
+
+        private float CalculateCoverPeekDelta(
+            AIActionType actionType,
+            AICoverPeekContext context)
+        {
+            float delta = 0f;
+
+            if (context.CoverPeekWindow)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.HoldRange:
+                        delta += _profile.CoverPeekHoldBonus;
+                        break;
+                    case AIActionType.Reposition:
+                        delta += _profile.CoverPeekHoldBonus * 0.35f;
+                        break;
+                    case AIActionType.Approach:
+                        delta -= _profile.CoverPeekApproachPenalty;
+                        break;
+                }
+            }
+
+            if (context.BlockedFireLane)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Reposition:
+                        delta += _profile.BlockedFireLaneRepositionBonus;
+                        break;
+                    case AIActionType.HoldRange:
+                        delta -= _profile.CoverPeekApproachPenalty * 0.45f;
+                        break;
+                    case AIActionType.Approach:
+                        delta -= _profile.CoverPeekApproachPenalty;
+                        break;
+                    case AIActionType.UseSuper:
+                        delta -= _profile.CoverPeekApproachPenalty * 0.35f;
+                        break;
+                }
+            }
+
+            if (context.ExposedDuel)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Reposition:
+                        delta += _profile.ExposedDuelRepositionBonus;
+                        break;
+                    case AIActionType.HoldRange:
+                        delta += _profile.ExposedDuelRepositionBonus * 0.45f;
+                        break;
+                    case AIActionType.Approach:
+                        if (IsBacklineRole())
+                            delta -= _profile.CoverPeekApproachPenalty * 0.65f;
+                        break;
+                }
+            }
+
+            if (context.ThrowerCoverWindow)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.HoldRange:
+                        delta += _profile.CoverPeekHoldBonus * 0.85f;
+                        break;
+                    case AIActionType.Reposition:
+                        delta += _profile.CoverPeekHoldBonus * 0.45f;
+                        break;
+                    case AIActionType.Approach:
+                        delta -= _profile.CoverPeekApproachPenalty * 0.35f;
+                        break;
+                }
+            }
+
+            return delta;
+        }
+
+        private static bool CanCreateCoverPeekScore(
+            AIActionType actionType,
+            AICoverPeekContext context)
+        {
+            switch (actionType)
+            {
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                    return context.HasCoverSignal;
 
                 default:
                     return false;
@@ -3833,6 +4061,20 @@ namespace MOBA.Core.Simulation.AI
             public float TargetDistance;
         }
 
+        private struct AICoverPeekContext
+        {
+            public bool HasCoverSignal;
+            public bool SelfNearCover;
+            public bool TargetNearCover;
+            public bool HasCoverBetween;
+            public bool DirectFire;
+            public bool CoverPeekWindow;
+            public bool BlockedFireLane;
+            public bool ExposedDuel;
+            public bool ThrowerCoverWindow;
+            public float TargetDistance;
+        }
+
         private CloseRangeMatchupEvaluation EvaluateCloseRangeMatchup(
             AITargetInfo targetInfo,
             float distance,
@@ -3965,6 +4207,36 @@ namespace MOBA.Core.Simulation.AI
             return archetype == BrawlerArchetype.Tank ||
                    archetype == BrawlerArchetype.Assassin ||
                    (archetype == BrawlerArchetype.Fighter && targetRange <= 4.75f);
+        }
+
+        private bool IsCurrentMainAttackDirectFire()
+        {
+            AbilityDefinition attack = _self != null && _self.State != null
+                ? _self.State.GetCurrentMainAttackDefinition()
+                : _self?.Definition?.MainAttack;
+
+            if (attack == null)
+                return true;
+
+            if (attack is ThrownHybridAoEAbilityDefinition ||
+                attack is ThrownVolleyAoEAbilityDefinition ||
+                attack is AoEAbilityDefinition ||
+                attack is MeleeConeAbilityDefinition ||
+                attack is LeapAbilityDefinition ||
+                attack is MinefieldAbilityDefinition ||
+                attack is EffectAbilityDefinition)
+            {
+                return false;
+            }
+
+            return attack.DeliveryType == AbilityDeliveryType.Projectile ||
+                   attack is ProjectileAbilityDefinition ||
+                   attack is BasicProjectileAttackDefinition ||
+                   attack is BurstSequenceProjectileAbilityDefinition ||
+                   attack is ChainProjectileAbilityDefinition ||
+                   attack is HybridProjectileAbilityDefinition ||
+                   attack is VolleyProjectileAbilityDefinition ||
+                   attack is BasicSuperDefinition;
         }
 
         private static float GetTargetAbilityMaxRange(BrawlerController target)
