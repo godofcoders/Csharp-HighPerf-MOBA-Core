@@ -25,6 +25,10 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0f)] private float _goalEdgeInset = 0.15f;
         [SerializeField, Min(0f)] private float _goalBehindSpawnOffset = 0.15f;
         [SerializeField, Min(0f)] private float _goalGroundOffset = 0.04f;
+        [SerializeField] private bool _spawnBreakableGoalBlockers = true;
+        [SerializeField, Min(1)] private int _goalBlockerTileCount = 4;
+        [SerializeField, Min(0.1f)] private float _goalBlockerTileHealth = 900f;
+        [SerializeField, Min(0.1f)] private float _goalBlockerHeight = 1.15f;
 
         [Header("Ball State")]
         [SerializeField] private Transform _ballTransform;
@@ -32,7 +36,11 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0f)] private float _goalScoreLockoutSeconds = 0.35f;
 
         private readonly List<BrawlBallGoalController> _goals = new List<BrawlBallGoalController>(2);
+        private readonly List<BreakableObjectController> _goalBlockers =
+            new List<BreakableObjectController>(8);
         private BrawlBallController _ball;
+        private BreakableObjectDefinition _goalBlockerDefinition;
+        private bool _goalBlockerNavigationDirty;
         private uint _goalScoreUnlockTick;
         private float _regulationElapsedSeconds;
         private float _overtimeElapsedSeconds;
@@ -132,6 +140,7 @@ namespace MOBA.Core.Simulation
                 _roundResetRoutine = null;
             }
 
+            ClearGoalBlockers();
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
@@ -143,6 +152,13 @@ namespace MOBA.Core.Simulation
 
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
+            ClearGoalBlockers();
+
+            if (_goalBlockerDefinition != null)
+            {
+                Destroy(_goalBlockerDefinition);
+                _goalBlockerDefinition = null;
+            }
         }
 
         private void Start()
@@ -152,6 +168,8 @@ namespace MOBA.Core.Simulation
 
         private void Update()
         {
+            RefreshGoalBlockerNavigationIfNeeded();
+
             MatchManager matchManager = MatchManager.Instance;
             if (matchManager == null)
                 return;
@@ -723,7 +741,10 @@ namespace MOBA.Core.Simulation
             }
 
             if (_autoPlaceGoalsFromMap)
+            {
                 PlaceGoalsOnMapEdges(bounds);
+                EnsureGoalBlockers(bounds);
+            }
         }
 
         private void PlaceGoalsOnMapEdges(Bounds bounds)
@@ -767,6 +788,184 @@ namespace MOBA.Core.Simulation
                 goal.transform.position = position;
                 goal.AlignMouthToward(arenaCenter);
             }
+        }
+
+        private void EnsureGoalBlockers(Bounds bounds)
+        {
+            if (!_spawnBreakableGoalBlockers)
+            {
+                ClearGoalBlockers();
+                return;
+            }
+
+            ClearGoalBlockers();
+
+            BreakableObjectDefinition definition = ResolveGoalBlockerDefinition();
+            if (definition == null)
+                return;
+
+            float tileSize = ResolveGoalBlockerTileSize();
+            float blockerHeight = Mathf.Max(0.1f, _goalBlockerHeight);
+            int tileCount = Mathf.Max(1, _goalBlockerTileCount);
+
+            for (int i = 0; i < _goals.Count; i++)
+            {
+                BrawlBallGoalController goal = _goals[i];
+                if (goal == null || !IsScoringTeam(goal.ScoringTeam))
+                    continue;
+
+                Vector3 forward = goal.FieldDirection;
+                Vector3 lateral = goal.transform.right;
+                forward.y = 0f;
+                lateral.y = 0f;
+                if (forward.sqrMagnitude <= 0.001f || lateral.sqrMagnitude <= 0.001f)
+                    continue;
+
+                forward.Normalize();
+                lateral.Normalize();
+
+                Vector3 rowCenter = goal.MouthPosition + forward * (tileSize * 0.58f);
+                rowCenter.y = Mathf.Max(goal.transform.position.y, _goalGroundOffset) + blockerHeight * 0.5f;
+
+                float halfIndex = (tileCount - 1) * 0.5f;
+                for (int tileIndex = 0; tileIndex < tileCount; tileIndex++)
+                {
+                    Vector3 position = rowCenter + lateral * ((tileIndex - halfIndex) * tileSize);
+                    position.x = Mathf.Clamp(position.x, bounds.min.x + tileSize * 0.5f, bounds.max.x - tileSize * 0.5f);
+                    BreakableObjectController blocker = CreateGoalBlockerTile(
+                        definition,
+                        position,
+                        Quaternion.LookRotation(forward, Vector3.up),
+                        tileSize,
+                        blockerHeight);
+
+                    if (blocker == null)
+                        continue;
+
+                    _goalBlockers.Add(blocker);
+                    MarkGoalBlockerNavigation(blocker, false);
+                }
+            }
+
+            _goalBlockerNavigationDirty = _goalBlockers.Count > 0;
+        }
+
+        private BreakableObjectController CreateGoalBlockerTile(
+            BreakableObjectDefinition definition,
+            Vector3 position,
+            Quaternion rotation,
+            float tileSize,
+            float height)
+        {
+            GameObject blockerObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            blockerObject.name = "BrawlBallGoalBreakableTile";
+            blockerObject.transform.position = position;
+            blockerObject.transform.rotation = rotation;
+            blockerObject.transform.localScale = new Vector3(
+                tileSize * 0.92f,
+                height,
+                tileSize * 0.92f);
+
+            int obstacleLayer = LayerMask.NameToLayer("Obstacles");
+            if (obstacleLayer >= 0)
+                blockerObject.layer = obstacleLayer;
+
+            BreakableObjectController blocker =
+                blockerObject.AddComponent<BreakableObjectController>();
+            blocker.Initialize(definition);
+            return blocker;
+        }
+
+        private BreakableObjectDefinition ResolveGoalBlockerDefinition()
+        {
+            if (_goalBlockerDefinition != null)
+                return _goalBlockerDefinition;
+
+            BreakableObjectDefinition definition =
+                ScriptableObject.CreateInstance<BreakableObjectDefinition>();
+            definition.name = "RuntimeBrawlBallGoalBlocker";
+            definition.hideFlags = HideFlags.DontSave;
+            definition.MaxHealth = Mathf.Max(1f, _goalBlockerTileHealth);
+            definition.CollisionRadius = Mathf.Max(0.25f, ResolveGoalBlockerTileSize() * 0.52f);
+            definition.BlocksNavigation = true;
+            definition.NavigationClearRadius = Mathf.Max(0.45f, ResolveGoalBlockerTileSize() * 0.72f);
+            definition.CanBeDamagedByProjectiles = true;
+            definition.CanBeDamagedByAreaEffects = true;
+            definition.RequiresSuperDamage = true;
+            definition.RequiredSourceAbility = null;
+            definition.DestroyGameObjectOnDeath = true;
+            definition.BaseTint = new Color(0.66f, 0.48f, 0.28f, 1f);
+            definition.HitFlashColor = new Color(1f, 0.84f, 0.45f, 1f);
+            definition.CriticalTint = new Color(0.42f, 0.28f, 0.16f, 1f);
+            definition.FallbackDebrisColor = new Color(0.62f, 0.45f, 0.26f, 1f);
+            definition.FallbackDebrisPieces = 6;
+
+            _goalBlockerDefinition = definition;
+            return _goalBlockerDefinition;
+        }
+
+        private static float ResolveGoalBlockerTileSize()
+        {
+            MapGenerator mapGenerator = FindObjectOfType<MapGenerator>();
+            return mapGenerator != null
+                ? Mathf.Max(0.5f, mapGenerator.CellSize)
+                : 1f;
+        }
+
+        private static void MarkGoalBlockerNavigation(
+            BreakableObjectController blocker,
+            bool walkable)
+        {
+            if (blocker == null || blocker.Definition == null || !blocker.Definition.BlocksNavigation)
+                return;
+
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return;
+
+            float radius = Mathf.Max(blocker.CollisionRadius, blocker.Definition.NavigationClearRadius);
+            pathfinder.SetWalkableCircle(blocker.Position, radius, walkable);
+        }
+
+        private void RefreshGoalBlockerNavigationIfNeeded()
+        {
+            if (!_goalBlockerNavigationDirty || SimulationClock.Pathfinder == null)
+                return;
+
+            bool hasLiveBlocker = false;
+            for (int i = _goalBlockers.Count - 1; i >= 0; i--)
+            {
+                BreakableObjectController blocker = _goalBlockers[i];
+                if (blocker == null || blocker.IsDestroyed)
+                {
+                    _goalBlockers.RemoveAt(i);
+                    continue;
+                }
+
+                hasLiveBlocker = true;
+                MarkGoalBlockerNavigation(blocker, false);
+            }
+
+            _goalBlockerNavigationDirty = false;
+            if (!hasLiveBlocker)
+                _goalBlockers.Clear();
+        }
+
+        private void ClearGoalBlockers()
+        {
+            _goalBlockerNavigationDirty = false;
+
+            for (int i = _goalBlockers.Count - 1; i >= 0; i--)
+            {
+                BreakableObjectController blocker = _goalBlockers[i];
+                if (blocker == null)
+                    continue;
+
+                MarkGoalBlockerNavigation(blocker, true);
+                Destroy(blocker.gameObject);
+            }
+
+            _goalBlockers.Clear();
         }
 
         private Vector3 ResolveGoalEdgePosition(
