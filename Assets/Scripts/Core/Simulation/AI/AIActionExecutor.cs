@@ -428,6 +428,9 @@ namespace MOBA.Core.Simulation.AI
             if (!_hasMapRouteCache || routeIntent == AIMapRouteIntent.None)
                 return false;
 
+            if (_dangerMemory != null && _dangerMemory.HasDanger)
+                return false;
+
             if (_lastMapRequestIntent != routeIntent ||
                 _lastMapRequestHadThreatPosition != hasThreatPosition)
             {
@@ -509,6 +512,23 @@ namespace MOBA.Core.Simulation.AI
                 _profile.Archetype == BrawlerArchetype.Artillery ||
                 _profile.Archetype == BrawlerArchetype.Support ||
                 _profile.Archetype == BrawlerArchetype.Tank;
+            bool hasLiveDanger = _dangerMemory != null && _dangerMemory.HasDanger;
+            bool threatExecutionRoute =
+                hasLiveDanger ||
+                (hasThreatPosition &&
+                 (defensiveRoute ||
+                  routeIntent == AIMapRouteIntent.CombatReposition ||
+                  fragile));
+            Vector3 predictedThreatPosition = hasLiveDanger
+                ? _dangerMemory.ThreatPosition
+                : threatPosition;
+            float predictedThreatRadius = ResolvePredictedThreatRadius(
+                hasLiveDanger,
+                preferredThreatDistance);
+            float predictedThreatWeight = ResolvePredictedThreatWeight(
+                hasLiveDanger,
+                combatRoute,
+                defensiveRoute);
 
             return new AIMapNavigationRequest
             {
@@ -562,6 +582,15 @@ namespace MOBA.Core.Simulation.AI
                 PreferThrowerSpacing = hasThreatPosition &&
                                        _profile.Archetype == BrawlerArchetype.Artillery &&
                                        combatRoute,
+                AvoidPredictedThreat = threatExecutionRoute,
+                PredictedThreatPosition = predictedThreatPosition,
+                PredictedThreatRadius = predictedThreatRadius,
+                PredictedThreatWeight = predictedThreatWeight,
+                PreferThreatEscapeArc =
+                    hasLiveDanger ||
+                    routeIntent == AIMapRouteIntent.Evade ||
+                    routeIntent == AIMapRouteIntent.CombatRetreat ||
+                    routeIntent == AIMapRouteIntent.CombatReposition,
                 CoverPeekWeight = _profile.MapCoverPeekPreference,
                 LaneControlWeight = _profile.MapLaneControlPreference,
                 ChokeControlWeight = _profile.MapChokeControlPreference,
@@ -575,6 +604,41 @@ namespace MOBA.Core.Simulation.AI
                 CurrentTick = _currentExecuteTick,
                 HighPriority = IsCriticalRoute(routeIntent)
             };
+        }
+
+        private float ResolvePredictedThreatRadius(
+            bool hasLiveDanger,
+            float preferredThreatDistance)
+        {
+            if (hasLiveDanger)
+            {
+                return Mathf.Max(
+                    _profile.DangerEvadeDistance,
+                    _brawler != null ? _brawler.CollisionRadius * 3f : 1.5f);
+            }
+
+            return Mathf.Max(
+                2.25f,
+                preferredThreatDistance > 0f
+                    ? preferredThreatDistance * 0.85f
+                    : _profile.PredictedThreatRespectRange * 0.65f);
+        }
+
+        private float ResolvePredictedThreatWeight(
+            bool hasLiveDanger,
+            bool combatRoute,
+            bool defensiveRoute)
+        {
+            float baseWeight = Mathf.Max(0f, _profile.MapThreatAvoidanceWeight);
+            if (hasLiveDanger)
+            {
+                float pressure = _dangerMemory != null ? _dangerMemory.Pressure : 0f;
+                return baseWeight * (1f + Mathf.Clamp01(pressure) * 2f);
+            }
+
+            float predictionWeight = Mathf.Max(0f, _profile.AbilityThreatPredictionWeight);
+            float routeFactor = defensiveRoute ? 1.0f : combatRoute ? 0.75f : 0.55f;
+            return baseWeight * predictionWeight * routeFactor;
         }
 
         private string FormatVector(Vector3 value)

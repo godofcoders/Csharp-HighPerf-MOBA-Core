@@ -36,6 +36,11 @@ namespace MOBA.Core.Simulation.AI
         public bool PreferCoverDance;
         public bool PreferFireLanePressure;
         public bool PreferThrowerSpacing;
+        public bool AvoidPredictedThreat;
+        public Vector3 PredictedThreatPosition;
+        public float PredictedThreatRadius;
+        public float PredictedThreatWeight;
+        public bool PreferThreatEscapeArc;
         public float CoverPeekWeight;
         public float LaneControlWeight;
         public float ChokeControlWeight;
@@ -496,6 +501,17 @@ namespace MOBA.Core.Simulation.AI
                     ref reason);
             }
 
+            if (request.AvoidPredictedThreat)
+            {
+                ApplyPredictedThreatExecutionScore(
+                    self,
+                    candidate,
+                    pathfinder.CellSize,
+                    request,
+                    ref score,
+                    ref reason);
+            }
+
             AIMapControlEvaluation mapControl = AIMapControlUtility.EvaluateCandidate(
                 pathfinder,
                 selfCoords,
@@ -684,6 +700,69 @@ namespace MOBA.Core.Simulation.AI
                         reason += "|avoid_hotspot";
                     }
                     break;
+            }
+        }
+
+        private static void ApplyPredictedThreatExecutionScore(
+            BrawlerController self,
+            Vector3 candidate,
+            float cellSize,
+            in AIMapNavigationRequest request,
+            ref float score,
+            ref string reason)
+        {
+            float weight = Mathf.Max(0f, request.PredictedThreatWeight);
+            if (weight <= 0.01f)
+                return;
+
+            Vector3 threatPosition = request.PredictedThreatPosition;
+            float radius = Mathf.Max(cellSize, request.PredictedThreatRadius);
+            float candidateDistance = Vector3.Distance(candidate, threatPosition);
+            float selfDistance = self != null
+                ? Vector3.Distance(self.Position, threatPosition)
+                : candidateDistance;
+
+            if (candidateDistance < radius)
+            {
+                float dangerProximity = 1f - Mathf.Clamp01(candidateDistance / radius);
+                score -= dangerProximity * weight * 14f;
+                reason += "|predicted_threat";
+            }
+            else if (request.PreferThreatEscapeArc &&
+                     candidateDistance > selfDistance + Mathf.Max(0.35f, cellSize * 0.5f))
+            {
+                float escapeGain = Mathf.Clamp01((candidateDistance - selfDistance) / radius);
+                score += escapeGain * weight * 6f;
+                reason += "|threat_escape";
+            }
+
+            if (!request.PreferThreatEscapeArc || self == null)
+                return;
+
+            Vector3 fromThreatToSelf = self.Position - threatPosition;
+            Vector3 fromThreatToCandidate = candidate - threatPosition;
+            fromThreatToSelf.y = 0f;
+            fromThreatToCandidate.y = 0f;
+
+            if (fromThreatToSelf.sqrMagnitude <= 0.001f ||
+                fromThreatToCandidate.sqrMagnitude <= 0.001f)
+            {
+                return;
+            }
+
+            float escapeAlignment = Vector3.Dot(
+                fromThreatToSelf.normalized,
+                fromThreatToCandidate.normalized);
+
+            if (escapeAlignment >= 0.30f)
+            {
+                score += escapeAlignment * weight * 4f;
+                reason += "|escape_arc";
+            }
+            else if (escapeAlignment <= -0.10f)
+            {
+                score -= Mathf.Abs(escapeAlignment) * weight * 5f;
+                reason += "|bad_escape_arc";
             }
         }
 
