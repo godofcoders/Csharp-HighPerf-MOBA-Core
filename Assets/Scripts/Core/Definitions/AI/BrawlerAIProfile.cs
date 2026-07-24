@@ -459,6 +459,8 @@ namespace MOBA.Core.Simulation.AI
         public float MapFireLanePressurePreference = 5f;
         [Tooltip("Bonus for artillery cells that keep wall cover while preserving spacing and exits.")]
         public float MapThrowerSpacingPreference = 7f;
+        [Tooltip("Scales archetype-specific route preferences such as sniper lanes, tank anchors, assassin flanks, and thrower cover.")]
+        public float RoleRouteSelectionWeight = 1f;
         [Tooltip("If true, logs map-aware movement decisions.")]
         public bool LogMapIntelligence = false;
 
@@ -1416,6 +1418,7 @@ namespace MOBA.Core.Simulation.AI
             MapCoverDancePreference = 5f;
             MapFireLanePressurePreference = 5f;
             MapThrowerSpacingPreference = 7f;
+            RoleRouteSelectionWeight = 1f;
             LogMapIntelligence = false;
 
             switch (archetype)
@@ -1437,6 +1440,7 @@ namespace MOBA.Core.Simulation.AI
                     MapCoverDancePreference = 8f;
                     MapFireLanePressurePreference = 11f;
                     MapThrowerSpacingPreference = 0f;
+                    RoleRouteSelectionWeight = 1.15f;
                     break;
 
                 case BrawlerArchetype.Tank:
@@ -1457,6 +1461,7 @@ namespace MOBA.Core.Simulation.AI
                     MapCoverDancePreference = 2f;
                     MapFireLanePressurePreference = 3f;
                     MapThrowerSpacingPreference = 0f;
+                    RoleRouteSelectionWeight = 0.90f;
                     break;
 
                 case BrawlerArchetype.Assassin:
@@ -1476,6 +1481,7 @@ namespace MOBA.Core.Simulation.AI
                     MapCoverDancePreference = 7f;
                     MapFireLanePressurePreference = 5f;
                     MapThrowerSpacingPreference = 0f;
+                    RoleRouteSelectionWeight = 1.10f;
                     break;
 
                 case BrawlerArchetype.Support:
@@ -1495,6 +1501,7 @@ namespace MOBA.Core.Simulation.AI
                     MapCoverDancePreference = 6f;
                     MapFireLanePressurePreference = 5f;
                     MapThrowerSpacingPreference = 0f;
+                    RoleRouteSelectionWeight = 1.05f;
                     break;
 
                 case BrawlerArchetype.Controller:
@@ -1514,6 +1521,7 @@ namespace MOBA.Core.Simulation.AI
                     MapCoverDancePreference = 7f;
                     MapFireLanePressurePreference = 8f;
                     MapThrowerSpacingPreference = 0f;
+                    RoleRouteSelectionWeight = 1.10f;
                     break;
 
                 case BrawlerArchetype.Artillery:
@@ -1534,6 +1542,7 @@ namespace MOBA.Core.Simulation.AI
                     MapCoverDancePreference = 5f;
                     MapFireLanePressurePreference = 0f;
                     MapThrowerSpacingPreference = 13f;
+                    RoleRouteSelectionWeight = 1.20f;
                     break;
             }
         }

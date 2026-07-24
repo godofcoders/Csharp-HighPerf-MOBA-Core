@@ -591,6 +591,8 @@ namespace MOBA.Core.Simulation.AI
                     routeIntent == AIMapRouteIntent.Evade ||
                     routeIntent == AIMapRouteIntent.CombatRetreat ||
                     routeIntent == AIMapRouteIntent.CombatReposition,
+                PreferRoleRoute = geometryRoute || mapControlRoute,
+                RoleRouteWeight = _profile.RoleRouteSelectionWeight,
                 CoverPeekWeight = _profile.MapCoverPeekPreference,
                 LaneControlWeight = _profile.MapLaneControlPreference,
                 ChokeControlWeight = _profile.MapChokeControlPreference,

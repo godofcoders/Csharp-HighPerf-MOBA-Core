@@ -148,6 +148,27 @@ namespace MOBA.Core.Simulation.AI
                     ref evaluation);
             }
 
+            if (request.PreferRoleRoute)
+            {
+                ApplyRoleRouteSelectionScore(
+                    pathfinder,
+                    selfCoords,
+                    candidateCoords,
+                    desiredCoords,
+                    threatCoords,
+                    hasThreat,
+                    nearCover,
+                    insideChoke,
+                    adjacentChoke,
+                    hasCoverBetween,
+                    walkableNeighbors,
+                    cardinalExits,
+                    semantic,
+                    request,
+                    archetype,
+                    ref evaluation);
+            }
+
             return evaluation;
         }
 
@@ -541,6 +562,110 @@ namespace MOBA.Core.Simulation.AI
             return false;
         }
 
+        private static void ApplyRoleRouteSelectionScore(
+            AStarSolver pathfinder,
+            Vector2Int selfCoords,
+            Vector2Int candidateCoords,
+            Vector2Int desiredCoords,
+            Vector2Int threatCoords,
+            bool hasThreat,
+            bool nearCover,
+            bool insideChoke,
+            bool adjacentChoke,
+            bool hasCoverBetween,
+            int walkableNeighbors,
+            int cardinalExits,
+            AIMapSemanticCell semantic,
+            in AIMapNavigationRequest request,
+            BrawlerArchetype archetype,
+            ref AIMapControlEvaluation evaluation)
+        {
+            float weight = Mathf.Max(0f, request.RoleRouteWeight);
+            if (weight <= 0.01f)
+                return;
+
+            bool hasEscapeSpace = cardinalExits >= 3 && walkableNeighbors >= 5 && !insideChoke;
+            bool bush = pathfinder.IsBush(candidateCoords);
+            float flankFactor = CalculateFlankFactor(
+                selfCoords,
+                candidateCoords,
+                hasThreat ? threatCoords : desiredCoords);
+            float score = 0f;
+            string reason = string.Empty;
+
+            switch (archetype)
+            {
+                case BrawlerArchetype.Sniper:
+                    score += hasEscapeSpace ? 7f : 0f;
+                    score += hasThreat && !hasCoverBetween && !insideChoke ? 5f : 0f;
+                    score += nearCover && !insideChoke ? 3f : 0f;
+                    score -= insideChoke ? 9f : 0f;
+                    score -= hasThreat && !hasCoverBetween && !nearCover ? 4f : 0f;
+                    reason = "role_sniper_lane";
+                    break;
+
+                case BrawlerArchetype.Tank:
+                    score += adjacentChoke ? 8f : 0f;
+                    score += insideChoke ? 4f : 0f;
+                    score += walkableNeighbors >= 4 ? 3f : 0f;
+                    score -= hasEscapeSpace && !adjacentChoke ? 1.5f : 0f;
+                    reason = "role_tank_anchor";
+                    break;
+
+                case BrawlerArchetype.Assassin:
+                    score += bush ? 8f : 0f;
+                    score += flankFactor * 10f;
+                    score += hasEscapeSpace ? 3f : 0f;
+                    score -= insideChoke && !bush ? 4f : 0f;
+                    reason = "role_assassin_flank";
+                    break;
+
+                case BrawlerArchetype.Support:
+                    score += hasCoverBetween ? 7f : 0f;
+                    score += hasEscapeSpace ? 6f : 0f;
+                    score += nearCover ? 3f : 0f;
+                    score -= insideChoke ? 7f : 0f;
+                    reason = "role_support_safe";
+                    break;
+
+                case BrawlerArchetype.Controller:
+                    score += adjacentChoke ? 7f : 0f;
+                    score += semantic.HasTag(AIMapSemanticTag.Lane) ? 5f : 0f;
+                    score += semantic.HasTag(AIMapSemanticTag.Choke) ? 5f : 0f;
+                    score += nearCover && cardinalExits >= 2 ? 3f : 0f;
+                    score -= cardinalExits <= 1 ? 4f : 0f;
+                    reason = "role_controller_zone";
+                    break;
+
+                case BrawlerArchetype.Artillery:
+                    score += hasThreat && hasCoverBetween ? 9f : 0f;
+                    score += nearCover && cardinalExits >= 2 ? 6f : 0f;
+                    score += hasEscapeSpace ? 4f : 0f;
+                    score -= hasThreat && !hasCoverBetween ? 7f : 0f;
+                    score -= insideChoke ? 5f : 0f;
+                    reason = "role_thrower_safe";
+                    break;
+
+                case BrawlerArchetype.Fighter:
+                default:
+                    score += hasEscapeSpace ? 4f : 0f;
+                    score += adjacentChoke ? 3f : 0f;
+                    score += nearCover && cardinalExits >= 2 ? 2f : 0f;
+                    score -= cardinalExits <= 1 ? 3f : 0f;
+                    reason = "role_fighter_flex";
+                    break;
+            }
+
+            if (Mathf.Abs(score) <= 0.01f)
+                return;
+
+            float weightedScore = score * weight;
+            evaluation.Score += weightedScore;
+            AppendReason(
+                ref evaluation,
+                $"{reason}{weightedScore:+0.0;-0.0}");
+        }
+
         private static void ApplySemanticScore(
             AStarSolver pathfinder,
             Vector2Int candidateCoords,
@@ -668,6 +793,27 @@ namespace MOBA.Core.Simulation.AI
         private static float Cross(Vector2 a, Vector2 b)
         {
             return (a.x * b.y) - (a.y * b.x);
+        }
+
+        private static float CalculateFlankFactor(
+            Vector2Int selfCoords,
+            Vector2Int candidateCoords,
+            Vector2Int anchorCoords)
+        {
+            Vector2 anchor = new Vector2(
+                anchorCoords.x - selfCoords.x,
+                anchorCoords.y - selfCoords.y);
+            Vector2 candidate = new Vector2(
+                candidateCoords.x - selfCoords.x,
+                candidateCoords.y - selfCoords.y);
+
+            if (anchor.sqrMagnitude <= 0.001f ||
+                candidate.sqrMagnitude <= 0.001f)
+            {
+                return 0f;
+            }
+
+            return Mathf.Clamp01(Mathf.Abs(Cross(candidate.normalized, anchor.normalized)));
         }
 
         private static void AppendReason(ref AIMapControlEvaluation evaluation, string reason)

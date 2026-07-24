@@ -41,6 +41,8 @@ namespace MOBA.Core.Simulation.AI
         public float PredictedThreatRadius;
         public float PredictedThreatWeight;
         public bool PreferThreatEscapeArc;
+        public bool PreferRoleRoute;
+        public float RoleRouteWeight;
         public float CoverPeekWeight;
         public float LaneControlWeight;
         public float ChokeControlWeight;

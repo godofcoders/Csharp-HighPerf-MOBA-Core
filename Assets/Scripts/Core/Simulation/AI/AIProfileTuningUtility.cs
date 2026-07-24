@@ -101,7 +101,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Sense={profile.IdleSenseIntervalTicks}/{profile.CombatSenseIntervalTicks} " +
                 $"Obj={profile.ObjectiveWeight:0.00} Team={profile.TeamRoleCoordinationWeight:0.00} " +
                 $"TgtCtx={profile.TargetContextAwarenessWeight:0.00} " +
-                $"Focus={profile.FocusFireWeight:0.0} Map={profile.MapOpenShotPreference:0.0}/{profile.MapCoverDancePreference:0.0} " +
+                $"Focus={profile.FocusFireWeight:0.0} Map={profile.MapOpenShotPreference:0.0}/{profile.MapCoverDancePreference:0.0}/{profile.RoleRouteSelectionWeight:0.00} " +
                 $"Res={profile.OpponentResourceAwarenessWeight:0.00} " +
                 $"Threat={profile.AbilityThreatPredictionWeight:0.00} " +
                 $"Fight={profile.TeamFightCoordinationWeight:0.00} " +
@@ -166,6 +166,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapEscapeSpacePreference *= 0.74f;
                     profile.MapFireLanePressurePreference *= 0.74f;
                     profile.MapThrowerSpacingPreference *= 0.74f;
+                    profile.RoleRouteSelectionWeight *= 0.44f;
                     if (profile.HumanizationReactionJitterTicks < 6u)
                         profile.HumanizationReactionJitterTicks = 6u;
                     profile.HumanizationActionScoreJitter = Mathf.Max(profile.HumanizationActionScoreJitter, 4.8f);
@@ -268,6 +269,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapEscapeSpacePreference *= 1.10f;
                     profile.MapFireLanePressurePreference *= 1.12f;
                     profile.MapThrowerSpacingPreference *= 1.10f;
+                    profile.RoleRouteSelectionWeight *= 1.16f;
                     if (profile.HumanizationReactionJitterTicks > 1u)
                         profile.HumanizationReactionJitterTicks = 1u;
                     profile.HumanizationActionScoreJitter = Mathf.Min(profile.HumanizationActionScoreJitter, 0.8f);
@@ -372,6 +374,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapEscapeSpacePreference *= 1.16f;
                     profile.MapFireLanePressurePreference *= 1.20f;
                     profile.MapThrowerSpacingPreference *= 1.16f;
+                    profile.RoleRouteSelectionWeight *= 1.32f;
                     profile.HumanizationReactionJitterTicks = 0u;
                     profile.HumanizationActionScoreJitter = Mathf.Min(profile.HumanizationActionScoreJitter, 0.45f);
                     profile.HumanizationFakeOutChance *= 0.55f;
@@ -496,6 +499,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapCoverDancePreference *= 0.85f;
                     profile.MapFireLanePressurePreference *= 0.80f;
                     profile.MapThrowerSpacingPreference *= 0.85f;
+                    profile.RoleRouteSelectionWeight *= 0.70f;
                     profile.MapWallHugPenalty *= 0.90f;
                     profile.NavigationStuckSampleLimit += 1;
                     profile.StaleDestinationRecoveryTicks = ScaleTicks(profile.StaleDestinationRecoveryTicks, 1.25f, 1);
@@ -633,6 +637,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapCoverDancePreference *= 1.12f;
                     profile.MapFireLanePressurePreference *= 1.15f;
                     profile.MapThrowerSpacingPreference *= 1.12f;
+                    profile.RoleRouteSelectionWeight *= 1.10f;
                     profile.MapWallHugPenalty *= 1.08f;
                     profile.StaleDestinationRecoveryTicks = ScaleTicks(profile.StaleDestinationRecoveryTicks, 0.85f, 1);
                     profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 0.85f, 1);
@@ -762,6 +767,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapCoverDancePreference *= 1.12f;
                     profile.MapFireLanePressurePreference *= 1.15f;
                     profile.MapThrowerSpacingPreference *= 0.92f;
+                    profile.RoleRouteSelectionWeight *= 0.94f;
                     profile.MapWallHugPenalty *= 0.92f;
                     profile.FailureRecoveryDetourDistance *= 0.95f;
                     profile.HumanizationFakeOutChance *= 1.25f;
@@ -856,6 +862,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapCoverDancePreference *= 1.08f;
                     profile.MapFireLanePressurePreference *= 0.92f;
                     profile.MapThrowerSpacingPreference *= 1.10f;
+                    profile.RoleRouteSelectionWeight *= 1.10f;
                     profile.MapWallHugPenalty *= 1.15f;
                     profile.FailureRecoveryCooldownTicks = ScaleTicks(profile.FailureRecoveryCooldownTicks, 0.90f, 1);
                     profile.FailureRecoveryDetourDistance *= 1.08f;
@@ -953,6 +960,7 @@ namespace MOBA.Core.Simulation.AI
                     profile.MapCoverDancePreference *= 1.05f;
                     profile.MapFireLanePressurePreference *= 1.05f;
                     profile.MapThrowerSpacingPreference *= 1.05f;
+                    profile.RoleRouteSelectionWeight *= 1.08f;
                     profile.MapWallHugPenalty *= 1.05f;
                     profile.FailedCastSuppressionTicks = ScaleTicks(profile.FailedCastSuppressionTicks, 1.10f, 1);
                     profile.HumanizationFakeOutChance *= 0.80f;
@@ -1274,6 +1282,7 @@ namespace MOBA.Core.Simulation.AI
             profile.MapCoverDancePreference = Mathf.Clamp(profile.MapCoverDancePreference, 0f, 30f);
             profile.MapFireLanePressurePreference = Mathf.Clamp(profile.MapFireLanePressurePreference, 0f, 35f);
             profile.MapThrowerSpacingPreference = Mathf.Clamp(profile.MapThrowerSpacingPreference, 0f, 35f);
+            profile.RoleRouteSelectionWeight = Mathf.Clamp(profile.RoleRouteSelectionWeight, 0f, 2.5f);
 
             profile.DangerScanRadius = Mathf.Clamp(profile.DangerScanRadius, 3f, 12f);
             profile.DangerPersonalSpace = Mathf.Clamp(profile.DangerPersonalSpace, 0.1f, 1.5f);
@@ -1662,6 +1671,7 @@ namespace MOBA.Core.Simulation.AI
             float coverDance = 5f;
             float fireLane = 5f;
             float throwerSpacing = 0f;
+            float roleRoute = 1f;
 
             switch (profile.Archetype)
             {
@@ -1670,6 +1680,7 @@ namespace MOBA.Core.Simulation.AI
                     escapeSpace = 7f;
                     coverDance = 8f;
                     fireLane = 11f;
+                    roleRoute = 1.15f;
                     break;
 
                 case BrawlerArchetype.Tank:
@@ -1677,6 +1688,7 @@ namespace MOBA.Core.Simulation.AI
                     escapeSpace = 4f;
                     coverDance = 2f;
                     fireLane = 3f;
+                    roleRoute = 0.90f;
                     break;
 
                 case BrawlerArchetype.Assassin:
@@ -1684,6 +1696,7 @@ namespace MOBA.Core.Simulation.AI
                     escapeSpace = 6f;
                     coverDance = 7f;
                     fireLane = 5f;
+                    roleRoute = 1.10f;
                     break;
 
                 case BrawlerArchetype.Support:
@@ -1691,6 +1704,7 @@ namespace MOBA.Core.Simulation.AI
                     escapeSpace = 8f;
                     coverDance = 6f;
                     fireLane = 5f;
+                    roleRoute = 1.05f;
                     break;
 
                 case BrawlerArchetype.Controller:
@@ -1698,6 +1712,7 @@ namespace MOBA.Core.Simulation.AI
                     escapeSpace = 6f;
                     coverDance = 7f;
                     fireLane = 8f;
+                    roleRoute = 1.10f;
                     break;
 
                 case BrawlerArchetype.Artillery:
@@ -1706,6 +1721,7 @@ namespace MOBA.Core.Simulation.AI
                     coverDance = 5f;
                     fireLane = 0f;
                     throwerSpacing = 13f;
+                    roleRoute = 1.20f;
                     break;
             }
 
@@ -1723,6 +1739,9 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.MapThrowerSpacingPreference <= 0f && throwerSpacing > 0f)
                 profile.MapThrowerSpacingPreference = throwerSpacing;
+
+            if (profile.RoleRouteSelectionWeight <= 0f)
+                profile.RoleRouteSelectionWeight = roleRoute;
         }
 
         private static void EnsureGemGrabObjectiveDefaults(BrawlerAIProfile profile)
