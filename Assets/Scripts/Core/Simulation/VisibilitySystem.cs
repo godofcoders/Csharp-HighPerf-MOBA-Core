@@ -16,7 +16,7 @@ namespace MOBA.Core.Simulation
             ProximityRevealDistance = Mathf.Max(0f, proximityRevealDistance);
         }
 
-        public static VisibilityRuleConfig Default => new VisibilityRuleConfig(false, 2f);
+        public static VisibilityRuleConfig Default => new VisibilityRuleConfig(true, 2.2f);
 
         public float ProximityRevealDistanceSq => ProximityRevealDistance * ProximityRevealDistance;
     }

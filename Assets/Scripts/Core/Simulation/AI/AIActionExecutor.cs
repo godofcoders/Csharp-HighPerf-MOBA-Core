@@ -30,8 +30,11 @@ namespace MOBA.Core.Simulation.AI
         private const float BrawlBallLooseBallSprintDistance = 4.25f;
         private const float BrawlBallLooseBallSelfDefenseRadius = 2.25f;
         private const float BrawlBallLooseBallContestRadius = 2.35f;
+        private const float BushProbeCooldownSeconds = 0.85f;
+        private const float BushProbeRangePadding = 0.75f;
 
         private uint _nextFallbackWanderTick;
+        private uint _nextBushProbeTick;
         private Vector3 _fallbackWanderPoint;
         private uint _tacticalStopStartedTick;
         private string _lastTacticalStopDebug = "Stop=None";
@@ -529,6 +532,10 @@ namespace MOBA.Core.Simulation.AI
                 hasLiveDanger,
                 combatRoute,
                 defensiveRoute);
+            bool brawlerBushRoute = ShouldPreferBrawlerBushRoute(
+                routeIntent,
+                hasLiveDanger || hasThreatPosition,
+                predictedThreatPosition);
 
             return new AIMapNavigationRequest
             {
@@ -537,7 +544,7 @@ namespace MOBA.Core.Simulation.AI
                 HasThreatPosition = hasThreatPosition,
                 ThreatPosition = threatPosition,
                 PreferredThreatDistance = preferredThreatDistance,
-                PreferBush = stealthRoute || fragile,
+                PreferBush = stealthRoute || fragile || brawlerBushRoute,
                 PreferCover = combatRoute || fragile || _profile.Archetype == BrawlerArchetype.Controller,
                 PreferLineOfSightCover = hasThreatPosition && (defensiveRoute || artilleryCoverAngle),
                 PreferOpenShot = hasThreatPosition && directFireRoute,
@@ -554,7 +561,7 @@ namespace MOBA.Core.Simulation.AI
                 SearchRadius = routeIntent == AIMapRouteIntent.Evade
                     ? Mathf.Min(_profile.MapDestinationSearchRadius, _profile.DangerMapSearchRadius)
                     : _profile.MapDestinationSearchRadius,
-                BushWeight = _profile.MapBushPreference,
+                BushWeight = _profile.MapBushPreference + (brawlerBushRoute ? 10f : 0f),
                 CoverWeight = _profile.MapCoverPreference,
                 LineOfSightCoverWeight = _profile.MapLineOfSightCoverPreference,
                 ExposedPositionPenalty = _profile.MapExposedPositionPenalty,
@@ -606,6 +613,63 @@ namespace MOBA.Core.Simulation.AI
                 CurrentTick = _currentExecuteTick,
                 HighPriority = IsCriticalRoute(routeIntent)
             };
+        }
+
+        private bool ShouldPreferBrawlerBushRoute(
+            AIMapRouteIntent routeIntent,
+            bool hasThreatPosition,
+            Vector3 threatPosition)
+        {
+            if (_brawler == null ||
+                _profile == null ||
+                SimulationClock.Pathfinder == null)
+            {
+                return false;
+            }
+
+            BrawlerTacticalIdentity identity =
+                AIBrawlerTacticalIdentityUtility.ResolveIdentity(_brawler.Definition);
+
+            bool combatOrSearch =
+                routeIntent == AIMapRouteIntent.CombatAdvance ||
+                routeIntent == AIMapRouteIntent.CombatReposition ||
+                routeIntent == AIMapRouteIntent.CombatRetreat ||
+                routeIntent == AIMapRouteIntent.Search ||
+                routeIntent == AIMapRouteIntent.Objective ||
+                routeIntent == AIMapRouteIntent.Regroup;
+            if (!combatOrSearch)
+                return false;
+
+            bool hasWallCover = IsNearMapObstacle(_brawler.Position);
+            bool superReady =
+                _brawler.State != null &&
+                _brawler.State.SuperCharge != null &&
+                _brawler.State.SuperCharge.IsReady;
+
+            if (identity == BrawlerTacticalIdentity.ElPrimo)
+                return !superReady && !hasWallCover;
+
+            if (identity != BrawlerTacticalIdentity.Barley)
+                return false;
+
+            float healthRatio = _brawler.State != null
+                ? Mathf.Clamp01(_brawler.State.CurrentHealth /
+                                Mathf.Max(1f, _brawler.State.MaxHealth.Value))
+                : 1f;
+            bool lowHealth = healthRatio <= Mathf.Clamp01(_profile.LowHealthRetreatRatio + 0.24f);
+            bool closeThreat =
+                hasThreatPosition &&
+                PlanarDistance(_brawler.Position, threatPosition) <=
+                Mathf.Max(4f, GetAbilityIdealRange() * 0.70f);
+
+            return (lowHealth || closeThreat) && (!hasWallCover || lowHealth);
+        }
+
+        private static bool IsNearMapObstacle(Vector3 position)
+        {
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            return pathfinder != null &&
+                   pathfinder.IsNearObstacle(pathfinder.GetGridCoords(position));
         }
 
         private float ResolvePredictedThreatRadius(
@@ -2175,6 +2239,8 @@ namespace MOBA.Core.Simulation.AI
             if (targetInfo != null &&
                 targetInfo.HasRecentMemory(currentTick, _profile.MemoryDurationTicks))
             {
+                TryProbeHiddenBushMemory(targetInfo, currentTick);
+
                 RequestMapAwareDestination(
                     targetInfo.LastKnownPosition,
                     1.0f,
@@ -2245,6 +2311,109 @@ namespace MOBA.Core.Simulation.AI
             }
 
             RunFallbackWander(currentTick);
+        }
+
+        private bool TryProbeHiddenBushMemory(AITargetInfo targetInfo, uint currentTick)
+        {
+            if (targetInfo == null ||
+                targetInfo.HasLiveTarget ||
+                currentTick < _nextBushProbeTick ||
+                _brawler == null ||
+                _brawler.State == null ||
+                _brawler.State.IsDead ||
+                !_brawler.State.CanUseMainAttack(currentTick) ||
+                _commandSource == null)
+            {
+                return false;
+            }
+
+            if (!TryResolveBushProbePoint(targetInfo.LastKnownPosition, out Vector3 probePoint))
+                return false;
+
+            AbilityDefinition ability = _brawler.State.GetCurrentMainAttackDefinition();
+            if (ability == null)
+                ability = _brawler.Definition != null ? _brawler.Definition.MainAttack : null;
+
+            if (ability == null)
+                return false;
+
+            Vector3 direction = Flatten(probePoint - _brawler.Position);
+            float distance = direction.magnitude;
+            float maxRange = Mathf.Max(1f, ability.GetAIMaxRange()) + BushProbeRangePadding;
+            if (distance <= 0.1f || distance > maxRange)
+                return false;
+
+            direction /= distance;
+            AIAbilityCastPlan plan =
+                AIAbilityCastPlan.PointTarget(
+                    null,
+                    _brawler.Position,
+                    probePoint,
+                    "hidden_bush_probe");
+
+            if (!AIShotObstacleUtility.CanFireAtTarget(
+                    _brawler,
+                    ability,
+                    plan,
+                    null,
+                    maxRange,
+                    out _))
+            {
+                return false;
+            }
+
+            _commandSource.QueueMainAttack(direction, probePoint, true);
+            uint cooldownTicks = SimulationClock.SecondsToTicks(BushProbeCooldownSeconds);
+            if (_profile.AttackCadenceTicks > cooldownTicks)
+                cooldownTicks = _profile.AttackCadenceTicks;
+
+            if (cooldownTicks == 0u)
+                cooldownTicks = 1u;
+
+            _nextBushProbeTick = currentTick + cooldownTicks;
+            AIValidationGauntlet.RecordSignal(
+                AIValidationGauntletSignal.MainAttackCast,
+                currentTick);
+            return true;
+        }
+
+        private static bool TryResolveBushProbePoint(Vector3 memoryPoint, out Vector3 probePoint)
+        {
+            probePoint = memoryPoint;
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return false;
+
+            Vector2Int center = pathfinder.GetGridCoords(memoryPoint);
+            if (pathfinder.IsBush(center))
+            {
+                probePoint = pathfinder.GetWorldPos(center);
+                return true;
+            }
+
+            const int searchRadius = 2;
+            float bestScore = float.MaxValue;
+            bool found = false;
+            for (int x = center.x - searchRadius; x <= center.x + searchRadius; x++)
+            {
+                for (int y = center.y - searchRadius; y <= center.y + searchRadius; y++)
+                {
+                    Vector2Int coords = new Vector2Int(x, y);
+                    if (!pathfinder.IsInBounds(coords) || !pathfinder.IsBush(coords))
+                        continue;
+
+                    Vector3 candidate = pathfinder.GetWorldPos(coords);
+                    float score = (candidate - memoryPoint).sqrMagnitude;
+                    if (score >= bestScore)
+                        continue;
+
+                    bestScore = score;
+                    probePoint = candidate;
+                    found = true;
+                }
+            }
+
+            return found;
         }
 
         private bool TryRunGemPickupSearch(uint currentTick)
