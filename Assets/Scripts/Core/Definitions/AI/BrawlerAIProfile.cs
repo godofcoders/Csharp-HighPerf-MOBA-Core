@@ -33,6 +33,14 @@ namespace MOBA.Core.Simulation.AI
         public float ThreatBonus = 12f;
         public float ClusterTargetBonus = 10f;
         public float InRangeTargetBonus = 12f;
+        [Tooltip("Bonus for switching to a meaningfully better target instead of tunneling the previous one.")]
+        public float DynamicTargetSwitchBonus = 22f;
+        [Tooltip("Score removed from current-target stickiness when that target is outside the bot's practical engagement window.")]
+        public float CurrentTargetOutOfRangeStickinessPenalty = 20f;
+        [Tooltip("Enemies inside this distance can pull target focus immediately, especially for close-range brawlers.")]
+        public float ImmediateThreatSwitchRadius = 3f;
+        [Tooltip("Extra target score for close-range bots when a fresh enemy enters their immediate threat radius.")]
+        public float CloseRangeImmediateThreatBonus = 32f;
 
         [Header("Target Context Awareness")]
         [Tooltip("Scales target selection awareness for isolated enemies, protected enemies, and team collapse support.")]
@@ -1189,6 +1197,10 @@ namespace MOBA.Core.Simulation.AI
             ChaseCommitScoreBonus = 10f;
             ChaseDisengageScorePenalty = 42f;
             BadMapChasePenalty = 24f;
+            DynamicTargetSwitchBonus = 22f;
+            CurrentTargetOutOfRangeStickinessPenalty = 20f;
+            ImmediateThreatSwitchRadius = 3f;
+            CloseRangeImmediateThreatBonus = 32f;
             CloseRangeCatchDistanceMultiplier = 2.35f;
             CloseRangeOutrangedChasePenalty = 52f;
             CloseRangeCoverRepositionBonus = 26f;
@@ -1222,6 +1234,10 @@ namespace MOBA.Core.Simulation.AI
                     ChaseCommitScoreBonus = 7f;
                     ChaseDisengageScorePenalty = 50f;
                     BadMapChasePenalty = 30f;
+                    DynamicTargetSwitchBonus = 24f;
+                    CurrentTargetOutOfRangeStickinessPenalty = 24f;
+                    ImmediateThreatSwitchRadius = 2.8f;
+                    CloseRangeImmediateThreatBonus = 26f;
                     MatchupKiteShortRangeBonus = 24f;
                     MatchupPunishShortRangeBonus = 18f;
                     CoverPeekPlannerWeight = 1.2f;
@@ -1239,6 +1255,10 @@ namespace MOBA.Core.Simulation.AI
                     LowHealthChaseMaxTicks = 100;
                     ChaseDisengageScorePenalty = 34f;
                     BadMapChasePenalty = 16f;
+                    DynamicTargetSwitchBonus = 26f;
+                    CurrentTargetOutOfRangeStickinessPenalty = 26f;
+                    ImmediateThreatSwitchRadius = 3.4f;
+                    CloseRangeImmediateThreatBonus = 42f;
                     CloseRangeCatchDistanceMultiplier = 2.45f;
                     CloseRangeOutrangedChasePenalty = 58f;
                     CloseRangeCoverRepositionBonus = 30f;
@@ -1262,6 +1282,10 @@ namespace MOBA.Core.Simulation.AI
                     ChaseCommitScoreBonus = 16f;
                     ChaseDisengageScorePenalty = 30f;
                     BadMapChasePenalty = 14f;
+                    DynamicTargetSwitchBonus = 30f;
+                    CurrentTargetOutOfRangeStickinessPenalty = 20f;
+                    ImmediateThreatSwitchRadius = 3.8f;
+                    CloseRangeImmediateThreatBonus = 44f;
                     CloseRangeCatchDistanceMultiplier = 2.80f;
                     CloseRangeOutrangedChasePenalty = 44f;
                     CloseRangeCoverRepositionBonus = 24f;

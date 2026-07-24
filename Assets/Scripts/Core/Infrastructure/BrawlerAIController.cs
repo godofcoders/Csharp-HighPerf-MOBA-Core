@@ -20,9 +20,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerController _brawler;
         [Header("Runtime Performance")]
         [Tooltip("Custom uses the explicit difficulty/personality below. Named tiers can be changed in Play Mode and rebuild AI tuning immediately.")]
-        [SerializeField] private AIBotPerformanceTier _performanceTier = AIBotPerformanceTier.Custom;
-        [SerializeField] private AIDifficultyLevel _difficulty = AIDifficultyLevel.Normal;
-        [SerializeField] private AIPersonalityType _personality = AIPersonalityType.Balanced;
+        [SerializeField] private AIBotPerformanceTier _performanceTier = AIBotPerformanceTier.Elite;
+        [SerializeField] private AIDifficultyLevel _difficulty = AIDifficultyLevel.Hard;
+        [SerializeField] private AIPersonalityType _personality = AIPersonalityType.Aggressive;
         [SerializeField] private AITuningCatalog _tuningCatalog;
 
 #if UNITY_EDITOR
@@ -105,9 +105,9 @@ namespace MOBA.Core.Infrastructure
         private BrawlerAIProfile _profile;
         private AITuningCatalog _activeTuningCatalog;
         private int _runtimeTuningVersion = -1;
-        private AIBotPerformanceTier _appliedPerformanceTier = AIBotPerformanceTier.Custom;
-        private AIDifficultyLevel _appliedDifficulty = AIDifficultyLevel.Normal;
-        private AIPersonalityType _appliedPersonality = AIPersonalityType.Balanced;
+        private AIBotPerformanceTier _appliedPerformanceTier = AIBotPerformanceTier.Elite;
+        private AIDifficultyLevel _appliedDifficulty = AIDifficultyLevel.Hard;
+        private AIPersonalityType _appliedPersonality = AIPersonalityType.Aggressive;
 
         private uint _nextSenseTick;
         private uint _nextDangerRefreshTick;

@@ -76,6 +76,7 @@ namespace MOBA.Core.Simulation.AI
             float dist = delta.sqrMagnitude;
             float distance = Mathf.Sqrt(dist);
             int targetEntityId = target.EntityID;
+            float ownAttackRange = GetSelfMainAttackRange();
 
             float score = 0f;
             bool isCurrentTarget =
@@ -95,7 +96,12 @@ namespace MOBA.Core.Simulation.AI
             // 2. Prefer keeping current target a bit
             if (isCurrentTarget)
             {
-                score += _profile.CurrentTargetStickiness;
+                float stickiness = _profile.CurrentTargetStickiness;
+
+                if (IsCurrentTargetBeyondPracticalRange(distance, ownAttackRange))
+                    stickiness -= Mathf.Max(0f, _profile.CurrentTargetOutOfRangeStickinessPenalty);
+
+                score += stickiness;
             }
 
             // 3. Target health / status scoring
@@ -243,6 +249,17 @@ namespace MOBA.Core.Simulation.AI
                     targetCarriedGems,
                     targetHealthRatio,
                     alliedFocusCount);
+
+                score += ScoreDynamicTargetSwitch(
+                    targetBrawlerRef,
+                    memory,
+                    distance,
+                    ownAttackRange,
+                    targetHealthRatio,
+                    targetCarriedGems,
+                    isCurrentTarget,
+                    isTeamFocusTarget,
+                    isEnemyBrawlBallCarrier);
             }
 
             score -= overFocusPenalty;
@@ -266,6 +283,125 @@ namespace MOBA.Core.Simulation.AI
             score += ScoreByAbilityShape(target);
 
             return score;
+        }
+
+        private float ScoreDynamicTargetSwitch(
+            BrawlerController target,
+            AITargetInfo memory,
+            float distance,
+            float ownAttackRange,
+            float targetHealthRatio,
+            int targetCarriedGems,
+            bool isCurrentTarget,
+            bool isTeamFocusTarget,
+            bool isEnemyBrawlBallCarrier)
+        {
+            if (isCurrentTarget ||
+                target == null ||
+                memory == null ||
+                !memory.HasLiveTarget ||
+                !SpatialEntityUtility.IsAlive(memory.Target))
+            {
+                return 0f;
+            }
+
+            float currentDistance = XZDistance(_self.Position, memory.Target.Position);
+            float closerAdvantage = currentDistance - distance;
+            float rangeBuffer = Mathf.Max(0.1f, _profile.AttackRangeBuffer);
+            float immediateRadius = Mathf.Max(
+                _profile.ImmediateThreatSwitchRadius,
+                ownAttackRange + rangeBuffer);
+            bool immediateThreat = distance <= immediateRadius;
+            bool candidateInAttackWindow = distance <= ownAttackRange + rangeBuffer;
+            bool currentOutsideAttackWindow = currentDistance > ownAttackRange + rangeBuffer;
+
+            if (closerAdvantage <= 0.35f &&
+                !immediateThreat &&
+                !candidateInAttackWindow &&
+                !isTeamFocusTarget &&
+                !isEnemyBrawlBallCarrier)
+            {
+                return 0f;
+            }
+
+            float score = 0f;
+            float switchBonus = Mathf.Max(0f, _profile.DynamicTargetSwitchBonus);
+
+            if (closerAdvantage > Mathf.Max(0.65f, ownAttackRange * 0.25f))
+            {
+                float advantageFactor =
+                    Mathf.Clamp01(closerAdvantage / Mathf.Max(1f, ownAttackRange * 1.5f));
+                score += switchBonus * advantageFactor;
+            }
+
+            if (candidateInAttackWindow && currentOutsideAttackWindow)
+                score += switchBonus * 0.55f + Mathf.Max(0f, _profile.InRangeTargetBonus) * 0.65f;
+
+            if (immediateThreat)
+            {
+                float pressure =
+                    1f - Mathf.Clamp01(distance / Mathf.Max(0.1f, immediateRadius));
+                score += switchBonus * (0.25f + pressure * 0.35f);
+
+                if (IsCloseRangeSelf())
+                    score += Mathf.Max(0f, _profile.CloseRangeImmediateThreatBonus) * pressure;
+            }
+
+            if (targetHealthRatio <= Mathf.Max(0.20f, _profile.FinisherHealthThreshold))
+                score += switchBonus * 0.35f;
+
+            if (targetCarriedGems > 0)
+                score += Mathf.Min(18f, targetCarriedGems * 4f);
+
+            if (isTeamFocusTarget)
+                score += switchBonus * 0.45f;
+
+            if (isEnemyBrawlBallCarrier)
+                score += switchBonus * 0.60f;
+
+            return Mathf.Clamp(score, 0f, 110f);
+        }
+
+        private bool IsCurrentTargetBeyondPracticalRange(float distance, float ownAttackRange)
+        {
+            float engagementRange =
+                ownAttackRange + Mathf.Max(0.1f, _profile.AttackRangeBuffer);
+
+            if (IsCloseRangeSelf())
+            {
+                engagementRange = Mathf.Max(
+                    engagementRange,
+                    ownAttackRange * Mathf.Max(1.25f, _profile.CloseRangeCatchDistanceMultiplier));
+            }
+            else
+            {
+                engagementRange = Mathf.Max(engagementRange, ownAttackRange * 1.35f);
+            }
+
+            return distance > engagementRange;
+        }
+
+        private bool IsCloseRangeSelf()
+        {
+            if (_self == null)
+                return false;
+
+            BrawlerArchetype archetype = _self.Definition != null
+                ? _self.Definition.Archetype
+                : _profile.Archetype;
+
+            return archetype == BrawlerArchetype.Tank ||
+                   archetype == BrawlerArchetype.Assassin ||
+                   (archetype == BrawlerArchetype.Fighter && GetSelfMainAttackRange() <= 4.75f);
+        }
+
+        private float GetSelfMainAttackRange()
+        {
+            AbilityDefinition attack = _self != null && _self.State != null
+                ? _self.State.GetCurrentMainAttackDefinition()
+                : _self?.Definition?.MainAttack;
+
+            return attack != null ? Mathf.Max(1f, attack.GetAIMaxRange()) : 6f;
         }
 
         private bool IsEnemyBrawlBallCarrier(BrawlerController targetBrawler)

@@ -1755,6 +1755,7 @@ namespace MOBA.Core.Simulation.AI
                 $"dist:{context.TargetDistance:0.0} " +
                 $"shortBad:{context.ShortRangeBadChase} kite:{context.RangedKiteWindow} " +
                 $"punish:{context.RangedPunishWindow} commit:{context.ObjectiveOverride} " +
+                $"superGap:{context.SuperCanCloseGap} wait:{context.WaitingForCloseRangeSuper} " +
                 $"w:{weight:0.00}";
 
             if (!string.IsNullOrEmpty(deltaDebug))
@@ -1795,14 +1796,19 @@ namespace MOBA.Core.Simulation.AI
                 targetCarriedGems >= 3 ||
                 (macroState.EnemyTeamHasCountdown && targetCarriedGems > 0) ||
                 IsModeCriticalTarget(target, macroState);
-            bool selfSuperReady =
+            bool superCanCloseGap = CanUseSuperToCloseGap(targetDistance);
+            bool waitingForCloseRangeSuper =
+                ownShortRange &&
+                !superCanCloseGap &&
                 _self.State != null &&
-                _self.State.SuperCharge.IsReady;
+                _self.State.SuperCharge != null &&
+                !_self.State.SuperCharge.IsReady &&
+                _self.State.SuperCharge.ChargePercent >= 0.50f;
             bool teamCollapse = HasTeamCollapseOnTarget(target, currentTick);
             bool objectiveOverride =
                 targetLow ||
                 highValueTarget ||
-                selfSuperReady ||
+                superCanCloseGap ||
                 teamCollapse;
 
             float catchDistance = Mathf.Max(
@@ -1845,6 +1851,8 @@ namespace MOBA.Core.Simulation.AI
                 RangedKiteWindow = rangedKiteWindow,
                 RangedPunishWindow = rangedPunishWindow,
                 ObjectiveOverride = objectiveOverride,
+                SuperCanCloseGap = superCanCloseGap,
+                WaitingForCloseRangeSuper = waitingForCloseRangeSuper,
                 OwnRange = ownRange,
                 TargetRange = targetRange,
                 TargetDistance = targetDistance
@@ -1862,13 +1870,16 @@ namespace MOBA.Core.Simulation.AI
                 switch (actionType)
                 {
                     case AIActionType.Approach:
-                        delta -= Mathf.Max(0f, _profile.CloseRangeOutrangedChasePenalty) * 0.55f;
+                        delta -= Mathf.Max(0f, _profile.CloseRangeOutrangedChasePenalty) *
+                                 (context.WaitingForCloseRangeSuper ? 0.92f : 0.65f);
                         break;
                     case AIActionType.Reposition:
-                        delta += Mathf.Max(0f, _profile.CloseRangeCoverRepositionBonus);
+                        delta += Mathf.Max(0f, _profile.CloseRangeCoverRepositionBonus) *
+                                 (context.WaitingForCloseRangeSuper ? 1.18f : 1f);
                         break;
                     case AIActionType.HoldRange:
-                        delta += Mathf.Max(0f, _profile.CloseRangeCoverRepositionBonus) * 0.45f;
+                        delta += Mathf.Max(0f, _profile.CloseRangeCoverRepositionBonus) *
+                                 (context.WaitingForCloseRangeSuper ? 0.72f : 0.45f);
                         break;
                     case AIActionType.Search:
                     case AIActionType.Objective:
@@ -4904,6 +4915,8 @@ namespace MOBA.Core.Simulation.AI
             public bool RangedKiteWindow;
             public bool RangedPunishWindow;
             public bool ObjectiveOverride;
+            public bool SuperCanCloseGap;
+            public bool WaitingForCloseRangeSuper;
             public BrawlerArchetype OwnArchetype;
             public BrawlerArchetype TargetArchetype;
             public float OwnRange;
@@ -5011,12 +5024,18 @@ namespace MOBA.Core.Simulation.AI
                                    IsModeCriticalTarget(targetBrawler, macroState);
             bool superReady = _self.State != null &&
                               _self.State.SuperCharge.IsReady;
+            bool superCanCloseGap = CanUseSuperToCloseGap(distance);
+            bool waitingForSuper =
+                !superReady &&
+                _self.State != null &&
+                _self.State.SuperCharge != null &&
+                _self.State.SuperCharge.ChargePercent >= 0.50f;
             bool teamCollapse = HasTeamCollapseOnTarget(targetBrawler, currentTick);
             bool catchable =
                 distance <= catchDistance ||
                 targetLow ||
                 objectiveTarget ||
-                superReady ||
+                superCanCloseGap ||
                 teamCollapse;
 
             float overReach = Mathf.Max(0f, distance - catchDistance);
@@ -5031,7 +5050,7 @@ namespace MOBA.Core.Simulation.AI
                 if (objectiveTarget)
                     engageBonus += Mathf.Min(18f, 6f + targetCarriedGems * 4f);
 
-                if (superReady)
+                if (superCanCloseGap)
                     engageBonus += 8f;
 
                 if (teamCollapse)
@@ -5045,7 +5064,7 @@ namespace MOBA.Core.Simulation.AI
                     true,
                     engageBonus,
                     repositionBonus,
-                    $"engage rangeGap={rangeGap:0.0} dist={distance:0.0} catch={catchDistance:0.0}");
+                    $"engage rangeGap={rangeGap:0.0} dist={distance:0.0} catch={catchDistance:0.0} superGap={superCanCloseGap}");
             }
 
             float penalty =
@@ -5068,15 +5087,52 @@ namespace MOBA.Core.Simulation.AI
                     penalty += 12f;
             }
 
+            if (waitingForSuper)
+                penalty += 14f + _self.State.SuperCharge.ChargePercent * 10f;
+
             float coverBonus =
                 Mathf.Max(0f, _profile.CloseRangeCoverRepositionBonus) +
                 Mathf.Min(16f, overReach * 4f);
+
+            if (waitingForSuper)
+                coverBonus += Mathf.Max(4f, _profile.CloseRangeEvasivePressureBonus * 0.8f);
 
             return new CloseRangeMatchupEvaluation(
                 true,
                 -penalty,
                 coverBonus,
-                $"cover_outmatched rangeGap={rangeGap:0.0} dist={distance:0.0} catch={catchDistance:0.0}");
+                $"cover_outmatched rangeGap={rangeGap:0.0} dist={distance:0.0} catch={catchDistance:0.0} waitSuper={waitingForSuper}");
+        }
+
+        private bool CanUseSuperToCloseGap(float distance)
+        {
+            if (_self == null ||
+                _self.State == null ||
+                _self.State.SuperCharge == null ||
+                !_self.State.SuperCharge.IsReady)
+            {
+                return false;
+            }
+
+            AbilityDefinition super = _self.State.GetCurrentSuperDefinition();
+            if (super == null)
+                super = _self.Definition != null ? _self.Definition.SuperAbility : null;
+
+            if (super == null)
+                return false;
+
+            bool isGapCloser =
+                super is LeapAbilityDefinition ||
+                AIAbilityIntentUtility.IsEngage(super);
+
+            if (!isGapCloser)
+                return false;
+
+            float maxRange =
+                Mathf.Max(1f, super.GetAIMaxRange()) *
+                Mathf.Max(1f, _profile.SuperMaxRangeMultiplier);
+
+            return distance <= maxRange + Mathf.Max(0.1f, _profile.AttackRangeBuffer);
         }
 
         private bool IsCloseRangePressureRole()

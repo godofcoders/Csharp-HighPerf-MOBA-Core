@@ -143,6 +143,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.FocusFireWeight *= 0.78f;
                     profile.LowHealthTargetBias *= 0.76f;
                     profile.FinisherBonus *= 0.75f;
+                    profile.DynamicTargetSwitchBonus *= 0.55f;
+                    profile.CurrentTargetOutOfRangeStickinessPenalty *= 0.55f;
+                    profile.ImmediateThreatSwitchRadius *= 0.82f;
+                    profile.CloseRangeImmediateThreatBonus *= 0.58f;
                     profile.GemPickupMinimumScore *= 1.18f;
                     profile.GemPickupSecureThresholdBonus *= 0.76f;
                     profile.GemPickupDenyThresholdBonus *= 0.76f;
@@ -249,6 +253,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.FocusFireWeight *= 1.12f;
                     profile.LowHealthTargetBias *= 1.10f;
                     profile.FinisherBonus *= 1.10f;
+                    profile.DynamicTargetSwitchBonus *= 1.14f;
+                    profile.CurrentTargetOutOfRangeStickinessPenalty *= 1.12f;
+                    profile.ImmediateThreatSwitchRadius *= 1.06f;
+                    profile.CloseRangeImmediateThreatBonus *= 1.14f;
                     profile.GemPickupMinimumScore *= 0.92f;
                     profile.GemPickupSecureThresholdBonus *= 1.12f;
                     profile.GemPickupDenyThresholdBonus *= 1.12f;
@@ -352,6 +360,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.FocusFireWeight *= 1.22f;
                     profile.LowHealthTargetBias *= 1.20f;
                     profile.FinisherBonus *= 1.22f;
+                    profile.DynamicTargetSwitchBonus *= 1.32f;
+                    profile.CurrentTargetOutOfRangeStickinessPenalty *= 1.26f;
+                    profile.ImmediateThreatSwitchRadius *= 1.12f;
+                    profile.CloseRangeImmediateThreatBonus *= 1.30f;
                     profile.GemPickupMinimumScore *= 0.86f;
                     profile.GemPickupSecureThresholdBonus *= 1.18f;
                     profile.GemPickupDenyThresholdBonus *= 1.18f;
@@ -601,6 +613,10 @@ namespace MOBA.Core.Simulation.AI
                     profile.NonCombatActionCommitmentTicks = ScaleTicks(profile.NonCombatActionCommitmentTicks, 0.90f, 1);
                     profile.EmergencyOverrideScore *= 0.96f;
                     profile.CurrentTargetStickiness *= 0.92f;
+                    profile.DynamicTargetSwitchBonus *= 1.20f;
+                    profile.CurrentTargetOutOfRangeStickinessPenalty *= 1.18f;
+                    profile.ImmediateThreatSwitchRadius *= 1.08f;
+                    profile.CloseRangeImmediateThreatBonus *= 1.18f;
                     profile.FocusFireWeight *= 1.15f;
                     profile.ClusterTargetBonus *= 1.20f;
                     profile.InRangeTargetBonus *= 1.15f;
@@ -790,6 +806,9 @@ namespace MOBA.Core.Simulation.AI
                     profile.ChaseCommitScoreBonus *= 1.18f;
                     profile.ChaseDisengageScorePenalty *= 0.85f;
                     profile.BadMapChasePenalty *= 0.85f;
+                    profile.DynamicTargetSwitchBonus *= 1.10f;
+                    profile.CurrentTargetOutOfRangeStickinessPenalty *= 0.92f;
+                    profile.CloseRangeImmediateThreatBonus *= 1.08f;
                     profile.EnemyLowAmmoOpportunityBonus *= 1.15f;
                     profile.EnemyNoAttackApproachBonus *= 1.18f;
                     profile.EnemySuperReadyThreatPenalty *= 0.82f;
@@ -1103,6 +1122,14 @@ namespace MOBA.Core.Simulation.AI
             profile.ChaseCommitScoreBonus = Mathf.Clamp(profile.ChaseCommitScoreBonus, 0f, 35f);
             profile.ChaseDisengageScorePenalty = Mathf.Clamp(profile.ChaseDisengageScorePenalty, 0f, 90f);
             profile.BadMapChasePenalty = Mathf.Clamp(profile.BadMapChasePenalty, 0f, 60f);
+            profile.DynamicTargetSwitchBonus =
+                Mathf.Clamp(profile.DynamicTargetSwitchBonus, 0f, 80f);
+            profile.CurrentTargetOutOfRangeStickinessPenalty =
+                Mathf.Clamp(profile.CurrentTargetOutOfRangeStickinessPenalty, 0f, 70f);
+            profile.ImmediateThreatSwitchRadius =
+                Mathf.Clamp(profile.ImmediateThreatSwitchRadius, 0.5f, 6f);
+            profile.CloseRangeImmediateThreatBonus =
+                Mathf.Clamp(profile.CloseRangeImmediateThreatBonus, 0f, 90f);
             profile.CloseRangeCatchDistanceMultiplier =
                 Mathf.Clamp(profile.CloseRangeCatchDistanceMultiplier, 1.25f, 4.0f);
             profile.CloseRangeOutrangedChasePenalty =
@@ -1832,6 +1859,18 @@ namespace MOBA.Core.Simulation.AI
 
             if (profile.BadMapChasePenalty <= 0f)
                 profile.BadMapChasePenalty = 24f;
+
+            if (profile.DynamicTargetSwitchBonus <= 0f)
+                profile.DynamicTargetSwitchBonus = 22f;
+
+            if (profile.CurrentTargetOutOfRangeStickinessPenalty <= 0f)
+                profile.CurrentTargetOutOfRangeStickinessPenalty = 20f;
+
+            if (profile.ImmediateThreatSwitchRadius <= 0f)
+                profile.ImmediateThreatSwitchRadius = 3f;
+
+            if (profile.CloseRangeImmediateThreatBonus <= 0f)
+                profile.CloseRangeImmediateThreatBonus = 32f;
 
             if (profile.CloseRangeCatchDistanceMultiplier <= 0f)
                 profile.CloseRangeCatchDistanceMultiplier = 2.35f;
