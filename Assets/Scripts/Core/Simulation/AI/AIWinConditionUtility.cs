@@ -200,6 +200,15 @@ namespace MOBA.Core.Simulation.AI
                 case GameModeId.Knockout:
                     return EvaluateKnockoutAction(actionType, context);
 
+                case GameModeId.BrawlBall:
+                    return EvaluateBrawlBallAction(actionType, context);
+
+                case GameModeId.HotZone:
+                    return EvaluateHotZoneAction(actionType, context);
+
+                case GameModeId.SoloShowdown:
+                    return EvaluateSoloShowdownAction(actionType, context);
+
                 default:
                     return EvaluateGenericAction(actionType, context);
             }
@@ -508,6 +517,233 @@ namespace MOBA.Core.Simulation.AI
             return EvaluateLowHealthAction(actionType, 12f, "knockout_confirm");
         }
 
+        private static AIWinConditionActionEvaluation EvaluateBrawlBallAction(
+            AIActionType actionType,
+            AIWinConditionActionContext context)
+        {
+            bool scorePointThreat = IsOneScoreFromWin(
+                context.MacroState.EnemyScore,
+                context.MacroState.ScoreToWin);
+            bool scorePointChance = IsOneScoreFromWin(
+                context.MacroState.OwnScore,
+                context.MacroState.ScoreToWin);
+            bool finalPressure =
+                context.MacroState.Phase == AIGameModeObjectivePhase.FinalPressure;
+
+            if (context.HasLiveTarget &&
+                context.TargetHealthRatio <= 0.30f)
+            {
+                return EvaluateLowHealthAction(actionType, 10f, "ball_confirm_opening");
+            }
+
+            if (context.MacroState.Call == AIGameModeMacroCall.Push)
+            {
+                float finishBonus = scorePointChance || finalPressure ? 8f : 0f;
+                switch (actionType)
+                {
+                    case AIActionType.Objective:
+                        return Result(26f + finishBonus, "ball_score_path");
+                    case AIActionType.Search:
+                        return Result(17f + finishBonus * 0.5f, "ball_score_path");
+                    case AIActionType.Reposition:
+                        return Result(14f, "ball_support_lane");
+                    case AIActionType.Approach:
+                        return Result(10f, "ball_screen_push");
+                    case AIActionType.HoldRange:
+                        return Result(7f, "ball_hold_lane");
+                    case AIActionType.Retreat:
+                    case AIActionType.Regroup:
+                        return Result(-14f, "ball_score_path");
+                }
+            }
+
+            if (context.MacroState.Call == AIGameModeMacroCall.Reset)
+            {
+                float stopBonus = scorePointThreat ? 8f : 0f;
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        return Result(18f + stopBonus, "ball_stop_carrier");
+                    case AIActionType.Search:
+                        return Result(18f + stopBonus, "ball_recover");
+                    case AIActionType.Objective:
+                        return Result(14f + stopBonus, "ball_recover");
+                    case AIActionType.UseSuper:
+                        return Result(10f + stopBonus * 0.5f, "ball_stop_carrier");
+                    case AIActionType.Reposition:
+                    case AIActionType.HoldRange:
+                        return Result(10f, "ball_defensive_shape");
+                    case AIActionType.Retreat:
+                    case AIActionType.Regroup:
+                        return Result(-10f, "ball_stop_carrier");
+                }
+            }
+
+            if (context.MacroState.Call == AIGameModeMacroCall.Hold)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.HoldRange:
+                    case AIActionType.Reposition:
+                        return Result(10f, "ball_protect_lead");
+                    case AIActionType.Objective:
+                    case AIActionType.Search:
+                        return Result(7f, "ball_control_mid");
+                    case AIActionType.Approach:
+                        return Result(-6f, "ball_protect_lead");
+                }
+            }
+
+            if (!context.HasLiveTarget &&
+                context.MacroState.Phase == AIGameModeObjectivePhase.Opening)
+            {
+                if (actionType == AIActionType.Objective)
+                    return Result(14f, "ball_opening_center");
+
+                if (actionType == AIActionType.Search)
+                    return Result(8f, "ball_opening_center");
+            }
+
+            return AIWinConditionActionEvaluation.None;
+        }
+
+        private static AIWinConditionActionEvaluation EvaluateHotZoneAction(
+            AIActionType actionType,
+            AIWinConditionActionContext context)
+        {
+            bool finalPressure =
+                context.MacroState.Phase == AIGameModeObjectivePhase.FinalPressure;
+            float urgency = finalPressure ? 1.25f : 1f;
+
+            switch (context.MacroState.Call)
+            {
+                case AIGameModeMacroCall.Reset:
+                    switch (actionType)
+                    {
+                        case AIActionType.Objective:
+                            return Result(30f * urgency, "zone_deny_finish");
+                        case AIActionType.Search:
+                            return Result(18f * urgency, "zone_deny_finish");
+                        case AIActionType.Approach:
+                        case AIActionType.UseSuper:
+                            return Result(12f * urgency, "zone_break_hold");
+                        case AIActionType.HoldRange:
+                        case AIActionType.Reposition:
+                            return Result(8f, "zone_deny_angle");
+                        case AIActionType.Retreat:
+                        case AIActionType.Regroup:
+                            return Result(-14f, "zone_deny_finish");
+                    }
+                    break;
+
+                case AIGameModeMacroCall.Push:
+                    switch (actionType)
+                    {
+                        case AIActionType.Objective:
+                            return Result(28f * urgency, "zone_capture");
+                        case AIActionType.Search:
+                            return Result(16f * urgency, "zone_capture");
+                        case AIActionType.Approach:
+                            return Result(10f, "zone_take_space");
+                        case AIActionType.Reposition:
+                        case AIActionType.HoldRange:
+                            return Result(8f, "zone_take_angle");
+                        case AIActionType.Retreat:
+                        case AIActionType.Regroup:
+                            return Result(-10f, "zone_capture");
+                    }
+                    break;
+
+                case AIGameModeMacroCall.Hold:
+                    switch (actionType)
+                    {
+                        case AIActionType.Objective:
+                            return Result(22f, "zone_hold");
+                        case AIActionType.HoldRange:
+                        case AIActionType.Reposition:
+                            return Result(12f, "zone_hold_shape");
+                        case AIActionType.Search:
+                            return Result(8f, "zone_hold");
+                        case AIActionType.Approach:
+                            return Result(-6f, "zone_hold");
+                    }
+                    break;
+            }
+
+            if (context.MacroState.Phase == AIGameModeObjectivePhase.Opening &&
+                (actionType == AIActionType.Objective || actionType == AIActionType.Search))
+            {
+                return Result(actionType == AIActionType.Objective ? 18f : 10f, "zone_opening");
+            }
+
+            return AIWinConditionActionEvaluation.None;
+        }
+
+        private static AIWinConditionActionEvaluation EvaluateSoloShowdownAction(
+            AIActionType actionType,
+            AIWinConditionActionContext context)
+        {
+            if (context.MacroState.Call == AIGameModeMacroCall.Reset)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Objective:
+                        return Result(26f, "showdown_safe_zone");
+                    case AIActionType.Reposition:
+                        return Result(20f, "showdown_escape_angle");
+                    case AIActionType.Retreat:
+                    case AIActionType.Regroup:
+                        return Result(18f, "showdown_survive");
+                    case AIActionType.HoldRange:
+                        return Result(8f, "showdown_cover_hold");
+                    case AIActionType.Approach:
+                        return Result(-22f, "showdown_survive");
+                    case AIActionType.UseSuper:
+                        return Result(-8f, "showdown_survive");
+                }
+            }
+
+            if (context.HasLiveTarget &&
+                context.TargetHealthRatio <= 0.28f &&
+                context.MacroState.Call == AIGameModeMacroCall.Push)
+            {
+                return EvaluateLowHealthAction(actionType, 10f, "showdown_confirm");
+            }
+
+            if (context.MacroState.Call == AIGameModeMacroCall.Push)
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Approach:
+                        return Result(8f, "showdown_duel");
+                    case AIActionType.UseSuper:
+                        return Result(6f, "showdown_duel");
+                    case AIActionType.Reposition:
+                    case AIActionType.HoldRange:
+                        return Result(5f, "showdown_duel_angle");
+                    case AIActionType.Objective:
+                        return Result(4f, "showdown_keep_safe");
+                }
+            }
+
+            if (!context.HasLiveTarget &&
+                (context.MacroState.Phase == AIGameModeObjectivePhase.Opening ||
+                 context.MacroState.Call == AIGameModeMacroCall.Neutral))
+            {
+                switch (actionType)
+                {
+                    case AIActionType.Objective:
+                        return Result(16f, "showdown_cube_route");
+                    case AIActionType.Search:
+                        return Result(9f, "showdown_cube_route");
+                    case AIActionType.Wander:
+                        return Result(-8f, "showdown_cube_route");
+                }
+            }
+
+            return AIWinConditionActionEvaluation.None;
+        }
+
         private static AIWinConditionActionEvaluation EvaluateGenericAction(
             AIActionType actionType,
             AIWinConditionActionContext context)
@@ -561,6 +797,11 @@ namespace MOBA.Core.Simulation.AI
                    state.Call == AIGameModeMacroCall.Push ||
                    state.Call == AIGameModeMacroCall.Reset ||
                    state.IsBehind;
+        }
+
+        private static bool IsOneScoreFromWin(int score, int scoreToWin)
+        {
+            return scoreToWin > 0 && score >= Mathf.Max(0, scoreToWin - 1);
         }
 
         private static float GetCountdownUrgency(AIGameModeMacroState state)
