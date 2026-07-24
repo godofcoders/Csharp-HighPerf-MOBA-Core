@@ -134,6 +134,7 @@ namespace MOBA.Core.Simulation.AI
                 currentTick);
 
             _lastPlaybookState = AITeamPlaybookDirector.Resolve(context);
+            RecordPlaybookGauntletSignal(_lastPlaybookState.Call, currentTick);
 
             AITeamBlackboard.ReportPlaybookState(
                 _self.Team,
@@ -159,6 +160,26 @@ namespace MOBA.Core.Simulation.AI
                 $"{_lastPlaybookState.GetDebugSummary()} {_lastLaneOwnershipDebug}";
 
             return _lastPlaybookState;
+        }
+
+        private static void RecordPlaybookGauntletSignal(
+            AITeamPlaybookCall call,
+            uint currentTick)
+        {
+            switch (call)
+            {
+                case AITeamPlaybookCall.Engage:
+                    AIValidationGauntlet.RecordSignal(
+                        AIValidationGauntletSignal.TeamEngageCall,
+                        currentTick);
+                    break;
+
+                case AITeamPlaybookCall.Disengage:
+                    AIValidationGauntlet.RecordSignal(
+                        AIValidationGauntletSignal.TeamDisengageCall,
+                        currentTick);
+                    break;
+            }
         }
 
         public bool TryGetFocusTarget(uint currentTick, out BrawlerController target)

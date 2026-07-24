@@ -144,7 +144,7 @@ namespace MOBA.Core.Simulation.AI
                 macroState,
                 playbookState,
                 results);
-            ApplyWinConditionPressure(targetInfo, macroState, results);
+            ApplyWinConditionPressure(targetInfo, currentTick, macroState, results);
             ApplyModeClutchLogic(targetInfo, macroState, results);
             ApplyOpponentResourceAwareness(targetInfo, currentTick, results);
             ApplyAbilityThreatPrediction(targetInfo, currentTick, results);
@@ -422,6 +422,7 @@ namespace MOBA.Core.Simulation.AI
 
         private void ApplyWinConditionPressure(
             AITargetInfo targetInfo,
+            uint currentTick,
             AIGameModeMacroState macroState,
             List<AIActionScore> results)
         {
@@ -494,7 +495,12 @@ namespace MOBA.Core.Simulation.AI
             }
 
             if (!string.IsNullOrEmpty(deltaDebug))
+            {
                 _lastWinConditionDebug = $"Win={deltaDebug}";
+                AIValidationGauntlet.RecordSignal(
+                    AIValidationGauntletSignal.ModeObjectivePriority,
+                    currentTick);
+            }
         }
 
         private void ApplyOpponentResourceAwareness(
