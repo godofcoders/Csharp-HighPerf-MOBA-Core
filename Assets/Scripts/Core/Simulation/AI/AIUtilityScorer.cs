@@ -1234,12 +1234,14 @@ namespace MOBA.Core.Simulation.AI
                     : 0,
                 MacroPush = macroState.Call == AIGameModeMacroCall.Push ||
                             playbookState.Call == AITeamPlaybookCall.Push ||
+                            playbookState.Call == AITeamPlaybookCall.Engage ||
                             playbookState.Call == AITeamPlaybookCall.PinchPressure ||
                             playbookState.Call == AITeamPlaybookCall.BaitAndCollapse,
                 MacroHold = macroState.Call == AIGameModeMacroCall.Hold ||
                             playbookState.Call == AITeamPlaybookCall.Hold ||
                             playbookState.Call == AITeamPlaybookCall.EscortCarrier,
                 MacroReset = macroState.Call == AIGameModeMacroCall.Reset ||
+                             playbookState.Call == AITeamPlaybookCall.Disengage ||
                              playbookState.Call == AITeamPlaybookCall.Reset,
                 ObjectivePressure = macroState.Phase == AIGameModeObjectivePhase.Opening ||
                                     macroState.Phase == AIGameModeObjectivePhase.Contest ||
@@ -3174,6 +3176,12 @@ namespace MOBA.Core.Simulation.AI
                 case AITeamPlaybookCall.Reset:
                     return GetResetPlaybookDelta(actionType, selfCarrier);
 
+                case AITeamPlaybookCall.Engage:
+                    return GetEngagePlaybookDelta(actionType);
+
+                case AITeamPlaybookCall.Disengage:
+                    return GetDisengagePlaybookDelta(actionType);
+
                 case AITeamPlaybookCall.EscortCarrier:
                     return GetEscortCarrierPlaybookDelta(
                         actionType,
@@ -3187,6 +3195,60 @@ namespace MOBA.Core.Simulation.AI
                 case AITeamPlaybookCall.BaitAndCollapse:
                     return GetBaitAndCollapsePlaybookDelta(actionType, playbookState.Lane);
 
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetEngagePlaybookDelta(AIActionType actionType)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return 14f;
+                case AIActionType.Reposition:
+                    return 9f;
+                case AIActionType.UseSuper:
+                    return 8f;
+                case AIActionType.HoldRange:
+                    return 7f;
+                case AIActionType.Search:
+                    return 6f;
+                case AIActionType.Objective:
+                    return 4f;
+                case AIActionType.Peel:
+                    return 3f;
+                case AIActionType.Retreat:
+                    return -10f;
+                case AIActionType.Regroup:
+                    return -8f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private float GetDisengagePlaybookDelta(AIActionType actionType)
+        {
+            switch (actionType)
+            {
+                case AIActionType.Retreat:
+                    return 16f;
+                case AIActionType.Regroup:
+                    return 14f;
+                case AIActionType.Reposition:
+                    return 12f;
+                case AIActionType.Peel:
+                    return 8f;
+                case AIActionType.HoldRange:
+                    return 6f;
+                case AIActionType.Approach:
+                    return -18f;
+                case AIActionType.Search:
+                    return -10f;
+                case AIActionType.Objective:
+                    return -8f;
+                case AIActionType.UseSuper:
+                    return -6f;
                 default:
                     return 0f;
             }
@@ -3420,8 +3482,15 @@ namespace MOBA.Core.Simulation.AI
 
                 case AIActionType.Peel:
                     return playbookState.Call == AITeamPlaybookCall.BaitAndCollapse ||
+                           playbookState.Call == AITeamPlaybookCall.Disengage ||
                            (playbookState.Call == AITeamPlaybookCall.EscortCarrier &&
                             playbookState.HasEscortTargetPoint);
+
+                case AIActionType.Regroup:
+                case AIActionType.Retreat:
+                    return playbookState.Call == AITeamPlaybookCall.Disengage ||
+                           playbookState.Call == AITeamPlaybookCall.Reset ||
+                           playbookState.Call == AITeamPlaybookCall.EscortCarrier;
 
                 default:
                     return targetInfo != null &&

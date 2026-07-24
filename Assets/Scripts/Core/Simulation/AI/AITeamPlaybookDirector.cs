@@ -9,6 +9,8 @@ namespace MOBA.Core.Simulation.AI
         None,
         Push,
         Hold,
+        Engage,
+        Disengage,
         Reset,
         EscortCarrier,
         PinchPressure,
@@ -80,6 +82,11 @@ namespace MOBA.Core.Simulation.AI
         public int PeelAllies;
         public int RegroupAllies;
         public int ObjectiveAllies;
+
+        public int NearbyAllies;
+        public int NearbyEnemies;
+        public float LocalAllyPressure;
+        public float LocalEnemyPressure;
     }
 
     public readonly struct AITeamPlaybookState
@@ -239,9 +246,22 @@ namespace MOBA.Core.Simulation.AI
                 ? Mathf.Max(3, context.MacroState.GemsToWin / 3)
                 : 3;
             float pressure = GetTeamPressure(context);
+            float engageReadiness = CalculateEngageReadiness(context, pressure);
+            float disengageRisk = CalculateDisengageRisk(context, pressure);
+            bool hasPickWindow =
+                context.HasFocusTarget &&
+                (context.FocusUrgency >= 1.45f ||
+                 context.MacroState.EnemyTeamHasCountdown ||
+                 context.LocalAllyPressure >= context.LocalEnemyPressure + 0.45f);
 
             if (macroCall == AIGameModeMacroCall.Reset)
             {
+                if (disengageRisk >= 1.45f && !context.SelfIsCarrier)
+                {
+                    reason = $"team_disengage:{disengageRisk:0.0}";
+                    return AITeamPlaybookCall.Disengage;
+                }
+
                 if (context.MacroState.Mode == GameModeId.Knockout)
                 {
                     reason = "knockout_stabilize";
@@ -261,12 +281,26 @@ namespace MOBA.Core.Simulation.AI
                 return AITeamPlaybookCall.EscortCarrier;
             }
 
+            if (disengageRisk >= 1.90f && !hasPickWindow)
+            {
+                reason = $"bad_fight:{disengageRisk:0.0}";
+                return AITeamPlaybookCall.Disengage;
+            }
+
             if (context.HasAllyUnderThreat &&
                 (context.HasThreatCenter || context.HasEnemyHotspot) &&
                 pressure >= 1f)
             {
                 reason = "threatened_ally";
                 return AITeamPlaybookCall.BaitAndCollapse;
+            }
+
+            if (hasPickWindow && engageReadiness >= 1.10f)
+            {
+                reason = string.IsNullOrEmpty(context.FocusReason)
+                    ? $"team_engage:{engageReadiness:0.0}"
+                    : $"team_engage:{context.FocusReason}:{engageReadiness:0.0}";
+                return AITeamPlaybookCall.Engage;
             }
 
             if (context.HasFocusTarget &&
@@ -291,6 +325,13 @@ namespace MOBA.Core.Simulation.AI
 
             if (macroCall == AIGameModeMacroCall.Push)
             {
+                if (engageReadiness >= 0.95f &&
+                    (context.HasFocusTarget || context.HasEnemyHotspot))
+                {
+                    reason = $"macro_engage:{engageReadiness:0.0}";
+                    return AITeamPlaybookCall.Engage;
+                }
+
                 reason = "macro_push";
                 return AITeamPlaybookCall.Push;
             }
@@ -338,6 +379,30 @@ namespace MOBA.Core.Simulation.AI
                         return AITeamLaneAssignment.Anchor;
 
                     return AITeamLaneAssignment.Flank;
+
+                case AITeamPlaybookCall.Engage:
+                    if (context.Archetype == BrawlerArchetype.Tank ||
+                        context.Archetype == BrawlerArchetype.Fighter ||
+                        context.Archetype == BrawlerArchetype.Controller)
+                    {
+                        return baseLane == AITeamLaneAssignment.Mid
+                            ? AITeamLaneAssignment.Anchor
+                            : baseLane;
+                    }
+
+                    return baseLane == AITeamLaneAssignment.Mid
+                        ? AITeamLaneAssignment.Flank
+                        : baseLane;
+
+                case AITeamPlaybookCall.Disengage:
+                    if (context.SelfIsCarrier ||
+                        context.HealthRatio <= 0.40f ||
+                        context.LocalEnemyPressure > context.LocalAllyPressure + 0.75f)
+                    {
+                        return AITeamLaneAssignment.Anchor;
+                    }
+
+                    return baseLane;
 
                 case AITeamPlaybookCall.Reset:
                     if (context.SelfIsCarrier || context.HealthRatio <= 0.35f)
@@ -411,6 +476,21 @@ namespace MOBA.Core.Simulation.AI
             {
                 hasAnchorPoint = true;
                 return context.ThreatenedAllyPosition;
+            }
+
+            if (call == AITeamPlaybookCall.Disengage)
+            {
+                hasAnchorPoint = true;
+                return ResolveDisengageAnchorPoint(
+                    context,
+                    pressurePoint,
+                    hasPressurePoint);
+            }
+
+            if (call == AITeamPlaybookCall.Engage && hasPressurePoint)
+            {
+                hasAnchorPoint = true;
+                return pressurePoint;
             }
 
             hasAnchorPoint = true;
@@ -653,6 +733,18 @@ namespace MOBA.Core.Simulation.AI
                     urgency = 0.80f + pressure * 0.08f;
                     break;
 
+                case AITeamPlaybookCall.Engage:
+                    urgency = 0.82f +
+                              context.FocusUrgency * 0.07f +
+                              Mathf.Max(0f, context.LocalAllyPressure - context.LocalEnemyPressure) * 0.08f;
+                    break;
+
+                case AITeamPlaybookCall.Disengage:
+                    urgency = 0.86f +
+                              (1f - Mathf.Clamp01(context.HealthRatio)) * 0.18f +
+                              Mathf.Max(0f, context.LocalEnemyPressure - context.LocalAllyPressure) * 0.08f;
+                    break;
+
                 case AITeamPlaybookCall.PinchPressure:
                     urgency = 0.70f + pressure * 0.06f + context.FocusUrgency * 0.08f;
                     break;
@@ -678,6 +770,66 @@ namespace MOBA.Core.Simulation.AI
             return Mathf.Max(
                 context.HasThreatCenter ? context.ThreatCenterPressure : 0f,
                 context.HasEnemyHotspot ? context.EnemyHotspotPressure : 0f);
+        }
+
+        private static float CalculateEngageReadiness(
+            AITeamPlaybookContext context,
+            float pressure)
+        {
+            float allyIntent =
+                context.ApproachAllies * 0.45f +
+                context.RepositionAllies * 0.30f +
+                context.HoldAllies * 0.18f +
+                context.ObjectiveAllies * 0.20f;
+            float localAdvantage =
+                Mathf.Max(0f, context.LocalAllyPressure - context.LocalEnemyPressure) * 0.55f;
+            float focus =
+                context.HasFocusTarget ? Mathf.Clamp(context.FocusUrgency * 0.35f, 0f, 1.75f) : 0f;
+            float health =
+                Mathf.Lerp(-0.45f, 0.35f, Mathf.Clamp01(context.HealthRatio));
+
+            return pressure * 0.16f + allyIntent + localAdvantage + focus + health;
+        }
+
+        private static float CalculateDisengageRisk(
+            AITeamPlaybookContext context,
+            float pressure)
+        {
+            float enemyAdvantage =
+                Mathf.Max(0f, context.LocalEnemyPressure - context.LocalAllyPressure) * 0.65f;
+            float defensiveIntent =
+                context.RegroupAllies * 0.42f +
+                context.PeelAllies * 0.26f;
+            float lowHealth =
+                Mathf.Max(0f, 0.55f - Mathf.Clamp01(context.HealthRatio)) * 2.25f;
+            float crowdRisk =
+                context.NearbyEnemies > context.NearbyAllies
+                    ? (context.NearbyEnemies - context.NearbyAllies) * 0.32f
+                    : 0f;
+            float carrierRisk =
+                context.SelfIsCarrier || context.HasAllyCarrier ? 0.28f : 0f;
+
+            return pressure * 0.14f + enemyAdvantage + defensiveIntent + lowHealth + crowdRisk + carrierRisk;
+        }
+
+        private static Vector3 ResolveDisengageAnchorPoint(
+            AITeamPlaybookContext context,
+            Vector3 pressurePoint,
+            bool hasPressurePoint)
+        {
+            if (!hasPressurePoint)
+                return context.SelfPosition;
+
+            Vector3 away = context.SelfPosition - pressurePoint;
+            away.y = 0f;
+            if (away.sqrMagnitude <= 0.001f)
+                away = -ResolveCarrierPressureDirection(
+                    context.SelfPosition,
+                    pressurePoint,
+                    true,
+                    context.BotEntityId);
+
+            return context.SelfPosition + away.normalized * 2.25f;
         }
     }
 }

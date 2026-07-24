@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
@@ -8,6 +9,7 @@ namespace MOBA.Core.Simulation.AI
     public sealed class AITeamCoordinator
     {
         private readonly BrawlerController _self;
+        private readonly List<ISpatialEntity> _localFightBuffer = new List<ISpatialEntity>(16);
 
         private const uint FocusMemoryTicks = 90;
         private const uint RegroupMemoryTicks = 30;
@@ -18,6 +20,7 @@ namespace MOBA.Core.Simulation.AI
         private const uint CarrierMemoryTicks = 90;
         private const uint PlaybookMemoryTicks = 20;
         private const uint LaneOwnershipMemoryTicks = 45;
+        private const float LocalFightRadius = 6.5f;
 
         private AITeamPlaybookState _lastPlaybookState;
         private AITeamLaneOwnershipSnapshot _lastLaneOwnership;
@@ -400,6 +403,7 @@ namespace MOBA.Core.Simulation.AI
             PopulateThreatenedAllyContext(ref context, currentTick);
             PopulateFocusContext(ref context, targetInfo, currentTick);
             PopulatePositionSignalContext(ref context, currentTick);
+            PopulateLocalFightContext(ref context);
             PopulateLaneOwnershipContext(ref context, currentTick);
 
             return context;
@@ -582,6 +586,47 @@ namespace MOBA.Core.Simulation.AI
                 context.HasThreatCenter = true;
                 context.ThreatCenterPosition = threatCenter;
                 context.ThreatCenterPressure = threatPressure;
+            }
+        }
+
+        private void PopulateLocalFightContext(ref AITeamPlaybookContext context)
+        {
+            if (SimulationClock.Grid == null)
+                return;
+
+            _localFightBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                _self.Position,
+                LocalFightRadius,
+                _localFightBuffer);
+
+            for (int i = 0; i < _localFightBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _localFightBuffer[i];
+                if (!SpatialEntityUtility.IsAlive(entity) ||
+                    entity.EntityID == _self.EntityID ||
+                    entity is not BrawlerController brawler ||
+                    brawler.State == null)
+                {
+                    continue;
+                }
+
+                float distance = Vector3.Distance(_self.Position, brawler.Position);
+                float distancePressure = 1f - Mathf.Clamp01(distance / LocalFightRadius);
+                float healthRatio = brawler.State.CurrentHealth /
+                                    Mathf.Max(1f, brawler.State.MaxHealth.Value);
+                float pressure = 0.35f + distancePressure * 0.45f + healthRatio * 0.35f;
+
+                if (brawler.Team == _self.Team)
+                {
+                    context.NearbyAllies++;
+                    context.LocalAllyPressure += pressure;
+                }
+                else
+                {
+                    context.NearbyEnemies++;
+                    context.LocalEnemyPressure += pressure;
+                }
             }
         }
 
