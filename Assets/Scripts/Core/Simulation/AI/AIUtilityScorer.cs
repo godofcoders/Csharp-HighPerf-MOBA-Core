@@ -55,6 +55,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastPressureRotationDebug = "PressureRot=None";
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
         private string _lastWinConditionDebug = "Win=None";
+        private string _lastBrawlerIdentityDebug = "Identity=None";
         private uint _lastLaneEvaluationTick;
         private bool _hasLaneEvaluation;
         private bool _lastCanHoldLane;
@@ -86,6 +87,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastPressureRotationDebug => _lastPressureRotationDebug;
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
         public string LastWinConditionDebug => _lastWinConditionDebug;
+        public string LastBrawlerIdentityDebug => _lastBrawlerIdentityDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -183,6 +185,11 @@ namespace MOBA.Core.Simulation.AI
                 results);
             ApplyTeamRoleCoordination(targetInfo, currentTick, results);
             ApplyPlaybookCoordination(targetInfo, playbookState, results);
+            ApplyBrawlerTacticalIdentity(
+                targetInfo,
+                currentTick,
+                macroState,
+                results);
         }
 
         private AIGameModeMacroState ResolveMacroState()
@@ -336,6 +343,297 @@ namespace MOBA.Core.Simulation.AI
 
             if (!string.IsNullOrEmpty(deltaDebug))
                 _lastPlaybookDebug += $" Delta={deltaDebug}";
+        }
+
+        private void ApplyBrawlerTacticalIdentity(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState,
+            List<AIActionScore> results)
+        {
+            _lastBrawlerIdentityDebug = "Identity=None";
+
+            if (_profile == null ||
+                _self == null ||
+                results == null ||
+                results.Count == 0)
+            {
+                return;
+            }
+
+            AIBrawlerTacticalIdentityContext context =
+                BuildBrawlerTacticalIdentityContext(
+                    targetInfo,
+                    currentTick,
+                    macroState);
+
+            if (context.Identity == BrawlerTacticalIdentity.Auto)
+                return;
+
+            string deltaDebug = string.Empty;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore actionScore = results[i];
+                AIBrawlerTacticalIdentityEvaluation evaluation =
+                    AIBrawlerTacticalIdentityUtility.EvaluateAction(
+                        actionScore.ActionType,
+                        _profile,
+                        context);
+
+                if (!evaluation.HasDelta)
+                    continue;
+
+                if (actionScore.Score <= 0f &&
+                    evaluation.Delta > 0f &&
+                    !CanCreateBrawlerIdentityScore(actionScore.ActionType, context))
+                {
+                    continue;
+                }
+
+                float adjustedScore = ClampActionScore(
+                    actionScore.ActionType,
+                    actionScore.Score + evaluation.Delta);
+                float actualDelta = adjustedScore - actionScore.Score;
+                if (Mathf.Abs(actualDelta) <= 0.01f)
+                    continue;
+
+                results[i] = new AIActionScore(actionScore.ActionType, adjustedScore);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionScore.ActionType}{actualDelta:+0.0;-0.0}:{evaluation.Reason}");
+            }
+
+            _lastBrawlerIdentityDebug =
+                $"Identity={AIBrawlerTacticalIdentityUtility.GetIdentityLabel(context.Identity)} " +
+                $"discipline={AIBrawlerTacticalIdentityUtility.GetDiscipline(_profile):0.00} " +
+                $"dist={context.TargetDistance:0.0} " +
+                $"range={context.OwnAttackRange:0.0}/{context.TargetAttackRange:0.0} " +
+                $"cover self:{context.SelfNearCover} between:{context.HasCoverBetween} " +
+                $"cluster:{context.EnemyClusterCount} allyLow:{context.WoundedAllyCount}/{context.CriticalAllyCount} " +
+                $"super:{context.SuperReady}/{context.SuperCanReachTarget}";
+
+            if (!string.IsNullOrEmpty(deltaDebug))
+                _lastBrawlerIdentityDebug += $" Delta={deltaDebug}";
+        }
+
+        private AIBrawlerTacticalIdentityContext BuildBrawlerTacticalIdentityContext(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState)
+        {
+            BrawlerTacticalIdentity identity =
+                AIBrawlerTacticalIdentityUtility.ResolveIdentity(
+                    _self != null ? _self.Definition : null);
+            bool hasTarget =
+                targetInfo != null &&
+                targetInfo.HasLiveTarget &&
+                SpatialEntityUtility.IsAlive(targetInfo.Target);
+            float ownRange = Mathf.Max(1f, GetAbilityMaxRange());
+            float ownIdealRange = Mathf.Max(1f, GetAbilityIdealRange());
+            float preferredRange = _profile.GetPreferredAttackRange(ownIdealRange);
+            float tooClose = _profile.GetTooCloseDistance(ownIdealRange);
+            float targetDistance = 0f;
+            float targetRange = 6f;
+            float targetHealthRatio = 1f;
+            int targetCarriedGems = 0;
+            int enemyClusterCount = 0;
+            bool targetNearCover = false;
+            bool hasCoverBetween = false;
+
+            if (hasTarget)
+            {
+                targetDistance = Vector3.Distance(_self.Position, targetInfo.Target.Position);
+                enemyClusterCount = CountEnemyBrawlersNear(
+                    targetInfo.Target.Position,
+                    Mathf.Max(2.75f, ownRange * 0.45f));
+                hasCoverBetween = AIMapNavigationUtility.HasCoverBetween(
+                    SimulationClock.Pathfinder,
+                    _self.Position,
+                    targetInfo.Target.Position);
+                targetNearCover = HasNearbyMapCover(targetInfo.Target.Position);
+
+                if (targetInfo.Target is BrawlerController targetBrawler)
+                {
+                    targetRange = Mathf.Max(1f, GetTargetAbilityMaxRange(targetBrawler));
+                    if (targetBrawler.State != null)
+                    {
+                        targetHealthRatio = Mathf.Clamp01(
+                            targetBrawler.State.CurrentHealth /
+                            Mathf.Max(1f, targetBrawler.State.MaxHealth.Value));
+                        targetCarriedGems = targetBrawler.State.CarriedGemCount;
+                    }
+                }
+            }
+
+            CountAllyHealthPressure(
+                Mathf.Max(5f, ownRange * 0.75f),
+                out int woundedAllies,
+                out int criticalAllies);
+
+            bool superReady =
+                _self.State != null &&
+                _self.State.SuperCharge != null &&
+                _self.State.SuperCharge.IsReady;
+
+            return new AIBrawlerTacticalIdentityContext(
+                identity,
+                _profile.Difficulty,
+                _profile.Personality,
+                hasTarget,
+                targetDistance,
+                ownRange,
+                preferredRange,
+                tooClose,
+                targetRange,
+                targetHealthRatio,
+                targetCarriedGems,
+                enemyClusterCount,
+                woundedAllies,
+                criticalAllies,
+                superReady,
+                hasTarget && CanUseSuperToCloseGap(targetDistance),
+                HasNearbyMapCover(_self.Position),
+                targetNearCover,
+                hasCoverBetween,
+                IsCurrentMainAttackDirectFire(),
+                IsObjectivePressure(macroState),
+                macroState.IsBehind,
+                macroState.EnemyTeamHasCountdown);
+        }
+
+        private bool CanCreateBrawlerIdentityScore(
+            AIActionType actionType,
+            in AIBrawlerTacticalIdentityContext context)
+        {
+            switch (actionType)
+            {
+                case AIActionType.HoldRange:
+                case AIActionType.Reposition:
+                case AIActionType.Approach:
+                case AIActionType.UseSuper:
+                    return context.HasTarget;
+
+                case AIActionType.Peel:
+                case AIActionType.Regroup:
+                    return context.CriticalAllyCount > 0 ||
+                           context.WoundedAllyCount > 0 ||
+                           context.Behind;
+
+                case AIActionType.Search:
+                case AIActionType.Objective:
+                    return !context.HasTarget || context.ObjectivePressure;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsObjectivePressure(AIGameModeMacroState macroState)
+        {
+            return macroState.Phase == AIGameModeObjectivePhase.Opening ||
+                   macroState.Phase == AIGameModeObjectivePhase.Contest ||
+                   macroState.Phase == AIGameModeObjectivePhase.Countdown ||
+                   macroState.Phase == AIGameModeObjectivePhase.FinalPressure ||
+                   macroState.Call == AIGameModeMacroCall.Push ||
+                   macroState.Call == AIGameModeMacroCall.Hold ||
+                   macroState.Call == AIGameModeMacroCall.Reset;
+        }
+
+        private int CountEnemyBrawlersNear(Vector3 position, float radius)
+        {
+            if (SimulationClock.Grid == null)
+                return 0;
+
+            _nearbyAllyBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                position,
+                Mathf.Max(0.1f, radius),
+                _nearbyAllyBuffer);
+
+            int count = 0;
+            for (int i = 0; i < _nearbyAllyBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _nearbyAllyBuffer[i];
+                if (!SpatialEntityUtility.IsAlive(entity) ||
+                    entity.Team == _self.Team ||
+                    !(entity is BrawlerController brawler) ||
+                    brawler.State == null ||
+                    brawler.State.IsDead)
+                {
+                    continue;
+                }
+
+                count++;
+            }
+
+            return count;
+        }
+
+        private void CountAllyHealthPressure(
+            float radius,
+            out int woundedAllyCount,
+            out int criticalAllyCount)
+        {
+            woundedAllyCount = 0;
+            criticalAllyCount = 0;
+
+            if (SimulationClock.Grid == null ||
+                _self == null)
+            {
+                return;
+            }
+
+            _nearbyAllyBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                _self.Position,
+                Mathf.Max(0.1f, radius),
+                _nearbyAllyBuffer);
+
+            for (int i = 0; i < _nearbyAllyBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _nearbyAllyBuffer[i];
+                if (!SpatialEntityUtility.IsAlive(entity) ||
+                    entity.Team != _self.Team ||
+                    !(entity is BrawlerController ally) ||
+                    ally.State == null ||
+                    ally.State.IsDead)
+                {
+                    continue;
+                }
+
+                float healthRatio = Mathf.Clamp01(
+                    ally.State.CurrentHealth /
+                    Mathf.Max(1f, ally.State.MaxHealth.Value));
+                if (healthRatio <= 0.30f)
+                    criticalAllyCount++;
+                else if (healthRatio <= 0.55f)
+                    woundedAllyCount++;
+            }
+        }
+
+        private static bool HasNearbyMapCover(Vector3 position)
+        {
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return false;
+
+            Vector2Int coords = pathfinder.GetGridCoords(position);
+            for (int x = coords.x - 1; x <= coords.x + 1; x++)
+            {
+                for (int y = coords.y - 1; y <= coords.y + 1; y++)
+                {
+                    if (x == coords.x && y == coords.y)
+                        continue;
+
+                    if (x < 0 || x >= pathfinder.Width || y < 0 || y >= pathfinder.Height)
+                        continue;
+
+                    if (!pathfinder.IsWalkable(new Vector2Int(x, y)))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         private void ApplyObjectiveIntentArbitration(

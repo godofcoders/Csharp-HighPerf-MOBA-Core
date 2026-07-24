@@ -266,6 +266,8 @@ _actionExecutor != null
             _utilityScorer != null ? _utilityScorer.LastRoleMacroDebug : "RoleMacro=None";
         public string RoleMatchupDebug =>
             _utilityScorer != null ? _utilityScorer.LastRoleMatchupDebug : "Matchup=None";
+        public string BrawlerIdentityDebug =>
+            _utilityScorer != null ? _utilityScorer.LastBrawlerIdentityDebug : "Identity=None";
         public string CoverPeekDebug =>
             _utilityScorer != null ? _utilityScorer.LastCoverPeekDebug : "CoverPeek=None";
         public string ModeClutchDebug =>
@@ -619,6 +621,7 @@ _actionExecutor != null
                 _debugSnapshot.TeamFightDebug = TeamFightDebug;
                 _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
                 _debugSnapshot.RoleMatchupDebug = RoleMatchupDebug;
+                _debugSnapshot.BrawlerIdentityDebug = BrawlerIdentityDebug;
                 _debugSnapshot.CoverPeekDebug = CoverPeekDebug;
                 _debugSnapshot.ModeClutchDebug = ModeClutchDebug;
                 _debugSnapshot.SpacingDebug = SpacingDebug;
@@ -639,6 +642,7 @@ _actionExecutor != null
                 _debugSnapshot.TeamFightDebug = "TeamFight=None";
                 _debugSnapshot.RoleMacroDebug = "RoleMacro=None";
                 _debugSnapshot.RoleMatchupDebug = "Matchup=None";
+                _debugSnapshot.BrawlerIdentityDebug = "Identity=None";
                 _debugSnapshot.CoverPeekDebug = "CoverPeek=None";
                 _debugSnapshot.ModeClutchDebug = "Clutch=None";
                 _debugSnapshot.SpacingDebug = "Spacing=None";
@@ -771,6 +775,7 @@ $"Map={LastMapRouteDebug}";
             _debugSnapshot.PlaybookDebug = PlaybookDebug;
             _debugSnapshot.RoleMacroDebug = RoleMacroDebug;
             _debugSnapshot.RoleMatchupDebug = RoleMatchupDebug;
+            _debugSnapshot.BrawlerIdentityDebug = BrawlerIdentityDebug;
             _debugSnapshot.CoverPeekDebug = CoverPeekDebug;
             _debugSnapshot.ModeClutchDebug = ModeClutchDebug;
             _debugSnapshot.SpacingDebug = SpacingDebug;
@@ -2000,6 +2005,7 @@ $"Map={LastMapRouteDebug}";
                 $"{TeamFightDebug}\n" +
                 $"{RoleMacroDebug}\n" +
                 $"{RoleMatchupDebug}\n" +
+                $"{BrawlerIdentityDebug}\n" +
                 $"{CoverPeekDebug}\n" +
                 $"{ModeClutchDebug}\n" +
                 $"{SpacingDebug}\n" +
@@ -2354,6 +2360,7 @@ $"Map={LastMapRouteDebug}";
                 $"{SceneRich("Top", SceneObjectiveColor)} {BuildTopActionScoreSummary(4)}\n" +
                 $"{SceneRich("Conf", SceneLabelMutedColor)} {DecisionConfidenceDebug}\n" +
                 $"{SceneRich("Match", SceneTargetColor)} {RoleMatchupDebug}\n" +
+                $"{SceneRich("Identity", SceneObjectiveColor)} {BrawlerIdentityDebug}\n" +
                 $"{SceneRich("Cover", SceneMoveColor)} {CoverPeekDebug}\n" +
                 $"{SceneRich("Clutch", SceneObjectiveColor)} {ModeClutchDebug}\n" +
                 $"{SceneRich("Space", SceneMoveColor)} {SpacingDebug}\n" +

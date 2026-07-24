@@ -46,6 +46,8 @@ namespace MOBA.Core.Definitions
 
         [Header("AI")]
         public BrawlerAIProfile AIProfile;
+        [Tooltip("Specific tactical personality used by the AI. Auto falls back to brawler name/archetype heuristics.")]
+        public BrawlerTacticalIdentity TacticalIdentity = BrawlerTacticalIdentity.Auto;
 
         [Header("AI Role")]
         public BrawlerArchetype Archetype;

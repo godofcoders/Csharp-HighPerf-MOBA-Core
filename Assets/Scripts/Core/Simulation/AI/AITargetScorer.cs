@@ -260,6 +260,14 @@ namespace MOBA.Core.Simulation.AI
                     isCurrentTarget,
                     isTeamFocusTarget,
                     isEnemyBrawlBallCarrier);
+
+                score += ScoreBrawlerIdentityTarget(
+                    targetBrawlerRef,
+                    distance,
+                    ownAttackRange,
+                    targetHealthRatio,
+                    targetCarriedGems,
+                    isCurrentTarget);
             }
 
             score -= overFocusPenalty;
@@ -362,6 +370,73 @@ namespace MOBA.Core.Simulation.AI
             return Mathf.Clamp(score, 0f, 110f);
         }
 
+        private float ScoreBrawlerIdentityTarget(
+            BrawlerController target,
+            float distance,
+            float ownAttackRange,
+            float targetHealthRatio,
+            int targetCarriedGems,
+            bool isCurrentTarget)
+        {
+            if (_profile == null ||
+                _self == null ||
+                target == null)
+            {
+                return 0f;
+            }
+
+            BrawlerTacticalIdentity identity =
+                AIBrawlerTacticalIdentityUtility.ResolveIdentity(_self.Definition);
+            if (identity == BrawlerTacticalIdentity.Auto)
+                return 0f;
+
+            int enemyClusterCount = 1;
+            if (SimulationClock.Grid != null)
+            {
+                enemyClusterCount = CountEnemiesNear(
+                    target.Position,
+                    Mathf.Max(2.75f, _profile.TargetContextRadius * 0.75f),
+                    _self.Team);
+            }
+
+            bool superReady =
+                _self.State != null &&
+                _self.State.SuperCharge != null &&
+                _self.State.SuperCharge.IsReady;
+            var context = new AIBrawlerTacticalTargetContext(
+                identity,
+                _profile.Difficulty,
+                _profile.Personality,
+                distance,
+                ownAttackRange,
+                targetHealthRatio,
+                targetCarriedGems,
+                enemyClusterCount,
+                isCurrentTarget,
+                superReady,
+                superReady && CanSelfSuperReachTarget(distance));
+
+            float delta = AIBrawlerTacticalIdentityUtility.EvaluateTargetScore(
+                _profile,
+                context,
+                out string reason);
+
+            if (Mathf.Abs(delta) > 0.01f)
+            {
+                string identityDebug =
+                    $"IdentityTarget={AIBrawlerTacticalIdentityUtility.GetIdentityLabel(identity)} " +
+                    $"reason:{reason} cluster:{enemyClusterCount} " +
+                    $"super:{context.SelfSuperCanReachTarget} delta:{delta:+0.0;-0.0}";
+
+                _candidateTargetContextDebug =
+                    _candidateTargetContextDebug == "TargetCtx=None"
+                        ? identityDebug
+                        : $"{_candidateTargetContextDebug} {identityDebug}";
+            }
+
+            return delta;
+        }
+
         private bool IsCurrentTargetBeyondPracticalRange(float distance, float ownAttackRange)
         {
             float engagementRange =
@@ -402,6 +477,35 @@ namespace MOBA.Core.Simulation.AI
                 : _self?.Definition?.MainAttack;
 
             return attack != null ? Mathf.Max(1f, attack.GetAIMaxRange()) : 6f;
+        }
+
+        private bool CanSelfSuperReachTarget(float distance)
+        {
+            if (_self == null ||
+                _self.State == null ||
+                _self.State.SuperCharge == null ||
+                !_self.State.SuperCharge.IsReady)
+            {
+                return false;
+            }
+
+            AbilityDefinition super = _self.State.GetCurrentSuperDefinition();
+            if (super == null)
+                super = _self.Definition != null ? _self.Definition.SuperAbility : null;
+
+            if (super == null)
+                return false;
+
+            bool isGapCloser =
+                super is LeapAbilityDefinition ||
+                AIAbilityIntentUtility.IsEngage(super);
+            if (!isGapCloser)
+                return false;
+
+            float maxRange =
+                Mathf.Max(1f, super.GetAIMaxRange()) *
+                Mathf.Max(1f, _profile.SuperMaxRangeMultiplier);
+            return distance <= maxRange + Mathf.Max(0.1f, _profile.AttackRangeBuffer);
         }
 
         private bool IsEnemyBrawlBallCarrier(BrawlerController targetBrawler)

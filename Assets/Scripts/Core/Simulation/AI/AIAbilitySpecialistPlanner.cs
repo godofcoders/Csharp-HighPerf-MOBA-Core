@@ -8,8 +8,8 @@ namespace MOBA.Core.Simulation.AI
 {
     public sealed class AIAbilitySpecialistPlanner
     {
-        private const float HybridHealHealthThreshold = 0.68f;
-        private const float HybridEmergencyHealthThreshold = 0.40f;
+        private const float HybridHealHealthThreshold = 0.48f;
+        private const float HybridEmergencyHealthThreshold = 0.30f;
         private const float HealthyDeployableKeepThreshold = 0.35f;
         private const float FireLaneWidth = 1.15f;
         private const uint ComboWindowTicks = 36;

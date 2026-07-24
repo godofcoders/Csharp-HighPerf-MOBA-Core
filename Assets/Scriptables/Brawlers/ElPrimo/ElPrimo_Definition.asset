@@ -30,6 +30,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 1328f1f9d3ec4643a190f698b22a6258, type: 2}
   - {fileID: 11400000, guid: 8ab31fd3ad604a7eb1c4dc9b968e9a71, type: 2}
   AIProfile: {fileID: 11400000, guid: 3234adecb0494141bc45f79744a0bb09, type: 2}
+  TacticalIdentity: 3
   Archetype: 0
   Aggression: 1.35
   SurvivalInstinct: 1.25

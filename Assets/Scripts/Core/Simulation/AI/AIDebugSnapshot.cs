@@ -42,6 +42,7 @@ namespace MOBA.Core.Simulation.AI
         public string TeamFightDebug;
         public string RoleMacroDebug;
         public string RoleMatchupDebug;
+        public string BrawlerIdentityDebug;
         public string CoverPeekDebug;
         public string ModeClutchDebug;
         public string SpacingDebug;
