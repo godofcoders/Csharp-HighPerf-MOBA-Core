@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ElPrimo_AutoSuperCharge
   m_EditorClassIdentifier:
   SourceName: El Primo Passive Super Charge
-  Description: El Primo gains his engage super over six seconds so close-range AI can posture instead of chasing forever.
+  Description: El Primo gains his engage super over ten seconds so close-range AI can posture instead of chasing forever.
   Enabled: 1
-  ChargePerSecond: 0.16666667
+  ChargePerSecond: 0.1
   PauseInCombat: 0

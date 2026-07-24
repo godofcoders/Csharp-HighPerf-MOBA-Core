@@ -42,7 +42,6 @@ namespace MOBA.Core.Simulation.Abilities
             float horizontalDistance = ResolveHorizontalDistance(origin, landing);
             float travelDuration = ResolveTravelDuration(horizontalDistance);
             float jumpHeight = ResolveJumpHeight(horizontalDistance);
-            owner.WarpTo(landing);
             owner.PlayPresentationLeapArc(
                 origin,
                 landing,
@@ -121,6 +120,7 @@ namespace MOBA.Core.Simulation.Abilities
                 yield break;
             }
 
+            owner.WarpTo(landing);
             int targetsAffected = ApplyLandingDamage(owner, context, landing);
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
             {

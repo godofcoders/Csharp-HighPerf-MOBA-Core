@@ -22,7 +22,7 @@ MonoBehaviour:
   DeliveryType: 2
   Cooldown: 1
   Tags:
-  CastDurationSeconds: 0.68
+  CastDurationSeconds: 1.04
   AllowMovementDuringCast: 0
   AllowActionInputDuringCast: 0
   IsInterruptible: 1
