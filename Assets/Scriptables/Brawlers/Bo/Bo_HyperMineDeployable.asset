@@ -31,6 +31,6 @@ MonoBehaviour:
   ExplosionRadius: 2.45
   Damage: 1260
   StunDurationSeconds: 1
-  ArmDelaySeconds: 0.25
-  DetonationDelaySeconds: 1.5
+  ArmDelaySeconds: 0.45
+  DetonationDelaySeconds: 0.75
   HideWhenArmed: 1
