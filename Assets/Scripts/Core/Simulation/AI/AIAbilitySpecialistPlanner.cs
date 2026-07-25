@@ -16,6 +16,10 @@ namespace MOBA.Core.Simulation.AI
         private const float DeployableProtectionRadius = 5.5f;
         private const float WoundedDeployableProtectThreshold = 0.72f;
         private const uint TargetMotionForgetTicks = 90;
+        private const float LeapMinimumDisplacementRatio = 0.32f;
+        private const float LeapMinimumDisplacement = 2.35f;
+        private const float LeapPredictionStrength = 0.82f;
+        private const float LeapMaxLeadSeconds = 0.9f;
 
         private readonly BrawlerController _self;
         private readonly List<ISpatialEntity> _buffer = new List<ISpatialEntity>(24);
@@ -383,22 +387,16 @@ namespace MOBA.Core.Simulation.AI
 
             if (ability is LeapAbilityDefinition leap)
             {
-                if (!SpatialEntityUtility.IsAlive(requestedTarget) || !IsWithinRange(requestedTarget.Position, abilityRange))
+                if (!TryBuildLeapPlan(
+                        leap,
+                        requestedTarget,
+                        abilityRange,
+                        currentTick,
+                        out plan))
+                {
                     return false;
+                }
 
-                Vector3 targetPoint = GetPredictedTargetPoint(
-                    ability,
-                    requestedTarget,
-                    leap.Range,
-                    currentTick,
-                    out _);
-                targetPoint = ClampPointToRange(targetPoint, leap.Range);
-
-                plan = AIAbilityCastPlan.PointTarget(
-                    requestedTarget,
-                    _self.Position,
-                    targetPoint,
-                    "leap_engage");
                 ApplyComboWindow(requestedTarget, currentTick, ref plan);
                 return true;
             }
@@ -603,6 +601,73 @@ namespace MOBA.Core.Simulation.AI
                     allyCountInLane: 0);
 
             return result.AimPoint;
+        }
+
+        private bool TryBuildLeapPlan(
+            LeapAbilityDefinition leap,
+            ISpatialEntity requestedTarget,
+            float abilityRange,
+            uint currentTick,
+            out AIAbilityCastPlan plan)
+        {
+            plan = default;
+
+            if (leap == null ||
+                !SpatialEntityUtility.IsAlive(requestedTarget) ||
+                _self == null)
+            {
+                return false;
+            }
+
+            float range = Mathf.Max(1f, Mathf.Min(abilityRange, leap.Range));
+            Vector3 flatToTarget = requestedTarget.Position - _self.Position;
+            flatToTarget.y = 0f;
+            float targetDistance = flatToTarget.magnitude;
+
+            if (targetDistance > range + Mathf.Max(0f, requestedTarget.CollisionRadius))
+                return false;
+
+            float minimumDisplacement = Mathf.Max(
+                LeapMinimumDisplacement,
+                range * LeapMinimumDisplacementRatio);
+
+            if (targetDistance < minimumDisplacement)
+                return false;
+
+            Vector3 targetVelocity = EstimateTargetVelocity(requestedTarget, currentTick);
+            float travelDuration = ResolveLeapTravelDuration(leap, targetDistance);
+            float leadSeconds = Mathf.Min(LeapMaxLeadSeconds, travelDuration * LeapPredictionStrength);
+            Vector3 targetPoint = requestedTarget.Position + targetVelocity * leadSeconds;
+            targetPoint.y = _self.Position.y;
+            targetPoint = ClampPointToRange(targetPoint, range);
+
+            Vector3 landingOffset = targetPoint - _self.Position;
+            landingOffset.y = 0f;
+            if (landingOffset.magnitude < minimumDisplacement)
+                return false;
+
+            plan = AIAbilityCastPlan.PointTarget(
+                requestedTarget,
+                _self.Position,
+                targetPoint,
+                $"leap_engage dist={targetDistance:0.0} lead={leadSeconds:0.00}");
+            plan.ForceUse = true;
+            return true;
+        }
+
+        private static float ResolveLeapTravelDuration(LeapAbilityDefinition leap, float horizontalDistance)
+        {
+            if (leap == null)
+                return 0f;
+
+            float duration = Mathf.Max(0f, leap.TravelDurationSeconds);
+            if (leap.TravelDurationPerUnit > 0f)
+                duration += Mathf.Max(0f, horizontalDistance) * leap.TravelDurationPerUnit;
+
+            if (leap.MaxTravelDurationSeconds > 0f)
+                duration = Mathf.Min(duration, leap.MaxTravelDurationSeconds);
+
+            return duration;
         }
 
         private bool TryBuildChainBouncePlan(

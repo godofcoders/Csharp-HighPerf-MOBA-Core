@@ -66,6 +66,9 @@ namespace MOBA.Core.Simulation.AI
                 currentTick,
                 out plan);
 
+            if (super is LeapAbilityDefinition && !hasSpecialistPlan)
+                return;
+
             Vector3 aimPoint = hasSpecialistPlan && plan.HasTargetPoint
                 ? plan.TargetPoint
                 : target.Position;
@@ -97,10 +100,18 @@ namespace MOBA.Core.Simulation.AI
                     "default_super");
             }
 
-            plan = AIAimAccuracyUtility.ApplyAimError(
-                plan,
-                _self.Position,
-                _profile.AimErrorDegrees);
+            bool preserveSpecialistLanding =
+                super is LeapAbilityDefinition &&
+                hasSpecialistPlan &&
+                plan.ForceUse &&
+                plan.HasTargetPoint;
+            if (!preserveSpecialistLanding)
+            {
+                plan = AIAimAccuracyUtility.ApplyAimError(
+                    plan,
+                    _self.Position,
+                    _profile.AimErrorDegrees);
+            }
 
             if (!AIShotObstacleUtility.CanFireAtTarget(
                     _self,

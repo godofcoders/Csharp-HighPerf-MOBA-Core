@@ -2191,7 +2191,7 @@ namespace MOBA.Core.Infrastructure
                 yield return null;
             }
 
-            _presentationWorldOffset = Vector3.zero;
+            _presentationWorldOffset = landingPosition - transform.position;
             _presentationLeapRoutine = null;
         }
 
