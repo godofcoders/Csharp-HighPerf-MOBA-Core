@@ -733,6 +733,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b1f5e71c3af374589a4e5dee979f4c60, type: 2}
   - {fileID: 11400000, guid: b5f09f640d494f2a89f6a68eb092e30d, type: 2}
   - {fileID: 11400000, guid: e6117ae7effd443ab6a52e3d4e828556, type: 2}
+  - {fileID: 11400000, guid: c93e4459c3174767acf09bc6d3a3e572, type: 2}
   _cardPrefab: {fileID: 614544048855934574, guid: eff843c18cec344548006aa756e644d8, type: 3}
   _cardContainer: {fileID: 508935457}
   _detailPanel: {fileID: 616374802}

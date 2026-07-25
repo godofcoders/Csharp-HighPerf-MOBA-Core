@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d4d7476af0334c89ba9613aa4565986, type: 3}
+  m_Name: Piper_MainProjectile_Presentation
+  m_EditorClassIdentifier:
+  VisualPrefab: {fileID: 0}
+  LocalPosition: {x: 0, y: 0, z: 0}
+  LocalRotationEuler: {x: 0, y: 0, z: 0}
+  LocalScale: {x: 0.16, y: 0.16, z: 0.72}
+  PreferRuntimeShape: 1
+  RuntimeShape: 0
+  FaceMovementDirection: 1
+  UseSpin: 0
+  SpinEulerPerSecond: {x: 0, y: 0, z: 0}
+  MinimumVisualDiameter: 0.18
+  UseRuntimeTrail: 1
+  TrailTime: 0.060
+  TrailStartWidth: 0.08
+  TrailEndWidth: 0.010
+  TrailColor: {r: 1, g: 0.86, b: 0.36, a: 0.78}
+  SuperTrailColor: {r: 0.40, g: 0.15, b: 0.95, a: 0.90}

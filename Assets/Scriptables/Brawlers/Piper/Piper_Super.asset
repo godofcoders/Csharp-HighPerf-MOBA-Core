@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0e2f5f3a41bd4cea8a2bcbc9a55078fd, type: 3}
+  m_Name: Piper_Super
+  m_EditorClassIdentifier:
+  OptionName: Poppin'
+  Description: Piper jumps to a target landing point and drops four delayed bombs at takeoff.
+  AllowedBuildSlotTypes:
+  AbilityName: Poppin'
+  Icon: {fileID: 0}
+  SlotType: 1
+  TargetingType: 3
+  DeliveryType: 2
+  Cooldown: 1
+  Tags:
+  - 2
+  - 6
+  CastDurationSeconds: 0.2
+  AllowMovementDuringCast: 0
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 3
+  AllowAimAssist: 1
+  AimAssistMode: 8
+  AimAssistIncludeSelf: 0
+  PreferManualAim: 1
+  AimAssistRangeOverride: 8
+  AimAssistForwardBias: 1.5
+  AimAssistDistanceBias: 0.8
+  AimAssistIdealRange: 6.6
+  AimAssistPlacementDistance: 6.4
+  AimAssistLowHealthBias: 1.2
+  AimAssistGemCarrierBias: 0.35
+  AimAssistCloseTargetRange: 2.25
+  AimAssistLeadStrength: 0.2
+  PreviewMode: 3
+  AimPreviewWidth: 1.55
+  Range: 8
+  LandingSearchRadius: 1.3
+  TravelDurationSeconds: 0.72
+  TravelDurationPerUnit: 0.035
+  MaxTravelDurationSeconds: 1.05
+  JumpHeight: 3.9
+  DistanceHeightBonus: 0.18
+  MaxJumpHeight: 5.1
+  ApexHangPower: 0.82
+  BombCount: 4
+  BombDelaySeconds: 0.5
+  BombRadius: 1.25
+  BombDamage: 720
+  BombSpreadRadius: 1.35

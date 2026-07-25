@@ -10,6 +10,7 @@ namespace MOBA.Core.Definitions
         ElPrimo = 3,
         Colt = 4,
         Bo = 5,
-        Barley = 6
+        Barley = 6,
+        Piper = 7
     }
 }
