@@ -312,6 +312,21 @@ namespace MOBA.Core.Infrastructure
                         new Vector3(0.88f, 0.035f, 0.88f));
                     break;
 
+                case ProjectileRuntimeShape.Bullet:
+                    CreatePrimitivePart(root.transform, "BulletBody", PrimitiveType.Cylinder,
+                        new Vector3(0f, 0f, -0.10f),
+                        Quaternion.Euler(90f, 0f, 0f),
+                        new Vector3(0.58f, 0.56f, 0.58f));
+                    CreatePrimitivePart(root.transform, "BulletNose", PrimitiveType.Sphere,
+                        new Vector3(0f, 0f, 0.32f),
+                        Quaternion.identity,
+                        new Vector3(0.58f, 0.58f, 0.48f));
+                    CreatePrimitivePart(root.transform, "BulletBase", PrimitiveType.Cylinder,
+                        new Vector3(0f, 0f, -0.52f),
+                        Quaternion.Euler(90f, 0f, 0f),
+                        new Vector3(0.66f, 0.14f, 0.66f));
+                    break;
+
                 default:
                     CreatePrimitivePart(root.transform, "SphereCore", PrimitiveType.Sphere,
                         Vector3.zero,
