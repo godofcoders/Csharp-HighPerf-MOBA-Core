@@ -37,6 +37,7 @@ MonoBehaviour:
   BuildLayout: {fileID: 11400000, guid: e7eb581d16fba44e382042c75204d09c, type: 2}
   GadgetOptions:
   - {fileID: 11400000, guid: bc90906066004691862cb2fbbe365984, type: 2}
+  - {fileID: 11400000, guid: a451d2e0d39c4ef2a6b20a67c5ff98e1, type: 2}
   StarPowerOptions:
   - {fileID: 11400000, guid: 9277e780d4824f84b51b8ff4b774be7d, type: 2}
   - {fileID: 11400000, guid: cba9b1f7c2d74a62986a4e95014adfd9, type: 2}

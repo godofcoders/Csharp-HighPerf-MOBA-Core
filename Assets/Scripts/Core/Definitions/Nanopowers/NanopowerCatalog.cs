@@ -12,6 +12,7 @@ namespace MOBA.Core.Definitions
         private static NanopowerDefinition[] _boDefaults;
         private static NanopowerDefinition[] _elPrimoDefaults;
         private static NanopowerDefinition[] _piperDefaults;
+        private static NanopowerDefinition[] _leonDefaults;
 
         public static void BuildOptions(BrawlerDefinition brawler, List<NanopowerDefinition> output)
         {
@@ -74,6 +75,12 @@ namespace MOBA.Core.Definitions
             else if (output.Count == 0 && IsNamedBrawler(brawler, "piper"))
             {
                 NanopowerDefinition[] defaults = GetPiperDefaults();
+                for (int i = 0; i < defaults.Length; i++)
+                    output.Add(defaults[i]);
+            }
+            else if (output.Count == 0 && IsNamedBrawler(brawler, "leon"))
+            {
+                NanopowerDefinition[] defaults = GetLeonDefaults();
                 for (int i = 0; i < defaults.Length; i++)
                     output.Add(defaults[i]);
             }
@@ -308,6 +315,39 @@ namespace MOBA.Core.Definitions
             };
 
             return _piperDefaults;
+        }
+
+        private static NanopowerDefinition[] GetLeonDefaults()
+        {
+            if (_leonDefaults != null)
+                return _leonDefaults;
+
+            _leonDefaults = new[]
+            {
+                CreateRuntimeNanopower(
+                    "LeonNanoRazorDiscs",
+                    "Razor Discs",
+                    "+12% damage. Leon's long-range poke and close-range burst both become sharper.",
+                    new Color(1f, 0.54f, 0.18f, 1f),
+                    outgoingDamageBonusPercent: 0.12f),
+
+                CreateRuntimeNanopower(
+                    "LeonNanoSilentStride",
+                    "Silent Stride",
+                    "+9% movement speed. Stronger flanks, faster retreats, and cleaner invisibility angles.",
+                    new Color(0.20f, 0.88f, 1f, 1f),
+                    moveSpeedBonusPercent: 0.09f),
+
+                CreateRuntimeNanopower(
+                    "LeonNanoSmokeWeave",
+                    "Smoke Weave",
+                    "+320 health and 6% damage reduction. Helps Leon survive after committing to a pick.",
+                    new Color(0.56f, 0.82f, 0.32f, 1f),
+                    bonusMaxHealth: 320f,
+                    incomingDamageReductionPercent: 0.06f)
+            };
+
+            return _leonDefaults;
         }
 
         private static NanopowerDefinition CreateRuntimeNanopower(
