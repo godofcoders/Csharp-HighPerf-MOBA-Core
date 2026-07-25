@@ -754,6 +754,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: b5f09f640d494f2a89f6a68eb092e30d, type: 2}
   - {fileID: 11400000, guid: e6117ae7effd443ab6a52e3d4e828556, type: 2}
   - {fileID: 11400000, guid: c93e4459c3174767acf09bc6d3a3e572, type: 2}
+  - {fileID: 11400000, guid: 10bb04ab86ca40e9ba653d490f7cf7b5, type: 2}
   _avoidDuplicateBotBrawlersUntilPoolExhausted: 1
 --- !u!1 &1182038182
 GameObject:

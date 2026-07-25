@@ -9,7 +9,8 @@ namespace MOBA.Core.Definitions
         EnergyOrb = 2,
         MiniOrb = 3,
         Vial = 4,
-        Bowl = 5
+        Bowl = 5,
+        Disc = 6
     }
 
     [CreateAssetMenu(fileName = "ProjectilePresentationProfile", menuName = "MOBA/Presentation/Projectile Presentation Profile")]

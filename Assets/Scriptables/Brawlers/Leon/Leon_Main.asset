@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 38a49263d082c4cef8a8eaea583f3295, type: 3}
+  m_Name: Leon_Main
+  m_EditorClassIdentifier:
+  OptionName: Leon Main Attack
+  Description: Two quick long-range spinning discs with a slight angle split.
+  AllowedBuildSlotTypes:
+  AbilityName: Spinner Blades
+  Icon: {fileID: 0}
+  SlotType: 0
+  TargetingType: 1
+  DeliveryType: 1
+  Cooldown: 0.92
+  Tags:
+  - 0
+  CastDurationSeconds: 0.14
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 0
+  AllowAimAssist: 1
+  AimAssistMode: 6
+  AimAssistIncludeSelf: 0
+  PreferManualAim: 1
+  AimAssistRangeOverride: 11.5
+  AimAssistForwardBias: 2.3
+  AimAssistDistanceBias: 0.9
+  AimAssistIdealRange: 7.2
+  AimAssistPlacementDistance: 3
+  AimAssistLowHealthBias: 1.55
+  AimAssistGemCarrierBias: 0.8
+  AimAssistCloseTargetRange: 2.35
+  AimAssistLeadStrength: 0.62
+  PreviewMode: 1
+  AimPreviewWidth: 0.95
+  Damage: 620
+  Range: 11.5
+  Speed: 28
+  ProjectileCount: 2
+  DelayBetweenProjectiles: 0.08
+  SpreadAngle: 7
+  ParallelLaneSpacing: 0.16
+  ForwardSpawnOffset: 0.95
+  DamageScalesWithDistance: 0
+  MinDamageMultiplier: 1
+  DamageScaleStartRatio: 0
+  PresentationProfile: {fileID: 11400000, guid: cdac2b8e10f2496090113191b0b11e5f, type: 2}

@@ -167,6 +167,8 @@ namespace MOBA.Core.Simulation.AI
                     return BrawlerTacticalIdentity.Barley;
                 if (lower.Contains("piper"))
                     return BrawlerTacticalIdentity.Piper;
+                if (lower.Contains("leon"))
+                    return BrawlerTacticalIdentity.Leon;
             }
 
             return BrawlerTacticalIdentity.Auto;
@@ -235,6 +237,9 @@ namespace MOBA.Core.Simulation.AI
                     break;
                 case BrawlerTacticalIdentity.Piper:
                     delta = EvaluatePiper(actionType, context, out reason);
+                    break;
+                case BrawlerTacticalIdentity.Leon:
+                    delta = EvaluateLeon(actionType, context, out reason);
                     break;
                 default:
                     return AIBrawlerTacticalIdentityEvaluation.None;
@@ -323,6 +328,18 @@ namespace MOBA.Core.Simulation.AI
                         score -= 20f;
                     reason = "piper_long_range_pick";
                     break;
+
+                case BrawlerTacticalIdentity.Leon:
+                    float assassinWindow =
+                        1f - Mathf.Clamp01(Mathf.Abs(context.Distance - context.OwnAttackRange * 0.62f) /
+                                           Mathf.Max(1f, context.OwnAttackRange * 0.45f));
+                    score += assassinWindow * 18f;
+                    score += lowHealth * 30f;
+                    score += context.TargetCarriedGems * 4f;
+                    if (context.SelfSuperReady)
+                        score += lowHealth * 12f;
+                    reason = "leon_stealth_pick";
+                    break;
             }
 
             if (context.IsCurrentTarget && score > 0f)
@@ -349,6 +366,8 @@ namespace MOBA.Core.Simulation.AI
                     return "Barley";
                 case BrawlerTacticalIdentity.Piper:
                     return "Piper";
+                case BrawlerTacticalIdentity.Leon:
+                    return "Leon";
                 default:
                     return "Auto";
             }
@@ -590,6 +609,43 @@ namespace MOBA.Core.Simulation.AI
                     return escapeSuper ? 42f : 0f;
                 case AIActionType.Objective:
                     return context.ObjectivePressure && sweetSpot ? 12f : 0f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private static float EvaluateLeon(
+            AIActionType actionType,
+            in AIBrawlerTacticalIdentityContext context,
+            out string reason)
+        {
+            reason = "leon_flank_pick";
+            bool hasTarget = context.HasTarget;
+            bool closeDanger = hasTarget && context.TargetDistance <= context.OwnTooCloseDistance + 0.35f;
+            bool pickWindow = hasTarget &&
+                              context.TargetDistance <= context.OwnAttackRange + 0.65f &&
+                              (context.TargetHealthRatio <= 0.48f ||
+                               context.TargetCarriedGems >= 2 ||
+                               context.EnemyClusterCount <= 1);
+            bool outOfRange = hasTarget && context.TargetDistance > context.OwnAttackRange + 0.9f;
+
+            switch (actionType)
+            {
+                case AIActionType.Approach:
+                    return pickWindow ? 22f : outOfRange ? 6f : 0f;
+                case AIActionType.HoldRange:
+                    return hasTarget && !closeDanger && !outOfRange ? 16f : 0f;
+                case AIActionType.Reposition:
+                    return closeDanger ? 18f : !context.SelfNearCover && hasTarget ? 10f : 0f;
+                case AIActionType.UseSuper:
+                    return context.SuperReady &&
+                           (pickWindow ||
+                            context.TargetCarriedGems >= 3 ||
+                            context.ObjectivePressure)
+                        ? 36f
+                        : 0f;
+                case AIActionType.Search:
+                    return !hasTarget ? 8f : 0f;
                 default:
                     return 0f;
             }

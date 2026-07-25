@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 100fa30d2c78d4094b9cb6cd0594c58f, type: 3}
+  m_Name: Leon_AIProfile
+  m_EditorClassIdentifier:
+  Archetype: 1
+  Difficulty: 2
+  Personality: 1
+  ReactionDelayTicks: 0
+  AimErrorDegrees: 0.6
+  DetectionRadius: 12
+  MemoryDurationTicks: 110
+  IdleSenseIntervalTicks: 8
+  CombatSenseIntervalTicks: 3
+  DistanceWeight: 0.9
+  CurrentTargetStickiness: 10
+  LowHealthTargetBias: 36
+  FinisherHealthThreshold: 0.48
+  FinisherBonus: 34
+  ThreatRange: 6.5
+  ThreatBonus: 14
+  ClusterTargetBonus: 6
+  InRangeTargetBonus: 16
+  AttackRangeBuffer: 0.7
+  PreferredAttackRangeRatio: 0.68
+  TooCloseRangeRatio: 0.32
+  AttackCadenceTicks: 13
+  EnableGadgetUsage: 1
+  GadgetLowHealthThreshold: 0.5
+  GadgetEnemyDistanceThreshold: 4
+  GadgetCooldownTicks: 105
+  LowHealthRetreatRatio: 0.34
+  RetreatStepDistance: 4.2
+  SharedHotspotMemoryTicks: 120
+  EnableSuperUsage: 1
+  SuperLowHealthTargetThreshold: 0.5
+  SuperMinRangeRatio: 0.1
+  SuperMaxRangeMultiplier: 1.05
+  SuperMinClusterCount: 1
+  SuperDecisionCooldownTicks: 16
+  UseStrafe: 1
+  StrafeDistance: 1.65
+  StrafeRetargetTicks: 12
+  RepositionStepDistance: 2.8
+  FallbackWanderRadius: 4.8
+  FallbackWanderRetargetTicks: 42
+  RetreatWeight: 1.05
+  ApproachWeight: 1.25
+  HoldRangeWeight: 1.05
+  RepositionWeight: 1.2
+  SearchWeight: 1.05
+  WanderWeight: 0.75
+  SuperWeight: 1.55
+  PreferredObjective: 7
+  ObjectiveWeight: 1.05
+  FocusFireWeight: 30
+  RegroupWeight: 1
+  PeelWeight: 0.75
+  RegroupHealthThreshold: 0.36
+  AllySupportRange: 8.5
+  TargetFocusSoftLimit: 1
+  OverFocusedTargetPenaltyPerAlly: 14
+  MaxOverFocusedTargetPenalty: 34
+  AllyAvoidanceRadius: 3.3
+  AllyAvoidanceWeight: 2
+  HoldRangePositionRefreshTicks: 16
+  PreferredCombatOffset: 1.1
+  TacticalStrafeDistance: 2.2
+  TacticalKiteDistance: 2.8
+  TacticalMoveRetargetTicks: 11
+  TacticalMoveHeartbeatTicks: 18
+  TacticalDestinationStaleDistance: 1.2
+  TacticalMinimumStepDistance: 0.8
+  FragileRangePadding: 0.8
+  MinimumCommittedActionScore: 8
+  ActionSwitchScoreMargin: 11
+  CombatActionCommitmentTicks: 7
+  NonCombatActionCommitmentTicks: 16
+  EmergencyOverrideScore: 90
+  LogActionCommitment: 1

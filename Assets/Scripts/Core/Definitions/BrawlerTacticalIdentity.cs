@@ -11,6 +11,7 @@ namespace MOBA.Core.Definitions
         Colt = 4,
         Bo = 5,
         Barley = 6,
-        Piper = 7
+        Piper = 7,
+        Leon = 8
     }
 }

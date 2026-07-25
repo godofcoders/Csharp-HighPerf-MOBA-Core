@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a8e10389a34284455a55c064f7270380, type: 3}
+  m_Name: Leon_Super
+  m_EditorClassIdentifier:
+  OptionName: Smoke Bomb
+  Description: Leon becomes invisible for six seconds, breaking on attack, damage, or enemy proximity.
+  AllowedBuildSlotTypes:
+  AbilityName: Smoke Bomb
+  Icon: {fileID: 0}
+  SlotType: 1
+  TargetingType: 0
+  DeliveryType: 4
+  Cooldown: 1
+  Tags:
+  - 6
+  - 7
+  CastDurationSeconds: 0.12
+  AllowMovementDuringCast: 1
+  AllowActionInputDuringCast: 0
+  IsInterruptible: 1
+  Intent: 2
+  AllowAimAssist: 0
+  AimAssistMode: 0
+  AimAssistIncludeSelf: 1
+  PreferManualAim: 0
+  AimAssistRangeOverride: 0
+  AimAssistForwardBias: 0
+  AimAssistDistanceBias: 0
+  AimAssistIdealRange: 0
+  AimAssistPlacementDistance: 0
+  AimAssistLowHealthBias: 0
+  AimAssistGemCarrierBias: 0
+  AimAssistCloseTargetRange: 0
+  AimAssistLeadStrength: 0
+  PreviewMode: 0
+  AimPreviewWidth: 0.5
+  Effects:
+  - {fileID: 11400000, guid: 222be930e3ce42b49a20b9c919cd6880, type: 2}
+  PreviewRange: 0

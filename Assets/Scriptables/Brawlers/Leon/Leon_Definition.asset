@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
+  m_Name: Leon_Definition
+  m_EditorClassIdentifier:
+  BrawlerName: Leon
+  ModelPrefab: {fileID: 884401910100000001, guid: fbedd24bf26142f3890afbf47c851ca2, type: 3}
+  Portrait: {fileID: 0}
+  BaseHealth: 3600
+  BaseMoveSpeed: 5.15
+  BaseDamage: 620
+  ProgressionBonuses: []
+  MainAttack: {fileID: 11400000, guid: ad10359e457f4155bd25b687db1854a2, type: 2}
+  SuperAbility: {fileID: 11400000, guid: e219662641074dffa77d05162bac3b21, type: 2}
+  Gadget: {fileID: 11400000, guid: bc90906066004691862cb2fbbe365984, type: 2}
+  StarPower: {fileID: 11400000, guid: 9277e780d4824f84b51b8ff4b774be7d, type: 2}
+  DefaultPassiveLoadout: {fileID: 0}
+  DefaultPassiveEntries: []
+  Hypercharge: {fileID: 11400000, guid: a38938300d21489598721480b01522bf, type: 2}
+  SuperChargeSources:
+  - {fileID: 11400000, guid: 6bfe3bbbc3e945159c5b7fb0002e2980, type: 2}
+  AIProfile: {fileID: 11400000, guid: 1877fd63a5ad4fc7973879f0565487cf, type: 2}
+  TacticalIdentity: 8
+  Archetype: 1
+  Aggression: 1.2
+  SurvivalInstinct: 0.95
+  TeamplayWeight: 0.9
+  BuildLayout: {fileID: 11400000, guid: e7eb581d16fba44e382042c75204d09c, type: 2}
+  GadgetOptions:
+  - {fileID: 11400000, guid: bc90906066004691862cb2fbbe365984, type: 2}
+  StarPowerOptions:
+  - {fileID: 11400000, guid: 9277e780d4824f84b51b8ff4b774be7d, type: 2}
+  - {fileID: 11400000, guid: cba9b1f7c2d74a62986a4e95014adfd9, type: 2}
+  HyperchargeOptions:
+  - {fileID: 11400000, guid: a38938300d21489598721480b01522bf, type: 2}
+  NanopowerOptions: []
+  DefaultBuild: {fileID: 11400000, guid: e041ee0e692541be88f2cb2e7f223db2, type: 2}
+  SharedGearCatalog: {fileID: 11400000, guid: 7f9a7730557864b77bb0ca97e22ea9e6, type: 2}
+  GearOptions: []
+  ExtraGearOptions: []

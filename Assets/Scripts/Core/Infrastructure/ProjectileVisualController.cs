@@ -301,6 +301,17 @@ namespace MOBA.Core.Infrastructure
                         new Vector3(1.12f, 0.06f, 1.12f));
                     break;
 
+                case ProjectileRuntimeShape.Disc:
+                    CreatePrimitivePart(root.transform, "DiscCore", PrimitiveType.Cylinder,
+                        Vector3.zero,
+                        Quaternion.Euler(90f, 0f, 0f),
+                        new Vector3(0.78f, 0.10f, 0.78f));
+                    CreatePrimitivePart(root.transform, "DiscEdge", PrimitiveType.Cylinder,
+                        new Vector3(0f, 0f, -0.012f),
+                        Quaternion.Euler(90f, 0f, 0f),
+                        new Vector3(0.88f, 0.035f, 0.88f));
+                    break;
+
                 default:
                     CreatePrimitivePart(root.transform, "SphereCore", PrimitiveType.Sphere,
                         Vector3.zero,
