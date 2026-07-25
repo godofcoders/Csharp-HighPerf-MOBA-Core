@@ -11,6 +11,7 @@ namespace MOBA.Core.Definitions
         private static NanopowerDefinition[] _barleyDefaults;
         private static NanopowerDefinition[] _boDefaults;
         private static NanopowerDefinition[] _elPrimoDefaults;
+        private static NanopowerDefinition[] _piperDefaults;
 
         public static void BuildOptions(BrawlerDefinition brawler, List<NanopowerDefinition> output)
         {
@@ -67,6 +68,12 @@ namespace MOBA.Core.Definitions
                      (IsNamedBrawler(brawler, "el primo") || IsNamedBrawler(brawler, "primo")))
             {
                 NanopowerDefinition[] defaults = GetElPrimoDefaults();
+                for (int i = 0; i < defaults.Length; i++)
+                    output.Add(defaults[i]);
+            }
+            else if (output.Count == 0 && IsNamedBrawler(brawler, "piper"))
+            {
+                NanopowerDefinition[] defaults = GetPiperDefaults();
                 for (int i = 0; i < defaults.Length; i++)
                     output.Add(defaults[i]);
             }
@@ -268,6 +275,39 @@ namespace MOBA.Core.Definitions
             };
 
             return _elPrimoDefaults;
+        }
+
+        private static NanopowerDefinition[] GetPiperDefaults()
+        {
+            if (_piperDefaults != null)
+                return _piperDefaults;
+
+            _piperDefaults = new[]
+            {
+                CreateRuntimeNanopower(
+                    "PiperNanoDeadeyeLens",
+                    "Deadeye Lens",
+                    "+13% damage. Piper's rewarded distance shots become a serious finisher threat.",
+                    new Color(1f, 0.64f, 0.20f, 1f),
+                    outgoingDamageBonusPercent: 0.13f),
+
+                CreateRuntimeNanopower(
+                    "PiperNanoSilkStep",
+                    "Silk Step",
+                    "+8% movement speed. Cleaner lane rotations and safer sniper spacing.",
+                    new Color(0.24f, 0.82f, 1f, 1f),
+                    moveSpeedBonusPercent: 0.08f),
+
+                CreateRuntimeNanopower(
+                    "PiperNanoParasolGuard",
+                    "Parasol Guard",
+                    "+280 health and 5% damage reduction. Gives Piper one extra beat to escape dives.",
+                    new Color(0.88f, 0.76f, 0.32f, 1f),
+                    bonusMaxHealth: 280f,
+                    incomingDamageReductionPercent: 0.05f)
+            };
+
+            return _piperDefaults;
         }
 
         private static NanopowerDefinition CreateRuntimeNanopower(
