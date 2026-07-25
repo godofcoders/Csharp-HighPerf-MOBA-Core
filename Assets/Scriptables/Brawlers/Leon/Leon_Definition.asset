@@ -17,7 +17,7 @@ MonoBehaviour:
   Portrait: {fileID: 0}
   BaseHealth: 3600
   BaseMoveSpeed: 5.15
-  BaseDamage: 620
+  BaseDamage: 310
   ProgressionBonuses: []
   MainAttack: {fileID: 11400000, guid: ad10359e457f4155bd25b687db1854a2, type: 2}
   SuperAbility: {fileID: 11400000, guid: e219662641074dffa77d05162bac3b21, type: 2}

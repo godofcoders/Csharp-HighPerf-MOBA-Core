@@ -327,6 +327,29 @@ namespace MOBA.Core.Infrastructure
                         new Vector3(0.66f, 0.14f, 0.66f));
                     break;
 
+                case ProjectileRuntimeShape.NinjaStar:
+                    CreatePrimitivePart(root.transform, "NinjaStarCore", PrimitiveType.Cylinder,
+                        Vector3.zero,
+                        Quaternion.Euler(90f, 0f, 0f),
+                        new Vector3(0.42f, 0.06f, 0.42f));
+                    CreatePrimitivePart(root.transform, "NinjaStarBladeTop", PrimitiveType.Cube,
+                        new Vector3(0f, 0.34f, 0f),
+                        Quaternion.Euler(0f, 0f, 45f),
+                        new Vector3(0.18f, 0.54f, 0.055f));
+                    CreatePrimitivePart(root.transform, "NinjaStarBladeBottom", PrimitiveType.Cube,
+                        new Vector3(0f, -0.34f, 0f),
+                        Quaternion.Euler(0f, 0f, 45f),
+                        new Vector3(0.18f, 0.54f, 0.055f));
+                    CreatePrimitivePart(root.transform, "NinjaStarBladeRight", PrimitiveType.Cube,
+                        new Vector3(0.34f, 0f, 0f),
+                        Quaternion.Euler(0f, 0f, -45f),
+                        new Vector3(0.54f, 0.18f, 0.055f));
+                    CreatePrimitivePart(root.transform, "NinjaStarBladeLeft", PrimitiveType.Cube,
+                        new Vector3(-0.34f, 0f, 0f),
+                        Quaternion.Euler(0f, 0f, -45f),
+                        new Vector3(0.54f, 0.18f, 0.055f));
+                    break;
+
                 default:
                     CreatePrimitivePart(root.transform, "SphereCore", PrimitiveType.Sphere,
                         Vector3.zero,
