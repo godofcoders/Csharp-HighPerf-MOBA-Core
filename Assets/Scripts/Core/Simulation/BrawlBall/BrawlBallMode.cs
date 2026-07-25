@@ -27,6 +27,7 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0f)] private float _goalGroundOffset = 0.04f;
         [SerializeField] private bool _spawnBreakableGoalBlockers = true;
         [SerializeField, Min(1)] private int _goalBlockerTileCount = 4;
+        [SerializeField, Range(2f, 4f)] private float _goalBlockerForwardTileOffset = 3f;
         [SerializeField, Min(0.1f)] private float _goalBlockerTileHealth = 900f;
         [SerializeField, Min(0.1f)] private float _goalBlockerHeight = 1.15f;
 
@@ -824,7 +825,8 @@ namespace MOBA.Core.Simulation
                 forward.Normalize();
                 lateral.Normalize();
 
-                Vector3 rowCenter = goal.MouthPosition + forward * (tileSize * 0.58f);
+                float forwardOffsetTiles = Mathf.Clamp(_goalBlockerForwardTileOffset, 2f, 4f);
+                Vector3 rowCenter = goal.MouthPosition + forward * (tileSize * forwardOffsetTiles);
                 rowCenter.y = Mathf.Max(goal.transform.position.y, _goalGroundOffset) + blockerHeight * 0.5f;
 
                 float halfIndex = (tileCount - 1) * 0.5f;
