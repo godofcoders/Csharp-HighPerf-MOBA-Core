@@ -10,6 +10,7 @@ namespace MOBA.Core.Simulation
         AttackLock,
         GadgetLock,
         SuperLock,
-        MovementLock
+        MovementLock,
+        Invisibility
     }
 }

@@ -36,6 +36,11 @@ namespace MOBA.Core.Simulation
             if (allBrawlers == null)
                 return;
 
+            uint currentTick = 0;
+            bool hasClock = ServiceProvider.TryGet<ISimulationClock>(out ISimulationClock clock);
+            if (hasClock)
+                currentTick = clock.CurrentTick;
+
             for (int i = 0; i < allBrawlers.Count; i++)
             {
                 BrawlerController brawler = allBrawlers[i];
@@ -52,7 +57,11 @@ namespace MOBA.Core.Simulation
                 brawler.State.IsInBush = isInBush;
 
                 bool proximityReveal = false;
-                if (isInBush && rules.EnableProximityReveal)
+                bool activelyInvisible =
+                    hasClock &&
+                    brawler.State.Stealth.IsActivelyInvisible(currentTick);
+
+                if ((isInBush || activelyInvisible) && rules.EnableProximityReveal)
                 {
                     for (int j = 0; j < allBrawlers.Count; j++)
                     {

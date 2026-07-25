@@ -89,8 +89,12 @@ namespace MOBA.Core.Infrastructure
                 Origin = context.Origin,
                 Direction = context.Direction.normalized,
                 Speed = context.Speed,
+                MaxRange = Mathf.Max(0.01f, context.Range),
                 MaxRangeSq = context.Range * context.Range,
                 Damage = context.Damage,
+                DamageScalesWithDistance = context.DamageScalesWithDistance,
+                MinDamageMultiplier = context.MinDamageMultiplier,
+                DamageScaleStartRatio = context.DamageScaleStartRatio,
                 Team = context.Team,
 
                 IsHybrid = context.IsHybrid,
@@ -438,10 +442,35 @@ namespace MOBA.Core.Infrastructure
             }
             else
             {
-                ApplyProjectileDamage(projectile, hit, projectile.Damage, projectilePosition, targetBrawler);
+                ApplyProjectileDamage(
+                    projectile,
+                    hit,
+                    ResolveProjectileDirectDamage(projectile, projectilePosition),
+                    projectilePosition,
+                    targetBrawler);
             }
 
             return targetBrawler;
+        }
+
+        private static float ResolveProjectileDirectDamage(
+            ActiveProjectile projectile,
+            Vector3 projectilePosition)
+        {
+            if (projectile == null || !projectile.DamageScalesWithDistance)
+                return projectile != null ? projectile.Damage : 0f;
+
+            Vector3 offset = projectilePosition - projectile.Origin;
+            offset.y = 0f;
+            float travelled = offset.magnitude;
+            float rangeRatio = Mathf.Clamp01(travelled / Mathf.Max(0.01f, projectile.MaxRange));
+            float startRatio = Mathf.Clamp01(projectile.DamageScaleStartRatio);
+            float normalized = Mathf.Approximately(startRatio, 1f)
+                ? 1f
+                : Mathf.InverseLerp(startRatio, 1f, rangeRatio);
+            float eased = Mathf.SmoothStep(0f, 1f, normalized);
+            float minMultiplier = Mathf.Clamp(projectile.MinDamageMultiplier, 0.05f, 1f);
+            return projectile.Damage * Mathf.Lerp(minMultiplier, 1f, eased);
         }
 
         private void ApplyProjectileDamage(
@@ -925,8 +954,12 @@ namespace MOBA.Core.Infrastructure
             public Vector3 Origin;
             public Vector3 Direction;
             public float Speed;
+            public float MaxRange;
             public float MaxRangeSq;
             public float Damage;
+            public bool DamageScalesWithDistance;
+            public float MinDamageMultiplier;
+            public float DamageScaleStartRatio;
             public TeamType Team;
 
             public bool IsHybrid;

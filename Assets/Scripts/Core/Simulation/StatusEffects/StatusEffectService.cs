@@ -92,6 +92,9 @@ namespace MOBA.Core.Simulation
 
                 case StatusEffectType.MovementLock:
                     return new MovementLockStatusEffect(currentTick, endTick, context.SourceToken);
+
+                case StatusEffectType.Invisibility:
+                    return new InvisibilityEffect(context.Duration, context.SourceToken, currentTick);
             }
 
             return null;

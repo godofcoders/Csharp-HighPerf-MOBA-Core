@@ -16,6 +16,9 @@ namespace MOBA.Core.Simulation.Abilities
         private readonly float _parallelLaneSpacing;
         private readonly float _forwardSpawnOffset;
         private readonly ProjectilePresentationProfile _presentationProfile;
+        private readonly bool _damageScalesWithDistance;
+        private readonly float _minDamageMultiplier;
+        private readonly float _damageScaleStartRatio;
 
         public StraightProjectileLogic(
             float damage,
@@ -26,7 +29,10 @@ namespace MOBA.Core.Simulation.Abilities
             float spreadAngle,
             float parallelLaneSpacing,
             float forwardSpawnOffset,
-            ProjectilePresentationProfile presentationProfile)
+            ProjectilePresentationProfile presentationProfile,
+            bool damageScalesWithDistance = false,
+            float minDamageMultiplier = 1f,
+            float damageScaleStartRatio = 0f)
         {
             _damage = damage;
             _range = range;
@@ -37,6 +43,9 @@ namespace MOBA.Core.Simulation.Abilities
             _parallelLaneSpacing = Mathf.Max(0f, parallelLaneSpacing);
             _forwardSpawnOffset = Mathf.Max(0f, forwardSpawnOffset);
             _presentationProfile = presentationProfile;
+            _damageScalesWithDistance = damageScalesWithDistance;
+            _minDamageMultiplier = Mathf.Clamp(minDamageMultiplier, 0.05f, 1f);
+            _damageScaleStartRatio = Mathf.Clamp01(damageScaleStartRatio);
         }
 
         public AbilityExecutionResult Execute(IAbilityUser user, AbilityExecutionContext context)
@@ -96,6 +105,16 @@ namespace MOBA.Core.Simulation.Abilities
                 baseDirection,
                 shotIndex);
 
+            if (_damageScalesWithDistance)
+            {
+                FireDistanceScaledProjectile(
+                    user,
+                    context,
+                    shotOrigin,
+                    shotDirection);
+                return;
+            }
+
             user.FireProjectile(
                 shotOrigin,
                 shotDirection,
@@ -107,6 +126,70 @@ namespace MOBA.Core.Simulation.Abilities
                 context.IsSuper,
                 context.IsGadget,
                 _presentationProfile);
+        }
+
+        private void FireDistanceScaledProjectile(
+            IAbilityUser user,
+            AbilityExecutionContext context,
+            Vector3 shotOrigin,
+            Vector3 shotDirection)
+        {
+            if (user is not BrawlerController brawler)
+            {
+                user.FireProjectile(
+                    shotOrigin,
+                    shotDirection,
+                    _speed,
+                    _range,
+                    _damage,
+                    context.AbilityDefinition,
+                    context.SlotType,
+                    context.IsSuper,
+                    context.IsGadget,
+                    _presentationProfile);
+                return;
+            }
+
+            IProjectileService projectileService = ServiceProvider.Get<IProjectileService>();
+            if (projectileService == null)
+            {
+                user.FireProjectile(
+                    shotOrigin,
+                    shotDirection,
+                    _speed,
+                    _range,
+                    _damage,
+                    context.AbilityDefinition,
+                    context.SlotType,
+                    context.IsSuper,
+                    context.IsGadget,
+                    _presentationProfile);
+                return;
+            }
+
+            ProjectileSpawnContext spawnContext = new ProjectileSpawnContext
+            {
+                Owner = brawler,
+                SourceAbility = context.AbilityDefinition,
+                SlotType = context.SlotType,
+                Origin = shotOrigin,
+                Direction = shotDirection,
+                Speed = _speed,
+                Range = _range,
+                Damage = _damage,
+                DamageScalesWithDistance = true,
+                MinDamageMultiplier = _minDamageMultiplier,
+                DamageScaleStartRatio = _damageScaleStartRatio,
+                Team = brawler.Team,
+                IsSuper = context.IsSuper,
+                IsGadget = context.IsGadget,
+                IsHybrid = false,
+                HitTeamRule = ProjectileHitTeamRule.EnemiesOnly,
+                DeliveryType = ProjectileDeliveryType.DirectHit,
+                PresentationProfile = _presentationProfile
+            };
+
+            projectileService.FireProjectile(spawnContext);
         }
 
         private Vector3 ResolveSourceOrigin(IAbilityUser user, Vector3 fallbackOrigin)

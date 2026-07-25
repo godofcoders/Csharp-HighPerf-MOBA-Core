@@ -24,6 +24,15 @@ namespace MOBA.Core.Definitions
         [Tooltip("Forward spawn offset along the aim direction. Keeps projectiles from appearing inside the brawler model while preserving aim-based travel.")]
         [Min(0f)]
         public float ForwardSpawnOffset = 0.95f;
+
+        [Header("Distance Damage")]
+        [Tooltip("When enabled, direct-hit damage starts lower and ramps up as the projectile travels toward max range.")]
+        public bool DamageScalesWithDistance;
+        [Range(0.05f, 1f)]
+        public float MinDamageMultiplier = 1f;
+        [Range(0f, 0.95f)]
+        public float DamageScaleStartRatio = 0f;
+
         [Header("Presentation")]
         public ProjectilePresentationProfile PresentationProfile;
 
@@ -53,7 +62,10 @@ namespace MOBA.Core.Definitions
                 SpreadAngle,
                 ParallelLaneSpacing,
                 ForwardSpawnOffset,
-                PresentationProfile
+                PresentationProfile,
+                DamageScalesWithDistance,
+                MinDamageMultiplier,
+                DamageScaleStartRatio
             );
         }
 

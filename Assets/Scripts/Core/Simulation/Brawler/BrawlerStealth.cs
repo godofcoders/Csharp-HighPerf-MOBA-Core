@@ -36,6 +36,10 @@ namespace MOBA.Core.Simulation
         private bool _hasDamageRevealTick;
         private uint _lastAttackTick;
         private uint _lastDamageTakenTick;
+        private bool _hasActiveInvisibility;
+        private uint _activeInvisibilityEndTick;
+
+        public bool HasActiveInvisibility => _hasActiveInvisibility;
 
         /// <summary>
         /// Last tick this brawler fired a main attack. Used by IsHidden to
@@ -78,6 +82,32 @@ namespace MOBA.Core.Simulation
             LastDamageTakenTick = currentTick;
         }
 
+        public void GrantInvisibility(uint endTick)
+        {
+            _hasActiveInvisibility = true;
+            _activeInvisibilityEndTick = endTick;
+            ClearRevealWindows();
+        }
+
+        public void ClearInvisibility()
+        {
+            _hasActiveInvisibility = false;
+            _activeInvisibilityEndTick = 0;
+        }
+
+        public bool IsActivelyInvisible(uint currentTick)
+        {
+            return _hasActiveInvisibility && currentTick < _activeInvisibilityEndTick;
+        }
+
+        public void ClearRevealWindows()
+        {
+            IsProximityRevealed = false;
+            IsStatusRevealed = false;
+            _hasAttackRevealTick = false;
+            _hasDamageRevealTick = false;
+        }
+
         /// <summary>
         /// True if the brawler is currently hidden from observers — i.e.
         /// standing in a bush, not revealed by an effect/proximity, and not
@@ -87,7 +117,8 @@ namespace MOBA.Core.Simulation
         /// </summary>
         public bool IsHidden(uint currentTick)
         {
-            if (!IsInBush)
+            bool activelyInvisible = IsActivelyInvisible(currentTick);
+            if (!IsInBush && !activelyInvisible)
                 return false;
 
             if (IsRevealed)
@@ -112,6 +143,7 @@ namespace MOBA.Core.Simulation
             _lastDamageTakenTick = 0;
             _hasAttackRevealTick = false;
             _hasDamageRevealTick = false;
+            ClearInvisibility();
         }
     }
 }

@@ -16,6 +16,9 @@ namespace MOBA.Core.Simulation
         public float Speed;
         public float Range;
         public float Damage;
+        public bool DamageScalesWithDistance;
+        public float MinDamageMultiplier;
+        public float DamageScaleStartRatio;
 
         public TeamType Team;
 
