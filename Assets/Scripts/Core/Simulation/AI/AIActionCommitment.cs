@@ -209,6 +209,12 @@ namespace MOBA.Core.Simulation.AI
                 case AIActionType.Peel:
                     return true;
 
+                case AIActionType.Search:
+                case AIActionType.Objective:
+                    return action.Score >= Mathf.Max(
+                        104f,
+                        _profile.EmergencyOverrideScore + 12f);
+
                 default:
                     return false;
             }

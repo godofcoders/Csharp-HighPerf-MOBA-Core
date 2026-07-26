@@ -190,6 +190,11 @@ namespace MOBA.Core.Simulation.AI
                 currentTick,
                 macroState,
                 results);
+            ApplyModeObjectivePriorityFloor(
+                targetInfo,
+                currentTick,
+                macroState,
+                results);
         }
 
         private AIGameModeMacroState ResolveMacroState()
@@ -716,6 +721,351 @@ namespace MOBA.Core.Simulation.AI
 
             if (!string.IsNullOrEmpty(deltaDebug))
                 _lastObjectiveIntentDebug = $"ObjIntent={deltaDebug}";
+        }
+
+        private void ApplyModeObjectivePriorityFloor(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            AIGameModeMacroState macroState,
+            List<AIActionScore> results)
+        {
+            if (_profile == null || results == null || results.Count == 0)
+                return;
+
+            bool hasLiveTarget = targetInfo != null && targetInfo.HasLiveTarget;
+            string deltaDebug = string.Empty;
+            bool raisedPriority = false;
+
+            switch (macroState.Mode)
+            {
+                case GameModeId.GemGrab:
+                    raisedPriority = ApplyGemGrabPriorityFloor(
+                        macroState,
+                        currentTick,
+                        hasLiveTarget,
+                        results,
+                        ref deltaDebug);
+                    break;
+
+                case GameModeId.BrawlBall:
+                    raisedPriority = ApplyBrawlBallPriorityFloor(
+                        macroState,
+                        hasLiveTarget,
+                        results,
+                        ref deltaDebug);
+                    break;
+
+                case GameModeId.Knockout:
+                    raisedPriority = ApplyKnockoutPriorityFloor(
+                        macroState,
+                        hasLiveTarget,
+                        results,
+                        ref deltaDebug);
+                    break;
+
+                case GameModeId.HotZone:
+                    raisedPriority = ApplyHotZonePriorityFloor(
+                        macroState,
+                        hasLiveTarget,
+                        results,
+                        ref deltaDebug);
+                    break;
+
+                case GameModeId.SoloShowdown:
+                    raisedPriority = ApplySoloShowdownPriorityFloor(
+                        macroState,
+                        hasLiveTarget,
+                        results,
+                        ref deltaDebug);
+                    break;
+            }
+
+            if (string.IsNullOrEmpty(deltaDebug))
+                return;
+
+            AppendObjectiveIntentDebug("ModeFloor", deltaDebug);
+
+            if (raisedPriority)
+            {
+                AIValidationGauntlet.RecordSignal(
+                    AIValidationGauntletSignal.ModeObjectivePriority,
+                    currentTick);
+            }
+        }
+
+        private bool ApplyGemGrabPriorityFloor(
+            AIGameModeMacroState macroState,
+            uint currentTick,
+            bool hasLiveTarget,
+            List<AIActionScore> results,
+            ref string deltaDebug)
+        {
+            bool hasGemDecision = TryResolveGemPickupDecision(
+                macroState,
+                currentTick,
+                out AIGemPickupDecision gemDecision);
+
+            if (hasGemDecision && gemDecision.HasPickup)
+            {
+                if (gemDecision.ShouldPickup)
+                {
+                    float floor = CalculateGemPickupPriorityFloor(
+                        macroState,
+                        gemDecision,
+                        hasLiveTarget);
+                    bool allowPriorityScore = floor > MaxNormalActionScore;
+                    bool raised = RaiseActionScoreFloor(
+                        results,
+                        AIActionType.Search,
+                        floor,
+                        allowPriorityScore,
+                        "gem_pickup",
+                        ref deltaDebug);
+
+                    raised |= RaiseActionScoreFloor(
+                        results,
+                        AIActionType.Objective,
+                        floor - 10f,
+                        allowPriorityScore,
+                        "gem_pickup_backup",
+                        ref deltaDebug);
+
+                    if (hasLiveTarget && allowPriorityScore)
+                    {
+                        raised |= LowerActionScoreCeiling(
+                            results,
+                            AIActionType.Wander,
+                            0f,
+                            "gem_live_target",
+                            ref deltaDebug);
+                    }
+
+                    return raised;
+                }
+
+                if (!hasLiveTarget && gemDecision.Score > 0f)
+                {
+                    return RaiseActionScoreFloor(
+                        results,
+                        AIActionType.Search,
+                        Mathf.Clamp(42f + gemDecision.Score * 0.18f, 48f, 68f),
+                        false,
+                        "gem_watch",
+                        ref deltaDebug);
+                }
+            }
+
+            if (hasLiveTarget)
+                return false;
+
+            if (macroState.OwnTeamHasCountdown && GetSelfCarriedGems() > 0)
+                return false;
+
+            if (macroState.EnemyTeamHasCountdown ||
+                macroState.Call == AIGameModeMacroCall.Reset ||
+                macroState.Call == AIGameModeMacroCall.Push ||
+                macroState.Phase == AIGameModeObjectivePhase.Opening ||
+                macroState.Phase == AIGameModeObjectivePhase.Contest)
+            {
+                float floor = macroState.EnemyTeamHasCountdown
+                    ? 88f
+                    : macroState.Call == AIGameModeMacroCall.Reset
+                        ? 82f
+                        : 74f;
+
+                bool raised = RaiseActionScoreFloor(
+                    results,
+                    AIActionType.Objective,
+                    floor,
+                    false,
+                    "gem_mine",
+                    ref deltaDebug);
+
+                raised |= RaiseActionScoreFloor(
+                    results,
+                    AIActionType.Search,
+                    floor - 12f,
+                    false,
+                    "gem_mine_route",
+                    ref deltaDebug);
+
+                return raised;
+            }
+
+            return false;
+        }
+
+        private bool ApplyBrawlBallPriorityFloor(
+            AIGameModeMacroState macroState,
+            bool hasLiveTarget,
+            List<AIActionScore> results,
+            ref string deltaDebug)
+        {
+            float floor = 0f;
+
+            if (macroState.Call == AIGameModeMacroCall.Push)
+                floor = macroState.Phase == AIGameModeObjectivePhase.FinalPressure ? 108f : 98f;
+            else if (macroState.Call == AIGameModeMacroCall.Reset)
+                floor = 100f;
+            else if (macroState.Phase == AIGameModeObjectivePhase.Opening ||
+                     macroState.Phase == AIGameModeObjectivePhase.Contest)
+                floor = hasLiveTarget ? 82f : 90f;
+
+            if (floor <= 0f)
+                return false;
+
+            bool allowPriorityScore = floor > MaxNormalActionScore;
+            bool raised = RaiseActionScoreFloor(
+                results,
+                AIActionType.Objective,
+                floor,
+                allowPriorityScore,
+                "ball_objective",
+                ref deltaDebug);
+
+            raised |= RaiseActionScoreFloor(
+                results,
+                AIActionType.Search,
+                floor - 12f,
+                allowPriorityScore,
+                "ball_route",
+                ref deltaDebug);
+
+            return raised;
+        }
+
+        private bool ApplyKnockoutPriorityFloor(
+            AIGameModeMacroState macroState,
+            bool hasLiveTarget,
+            List<AIActionScore> results,
+            ref string deltaDebug)
+        {
+            if (hasLiveTarget)
+                return false;
+
+            float floor = macroState.Call == AIGameModeMacroCall.Reset
+                ? 84f
+                : macroState.Phase == AIGameModeObjectivePhase.FinalPressure
+                    ? 80f
+                    : macroState.Phase == AIGameModeObjectivePhase.Opening ||
+                      macroState.Phase == AIGameModeObjectivePhase.Contest
+                        ? 74f
+                        : 0f;
+
+            if (floor <= 0f)
+                return false;
+
+            bool raised = RaiseActionScoreFloor(
+                results,
+                AIActionType.Objective,
+                floor,
+                false,
+                "knockout_space",
+                ref deltaDebug);
+
+            raised |= RaiseActionScoreFloor(
+                results,
+                AIActionType.Search,
+                floor - 12f,
+                false,
+                "knockout_contact",
+                ref deltaDebug);
+
+            return raised;
+        }
+
+        private bool ApplyHotZonePriorityFloor(
+            AIGameModeMacroState macroState,
+            bool hasLiveTarget,
+            List<AIActionScore> results,
+            ref string deltaDebug)
+        {
+            float floor = macroState.Phase == AIGameModeObjectivePhase.Countdown ||
+                          macroState.Phase == AIGameModeObjectivePhase.FinalPressure
+                ? 98f
+                : macroState.Phase == AIGameModeObjectivePhase.Opening ||
+                  macroState.Phase == AIGameModeObjectivePhase.Contest ||
+                  macroState.Call == AIGameModeMacroCall.Push ||
+                  macroState.Call == AIGameModeMacroCall.Reset
+                    ? hasLiveTarget ? 78f : 90f
+                    : 0f;
+
+            if (floor <= 0f)
+                return false;
+
+            bool raised = RaiseActionScoreFloor(
+                results,
+                AIActionType.Objective,
+                floor,
+                false,
+                "zone_control",
+                ref deltaDebug);
+
+            if (!hasLiveTarget)
+            {
+                raised |= RaiseActionScoreFloor(
+                    results,
+                    AIActionType.Search,
+                    floor - 14f,
+                    false,
+                    "zone_route",
+                    ref deltaDebug);
+            }
+
+            return raised;
+        }
+
+        private bool ApplySoloShowdownPriorityFloor(
+            AIGameModeMacroState macroState,
+            bool hasLiveTarget,
+            List<AIActionScore> results,
+            ref string deltaDebug)
+        {
+            if (macroState.Call == AIGameModeMacroCall.Reset)
+            {
+                bool raised = RaiseActionScoreFloor(
+                    results,
+                    AIActionType.Objective,
+                    100f,
+                    false,
+                    "showdown_safe",
+                    ref deltaDebug);
+
+                raised |= RaiseActionScoreFloor(
+                    results,
+                    AIActionType.Reposition,
+                    92f,
+                    false,
+                    "showdown_safe_angle",
+                    ref deltaDebug);
+
+                return raised;
+            }
+
+            if (hasLiveTarget ||
+                (macroState.Phase != AIGameModeObjectivePhase.Opening &&
+                 macroState.Call != AIGameModeMacroCall.Neutral))
+            {
+                return false;
+            }
+
+            bool cubeRoute = RaiseActionScoreFloor(
+                results,
+                AIActionType.Objective,
+                76f,
+                false,
+                "showdown_cube",
+                ref deltaDebug);
+
+            cubeRoute |= RaiseActionScoreFloor(
+                results,
+                AIActionType.Search,
+                68f,
+                false,
+                "showdown_cube_route",
+                ref deltaDebug);
+
+            return cubeRoute;
         }
 
         private void ApplyWinConditionPressure(
@@ -3941,11 +4291,27 @@ namespace MOBA.Core.Simulation.AI
 
         private float ClampActionScore(AIActionType actionType, float score)
         {
-            float maxScore = IsEmergencyAction(actionType)
+            return ClampActionScore(actionType, score, false);
+        }
+
+        private float ClampActionScore(
+            AIActionType actionType,
+            float score,
+            bool allowPriorityScore)
+        {
+            float maxScore = allowPriorityScore && IsMapControlAction(actionType)
+                ? MaxEmergencyActionScore
+                : IsEmergencyAction(actionType)
                 ? MaxEmergencyActionScore
                 : MaxNormalActionScore;
 
             return Mathf.Clamp(score, MinActionScore, maxScore);
+        }
+
+        private static bool IsMapControlAction(AIActionType actionType)
+        {
+            return actionType == AIActionType.Search ||
+                   actionType == AIActionType.Objective;
         }
 
         private bool IsEmergencyAction(AIActionType actionType)
@@ -3980,6 +4346,127 @@ namespace MOBA.Core.Simulation.AI
         private bool IsBacklineRole()
         {
             return IsSniper || IsSupport || IsController || IsArtillery;
+        }
+
+        private int GetSelfCarriedGems()
+        {
+            return _self != null && _self.State != null
+                ? _self.State.CarriedGemCount
+                : 0;
+        }
+
+        private float CalculateGemPickupPriorityFloor(
+            AIGameModeMacroState macroState,
+            in AIGemPickupDecision decision,
+            bool hasLiveTarget)
+        {
+            float floor = hasLiveTarget ? 94f : 84f;
+
+            if (decision.Distance <= 2.25f)
+                floor += 10f;
+            else if (decision.Distance <= 4f)
+                floor += 5f;
+
+            if (decision.ClusterValue > decision.Value)
+                floor += Mathf.Min(10f, (decision.ClusterValue - decision.Value) * 4f);
+
+            if (decision.IsThresholdPickup)
+                floor += 18f;
+
+            if (decision.IsDenyPickup ||
+                macroState.EnemyTeamHasCountdown ||
+                macroState.Call == AIGameModeMacroCall.Reset)
+            {
+                floor += 16f;
+            }
+            else if (macroState.Call == AIGameModeMacroCall.Push)
+            {
+                floor += 8f;
+            }
+
+            if (_profile != null && _profile.Difficulty == AIDifficultyLevel.Hard)
+                floor += 5f;
+
+            return Mathf.Clamp(floor, 78f, 116f);
+        }
+
+        private bool RaiseActionScoreFloor(
+            List<AIActionScore> results,
+            AIActionType actionType,
+            float floor,
+            bool allowPriorityScore,
+            string reason,
+            ref string deltaDebug)
+        {
+            if (results == null)
+                return false;
+
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore score = results[i];
+                if (score.ActionType != actionType)
+                    continue;
+
+                float adjusted = ClampActionScore(
+                    actionType,
+                    Mathf.Max(score.Score, floor),
+                    allowPriorityScore);
+
+                float delta = adjusted - score.Score;
+                if (delta <= 0.01f)
+                    return false;
+
+                results[i] = new AIActionScore(actionType, adjusted);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionType}{delta:+0.0;-0.0}_{reason}");
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool LowerActionScoreCeiling(
+            List<AIActionScore> results,
+            AIActionType actionType,
+            float ceiling,
+            string reason,
+            ref string deltaDebug)
+        {
+            if (results == null)
+                return false;
+
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore score = results[i];
+                if (score.ActionType != actionType || score.Score <= ceiling)
+                    continue;
+
+                float adjusted = Mathf.Max(MinActionScore, ceiling);
+                results[i] = new AIActionScore(actionType, adjusted);
+                deltaDebug = AppendRoleDebug(
+                    deltaDebug,
+                    $"{actionType}{adjusted - score.Score:+0.0;-0.0}_{reason}");
+                return true;
+            }
+
+            return false;
+        }
+
+        private void AppendObjectiveIntentDebug(string label, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return;
+
+            string entry = $"{label}={value}";
+            if (string.IsNullOrEmpty(_lastObjectiveIntentDebug) ||
+                _lastObjectiveIntentDebug == "ObjIntent=None")
+            {
+                _lastObjectiveIntentDebug = entry;
+                return;
+            }
+
+            _lastObjectiveIntentDebug = $"{_lastObjectiveIntentDebug} {entry}";
         }
 
         private string AppendRoleDebug(string current, string value)

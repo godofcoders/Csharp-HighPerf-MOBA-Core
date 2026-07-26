@@ -1704,7 +1704,11 @@ namespace MOBA.Core.Simulation.AI
             float idealRange,
             float superRange)
         {
-            // Combat always overrides objective movement.
+            if (TryRunGemPickupSearch(currentTick))
+                return;
+
+            // Combat owns normal objective movement, but mode-critical
+            // pickups are handled above before falling back to fight spacing.
             if (targetInfo != null && targetInfo.HasLiveTarget)
             {
                 _hasObjectiveDebug = false;
