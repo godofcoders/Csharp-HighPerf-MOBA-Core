@@ -31,13 +31,13 @@ MonoBehaviour:
   AimAssistMode: 1
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: 8
+  AimAssistRangeOverride: 8.5
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 1
-  AimAssistIdealRange: 8
+  AimAssistIdealRange: 7.25
   AimAssistPlacementDistance: 3
   Damage: 720
-  Range: 9
+  Range: 8.5
   Speed: 20
   BounceCount: 3
   BounceRadius: 5

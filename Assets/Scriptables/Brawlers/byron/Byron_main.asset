@@ -31,12 +31,12 @@ MonoBehaviour:
   AimAssistMode: 6
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: 12
+  AimAssistRangeOverride: 15
   AimAssistForwardBias: 2
   AimAssistDistanceBias: 1
-  AimAssistIdealRange: 12
+  AimAssistIdealRange: 12.75
   AimAssistPlacementDistance: 3
-  Range: 12
+  Range: 15
   Speed: 28
   EnemyDamage: 660
   AllyHeal: 1100

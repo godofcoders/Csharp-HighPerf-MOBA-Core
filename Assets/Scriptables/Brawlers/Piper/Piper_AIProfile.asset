@@ -17,7 +17,7 @@ MonoBehaviour:
   Personality: 0
   ReactionDelayTicks: 0
   AimErrorDegrees: 0.4
-  DetectionRadius: 12
+  DetectionRadius: 16
   MemoryDurationTicks: 110
   IdleSenseIntervalTicks: 8
   CombatSenseIntervalTicks: 3
@@ -26,7 +26,7 @@ MonoBehaviour:
   LowHealthTargetBias: 32
   FinisherHealthThreshold: 0.42
   FinisherBonus: 28
-  ThreatRange: 7
+  ThreatRange: 8.5
   ThreatBonus: 16
   ClusterTargetBonus: 8
   InRangeTargetBonus: 18

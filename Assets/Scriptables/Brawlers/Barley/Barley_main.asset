@@ -37,7 +37,7 @@ MonoBehaviour:
   AimAssistIdealRange: -1
   AimAssistPlacementDistance: 3
   PreviewMode: 2
-  ThrowRange: 5
+  ThrowRange: 6.5
   ThrowSpeed: 8.8
   ImpactRadius: 2.25
   EnemyDamage: 300

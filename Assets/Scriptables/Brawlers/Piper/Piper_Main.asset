@@ -32,10 +32,10 @@ MonoBehaviour:
   AimAssistMode: 6
   AimAssistIncludeSelf: 0
   PreferManualAim: 1
-  AimAssistRangeOverride: 11.5
+  AimAssistRangeOverride: 15
   AimAssistForwardBias: 2.6
   AimAssistDistanceBias: 0.75
-  AimAssistIdealRange: 9.5
+  AimAssistIdealRange: 12.75
   AimAssistPlacementDistance: 3
   AimAssistLowHealthBias: 1.5
   AimAssistGemCarrierBias: 0.65
@@ -44,7 +44,7 @@ MonoBehaviour:
   PreviewMode: 1
   AimPreviewWidth: 0.78
   Damage: 1500
-  Range: 11.5
+  Range: 15
   Speed: 33
   ProjectileCount: 1
   DelayBetweenProjectiles: 0

@@ -26,7 +26,7 @@ MonoBehaviour:
   LowHealthTargetBias: 30
   FinisherHealthThreshold: 0.42
   FinisherBonus: 28
-  ThreatRange: 4
+  ThreatRange: 5.25
   ThreatBonus: 10
   ClusterTargetBonus: 12
   InRangeTargetBonus: 18
