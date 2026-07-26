@@ -767,6 +767,23 @@ namespace MOBA.Core.Infrastructure
                     isSuper ? 0.034f : 0.026f);
             }
 
+            if (profileName.Contains("piper"))
+            {
+                return new ProjectileVisualStyle(
+                    new Color(1f, 0.12f, 0.08f, 1f),
+                    new Color(1f, 0.42f, 0.12f, 0.62f),
+                    new Color(1f, 0.10f, 0.06f, 0.82f),
+                    new Color(1f, 0.32f, 0.08f, 0.58f),
+                    0.32f,
+                    0.88f,
+                    0.70f,
+                    28f,
+                    0.070f,
+                    0.10f,
+                    0.26f,
+                    0.030f);
+            }
+
             if (profileName.Contains("bo") || profileName.Contains("arrow"))
             {
                 return new ProjectileVisualStyle(
