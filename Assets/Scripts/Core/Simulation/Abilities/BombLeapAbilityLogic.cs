@@ -96,7 +96,20 @@ namespace MOBA.Core.Simulation.Abilities
             Vector3 origin,
             Vector3 forward)
         {
+            int count = Mathf.Max(1, _definition.BombCount);
             float delay = Mathf.Max(0f, _definition.BombDelaySeconds);
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 bombPosition = ResolveBombPosition(origin, forward, i, count);
+                BombLeapPresentationView.SpawnBombMarker(
+                    bombPosition,
+                    owner.Team,
+                    _definition.BombRadius,
+                    delay,
+                    context.IsHypercharged);
+            }
+
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
 
@@ -108,7 +121,6 @@ namespace MOBA.Core.Simulation.Abilities
             }
 
             int totalAffected = 0;
-            int count = Mathf.Max(1, _definition.BombCount);
             for (int i = 0; i < count; i++)
             {
                 Vector3 bombPosition = ResolveBombPosition(origin, forward, i, count);

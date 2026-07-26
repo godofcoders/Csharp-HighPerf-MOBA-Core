@@ -178,8 +178,42 @@ namespace MOBA.Core.Infrastructure
                 case CombatPresentationEventType.AreaEffectResolved:
                     if (evt.AbilityDefinition is LeapAbilityDefinition leap)
                         SpawnLeapImpact(evt, leap);
+                    else if (evt.AbilityDefinition is BombLeapAbilityDefinition bombLeap)
+                        SpawnBombLeapExplosion(evt, bombLeap);
                     break;
             }
+        }
+
+        private void SpawnBombLeapExplosion(CombatPresentationEvent evt, BombLeapAbilityDefinition bombLeap)
+        {
+            float radius = Mathf.Max(0.25f, bombLeap.BombRadius);
+            Color blastColor = evt.IsHypercharged
+                ? _hyperImpactColor
+                : new Color(1f, 0.18f, 0.04f, 0.90f);
+            Color smokeColor = evt.IsHypercharged
+                ? new Color(0.46f, 0.10f, 0.74f, 0.42f)
+                : new Color(0.22f, 0.18f, 0.15f, 0.34f);
+
+            SpawnPulse(
+                evt.Position,
+                radius * 1.42f,
+                smokeColor,
+                _impactDurationSeconds * 2.2f,
+                _expiredPulseMaterial != null ? _expiredPulseMaterial : _impactPulseMaterial);
+
+            SpawnPulse(
+                evt.Position + Vector3.up * 0.06f,
+                radius * 1.08f,
+                blastColor,
+                _impactDurationSeconds * 1.45f,
+                _impactPulseMaterial);
+
+            SpawnSpark(
+                evt.Position,
+                evt.Direction,
+                blastColor,
+                Mathf.Max(_sparkDurationSeconds, _impactDurationSeconds * 1.35f),
+                Mathf.Clamp(radius * 1.25f, 1.35f, 2.4f));
         }
 
         private void SpawnLeapImpact(CombatPresentationEvent evt, LeapAbilityDefinition leap)
