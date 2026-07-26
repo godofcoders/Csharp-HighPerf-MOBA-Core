@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Leon_Main
   m_EditorClassIdentifier:
   OptionName: Leon Main Attack
-  Description: Four quick long-range ninja stars fired in a narrow angled sequence.
+  Description: Four long-range ninja stars fired one after another in a narrow Bow-style angle sequence.
   AllowedBuildSlotTypes:
   AbilityName: Spinner Blades
   Icon: {fileID: 0}
@@ -47,11 +47,6 @@ MonoBehaviour:
   Range: 15
   Speed: 28
   ProjectileCount: 4
-  DelayBetweenProjectiles: 0.08
   SpreadAngle: 5
-  ParallelLaneSpacing: 0
-  ForwardSpawnOffset: 0.95
-  DamageScalesWithDistance: 0
-  MinDamageMultiplier: 1
-  DamageScaleStartRatio: 0
+  DelayBetweenShots: 0.08
   PresentationProfile: {fileID: 11400000, guid: cdac2b8e10f2496090113191b0b11e5f, type: 2}

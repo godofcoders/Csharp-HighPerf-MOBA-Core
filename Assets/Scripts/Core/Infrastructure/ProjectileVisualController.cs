@@ -784,6 +784,23 @@ namespace MOBA.Core.Infrastructure
                     0.030f);
             }
 
+            if (profileName.Contains("leon"))
+            {
+                return new ProjectileVisualStyle(
+                    new Color(1f, 0.08f, 0.06f, 1f),
+                    new Color(1f, 0.28f, 0.10f, 0.64f),
+                    new Color(1f, 0.08f, 0.05f, 0.82f),
+                    new Color(1f, 0.24f, 0.08f, 0.58f),
+                    0.34f,
+                    0.88f,
+                    0.66f,
+                    30f,
+                    0.068f,
+                    0.095f,
+                    0.28f,
+                    0.030f);
+            }
+
             if (profileName.Contains("bo") || profileName.Contains("arrow"))
             {
                 return new ProjectileVisualStyle(
