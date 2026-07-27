@@ -31,10 +31,10 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Wind Dressing")]
         [SerializeField, Min(0)] private int _swayingTreeCount = 7;
-        [SerializeField, Min(0)] private int _windTornadoCount = 3;
 
         private Transform _stormRoot;
         private Transform _cameraDropletRoot;
+        private Transform _lensDropletOverlayRoot;
         private ParticleSystem _rainSystem;
         private ParticleSystem _cameraDropletSystem;
         private ParticleSystem _leafGustSystem;
@@ -45,9 +45,9 @@ namespace MOBA.Core.Infrastructure
         private Material _puddleMaterial;
         private Material _cloudShadowMaterial;
         private Material _leafMaterial;
-        private Material _tornadoMaterial;
         private Material _treeTrunkMaterial;
         private Material _treeCanopyMaterial;
+        private Material _lensOverlayMaterial;
         private Color _previousAmbientLight;
         private Color _previousFogColor;
         private bool _previousFogEnabled;
@@ -59,9 +59,6 @@ namespace MOBA.Core.Infrastructure
         private Transform[] _treeRoots;
         private Quaternion[] _treeBaseRotations;
         private float[] _treePhases;
-        private Transform[] _windTornadoRoots;
-        private Vector3[] _windTornadoBasePositions;
-        private float[] _windTornadoPhases;
 
         public static void InstallUnder(GameObject root)
         {
@@ -98,7 +95,6 @@ namespace MOBA.Core.Infrastructure
         {
             UpdateLightning();
             UpdateSwayingTrees();
-            UpdateWindTornadoes();
         }
 
         private void OnDestroy()
@@ -111,9 +107,9 @@ namespace MOBA.Core.Infrastructure
             DestroyMaterial(_puddleMaterial);
             DestroyMaterial(_cloudShadowMaterial);
             DestroyMaterial(_leafMaterial);
-            DestroyMaterial(_tornadoMaterial);
             DestroyMaterial(_treeTrunkMaterial);
             DestroyMaterial(_treeCanopyMaterial);
+            DestroyMaterial(_lensOverlayMaterial);
         }
 
         public void RefreshStorm()
@@ -260,7 +256,9 @@ namespace MOBA.Core.Infrastructure
             ParticleSystem.ShapeModule shape = _cameraDropletSystem.shape;
             shape.enabled = true;
             shape.shapeType = ParticleSystemShapeType.Box;
-            shape.scale = new Vector3(7.8f, 4.4f, 0.02f);
+            float dropletViewHeight = camera.orthographic ? camera.orthographicSize * 2.0f : 4.4f;
+            float dropletViewWidth = dropletViewHeight * Mathf.Max(0.1f, camera.aspect);
+            shape.scale = new Vector3(dropletViewWidth, dropletViewHeight, 0.02f);
 
             ParticleSystem.VelocityOverLifetimeModule velocity = _cameraDropletSystem.velocityOverLifetime;
             velocity.enabled = true;
@@ -300,6 +298,71 @@ namespace MOBA.Core.Infrastructure
             }
 
             _cameraDropletSystem.Play(true);
+            BuildLensDropletOverlay(camera);
+        }
+
+        private void BuildLensDropletOverlay(Camera camera)
+        {
+            if (camera == null)
+                return;
+
+            if (_lensDropletOverlayRoot == null)
+            {
+                Transform existing = camera.transform.Find("StormLensDropletOverlay");
+                if (existing != null)
+                    _lensDropletOverlayRoot = existing;
+            }
+
+            if (_lensDropletOverlayRoot == null)
+            {
+                GameObject overlay = new GameObject("StormLensDropletOverlay");
+                overlay.transform.SetParent(camera.transform, false);
+                _lensDropletOverlayRoot = overlay.transform;
+            }
+
+            ClearChildren(_lensDropletOverlayRoot);
+
+            float distance = camera.orthographic
+                ? Mathf.Max(0.8f, camera.nearClipPlane + 0.75f)
+                : Mathf.Max(2.0f, camera.nearClipPlane + 1.65f);
+            float halfHeight = camera.orthographic
+                ? Mathf.Max(1f, camera.orthographicSize)
+                : Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad) * distance;
+            float halfWidth = halfHeight * Mathf.Max(0.1f, camera.aspect);
+            _lensDropletOverlayRoot.localPosition = new Vector3(0f, 0f, distance);
+            _lensDropletOverlayRoot.localRotation = Quaternion.identity;
+            _lensDropletOverlayRoot.localScale = Vector3.one;
+
+            const int dropletCount = 54;
+            for (int i = 0; i < dropletCount; i++)
+            {
+                float tx = Mathf.Repeat(i * 0.618f + 0.13f, 1f);
+                float ty = Mathf.Repeat(i * 0.377f + 0.29f, 1f);
+                float x = Mathf.Lerp(-halfWidth * 0.82f, halfWidth * 0.82f, tx);
+                float y = Mathf.Lerp(-halfHeight * 0.72f, halfHeight * 0.72f, ty);
+                float size = camera.orthographic
+                    ? Mathf.Lerp(0.18f, 0.36f, Mathf.Repeat(i * 0.271f, 1f))
+                    : Mathf.Lerp(0.055f, 0.145f, Mathf.Repeat(i * 0.271f, 1f));
+
+                GameObject droplet = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                droplet.name = "LensRainDroplet_" + i;
+                droplet.transform.SetParent(_lensDropletOverlayRoot, false);
+                droplet.transform.localPosition = new Vector3(x, y, 0f);
+                droplet.transform.localRotation = Quaternion.identity;
+                droplet.transform.localScale = new Vector3(size * 0.68f, size * 1.45f, size * 0.08f);
+
+                Renderer renderer = droplet.GetComponent<Renderer>();
+                if (renderer != null)
+                {
+                    renderer.sharedMaterial = _lensOverlayMaterial;
+                    renderer.shadowCastingMode = ShadowCastingMode.Off;
+                    renderer.receiveShadows = false;
+                }
+
+                Collider collider = droplet.GetComponent<Collider>();
+                if (collider != null)
+                    Destroy(collider);
+            }
         }
 
         private void BuildGroundWetness(Bounds bounds)
@@ -353,7 +416,6 @@ namespace MOBA.Core.Infrastructure
         private void BuildWindAmbience(Bounds bounds)
         {
             BuildLeafGusts(bounds);
-            BuildWindTornadoes(bounds);
             BuildSwayingTrees(bounds);
         }
 
@@ -374,10 +436,10 @@ namespace MOBA.Core.Infrastructure
             main.loop = true;
             main.duration = 6f;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = 140;
+            main.maxParticles = 520;
             main.startLifetime = new ParticleSystem.MinMaxCurve(1.3f, 2.8f);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.09f, 0.18f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.28f);
             main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
             main.startColor = new ParticleSystem.MinMaxGradient(
                 new Color(0.64f, 0.52f, 0.23f, 0.62f),
@@ -385,7 +447,7 @@ namespace MOBA.Core.Infrastructure
 
             ParticleSystem.EmissionModule emission = _leafGustSystem.emission;
             emission.enabled = true;
-            emission.rateOverTime = new ParticleSystem.MinMaxCurve(16f);
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(62f);
 
             ParticleSystem.ShapeModule shape = _leafGustSystem.shape;
             shape.enabled = true;
@@ -415,55 +477,6 @@ namespace MOBA.Core.Infrastructure
             _leafGustSystem.Play(true);
         }
 
-        private void BuildWindTornadoes(Bounds bounds)
-        {
-            Transform tornadoRoot = _stormRoot.Find("StormWindTornadoes");
-            if (tornadoRoot == null)
-            {
-                GameObject root = new GameObject("StormWindTornadoes");
-                root.transform.SetParent(_stormRoot, false);
-                tornadoRoot = root.transform;
-            }
-
-            ClearChildren(tornadoRoot);
-
-            int count = Mathf.Clamp(_windTornadoCount, 0, 5);
-            _windTornadoRoots = new Transform[count];
-            _windTornadoBasePositions = new Vector3[count];
-            _windTornadoPhases = new float[count];
-
-            for (int i = 0; i < count; i++)
-            {
-                float t = (i + 0.35f) / Mathf.Max(1, count);
-                float x = Mathf.Lerp(bounds.min.x + 2.6f, bounds.max.x - 2.6f, Mathf.Repeat(t * 1.61f, 1f));
-                float z = Mathf.Lerp(bounds.min.z + 2.6f, bounds.max.z - 2.6f, Mathf.Repeat(t * 2.17f, 1f));
-                Vector3 basePosition = new Vector3(x, bounds.max.y + 0.22f, z);
-
-                GameObject root = new GameObject("StormWindTornado_" + i);
-                root.transform.SetParent(tornadoRoot, true);
-                root.transform.position = basePosition;
-                root.transform.rotation = Quaternion.identity;
-                root.transform.localScale = Vector3.one;
-
-                for (int ring = 0; ring < 5; ring++)
-                {
-                    float height = 0.18f + ring * 0.24f;
-                    float width = 0.42f + ring * 0.18f;
-                    CreateFlatPatch(
-                        root.transform,
-                        "WindSwirlRing_" + ring,
-                        PrimitiveType.Cylinder,
-                        new Vector3(basePosition.x, basePosition.y + height, basePosition.z),
-                        new Vector3(width, 0.01f, width * 0.62f),
-                        _tornadoMaterial);
-                }
-
-                _windTornadoRoots[i] = root.transform;
-                _windTornadoBasePositions[i] = basePosition;
-                _windTornadoPhases[i] = i * 1.71f;
-            }
-        }
-
         private void BuildSwayingTrees(Bounds bounds)
         {
             Transform treeRoot = _stormRoot.Find("StormSwayingTrees");
@@ -488,7 +501,9 @@ namespace MOBA.Core.Infrastructure
                 tree.transform.SetParent(treeRoot, true);
                 tree.transform.position = position;
                 tree.transform.rotation = Quaternion.identity;
-                tree.transform.localScale = Vector3.one;
+                float size = ResolveTreeSize(i);
+                float heightStretch = ResolveTreeHeightStretch(i);
+                tree.transform.localScale = new Vector3(size, size * heightStretch, size);
 
                 CreateTreePart(
                     tree.transform,
@@ -562,6 +577,16 @@ namespace MOBA.Core.Infrastructure
             return new Vector3(x, bounds.max.y, z);
         }
 
+        private static float ResolveTreeSize(int index)
+        {
+            return Mathf.Lerp(2.0f, 3.1f, Mathf.Repeat(index * 0.47f + 0.18f, 1f));
+        }
+
+        private static float ResolveTreeHeightStretch(int index)
+        {
+            return Mathf.Lerp(0.86f, 1.32f, Mathf.Repeat(index * 0.31f + 0.27f, 1f));
+        }
+
         private void EnsureLightningLight(Bounds bounds)
         {
             if (_lightningLight != null)
@@ -620,33 +645,6 @@ namespace MOBA.Core.Infrastructure
                     (wave + gust) * 3.8f,
                     0f,
                     Mathf.Sin(time * 1.1f + _treePhases[i]) * 2.2f);
-            }
-        }
-
-        private void UpdateWindTornadoes()
-        {
-            if (_windTornadoRoots == null ||
-                _windTornadoBasePositions == null ||
-                _windTornadoPhases == null)
-            {
-                return;
-            }
-
-            float time = Time.time;
-            int count = Mathf.Min(_windTornadoRoots.Length, Mathf.Min(_windTornadoBasePositions.Length, _windTornadoPhases.Length));
-            for (int i = 0; i < count; i++)
-            {
-                Transform tornado = _windTornadoRoots[i];
-                if (tornado == null)
-                    continue;
-
-                float phase = _windTornadoPhases[i];
-                Vector3 basePosition = _windTornadoBasePositions[i];
-                tornado.position = basePosition + new Vector3(
-                    Mathf.Sin(time * 0.55f + phase) * 0.42f,
-                    0f,
-                    Mathf.Cos(time * 0.47f + phase) * 0.34f);
-                tornado.rotation = Quaternion.Euler(0f, time * 185f + phase * Mathf.Rad2Deg, 0f);
             }
         }
 
@@ -726,9 +724,9 @@ namespace MOBA.Core.Infrastructure
             _puddleMaterial = EnsureMaterial(_puddleMaterial, "Runtime_StormPuddles", new Color(0.13f, 0.25f, 0.31f, 0.50f), true);
             _cloudShadowMaterial = EnsureMaterial(_cloudShadowMaterial, "Runtime_StormCloudShadow", new Color(0.02f, 0.03f, 0.05f, 0.18f), true);
             _leafMaterial = EnsureMaterial(_leafMaterial, "Runtime_StormLeaves", new Color(0.77f, 0.62f, 0.24f, 0.72f), true);
-            _tornadoMaterial = EnsureMaterial(_tornadoMaterial, "Runtime_StormWindTornado", new Color(0.82f, 0.88f, 0.88f, 0.18f), true);
             _treeTrunkMaterial = EnsureMaterial(_treeTrunkMaterial, "Runtime_StormTreeTrunk", new Color(0.34f, 0.22f, 0.11f, 1f), false);
             _treeCanopyMaterial = EnsureMaterial(_treeCanopyMaterial, "Runtime_StormTreeCanopy", new Color(0.54f, 0.49f, 0.25f, 1f), false);
+            _lensOverlayMaterial = EnsureMaterial(_lensOverlayMaterial, "Runtime_StormLensOverlayDrops", new Color(0.94f, 1f, 1f, 0.62f), true);
         }
 
         private static Material EnsureMaterial(Material current, string materialName, Color color, bool transparent)
@@ -836,16 +834,26 @@ namespace MOBA.Core.Infrastructure
 
         private void DestroyCameraDroplets()
         {
-            if (_cameraDropletRoot == null)
-                return;
+            if (_cameraDropletRoot != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(_cameraDropletRoot.gameObject);
+                else
+                    DestroyImmediate(_cameraDropletRoot.gameObject);
 
-            if (Application.isPlaying)
-                Destroy(_cameraDropletRoot.gameObject);
-            else
-                DestroyImmediate(_cameraDropletRoot.gameObject);
+                _cameraDropletRoot = null;
+                _cameraDropletSystem = null;
+            }
 
-            _cameraDropletRoot = null;
-            _cameraDropletSystem = null;
+            if (_lensDropletOverlayRoot != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(_lensDropletOverlayRoot.gameObject);
+                else
+                    DestroyImmediate(_lensDropletOverlayRoot.gameObject);
+
+                _lensDropletOverlayRoot = null;
+            }
         }
 
         private void ClearChildren(Transform root)

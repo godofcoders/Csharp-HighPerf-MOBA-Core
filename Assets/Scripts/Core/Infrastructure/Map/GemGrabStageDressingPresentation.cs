@@ -21,7 +21,7 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Mine")]
         [SerializeField, Min(0.5f)] private float _mineRadius = 2.45f;
-        [SerializeField, Min(0)] private int _mountainRockClusterCount = 6;
+        [SerializeField, Min(0)] private int _mountainRockClusterCount = 8;
 
         private Transform _stageRoot;
         private Material _darkSandMaterial;
@@ -216,8 +216,8 @@ namespace MOBA.Core.Infrastructure
                 CreatePrimitive(
                     "MountainRock_" + i + "_Core",
                     PrimitiveType.Sphere,
-                    basePosition + new Vector3(0f, 0.58f, 0f),
-                    new Vector3(1.25f, 1.05f, 0.95f),
+                    basePosition + new Vector3(0f, 1.0f, 0f),
+                    new Vector3(2.45f, 1.95f, 1.85f),
                     Quaternion.Euler(0f, i * 37f, 0f),
                     _rockMaterial,
                     false);
@@ -225,8 +225,8 @@ namespace MOBA.Core.Infrastructure
                 CreatePrimitive(
                     "MountainRock_" + i + "_ShoulderA",
                     PrimitiveType.Sphere,
-                    basePosition + new Vector3(0.72f, 0.34f, -0.24f),
-                    new Vector3(0.82f, 0.62f, 0.72f),
+                    basePosition + new Vector3(1.32f, 0.62f, -0.44f),
+                    new Vector3(1.55f, 1.12f, 1.28f),
                     Quaternion.Euler(0f, i * 23f, 0f),
                     _darkSandMaterial,
                     false);
@@ -234,8 +234,8 @@ namespace MOBA.Core.Infrastructure
                 CreatePrimitive(
                     "MountainRock_" + i + "_ShoulderB",
                     PrimitiveType.Sphere,
-                    basePosition + new Vector3(-0.58f, 0.28f, 0.3f),
-                    new Vector3(0.72f, 0.54f, 0.62f),
+                    basePosition + new Vector3(-1.08f, 0.52f, 0.58f),
+                    new Vector3(1.38f, 1.0f, 1.14f),
                     Quaternion.Euler(0f, i * -29f, 0f),
                     _rockMaterial,
                     false);

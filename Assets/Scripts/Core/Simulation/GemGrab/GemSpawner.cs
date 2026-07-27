@@ -37,7 +37,7 @@ namespace MOBA.Core.Simulation
         [SerializeField] private Vector3 _spawnOffset = Vector3.zero;
 
         [Tooltip("Extra vertical lift applied to spawned mine gems so presentation dressing cannot hide the readable pickup.")]
-        [SerializeField, Min(0f)] private float _spawnHeightOffset = 0.76f;
+        [SerializeField, Min(0f)] private float _spawnHeightOffset = 1.35f;
 
         [Tooltip("Minimum XZ spacing used when several unpicked gems accumulate near the same mine.")]
         [Min(0.1f)]
