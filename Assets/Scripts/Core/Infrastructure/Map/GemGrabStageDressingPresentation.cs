@@ -21,27 +21,14 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Mine")]
         [SerializeField, Min(0.5f)] private float _mineRadius = 2.45f;
-        [SerializeField, Min(0.1f)] private float _mineCrystalHeight = 0.95f;
-
-        [Header("Train")]
-        [SerializeField, Min(0.1f)] private float _trackInset = 1.8f;
-        [SerializeField, Min(0.1f)] private float _trackLaneOffsetRatio = 0.38f;
-        [SerializeField, Min(0.1f)] private float _trainSpeed = 6.4f;
-        [SerializeField, Min(0f)] private float _trainDamage = 850f;
-        [SerializeField, Min(0.1f)] private float _trainHitHalfLength = 1.55f;
-        [SerializeField, Min(0.1f)] private float _trainHitHalfWidth = 0.72f;
-        [SerializeField, Min(0.1f)] private float _trainDamageCooldownSeconds = 1.1f;
+        [SerializeField, Min(0.2f)] private float _mineHoistHeight = 1.15f;
 
         private Transform _stageRoot;
-        private Material _sandMaterial;
         private Material _darkSandMaterial;
         private Material _rockMaterial;
         private Material _woodMaterial;
-        private Material _railMaterial;
-        private Material _trainMaterial;
-        private Material _trainTrimMaterial;
-        private Material _crystalMaterial;
-        private Material _gemGlowMaterial;
+        private Material _metalMaterial;
+        private Material _lampMaterial;
 
         public static void InstallUnder(GameObject root)
         {
@@ -50,10 +37,15 @@ namespace MOBA.Core.Infrastructure
 
             GemGrabStageDressingPresentation presentation =
                 root.GetComponent<GemGrabStageDressingPresentation>();
+            bool created = false;
             if (presentation == null)
+            {
                 presentation = root.AddComponent<GemGrabStageDressingPresentation>();
+                created = true;
+            }
 
-            presentation.RefreshStage();
+            if (!created)
+                presentation.RefreshStage();
         }
 
         private void Awake()
@@ -70,15 +62,11 @@ namespace MOBA.Core.Infrastructure
 
         private void OnDestroy()
         {
-            DestroyMaterial(_sandMaterial);
             DestroyMaterial(_darkSandMaterial);
             DestroyMaterial(_rockMaterial);
             DestroyMaterial(_woodMaterial);
-            DestroyMaterial(_railMaterial);
-            DestroyMaterial(_trainMaterial);
-            DestroyMaterial(_trainTrimMaterial);
-            DestroyMaterial(_crystalMaterial);
-            DestroyMaterial(_gemGlowMaterial);
+            DestroyMaterial(_metalMaterial);
+            DestroyMaterial(_lampMaterial);
         }
 
         public void RefreshStage()
@@ -98,7 +86,6 @@ namespace MOBA.Core.Infrastructure
             mineCenter.y = groundY;
 
             BuildGemMine(mineCenter, groundY);
-            BuildTrainLane(bounds, mineCenter, groundY);
             BuildAmbientProps(bounds, mineCenter, groundY);
         }
 
@@ -123,22 +110,63 @@ namespace MOBA.Core.Infrastructure
                 false);
 
             CreatePrimitive(
-                "GemMine_GlowDisc",
+                "GemMine_WarmLampDisc",
                 PrimitiveType.Cylinder,
                 center + new Vector3(0f, 0.145f, 0f),
-                new Vector3(_mineRadius * 0.72f, 0.012f, _mineRadius * 0.72f),
+                new Vector3(_mineRadius * 0.66f, 0.012f, _mineRadius * 0.66f),
                 Quaternion.identity,
-                _gemGlowMaterial,
+                _lampMaterial,
                 false);
-
-            CreateCrystal("GemMine_CrystalCore", center + new Vector3(0f, _mineCrystalHeight * 0.55f, 0f), new Vector3(0.56f, _mineCrystalHeight, 0.56f), 45f);
-            CreateCrystal("GemMine_CrystalLeft", center + new Vector3(-0.58f, _mineCrystalHeight * 0.42f, 0.18f), new Vector3(0.34f, _mineCrystalHeight * 0.72f, 0.34f), 18f);
-            CreateCrystal("GemMine_CrystalRight", center + new Vector3(0.52f, _mineCrystalHeight * 0.38f, -0.24f), new Vector3(0.30f, _mineCrystalHeight * 0.62f, 0.30f), -28f);
 
             CreateBeam("GemMine_TopBeam_A", center + new Vector3(0f, 0.38f, -1.15f), new Vector3(2.25f, 0.16f, 0.18f));
             CreateBeam("GemMine_TopBeam_B", center + new Vector3(0f, 0.38f, 1.15f), new Vector3(2.25f, 0.16f, 0.18f));
             CreateBeam("GemMine_SideBeam_L", center + new Vector3(-1.15f, 0.34f, 0f), new Vector3(0.18f, 0.16f, 2.05f));
             CreateBeam("GemMine_SideBeam_R", center + new Vector3(1.15f, 0.34f, 0f), new Vector3(0.18f, 0.16f, 2.05f));
+
+            CreatePrimitive(
+                "GemMine_HoistPost_L",
+                PrimitiveType.Cube,
+                center + new Vector3(-0.72f, _mineHoistHeight * 0.5f, 0f),
+                new Vector3(0.16f, _mineHoistHeight, 0.16f),
+                Quaternion.identity,
+                _woodMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_HoistPost_R",
+                PrimitiveType.Cube,
+                center + new Vector3(0.72f, _mineHoistHeight * 0.5f, 0f),
+                new Vector3(0.16f, _mineHoistHeight, 0.16f),
+                Quaternion.identity,
+                _woodMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_HoistBeam",
+                PrimitiveType.Cube,
+                center + new Vector3(0f, _mineHoistHeight + 0.08f, 0f),
+                new Vector3(1.72f, 0.16f, 0.16f),
+                Quaternion.identity,
+                _woodMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_Pulley",
+                PrimitiveType.Cylinder,
+                center + new Vector3(0f, _mineHoistHeight + 0.02f, 0f),
+                new Vector3(0.26f, 0.08f, 0.26f),
+                Quaternion.Euler(90f, 0f, 0f),
+                _metalMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_Rope",
+                PrimitiveType.Cube,
+                center + new Vector3(0f, 0.68f, 0f),
+                new Vector3(0.045f, 0.82f, 0.045f),
+                Quaternion.identity,
+                _metalMaterial,
+                false);
 
             CreatePrimitive(
                 "GemMine_MiniCart",
@@ -150,147 +178,22 @@ namespace MOBA.Core.Infrastructure
                 false);
 
             CreatePrimitive(
-                "GemMine_CartGem",
-                PrimitiveType.Cube,
-                center + new Vector3(-2.1f, 0.58f, -1.8f),
-                new Vector3(0.32f, 0.32f, 0.32f),
-                Quaternion.Euler(20f, 45f, 12f),
-                _crystalMaterial,
+                "GemMine_CartOre",
+                PrimitiveType.Sphere,
+                center + new Vector3(-2.1f, 0.53f, -1.8f),
+                new Vector3(0.42f, 0.24f, 0.34f),
+                Quaternion.identity,
+                _darkSandMaterial,
                 false);
 
             CreatePrimitive(
-                "GemMine_SpawnRing",
+                "GemMine_MetalSpawnRim",
                 PrimitiveType.Cylinder,
                 new Vector3(center.x, groundY + 0.17f, center.z),
-                new Vector3(0.42f, 0.012f, 0.42f),
+                new Vector3(0.46f, 0.012f, 0.46f),
                 Quaternion.identity,
-                _crystalMaterial,
+                _metalMaterial,
                 false);
-        }
-
-        private void BuildTrainLane(Bounds bounds, Vector3 mineCenter, float groundY)
-        {
-            float minX = bounds.min.x + _trackInset;
-            float maxX = bounds.max.x - _trackInset;
-            if (maxX - minX < 6f)
-                return;
-
-            float targetZ = mineCenter.z + bounds.extents.z * _trackLaneOffsetRatio;
-            float lanePadding = Mathf.Max(3.5f, _mineRadius + 0.9f);
-            float minZ = bounds.min.z + lanePadding;
-            float maxZ = bounds.max.z - lanePadding;
-            float trackZ = Mathf.Clamp(targetZ, minZ, maxZ);
-            if (Mathf.Abs(trackZ - mineCenter.z) < _mineRadius + 1.4f)
-                trackZ = Mathf.Clamp(mineCenter.z - bounds.extents.z * 0.42f, minZ, maxZ);
-
-            float trackLength = maxX - minX;
-            float centerX = (minX + maxX) * 0.5f;
-            float railY = groundY + 0.065f;
-            float railGap = 0.62f;
-
-            CreatePrimitive(
-                "GemTrain_Rail_North",
-                PrimitiveType.Cube,
-                new Vector3(centerX, railY, trackZ + railGap),
-                new Vector3(trackLength, 0.08f, 0.08f),
-                Quaternion.identity,
-                _railMaterial,
-                false);
-
-            CreatePrimitive(
-                "GemTrain_Rail_South",
-                PrimitiveType.Cube,
-                new Vector3(centerX, railY, trackZ - railGap),
-                new Vector3(trackLength, 0.08f, 0.08f),
-                Quaternion.identity,
-                _railMaterial,
-                false);
-
-            int sleeperCount = Mathf.Clamp(Mathf.RoundToInt(trackLength / 1.15f), 8, 28);
-            float step = sleeperCount > 1 ? trackLength / (sleeperCount - 1) : trackLength;
-            for (int i = 0; i < sleeperCount; i++)
-            {
-                float x = minX + step * i;
-                CreatePrimitive(
-                    "GemTrain_Sleeper_" + i,
-                    PrimitiveType.Cube,
-                    new Vector3(x, groundY + 0.04f, trackZ),
-                    new Vector3(0.18f, 0.06f, 1.72f),
-                    Quaternion.identity,
-                    _woodMaterial,
-                    false);
-            }
-
-            GameObject trainRoot = new GameObject("GemGrab_TrainHazard");
-            trainRoot.transform.SetParent(_stageRoot, true);
-            trainRoot.transform.position = new Vector3(minX, groundY + 0.46f, trackZ);
-            trainRoot.transform.rotation = Quaternion.identity;
-            trainRoot.transform.localScale = Vector3.one;
-
-            BuildTrainVisual(trainRoot.transform);
-
-            GemGrabTrainHazard hazard = trainRoot.AddComponent<GemGrabTrainHazard>();
-            hazard.Configure(
-                new Vector3(minX, groundY + 0.46f, trackZ),
-                new Vector3(maxX, groundY + 0.46f, trackZ),
-                _trainSpeed,
-                _trainDamage,
-                _trainHitHalfLength,
-                _trainHitHalfWidth,
-                _trainDamageCooldownSeconds);
-        }
-
-        private void BuildTrainVisual(Transform trainRoot)
-        {
-            CreatePrimitiveLocal(
-                "Train_Body",
-                PrimitiveType.Cube,
-                trainRoot,
-                new Vector3(0f, 0f, 0f),
-                new Vector3(1.04f, 0.64f, 2.25f),
-                Quaternion.identity,
-                _trainMaterial);
-
-            CreatePrimitiveLocal(
-                "Train_Cabin",
-                PrimitiveType.Cube,
-                trainRoot,
-                new Vector3(0f, 0.52f, -0.52f),
-                new Vector3(0.9f, 0.72f, 0.82f),
-                Quaternion.identity,
-                _trainTrimMaterial);
-
-            CreatePrimitiveLocal(
-                "Train_Nose",
-                PrimitiveType.Cube,
-                trainRoot,
-                new Vector3(0f, -0.02f, 1.28f),
-                new Vector3(0.82f, 0.46f, 0.42f),
-                Quaternion.identity,
-                _trainTrimMaterial);
-
-            CreatePrimitiveLocal(
-                "Train_SmokeStack",
-                PrimitiveType.Cylinder,
-                trainRoot,
-                new Vector3(0f, 0.52f, 0.58f),
-                new Vector3(0.22f, 0.26f, 0.22f),
-                Quaternion.identity,
-                _railMaterial);
-
-            for (int i = 0; i < 4; i++)
-            {
-                float x = i % 2 == 0 ? -0.62f : 0.62f;
-                float z = i < 2 ? -0.65f : 0.72f;
-                CreatePrimitiveLocal(
-                    "Train_Wheel_" + i,
-                    PrimitiveType.Cylinder,
-                    trainRoot,
-                    new Vector3(x, -0.31f, z),
-                    new Vector3(0.28f, 0.08f, 0.28f),
-                    Quaternion.Euler(0f, 0f, 90f),
-                    _railMaterial);
-            }
         }
 
         private void BuildAmbientProps(Bounds bounds, Vector3 mineCenter, float groundY)
@@ -325,18 +228,6 @@ namespace MOBA.Core.Infrastructure
             CreatePrimitive(prefix + "_2", PrimitiveType.Sphere, basePosition + new Vector3(-0.38f, 0.13f, 0.18f), new Vector3(0.38f, 0.26f, 0.34f), Quaternion.identity, _rockMaterial, false);
         }
 
-        private void CreateCrystal(string objectName, Vector3 position, Vector3 scale, float yaw)
-        {
-            CreatePrimitive(
-                objectName,
-                PrimitiveType.Cube,
-                position,
-                scale,
-                Quaternion.Euler(12f, yaw, 8f),
-                _crystalMaterial,
-                false);
-        }
-
         private void CreateBeam(string objectName, Vector3 position, Vector3 scale)
         {
             CreatePrimitive(
@@ -369,26 +260,6 @@ namespace MOBA.Core.Infrastructure
             if (!keepCollider)
                 RemoveCollider(primitive);
 
-            return primitive;
-        }
-
-        private GameObject CreatePrimitiveLocal(
-            string objectName,
-            PrimitiveType type,
-            Transform parent,
-            Vector3 localPosition,
-            Vector3 localScale,
-            Quaternion localRotation,
-            Material material)
-        {
-            GameObject primitive = GameObject.CreatePrimitive(type);
-            primitive.name = objectName;
-            primitive.transform.SetParent(parent, false);
-            primitive.transform.localPosition = localPosition;
-            primitive.transform.localRotation = localRotation;
-            primitive.transform.localScale = localScale;
-            ApplyRendererMaterial(primitive, material);
-            RemoveCollider(primitive);
             return primitive;
         }
 
@@ -531,15 +402,11 @@ namespace MOBA.Core.Infrastructure
 
         private void EnsureMaterials()
         {
-            _sandMaterial = EnsureMaterial(_sandMaterial, "Runtime_GemGrab_Sand", new Color(0.76f, 0.59f, 0.36f, 1f), false);
             _darkSandMaterial = EnsureMaterial(_darkSandMaterial, "Runtime_GemGrab_DarkSand", new Color(0.31f, 0.22f, 0.15f, 1f), false);
             _rockMaterial = EnsureMaterial(_rockMaterial, "Runtime_GemGrab_Rock", new Color(0.66f, 0.48f, 0.30f, 1f), false);
             _woodMaterial = EnsureMaterial(_woodMaterial, "Runtime_GemGrab_Wood", new Color(0.46f, 0.26f, 0.12f, 1f), false);
-            _railMaterial = EnsureMaterial(_railMaterial, "Runtime_GemGrab_Rail", new Color(0.16f, 0.14f, 0.13f, 1f), false);
-            _trainMaterial = EnsureMaterial(_trainMaterial, "Runtime_GemGrab_TrainBody", new Color(0.72f, 0.18f, 0.13f, 1f), false);
-            _trainTrimMaterial = EnsureMaterial(_trainTrimMaterial, "Runtime_GemGrab_TrainTrim", new Color(0.95f, 0.64f, 0.18f, 1f), false);
-            _crystalMaterial = EnsureMaterial(_crystalMaterial, "Runtime_GemGrab_Crystal", new Color(0.95f, 0.08f, 0.92f, 1f), false);
-            _gemGlowMaterial = EnsureMaterial(_gemGlowMaterial, "Runtime_GemGrab_Glow", new Color(0.95f, 0.08f, 0.92f, 0.34f), true);
+            _metalMaterial = EnsureMaterial(_metalMaterial, "Runtime_GemGrab_Metal", new Color(0.16f, 0.14f, 0.13f, 1f), false);
+            _lampMaterial = EnsureMaterial(_lampMaterial, "Runtime_GemGrab_MineLamp", new Color(1f, 0.66f, 0.22f, 0.24f), true);
         }
 
         private static Material EnsureMaterial(Material current, string materialName, Color color, bool transparent)
