@@ -21,24 +21,33 @@ namespace MOBA.Core.Infrastructure
         [Header("Rain")]
         [SerializeField, Range(0f, 1f)] private float _rainIntensity = 0.82f;
         [SerializeField, Min(1f)] private float _rainHeight = 11f;
-        [SerializeField, Min(0.1f)] private float _rainFallSpeed = 28f;
-        [SerializeField, Min(0.1f)] private float _windSpeed = 4.4f;
+        [SerializeField, Min(0.1f)] private float _rainFallSpeed = 34f;
+        [SerializeField, Min(0.1f)] private float _windSpeed = 5.4f;
 
         [Header("Lightning")]
         [SerializeField, Min(0.5f)] private float _minLightningInterval = 4.5f;
         [SerializeField, Min(0.5f)] private float _maxLightningInterval = 9.5f;
         [SerializeField, Min(0.02f)] private float _lightningFlashSeconds = 0.14f;
 
+        [Header("Wind Dressing")]
+        [SerializeField, Min(0)] private int _swayingTreeCount = 7;
+        [SerializeField, Min(0)] private int _windTornadoCount = 3;
+
         private Transform _stormRoot;
         private Transform _cameraDropletRoot;
         private ParticleSystem _rainSystem;
         private ParticleSystem _cameraDropletSystem;
+        private ParticleSystem _leafGustSystem;
         private Light _lightningLight;
         private Material _rainMaterial;
         private Material _lensDropletMaterial;
         private Material _wetGroundMaterial;
         private Material _puddleMaterial;
         private Material _cloudShadowMaterial;
+        private Material _leafMaterial;
+        private Material _tornadoMaterial;
+        private Material _treeTrunkMaterial;
+        private Material _treeCanopyMaterial;
         private Color _previousAmbientLight;
         private Color _previousFogColor;
         private bool _previousFogEnabled;
@@ -47,6 +56,12 @@ namespace MOBA.Core.Infrastructure
         private bool _hasCameraColor;
         private float _nextLightningTime;
         private float _lightningTimer;
+        private Transform[] _treeRoots;
+        private Quaternion[] _treeBaseRotations;
+        private float[] _treePhases;
+        private Transform[] _windTornadoRoots;
+        private Vector3[] _windTornadoBasePositions;
+        private float[] _windTornadoPhases;
 
         public static void InstallUnder(GameObject root)
         {
@@ -82,6 +97,8 @@ namespace MOBA.Core.Infrastructure
         private void Update()
         {
             UpdateLightning();
+            UpdateSwayingTrees();
+            UpdateWindTornadoes();
         }
 
         private void OnDestroy()
@@ -93,6 +110,10 @@ namespace MOBA.Core.Infrastructure
             DestroyMaterial(_wetGroundMaterial);
             DestroyMaterial(_puddleMaterial);
             DestroyMaterial(_cloudShadowMaterial);
+            DestroyMaterial(_leafMaterial);
+            DestroyMaterial(_tornadoMaterial);
+            DestroyMaterial(_treeTrunkMaterial);
+            DestroyMaterial(_treeCanopyMaterial);
         }
 
         public void RefreshStorm()
@@ -108,6 +129,7 @@ namespace MOBA.Core.Infrastructure
             BuildRain(bounds);
             BuildCameraDroplets();
             BuildGroundWetness(bounds);
+            BuildWindAmbience(bounds);
             EnsureLightningLight(bounds);
         }
 
@@ -131,11 +153,11 @@ namespace MOBA.Core.Infrastructure
             main.loop = true;
             main.duration = 5f;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = Mathf.RoundToInt(Mathf.Lerp(520f, 1250f, _rainIntensity));
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.34f);
+            main.maxParticles = Mathf.RoundToInt(Mathf.Lerp(640f, 1450f, _rainIntensity));
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.08f, 0.17f);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.045f, 0.07f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.92f, 0.96f, 1f, 0.78f));
+            main.startSize = new ParticleSystem.MinMaxCurve(0.065f, 0.095f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.98f, 1f, 1f, 0.9f));
             main.gravityModifier = 0f;
 
             ParticleSystem.EmissionModule emission = _rainSystem.emission;
@@ -177,8 +199,8 @@ namespace MOBA.Core.Infrastructure
             {
                 renderer.sharedMaterial = _rainMaterial;
                 renderer.renderMode = ParticleSystemRenderMode.Stretch;
-                renderer.lengthScale = 0.42f;
-                renderer.velocityScale = 0.16f;
+                renderer.lengthScale = 0.12f;
+                renderer.velocityScale = 0.035f;
                 renderer.cameraVelocityScale = 0.02f;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
@@ -328,6 +350,218 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        private void BuildWindAmbience(Bounds bounds)
+        {
+            BuildLeafGusts(bounds);
+            BuildWindTornadoes(bounds);
+            BuildSwayingTrees(bounds);
+        }
+
+        private void BuildLeafGusts(Bounds bounds)
+        {
+            if (_leafGustSystem == null)
+            {
+                GameObject leafObject = new GameObject("StormLeafGusts");
+                leafObject.transform.SetParent(_stormRoot, false);
+                _leafGustSystem = leafObject.AddComponent<ParticleSystem>();
+            }
+
+            _leafGustSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            _leafGustSystem.transform.position = new Vector3(bounds.center.x, bounds.max.y + 0.9f, bounds.center.z);
+            _leafGustSystem.transform.rotation = Quaternion.identity;
+
+            ParticleSystem.MainModule main = _leafGustSystem.main;
+            main.loop = true;
+            main.duration = 6f;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 140;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.3f, 2.8f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.09f, 0.18f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.startColor = new ParticleSystem.MinMaxGradient(
+                new Color(0.64f, 0.52f, 0.23f, 0.62f),
+                new Color(0.88f, 0.72f, 0.28f, 0.78f));
+
+            ParticleSystem.EmissionModule emission = _leafGustSystem.emission;
+            emission.enabled = true;
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(16f);
+
+            ParticleSystem.ShapeModule shape = _leafGustSystem.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(bounds.size.x + 4f, 0.45f, bounds.size.z + 3f);
+
+            ParticleSystem.VelocityOverLifetimeModule velocity = _leafGustSystem.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.World;
+            velocity.x = new ParticleSystem.MinMaxCurve(_windSpeed * 0.7f, _windSpeed * 1.5f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.05f, 0.65f);
+            velocity.z = new ParticleSystem.MinMaxCurve(-_windSpeed * 0.45f, _windSpeed * 0.28f);
+
+            ParticleSystem.RotationOverLifetimeModule rotation = _leafGustSystem.rotationOverLifetime;
+            rotation.enabled = true;
+            rotation.z = new ParticleSystem.MinMaxCurve(-8f, 8f);
+
+            ParticleSystemRenderer renderer = _leafGustSystem.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = _leafMaterial;
+                renderer.renderMode = ParticleSystemRenderMode.Billboard;
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            _leafGustSystem.Play(true);
+        }
+
+        private void BuildWindTornadoes(Bounds bounds)
+        {
+            Transform tornadoRoot = _stormRoot.Find("StormWindTornadoes");
+            if (tornadoRoot == null)
+            {
+                GameObject root = new GameObject("StormWindTornadoes");
+                root.transform.SetParent(_stormRoot, false);
+                tornadoRoot = root.transform;
+            }
+
+            ClearChildren(tornadoRoot);
+
+            int count = Mathf.Clamp(_windTornadoCount, 0, 5);
+            _windTornadoRoots = new Transform[count];
+            _windTornadoBasePositions = new Vector3[count];
+            _windTornadoPhases = new float[count];
+
+            for (int i = 0; i < count; i++)
+            {
+                float t = (i + 0.35f) / Mathf.Max(1, count);
+                float x = Mathf.Lerp(bounds.min.x + 2.6f, bounds.max.x - 2.6f, Mathf.Repeat(t * 1.61f, 1f));
+                float z = Mathf.Lerp(bounds.min.z + 2.6f, bounds.max.z - 2.6f, Mathf.Repeat(t * 2.17f, 1f));
+                Vector3 basePosition = new Vector3(x, bounds.max.y + 0.22f, z);
+
+                GameObject root = new GameObject("StormWindTornado_" + i);
+                root.transform.SetParent(tornadoRoot, true);
+                root.transform.position = basePosition;
+                root.transform.rotation = Quaternion.identity;
+                root.transform.localScale = Vector3.one;
+
+                for (int ring = 0; ring < 5; ring++)
+                {
+                    float height = 0.18f + ring * 0.24f;
+                    float width = 0.42f + ring * 0.18f;
+                    CreateFlatPatch(
+                        root.transform,
+                        "WindSwirlRing_" + ring,
+                        PrimitiveType.Cylinder,
+                        new Vector3(basePosition.x, basePosition.y + height, basePosition.z),
+                        new Vector3(width, 0.01f, width * 0.62f),
+                        _tornadoMaterial);
+                }
+
+                _windTornadoRoots[i] = root.transform;
+                _windTornadoBasePositions[i] = basePosition;
+                _windTornadoPhases[i] = i * 1.71f;
+            }
+        }
+
+        private void BuildSwayingTrees(Bounds bounds)
+        {
+            Transform treeRoot = _stormRoot.Find("StormSwayingTrees");
+            if (treeRoot == null)
+            {
+                GameObject root = new GameObject("StormSwayingTrees");
+                root.transform.SetParent(_stormRoot, false);
+                treeRoot = root.transform;
+            }
+
+            ClearChildren(treeRoot);
+
+            int count = Mathf.Clamp(_swayingTreeCount, 0, 12);
+            _treeRoots = new Transform[count];
+            _treeBaseRotations = new Quaternion[count];
+            _treePhases = new float[count];
+
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 position = ResolveTreePosition(bounds, i, count);
+                GameObject tree = new GameObject("StormSwayingTree_" + i);
+                tree.transform.SetParent(treeRoot, true);
+                tree.transform.position = position;
+                tree.transform.rotation = Quaternion.identity;
+                tree.transform.localScale = Vector3.one;
+
+                CreateTreePart(
+                    tree.transform,
+                    "TreeTrunk",
+                    PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.72f, 0f),
+                    new Vector3(0.16f, 0.72f, 0.16f),
+                    _treeTrunkMaterial);
+
+                CreateTreePart(
+                    tree.transform,
+                    "TreeCanopy",
+                    PrimitiveType.Sphere,
+                    new Vector3(0.08f, 1.55f, -0.04f),
+                    new Vector3(0.72f, 0.58f, 0.72f),
+                    _treeCanopyMaterial);
+
+                CreateTreePart(
+                    tree.transform,
+                    "TreeCanopy_Offset",
+                    PrimitiveType.Sphere,
+                    new Vector3(-0.25f, 1.34f, 0.18f),
+                    new Vector3(0.48f, 0.42f, 0.48f),
+                    _treeCanopyMaterial);
+
+                _treeRoots[i] = tree.transform;
+                _treeBaseRotations[i] = tree.transform.rotation;
+                _treePhases[i] = i * 0.83f;
+            }
+        }
+
+        private void CreateTreePart(
+            Transform parent,
+            string objectName,
+            PrimitiveType type,
+            Vector3 localPosition,
+            Vector3 localScale,
+            Material material)
+        {
+            GameObject primitive = GameObject.CreatePrimitive(type);
+            primitive.name = objectName;
+            primitive.transform.SetParent(parent, false);
+            primitive.transform.localPosition = localPosition;
+            primitive.transform.localRotation = Quaternion.identity;
+            primitive.transform.localScale = localScale;
+
+            Renderer renderer = primitive.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = material;
+                renderer.shadowCastingMode = ShadowCastingMode.On;
+                renderer.receiveShadows = true;
+            }
+
+            Collider collider = primitive.GetComponent<Collider>();
+            if (collider != null)
+                Destroy(collider);
+        }
+
+        private static Vector3 ResolveTreePosition(Bounds bounds, int index, int count)
+        {
+            float t = (index + 0.5f) / Mathf.Max(1, count);
+            bool leftOrRight = index % 2 == 0;
+            float x = leftOrRight
+                ? (index % 4 == 0 ? bounds.min.x + 1.15f : bounds.max.x - 1.15f)
+                : Mathf.Lerp(bounds.min.x + 3f, bounds.max.x - 3f, Mathf.Repeat(t * 1.9f, 1f));
+            float z = leftOrRight
+                ? Mathf.Lerp(bounds.min.z + 2.3f, bounds.max.z - 2.3f, Mathf.Repeat(t * 1.37f, 1f))
+                : (index % 4 == 1 ? bounds.min.z + 1.15f : bounds.max.z - 1.15f);
+
+            return new Vector3(x, bounds.max.y, z);
+        }
+
         private void EnsureLightningLight(Bounds bounds)
         {
             if (_lightningLight != null)
@@ -365,6 +599,55 @@ namespace MOBA.Core.Infrastructure
 
             _lightningTimer = _lightningFlashSeconds;
             ScheduleNextLightning();
+        }
+
+        private void UpdateSwayingTrees()
+        {
+            if (_treeRoots == null || _treeBaseRotations == null || _treePhases == null)
+                return;
+
+            float time = Time.time;
+            int count = Mathf.Min(_treeRoots.Length, Mathf.Min(_treeBaseRotations.Length, _treePhases.Length));
+            for (int i = 0; i < count; i++)
+            {
+                Transform tree = _treeRoots[i];
+                if (tree == null)
+                    continue;
+
+                float wave = Mathf.Sin(time * 1.65f + _treePhases[i]);
+                float gust = Mathf.Sin(time * 0.52f + _treePhases[i] * 0.7f) * 0.45f;
+                tree.rotation = _treeBaseRotations[i] * Quaternion.Euler(
+                    (wave + gust) * 3.8f,
+                    0f,
+                    Mathf.Sin(time * 1.1f + _treePhases[i]) * 2.2f);
+            }
+        }
+
+        private void UpdateWindTornadoes()
+        {
+            if (_windTornadoRoots == null ||
+                _windTornadoBasePositions == null ||
+                _windTornadoPhases == null)
+            {
+                return;
+            }
+
+            float time = Time.time;
+            int count = Mathf.Min(_windTornadoRoots.Length, Mathf.Min(_windTornadoBasePositions.Length, _windTornadoPhases.Length));
+            for (int i = 0; i < count; i++)
+            {
+                Transform tornado = _windTornadoRoots[i];
+                if (tornado == null)
+                    continue;
+
+                float phase = _windTornadoPhases[i];
+                Vector3 basePosition = _windTornadoBasePositions[i];
+                tornado.position = basePosition + new Vector3(
+                    Mathf.Sin(time * 0.55f + phase) * 0.42f,
+                    0f,
+                    Mathf.Cos(time * 0.47f + phase) * 0.34f);
+                tornado.rotation = Quaternion.Euler(0f, time * 185f + phase * Mathf.Rad2Deg, 0f);
+            }
         }
 
         private void ScheduleNextLightning()
@@ -442,6 +725,10 @@ namespace MOBA.Core.Infrastructure
             _wetGroundMaterial = EnsureMaterial(_wetGroundMaterial, "Runtime_StormWetGround", new Color(0.05f, 0.09f, 0.12f, 0.32f), true);
             _puddleMaterial = EnsureMaterial(_puddleMaterial, "Runtime_StormPuddles", new Color(0.13f, 0.25f, 0.31f, 0.50f), true);
             _cloudShadowMaterial = EnsureMaterial(_cloudShadowMaterial, "Runtime_StormCloudShadow", new Color(0.02f, 0.03f, 0.05f, 0.18f), true);
+            _leafMaterial = EnsureMaterial(_leafMaterial, "Runtime_StormLeaves", new Color(0.77f, 0.62f, 0.24f, 0.72f), true);
+            _tornadoMaterial = EnsureMaterial(_tornadoMaterial, "Runtime_StormWindTornado", new Color(0.82f, 0.88f, 0.88f, 0.18f), true);
+            _treeTrunkMaterial = EnsureMaterial(_treeTrunkMaterial, "Runtime_StormTreeTrunk", new Color(0.34f, 0.22f, 0.11f, 1f), false);
+            _treeCanopyMaterial = EnsureMaterial(_treeCanopyMaterial, "Runtime_StormTreeCanopy", new Color(0.54f, 0.49f, 0.25f, 1f), false);
         }
 
         private static Material EnsureMaterial(Material current, string materialName, Color color, bool transparent)

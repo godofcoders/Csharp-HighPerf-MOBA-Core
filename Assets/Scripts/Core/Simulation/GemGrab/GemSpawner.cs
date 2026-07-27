@@ -36,6 +36,9 @@ namespace MOBA.Core.Simulation
         [Tooltip("Spawn position offset from this transform. Useful if the spawner GameObject is the mine root and gems should pop out at a child point.")]
         [SerializeField] private Vector3 _spawnOffset = Vector3.zero;
 
+        [Tooltip("Extra vertical lift applied to spawned mine gems so presentation dressing cannot hide the readable pickup.")]
+        [SerializeField, Min(0f)] private float _spawnHeightOffset = 0.28f;
+
         [Tooltip("Minimum XZ spacing used when several unpicked gems accumulate near the same mine.")]
         [Min(0.1f)]
         [SerializeField] private float _spawnGemSpacing = 0.82f;
@@ -84,6 +87,7 @@ namespace MOBA.Core.Simulation
                 return;
 
             Vector3 spawnCenter = transform.position + _spawnOffset;
+            spawnCenter.y += _spawnHeightOffset;
             Vector3 spawnPos = GemPlacementUtility.ResolveReadablePosition(
                 spawnCenter,
                 _active.Count,

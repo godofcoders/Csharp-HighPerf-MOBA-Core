@@ -113,19 +113,12 @@ namespace MOBA.Core.Infrastructure
                 "GemMine_SewerInnerGlow",
                 PrimitiveType.Cylinder,
                 center + new Vector3(0f, 0.126f, 0f),
-                new Vector3(_mineRadius * 0.42f, 0.01f, _mineRadius * 0.42f),
+                new Vector3(_mineRadius * 0.34f, 0.01f, _mineRadius * 0.34f),
                 Quaternion.identity,
                 _lampMaterial,
                 false);
 
-            CreatePrimitive(
-                "GemMine_MetalSpawnRim",
-                PrimitiveType.Cylinder,
-                new Vector3(center.x, rimY, center.z),
-                new Vector3(_mineRadius * 0.62f, 0.035f, _mineRadius * 0.62f),
-                Quaternion.identity,
-                _metalMaterial,
-                false);
+            CreateSewerRimSegments(center, rimY);
 
             CreatePrimitive(
                 "GemMine_MovedSewerLid",
@@ -181,14 +174,28 @@ namespace MOBA.Core.Infrastructure
                 _lampMaterial,
                 false);
 
-            CreatePrimitive(
-                "GemMine_GemSpawnClearMarker",
-                PrimitiveType.Cylinder,
-                new Vector3(center.x, groundY + 0.17f, center.z),
-                new Vector3(0.26f, 0.008f, 0.26f),
-                Quaternion.identity,
-                _metalMaterial,
-                false);
+        }
+
+        private void CreateSewerRimSegments(Vector3 center, float rimY)
+        {
+            const int segmentCount = 10;
+            float radius = _mineRadius * 0.55f;
+            for (int i = 0; i < segmentCount; i++)
+            {
+                float angle = i / (float)segmentCount * Mathf.PI * 2f;
+                float degrees = angle * Mathf.Rad2Deg;
+                Vector3 position = center + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
+                position.y = rimY;
+
+                CreatePrimitive(
+                    "GemMine_MetalRimSegment_" + i,
+                    PrimitiveType.Cube,
+                    position,
+                    new Vector3(0.52f, 0.06f, 0.15f),
+                    Quaternion.Euler(0f, -degrees, 0f),
+                    _metalMaterial,
+                    false);
+            }
         }
 
         private void BuildAmbientProps(Bounds bounds, Vector3 mineCenter, float groundY)
