@@ -19,10 +19,10 @@ namespace MOBA.Core.Infrastructure
         private const string StormRootName = "RuntimeStormPresentation";
 
         [Header("Rain")]
-        [SerializeField, Range(0f, 1f)] private float _rainIntensity = 0.74f;
+        [SerializeField, Range(0f, 1f)] private float _rainIntensity = 0.82f;
         [SerializeField, Min(1f)] private float _rainHeight = 11f;
-        [SerializeField, Min(0.1f)] private float _rainFallSpeed = 17f;
-        [SerializeField, Min(0.1f)] private float _windSpeed = 3.2f;
+        [SerializeField, Min(0.1f)] private float _rainFallSpeed = 28f;
+        [SerializeField, Min(0.1f)] private float _windSpeed = 4.4f;
 
         [Header("Lightning")]
         [SerializeField, Min(0.5f)] private float _minLightningInterval = 4.5f;
@@ -30,9 +30,13 @@ namespace MOBA.Core.Infrastructure
         [SerializeField, Min(0.02f)] private float _lightningFlashSeconds = 0.14f;
 
         private Transform _stormRoot;
+        private Transform _cameraDropletRoot;
         private ParticleSystem _rainSystem;
+        private ParticleSystem _cameraDropletSystem;
         private Light _lightningLight;
         private Material _rainMaterial;
+        private Material _lensDropletMaterial;
+        private Material _wetGroundMaterial;
         private Material _puddleMaterial;
         private Material _cloudShadowMaterial;
         private Color _previousAmbientLight;
@@ -83,7 +87,10 @@ namespace MOBA.Core.Infrastructure
         private void OnDestroy()
         {
             RestoreLightingState();
+            DestroyCameraDroplets();
             DestroyMaterial(_rainMaterial);
+            DestroyMaterial(_lensDropletMaterial);
+            DestroyMaterial(_wetGroundMaterial);
             DestroyMaterial(_puddleMaterial);
             DestroyMaterial(_cloudShadowMaterial);
         }
@@ -99,6 +106,7 @@ namespace MOBA.Core.Infrastructure
             EnsureStormRoot();
             EnsureMaterials();
             BuildRain(bounds);
+            BuildCameraDroplets();
             BuildGroundWetness(bounds);
             EnsureLightningLight(bounds);
         }
@@ -123,16 +131,16 @@ namespace MOBA.Core.Infrastructure
             main.loop = true;
             main.duration = 5f;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.maxParticles = Mathf.RoundToInt(Mathf.Lerp(280f, 920f, _rainIntensity));
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.62f, 0.92f);
+            main.maxParticles = Mathf.RoundToInt(Mathf.Lerp(520f, 1250f, _rainIntensity));
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.34f);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.025f, 0.045f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.64f, 0.79f, 0.92f, 0.55f));
+            main.startSize = new ParticleSystem.MinMaxCurve(0.045f, 0.07f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.92f, 0.96f, 1f, 0.78f));
             main.gravityModifier = 0f;
 
             ParticleSystem.EmissionModule emission = _rainSystem.emission;
             emission.enabled = true;
-            emission.rateOverTime = new ParticleSystem.MinMaxCurve(Mathf.Lerp(100f, 330f, _rainIntensity));
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(Mathf.Lerp(220f, 560f, _rainIntensity));
 
             ParticleSystem.ShapeModule shape = _rainSystem.shape;
             shape.enabled = true;
@@ -143,7 +151,7 @@ namespace MOBA.Core.Infrastructure
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.World;
             velocity.x = new ParticleSystem.MinMaxCurve(-_windSpeed * 0.35f, _windSpeed * 0.2f);
-            velocity.y = new ParticleSystem.MinMaxCurve(-_rainFallSpeed * 1.08f, -_rainFallSpeed * 0.86f);
+            velocity.y = new ParticleSystem.MinMaxCurve(-_rainFallSpeed * 1.12f, -_rainFallSpeed * 0.92f);
             velocity.z = new ParticleSystem.MinMaxCurve(-_windSpeed, -_windSpeed * 0.45f);
 
             ParticleSystem.ColorOverLifetimeModule colorOverLifetime = _rainSystem.colorOverLifetime;
@@ -152,14 +160,14 @@ namespace MOBA.Core.Infrastructure
             gradient.SetKeys(
                 new[]
                 {
-                    new GradientColorKey(new Color(0.73f, 0.86f, 1f), 0f),
-                    new GradientColorKey(new Color(0.47f, 0.64f, 0.78f), 1f)
+                    new GradientColorKey(new Color(1f, 1f, 1f), 0f),
+                    new GradientColorKey(new Color(0.78f, 0.9f, 1f), 1f)
                 },
                 new[]
                 {
                     new GradientAlphaKey(0f, 0f),
-                    new GradientAlphaKey(0.58f, 0.18f),
-                    new GradientAlphaKey(0.42f, 0.78f),
+                    new GradientAlphaKey(0.82f, 0.14f),
+                    new GradientAlphaKey(0.58f, 0.72f),
                     new GradientAlphaKey(0f, 1f)
                 });
             colorOverLifetime.color = new ParticleSystem.MinMaxGradient(gradient);
@@ -169,14 +177,107 @@ namespace MOBA.Core.Infrastructure
             {
                 renderer.sharedMaterial = _rainMaterial;
                 renderer.renderMode = ParticleSystemRenderMode.Stretch;
-                renderer.lengthScale = 2.3f;
-                renderer.velocityScale = 0.72f;
+                renderer.lengthScale = 0.42f;
+                renderer.velocityScale = 0.16f;
                 renderer.cameraVelocityScale = 0.02f;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
             }
 
             _rainSystem.Play(true);
+        }
+
+        private void BuildCameraDroplets()
+        {
+            Camera camera = Camera.main;
+            if (camera == null)
+                return;
+
+            if (_cameraDropletRoot == null)
+            {
+                Transform existing = camera.transform.Find("StormCameraDroplets");
+                if (existing != null)
+                {
+                    _cameraDropletRoot = existing;
+                    _cameraDropletSystem = existing.GetComponent<ParticleSystem>();
+                }
+            }
+
+            if (_cameraDropletRoot == null)
+            {
+                GameObject dropletObject = new GameObject("StormCameraDroplets");
+                dropletObject.transform.SetParent(camera.transform, false);
+                _cameraDropletRoot = dropletObject.transform;
+                _cameraDropletSystem = dropletObject.AddComponent<ParticleSystem>();
+            }
+
+            if (_cameraDropletSystem == null)
+                _cameraDropletSystem = _cameraDropletRoot.gameObject.AddComponent<ParticleSystem>();
+
+            _cameraDropletSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            _cameraDropletRoot.localPosition = new Vector3(0f, 0f, Mathf.Max(1.6f, camera.nearClipPlane + 1.2f));
+            _cameraDropletRoot.localRotation = Quaternion.identity;
+            _cameraDropletRoot.localScale = Vector3.one;
+
+            ParticleSystem.MainModule main = _cameraDropletSystem.main;
+            main.loop = true;
+            main.duration = 4f;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.maxParticles = 70;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.1f, 2.4f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.028f, 0.072f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.92f, 0.98f, 1f, 0.22f));
+            main.gravityModifier = 0f;
+
+            ParticleSystem.EmissionModule emission = _cameraDropletSystem.emission;
+            emission.enabled = true;
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(8f);
+
+            ParticleSystem.ShapeModule shape = _cameraDropletSystem.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(7.8f, 4.4f, 0.02f);
+
+            ParticleSystem.VelocityOverLifetimeModule velocity = _cameraDropletSystem.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.Local;
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
+            velocity.y = new ParticleSystem.MinMaxCurve(-0.48f, -0.16f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f);
+
+            ParticleSystem.ColorOverLifetimeModule colorOverLifetime = _cameraDropletSystem.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            Gradient gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(1f, 1f, 1f), 0f),
+                    new GradientColorKey(new Color(0.72f, 0.88f, 1f), 1f)
+                },
+                new[]
+                {
+                    new GradientAlphaKey(0f, 0f),
+                    new GradientAlphaKey(0.24f, 0.16f),
+                    new GradientAlphaKey(0.16f, 0.82f),
+                    new GradientAlphaKey(0f, 1f)
+                });
+            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(gradient);
+
+            ParticleSystemRenderer renderer = _cameraDropletSystem.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                renderer.sharedMaterial = _lensDropletMaterial;
+                renderer.renderMode = ParticleSystemRenderMode.Stretch;
+                renderer.lengthScale = 0.72f;
+                renderer.velocityScale = 0.58f;
+                renderer.cameraVelocityScale = 0f;
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+
+            _cameraDropletSystem.Play(true);
         }
 
         private void BuildGroundWetness(Bounds bounds)
@@ -193,25 +294,35 @@ namespace MOBA.Core.Infrastructure
 
             CreateFlatPatch(
                 wetnessRoot,
+                "StormWetGround",
+                PrimitiveType.Cube,
+                new Vector3(bounds.center.x, bounds.max.y + 0.018f, bounds.center.z),
+                new Vector3(bounds.size.x + 1.5f, 0.012f, bounds.size.z + 1.5f),
+                _wetGroundMaterial);
+
+            CreateFlatPatch(
+                wetnessRoot,
                 "StormCloudShadow",
+                PrimitiveType.Cube,
                 new Vector3(bounds.center.x, bounds.max.y + 0.018f, bounds.center.z),
                 new Vector3(bounds.size.x + 1.5f, 0.01f, bounds.size.z + 1.5f),
                 _cloudShadowMaterial);
 
-            int puddleCount = 9;
+            int puddleCount = 14;
             for (int i = 0; i < puddleCount; i++)
             {
                 float t = (i + 0.5f) / puddleCount;
                 float wave = Mathf.Sin(t * Mathf.PI * 4.8f);
                 float x = Mathf.Lerp(bounds.min.x + 2f, bounds.max.x - 2f, t);
                 float z = bounds.center.z + wave * bounds.extents.z * 0.48f;
-                float width = Mathf.Lerp(1.0f, 2.2f, Mathf.Repeat(t * 2.7f, 1f));
-                float depth = Mathf.Lerp(0.34f, 0.78f, Mathf.Repeat(t * 3.1f, 1f));
+                float width = Mathf.Lerp(1.15f, 2.7f, Mathf.Repeat(t * 2.7f, 1f));
+                float depth = Mathf.Lerp(0.42f, 1.05f, Mathf.Repeat(t * 3.1f, 1f));
 
                 CreateFlatPatch(
                     wetnessRoot,
                     "StormPuddle_" + i,
-                    new Vector3(x, bounds.max.y + 0.026f, z),
+                    PrimitiveType.Cylinder,
+                    new Vector3(x, bounds.max.y + 0.032f, z),
                     new Vector3(width, 0.01f, depth),
                     _puddleMaterial);
             }
@@ -326,9 +437,11 @@ namespace MOBA.Core.Infrastructure
 
         private void EnsureMaterials()
         {
-            _rainMaterial = EnsureMaterial(_rainMaterial, "Runtime_StormRain", new Color(0.64f, 0.79f, 0.92f, 0.58f), true);
-            _puddleMaterial = EnsureMaterial(_puddleMaterial, "Runtime_StormPuddles", new Color(0.16f, 0.23f, 0.28f, 0.36f), true);
-            _cloudShadowMaterial = EnsureMaterial(_cloudShadowMaterial, "Runtime_StormCloudShadow", new Color(0.03f, 0.05f, 0.08f, 0.28f), true);
+            _rainMaterial = EnsureMaterial(_rainMaterial, "Runtime_StormRain", new Color(0.92f, 0.96f, 1f, 0.78f), true);
+            _lensDropletMaterial = EnsureMaterial(_lensDropletMaterial, "Runtime_StormLensDrops", new Color(0.9f, 0.98f, 1f, 0.22f), true);
+            _wetGroundMaterial = EnsureMaterial(_wetGroundMaterial, "Runtime_StormWetGround", new Color(0.05f, 0.09f, 0.12f, 0.32f), true);
+            _puddleMaterial = EnsureMaterial(_puddleMaterial, "Runtime_StormPuddles", new Color(0.13f, 0.25f, 0.31f, 0.50f), true);
+            _cloudShadowMaterial = EnsureMaterial(_cloudShadowMaterial, "Runtime_StormCloudShadow", new Color(0.02f, 0.03f, 0.05f, 0.18f), true);
         }
 
         private static Material EnsureMaterial(Material current, string materialName, Color color, bool transparent)
@@ -404,9 +517,15 @@ namespace MOBA.Core.Infrastructure
             material.renderQueue = (int)RenderQueue.Transparent;
         }
 
-        private GameObject CreateFlatPatch(Transform parent, string objectName, Vector3 position, Vector3 scale, Material material)
+        private GameObject CreateFlatPatch(
+            Transform parent,
+            string objectName,
+            PrimitiveType primitiveType,
+            Vector3 position,
+            Vector3 scale,
+            Material material)
         {
-            GameObject primitive = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            GameObject primitive = GameObject.CreatePrimitive(primitiveType);
             primitive.name = objectName;
             primitive.transform.SetParent(parent, true);
             primitive.transform.position = position;
@@ -426,6 +545,20 @@ namespace MOBA.Core.Infrastructure
                 Destroy(collider);
 
             return primitive;
+        }
+
+        private void DestroyCameraDroplets()
+        {
+            if (_cameraDropletRoot == null)
+                return;
+
+            if (Application.isPlaying)
+                Destroy(_cameraDropletRoot.gameObject);
+            else
+                DestroyImmediate(_cameraDropletRoot.gameObject);
+
+            _cameraDropletRoot = null;
+            _cameraDropletSystem = null;
         }
 
         private void ClearChildren(Transform root)

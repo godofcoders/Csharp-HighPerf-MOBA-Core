@@ -21,12 +21,10 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Mine")]
         [SerializeField, Min(0.5f)] private float _mineRadius = 2.45f;
-        [SerializeField, Min(0.2f)] private float _mineHoistHeight = 1.15f;
 
         private Transform _stageRoot;
         private Material _darkSandMaterial;
         private Material _rockMaterial;
-        private Material _woodMaterial;
         private Material _metalMaterial;
         private Material _lampMaterial;
 
@@ -64,7 +62,6 @@ namespace MOBA.Core.Infrastructure
         {
             DestroyMaterial(_darkSandMaterial);
             DestroyMaterial(_rockMaterial);
-            DestroyMaterial(_woodMaterial);
             DestroyMaterial(_metalMaterial);
             DestroyMaterial(_lampMaterial);
         }
@@ -91,106 +88,104 @@ namespace MOBA.Core.Infrastructure
 
         private void BuildGemMine(Vector3 center, float groundY)
         {
+            float baseY = groundY + 0.04f;
+            float rimY = groundY + 0.12f;
+
             CreatePrimitive(
-                "GemMine_SandstoneBase",
+                "GemMine_SewerConcreteBase",
                 PrimitiveType.Cylinder,
                 center + new Vector3(0f, 0.055f, 0f),
-                new Vector3(_mineRadius, 0.055f, _mineRadius),
+                new Vector3(_mineRadius * 0.86f, 0.045f, _mineRadius * 0.86f),
                 Quaternion.identity,
                 _rockMaterial,
                 false);
 
             CreatePrimitive(
-                "GemMine_DarkShaft",
+                "GemMine_SewerHole",
                 PrimitiveType.Cylinder,
-                center + new Vector3(0f, 0.12f, 0f),
-                new Vector3(_mineRadius * 0.46f, 0.035f, _mineRadius * 0.46f),
+                center + new Vector3(0f, 0.112f, 0f),
+                new Vector3(_mineRadius * 0.48f, 0.02f, _mineRadius * 0.48f),
                 Quaternion.identity,
                 _darkSandMaterial,
                 false);
 
             CreatePrimitive(
-                "GemMine_WarmLampDisc",
+                "GemMine_SewerInnerGlow",
                 PrimitiveType.Cylinder,
-                center + new Vector3(0f, 0.145f, 0f),
-                new Vector3(_mineRadius * 0.66f, 0.012f, _mineRadius * 0.66f),
+                center + new Vector3(0f, 0.126f, 0f),
+                new Vector3(_mineRadius * 0.42f, 0.01f, _mineRadius * 0.42f),
                 Quaternion.identity,
                 _lampMaterial,
-                false);
-
-            CreateBeam("GemMine_TopBeam_A", center + new Vector3(0f, 0.38f, -1.15f), new Vector3(2.25f, 0.16f, 0.18f));
-            CreateBeam("GemMine_TopBeam_B", center + new Vector3(0f, 0.38f, 1.15f), new Vector3(2.25f, 0.16f, 0.18f));
-            CreateBeam("GemMine_SideBeam_L", center + new Vector3(-1.15f, 0.34f, 0f), new Vector3(0.18f, 0.16f, 2.05f));
-            CreateBeam("GemMine_SideBeam_R", center + new Vector3(1.15f, 0.34f, 0f), new Vector3(0.18f, 0.16f, 2.05f));
-
-            CreatePrimitive(
-                "GemMine_HoistPost_L",
-                PrimitiveType.Cube,
-                center + new Vector3(-0.72f, _mineHoistHeight * 0.5f, 0f),
-                new Vector3(0.16f, _mineHoistHeight, 0.16f),
-                Quaternion.identity,
-                _woodMaterial,
-                false);
-
-            CreatePrimitive(
-                "GemMine_HoistPost_R",
-                PrimitiveType.Cube,
-                center + new Vector3(0.72f, _mineHoistHeight * 0.5f, 0f),
-                new Vector3(0.16f, _mineHoistHeight, 0.16f),
-                Quaternion.identity,
-                _woodMaterial,
-                false);
-
-            CreatePrimitive(
-                "GemMine_HoistBeam",
-                PrimitiveType.Cube,
-                center + new Vector3(0f, _mineHoistHeight + 0.08f, 0f),
-                new Vector3(1.72f, 0.16f, 0.16f),
-                Quaternion.identity,
-                _woodMaterial,
-                false);
-
-            CreatePrimitive(
-                "GemMine_Pulley",
-                PrimitiveType.Cylinder,
-                center + new Vector3(0f, _mineHoistHeight + 0.02f, 0f),
-                new Vector3(0.26f, 0.08f, 0.26f),
-                Quaternion.Euler(90f, 0f, 0f),
-                _metalMaterial,
-                false);
-
-            CreatePrimitive(
-                "GemMine_Rope",
-                PrimitiveType.Cube,
-                center + new Vector3(0f, 0.68f, 0f),
-                new Vector3(0.045f, 0.82f, 0.045f),
-                Quaternion.identity,
-                _metalMaterial,
-                false);
-
-            CreatePrimitive(
-                "GemMine_MiniCart",
-                PrimitiveType.Cube,
-                center + new Vector3(-2.1f, 0.22f, -1.8f),
-                new Vector3(0.82f, 0.34f, 0.55f),
-                Quaternion.Euler(0f, 18f, 0f),
-                _woodMaterial,
-                false);
-
-            CreatePrimitive(
-                "GemMine_CartOre",
-                PrimitiveType.Sphere,
-                center + new Vector3(-2.1f, 0.53f, -1.8f),
-                new Vector3(0.42f, 0.24f, 0.34f),
-                Quaternion.identity,
-                _darkSandMaterial,
                 false);
 
             CreatePrimitive(
                 "GemMine_MetalSpawnRim",
                 PrimitiveType.Cylinder,
+                new Vector3(center.x, rimY, center.z),
+                new Vector3(_mineRadius * 0.62f, 0.035f, _mineRadius * 0.62f),
+                Quaternion.identity,
+                _metalMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_MovedSewerLid",
+                PrimitiveType.Cylinder,
+                center + new Vector3(1.68f, 0.16f, -0.82f),
+                new Vector3(_mineRadius * 0.56f, 0.055f, _mineRadius * 0.56f),
+                Quaternion.Euler(0f, 0f, -11f),
+                _metalMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_LidHandle",
+                PrimitiveType.Cube,
+                center + new Vector3(1.68f, 0.25f, -0.82f),
+                new Vector3(0.58f, 0.07f, 0.12f),
+                Quaternion.Euler(0f, -22f, -11f),
+                _darkSandMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_DrainGrate_H",
+                PrimitiveType.Cube,
+                center + new Vector3(-1.62f, 0.14f, 0.82f),
+                new Vector3(0.95f, 0.045f, 0.16f),
+                Quaternion.Euler(0f, 18f, 0f),
+                _metalMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_DrainGrate_V",
+                PrimitiveType.Cube,
+                center + new Vector3(-1.62f, 0.145f, 0.82f),
+                new Vector3(0.16f, 0.045f, 0.72f),
+                Quaternion.Euler(0f, 18f, 0f),
+                _metalMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_Runoff_A",
+                PrimitiveType.Cylinder,
+                new Vector3(center.x - 0.82f, baseY + 0.016f, center.z - 1.42f),
+                new Vector3(0.44f, 0.008f, 1.08f),
+                Quaternion.Euler(0f, -32f, 0f),
+                _lampMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_Runoff_B",
+                PrimitiveType.Cylinder,
+                new Vector3(center.x + 1.08f, baseY + 0.016f, center.z + 1.22f),
+                new Vector3(0.34f, 0.008f, 0.86f),
+                Quaternion.Euler(0f, 24f, 0f),
+                _lampMaterial,
+                false);
+
+            CreatePrimitive(
+                "GemMine_GemSpawnClearMarker",
+                PrimitiveType.Cylinder,
                 new Vector3(center.x, groundY + 0.17f, center.z),
-                new Vector3(0.46f, 0.012f, 0.46f),
+                new Vector3(0.26f, 0.008f, 0.26f),
                 Quaternion.identity,
                 _metalMaterial,
                 false);
@@ -201,24 +196,6 @@ namespace MOBA.Core.Infrastructure
             CreateRockPile("GemRockPile_A", new Vector3(bounds.min.x + 2.3f, groundY, mineCenter.z - 4.6f));
             CreateRockPile("GemRockPile_B", new Vector3(bounds.max.x - 2.5f, groundY, mineCenter.z + 3.8f));
             CreateRockPile("GemRockPile_C", new Vector3(mineCenter.x + 4.3f, groundY, bounds.min.z + 2.5f));
-
-            CreatePrimitive(
-                "GemMine_BrokenCart_A",
-                PrimitiveType.Cube,
-                new Vector3(bounds.min.x + 4.4f, groundY + 0.22f, bounds.max.z - 3.0f),
-                new Vector3(1.0f, 0.36f, 0.58f),
-                Quaternion.Euler(0f, -28f, 0f),
-                _woodMaterial,
-                false);
-
-            CreatePrimitive(
-                "GemMine_BrokenCart_B",
-                PrimitiveType.Cube,
-                new Vector3(bounds.max.x - 4.4f, groundY + 0.22f, bounds.min.z + 3.0f),
-                new Vector3(1.0f, 0.36f, 0.58f),
-                Quaternion.Euler(0f, 28f, 0f),
-                _woodMaterial,
-                false);
         }
 
         private void CreateRockPile(string prefix, Vector3 basePosition)
@@ -226,18 +203,6 @@ namespace MOBA.Core.Infrastructure
             CreatePrimitive(prefix + "_0", PrimitiveType.Sphere, basePosition + new Vector3(0f, 0.18f, 0f), new Vector3(0.62f, 0.36f, 0.5f), Quaternion.identity, _rockMaterial, false);
             CreatePrimitive(prefix + "_1", PrimitiveType.Sphere, basePosition + new Vector3(0.42f, 0.14f, -0.16f), new Vector3(0.42f, 0.28f, 0.38f), Quaternion.identity, _darkSandMaterial, false);
             CreatePrimitive(prefix + "_2", PrimitiveType.Sphere, basePosition + new Vector3(-0.38f, 0.13f, 0.18f), new Vector3(0.38f, 0.26f, 0.34f), Quaternion.identity, _rockMaterial, false);
-        }
-
-        private void CreateBeam(string objectName, Vector3 position, Vector3 scale)
-        {
-            CreatePrimitive(
-                objectName,
-                PrimitiveType.Cube,
-                position,
-                scale,
-                Quaternion.identity,
-                _woodMaterial,
-                false);
         }
 
         private GameObject CreatePrimitive(
@@ -404,9 +369,8 @@ namespace MOBA.Core.Infrastructure
         {
             _darkSandMaterial = EnsureMaterial(_darkSandMaterial, "Runtime_GemGrab_DarkSand", new Color(0.31f, 0.22f, 0.15f, 1f), false);
             _rockMaterial = EnsureMaterial(_rockMaterial, "Runtime_GemGrab_Rock", new Color(0.66f, 0.48f, 0.30f, 1f), false);
-            _woodMaterial = EnsureMaterial(_woodMaterial, "Runtime_GemGrab_Wood", new Color(0.46f, 0.26f, 0.12f, 1f), false);
             _metalMaterial = EnsureMaterial(_metalMaterial, "Runtime_GemGrab_Metal", new Color(0.16f, 0.14f, 0.13f, 1f), false);
-            _lampMaterial = EnsureMaterial(_lampMaterial, "Runtime_GemGrab_MineLamp", new Color(1f, 0.66f, 0.22f, 0.24f), true);
+            _lampMaterial = EnsureMaterial(_lampMaterial, "Runtime_GemGrab_WetAmber", new Color(1f, 0.66f, 0.22f, 0.22f), true);
         }
 
         private static Material EnsureMaterial(Material current, string materialName, Color color, bool transparent)
