@@ -15,8 +15,15 @@ namespace MOBA.Core.Infrastructure
         private static readonly int DstBlendId = Shader.PropertyToID("_DstBlend");
         private static readonly int ZWriteId = Shader.PropertyToID("_ZWrite");
         private static readonly int CullId = Shader.PropertyToID("_Cull");
+        private static readonly int TintId = Shader.PropertyToID("_Tint");
+        private static readonly int IntensityId = Shader.PropertyToID("_Intensity");
+        private static readonly int ScaleId = Shader.PropertyToID("_Scale");
+        private static readonly int SpeedId = Shader.PropertyToID("_Speed");
 
         private const string StormRootName = "RuntimeStormPresentation";
+        private const string CameraWaterOverlayName = "StormCameraWaterOverlay";
+        private const string LegacyCameraDropletsName = "StormCameraDroplets";
+        private const string LegacyLensOverlayName = "StormLensDropletOverlay";
 
         [Header("Rain")]
         [SerializeField, Range(0f, 1f)] private float _rainIntensity = 0.82f;
@@ -34,20 +41,17 @@ namespace MOBA.Core.Infrastructure
 
         private Transform _stormRoot;
         private Transform _cameraDropletRoot;
-        private Transform _lensDropletOverlayRoot;
         private ParticleSystem _rainSystem;
-        private ParticleSystem _cameraDropletSystem;
         private ParticleSystem _leafGustSystem;
         private Light _lightningLight;
         private Material _rainMaterial;
-        private Material _lensDropletMaterial;
+        private Material _cameraWaterMaterial;
         private Material _wetGroundMaterial;
         private Material _puddleMaterial;
         private Material _cloudShadowMaterial;
         private Material _leafMaterial;
         private Material _treeTrunkMaterial;
         private Material _treeCanopyMaterial;
-        private Material _lensOverlayMaterial;
         private Color _previousAmbientLight;
         private Color _previousFogColor;
         private bool _previousFogEnabled;
@@ -95,6 +99,7 @@ namespace MOBA.Core.Infrastructure
         {
             UpdateLightning();
             UpdateSwayingTrees();
+            UpdateCameraWaterOverlay();
         }
 
         private void OnDestroy()
@@ -102,14 +107,13 @@ namespace MOBA.Core.Infrastructure
             RestoreLightingState();
             DestroyCameraDroplets();
             DestroyMaterial(_rainMaterial);
-            DestroyMaterial(_lensDropletMaterial);
+            DestroyMaterial(_cameraWaterMaterial);
             DestroyMaterial(_wetGroundMaterial);
             DestroyMaterial(_puddleMaterial);
             DestroyMaterial(_cloudShadowMaterial);
             DestroyMaterial(_leafMaterial);
             DestroyMaterial(_treeTrunkMaterial);
             DestroyMaterial(_treeCanopyMaterial);
-            DestroyMaterial(_lensOverlayMaterial);
         }
 
         public void RefreshStorm()
@@ -211,158 +215,94 @@ namespace MOBA.Core.Infrastructure
             if (camera == null)
                 return;
 
+            DestroyLegacyCameraDropletObjects(camera);
+
+            if (_cameraWaterMaterial == null)
+            {
+                DestroyCameraDroplets();
+                return;
+            }
+
+            if (_cameraDropletRoot != null && _cameraDropletRoot.parent != camera.transform)
+                DestroyCameraDroplets();
+
             if (_cameraDropletRoot == null)
             {
-                Transform existing = camera.transform.Find("StormCameraDroplets");
+                Transform existing = camera.transform.Find(CameraWaterOverlayName);
                 if (existing != null)
-                {
                     _cameraDropletRoot = existing;
-                    _cameraDropletSystem = existing.GetComponent<ParticleSystem>();
-                }
             }
 
             if (_cameraDropletRoot == null)
             {
-                GameObject dropletObject = new GameObject("StormCameraDroplets");
+                GameObject dropletObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                dropletObject.name = CameraWaterOverlayName;
                 dropletObject.transform.SetParent(camera.transform, false);
                 _cameraDropletRoot = dropletObject.transform;
-                _cameraDropletSystem = dropletObject.AddComponent<ParticleSystem>();
             }
 
-            if (_cameraDropletSystem == null)
-                _cameraDropletSystem = _cameraDropletRoot.gameObject.AddComponent<ParticleSystem>();
+            Collider collider = _cameraDropletRoot.GetComponent<Collider>();
+            if (collider != null)
+                Destroy(collider);
 
-            _cameraDropletSystem.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-            _cameraDropletRoot.localPosition = new Vector3(0f, 0f, Mathf.Max(1.6f, camera.nearClipPlane + 1.2f));
-            _cameraDropletRoot.localRotation = Quaternion.identity;
-            _cameraDropletRoot.localScale = Vector3.one;
-
-            ParticleSystem.MainModule main = _cameraDropletSystem.main;
-            main.loop = true;
-            main.duration = 4f;
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.maxParticles = 180;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(1.35f, 2.8f);
-            main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.075f, 0.18f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.95f, 1f, 1f, 0.52f));
-            main.gravityModifier = 0f;
-
-            ParticleSystem.EmissionModule emission = _cameraDropletSystem.emission;
-            emission.enabled = true;
-            emission.rateOverTime = new ParticleSystem.MinMaxCurve(28f);
-
-            ParticleSystem.ShapeModule shape = _cameraDropletSystem.shape;
-            shape.enabled = true;
-            shape.shapeType = ParticleSystemShapeType.Box;
-            float dropletViewHeight = camera.orthographic ? camera.orthographicSize * 2.0f : 4.4f;
-            float dropletViewWidth = dropletViewHeight * Mathf.Max(0.1f, camera.aspect);
-            shape.scale = new Vector3(dropletViewWidth, dropletViewHeight, 0.02f);
-
-            ParticleSystem.VelocityOverLifetimeModule velocity = _cameraDropletSystem.velocityOverLifetime;
-            velocity.enabled = true;
-            velocity.space = ParticleSystemSimulationSpace.Local;
-            velocity.x = new ParticleSystem.MinMaxCurve(-0.02f, 0.02f);
-            velocity.y = new ParticleSystem.MinMaxCurve(-0.48f, -0.16f);
-            velocity.z = new ParticleSystem.MinMaxCurve(0f);
-
-            ParticleSystem.ColorOverLifetimeModule colorOverLifetime = _cameraDropletSystem.colorOverLifetime;
-            colorOverLifetime.enabled = true;
-            Gradient gradient = new Gradient();
-            gradient.SetKeys(
-                new[]
-                {
-                    new GradientColorKey(new Color(1f, 1f, 1f), 0f),
-                    new GradientColorKey(new Color(0.72f, 0.88f, 1f), 1f)
-                },
-                new[]
-                {
-                    new GradientAlphaKey(0f, 0f),
-                    new GradientAlphaKey(0.48f, 0.12f),
-                    new GradientAlphaKey(0.34f, 0.82f),
-                    new GradientAlphaKey(0f, 1f)
-                });
-            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(gradient);
-
-            ParticleSystemRenderer renderer = _cameraDropletSystem.GetComponent<ParticleSystemRenderer>();
+            Renderer renderer = _cameraDropletRoot.GetComponent<Renderer>();
             if (renderer != null)
             {
-                renderer.sharedMaterial = _lensDropletMaterial;
-                renderer.renderMode = ParticleSystemRenderMode.Stretch;
-                renderer.lengthScale = 1.05f;
-                renderer.velocityScale = 0.78f;
-                renderer.cameraVelocityScale = 0f;
+                renderer.sharedMaterial = _cameraWaterMaterial;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
+                renderer.sortingOrder = 1;
             }
 
-            _cameraDropletSystem.Play(true);
-            BuildLensDropletOverlay(camera);
+            UpdateCameraWaterOverlay();
         }
 
-        private void BuildLensDropletOverlay(Camera camera)
+        private void UpdateCameraWaterOverlay()
         {
-            if (camera == null)
+            if (_cameraDropletRoot == null)
                 return;
 
-            if (_lensDropletOverlayRoot == null)
-            {
-                Transform existing = camera.transform.Find("StormLensDropletOverlay");
-                if (existing != null)
-                    _lensDropletOverlayRoot = existing;
-            }
+            Camera camera = Camera.main;
+            if (camera == null || _cameraDropletRoot.parent != camera.transform)
+                return;
 
-            if (_lensDropletOverlayRoot == null)
-            {
-                GameObject overlay = new GameObject("StormLensDropletOverlay");
-                overlay.transform.SetParent(camera.transform, false);
-                _lensDropletOverlayRoot = overlay.transform;
-            }
-
-            ClearChildren(_lensDropletOverlayRoot);
-
-            float distance = camera.orthographic
-                ? Mathf.Max(0.8f, camera.nearClipPlane + 0.75f)
-                : Mathf.Max(2.0f, camera.nearClipPlane + 1.65f);
+            float distance = ResolveCameraOverlayDistance(camera);
             float halfHeight = camera.orthographic
-                ? Mathf.Max(1f, camera.orthographicSize)
+                ? Mathf.Max(0.5f, camera.orthographicSize)
                 : Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad) * distance;
             float halfWidth = halfHeight * Mathf.Max(0.1f, camera.aspect);
-            _lensDropletOverlayRoot.localPosition = new Vector3(0f, 0f, distance);
-            _lensDropletOverlayRoot.localRotation = Quaternion.identity;
-            _lensDropletOverlayRoot.localScale = Vector3.one;
 
-            const int dropletCount = 54;
-            for (int i = 0; i < dropletCount; i++)
-            {
-                float tx = Mathf.Repeat(i * 0.618f + 0.13f, 1f);
-                float ty = Mathf.Repeat(i * 0.377f + 0.29f, 1f);
-                float x = Mathf.Lerp(-halfWidth * 0.82f, halfWidth * 0.82f, tx);
-                float y = Mathf.Lerp(-halfHeight * 0.72f, halfHeight * 0.72f, ty);
-                float size = camera.orthographic
-                    ? Mathf.Lerp(0.18f, 0.36f, Mathf.Repeat(i * 0.271f, 1f))
-                    : Mathf.Lerp(0.055f, 0.145f, Mathf.Repeat(i * 0.271f, 1f));
+            _cameraDropletRoot.localPosition = new Vector3(0f, 0f, distance);
+            _cameraDropletRoot.localRotation = Quaternion.identity;
+            _cameraDropletRoot.localScale = new Vector3(halfWidth * 2.0f, halfHeight * 2.0f, 1f);
+        }
 
-                GameObject droplet = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                droplet.name = "LensRainDroplet_" + i;
-                droplet.transform.SetParent(_lensDropletOverlayRoot, false);
-                droplet.transform.localPosition = new Vector3(x, y, 0f);
-                droplet.transform.localRotation = Quaternion.identity;
-                droplet.transform.localScale = new Vector3(size * 0.68f, size * 1.45f, size * 0.08f);
+        private static float ResolveCameraOverlayDistance(Camera camera)
+        {
+            return camera.orthographic
+                ? Mathf.Max(0.65f, camera.nearClipPlane + 0.55f)
+                : Mathf.Max(2.0f, camera.nearClipPlane + 1.5f);
+        }
 
-                Renderer renderer = droplet.GetComponent<Renderer>();
-                if (renderer != null)
-                {
-                    renderer.sharedMaterial = _lensOverlayMaterial;
-                    renderer.shadowCastingMode = ShadowCastingMode.Off;
-                    renderer.receiveShadows = false;
-                }
+        private static void DestroyLegacyCameraDropletObjects(Camera camera)
+        {
+            DestroyCameraChild(camera, LegacyCameraDropletsName);
+            DestroyCameraChild(camera, LegacyLensOverlayName);
+        }
 
-                Collider collider = droplet.GetComponent<Collider>();
-                if (collider != null)
-                    Destroy(collider);
-            }
+        private static void DestroyCameraChild(Camera camera, string childName)
+        {
+            if (camera == null || string.IsNullOrEmpty(childName))
+                return;
+
+            Transform child = camera.transform.Find(childName);
+            if (child == null)
+                return;
+
+            if (Application.isPlaying)
+                Destroy(child.gameObject);
+            else
+                DestroyImmediate(child.gameObject);
         }
 
         private void BuildGroundWetness(Bounds bounds)
@@ -719,14 +659,36 @@ namespace MOBA.Core.Infrastructure
         private void EnsureMaterials()
         {
             _rainMaterial = EnsureMaterial(_rainMaterial, "Runtime_StormRain", new Color(0.92f, 0.96f, 1f, 0.78f), true);
-            _lensDropletMaterial = EnsureMaterial(_lensDropletMaterial, "Runtime_StormLensDrops", new Color(0.94f, 1f, 1f, 0.52f), true);
+            _cameraWaterMaterial = EnsureCameraWaterMaterial(_cameraWaterMaterial);
             _wetGroundMaterial = EnsureMaterial(_wetGroundMaterial, "Runtime_StormWetGround", new Color(0.05f, 0.09f, 0.12f, 0.32f), true);
             _puddleMaterial = EnsureMaterial(_puddleMaterial, "Runtime_StormPuddles", new Color(0.13f, 0.25f, 0.31f, 0.50f), true);
             _cloudShadowMaterial = EnsureMaterial(_cloudShadowMaterial, "Runtime_StormCloudShadow", new Color(0.02f, 0.03f, 0.05f, 0.18f), true);
             _leafMaterial = EnsureMaterial(_leafMaterial, "Runtime_StormLeaves", new Color(0.77f, 0.62f, 0.24f, 0.72f), true);
             _treeTrunkMaterial = EnsureMaterial(_treeTrunkMaterial, "Runtime_StormTreeTrunk", new Color(0.34f, 0.22f, 0.11f, 1f), false);
             _treeCanopyMaterial = EnsureMaterial(_treeCanopyMaterial, "Runtime_StormTreeCanopy", new Color(0.54f, 0.49f, 0.25f, 1f), false);
-            _lensOverlayMaterial = EnsureMaterial(_lensOverlayMaterial, "Runtime_StormLensOverlayDrops", new Color(0.94f, 1f, 1f, 0.62f), true);
+        }
+
+        private static Material EnsureCameraWaterMaterial(Material current)
+        {
+            if (current != null)
+                return current;
+
+            Shader shader = Shader.Find("MOBA/Storm/LensWaterDroplets");
+            if (shader == null)
+                return null;
+
+            Material material = new Material(shader)
+            {
+                name = "Runtime_StormLensWaterDroplets",
+                enableInstancing = false
+            };
+
+            SetMaterialColorIfPresent(material, TintId, new Color(0.88f, 0.96f, 1f, 0.30f));
+            SetMaterialFloatIfPresent(material, IntensityId, 0.48f);
+            SetMaterialFloatIfPresent(material, ScaleId, 1.0f);
+            SetMaterialFloatIfPresent(material, SpeedId, 1.08f);
+            material.renderQueue = (int)RenderQueue.Transparent + 80;
+            return material;
         }
 
         private static Material EnsureMaterial(Material current, string materialName, Color color, bool transparent)
@@ -842,17 +804,6 @@ namespace MOBA.Core.Infrastructure
                     DestroyImmediate(_cameraDropletRoot.gameObject);
 
                 _cameraDropletRoot = null;
-                _cameraDropletSystem = null;
-            }
-
-            if (_lensDropletOverlayRoot != null)
-            {
-                if (Application.isPlaying)
-                    Destroy(_lensDropletOverlayRoot.gameObject);
-                else
-                    DestroyImmediate(_lensDropletOverlayRoot.gameObject);
-
-                _lensDropletOverlayRoot = null;
             }
         }
 
@@ -956,6 +907,12 @@ namespace MOBA.Core.Infrastructure
         {
             if (material != null && material.HasProperty(propertyId))
                 material.SetInt(propertyId, value);
+        }
+
+        private static void SetMaterialColorIfPresent(Material material, int propertyId, Color value)
+        {
+            if (material != null && material.HasProperty(propertyId))
+                material.SetColor(propertyId, value);
         }
 
         private static void DestroyMaterial(Material material)
