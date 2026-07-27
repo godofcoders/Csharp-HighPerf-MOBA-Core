@@ -15,10 +15,6 @@ namespace MOBA.Core.Infrastructure
         private static readonly int DstBlendId = Shader.PropertyToID("_DstBlend");
         private static readonly int ZWriteId = Shader.PropertyToID("_ZWrite");
         private static readonly int CullId = Shader.PropertyToID("_Cull");
-        private static readonly int TintId = Shader.PropertyToID("_Tint");
-        private static readonly int IntensityId = Shader.PropertyToID("_Intensity");
-        private static readonly int ScaleId = Shader.PropertyToID("_Scale");
-        private static readonly int SpeedId = Shader.PropertyToID("_Speed");
 
         private const string StormRootName = "RuntimeStormPresentation";
         private const string CameraWaterOverlayName = "StormCameraWaterOverlay";
@@ -40,12 +36,10 @@ namespace MOBA.Core.Infrastructure
         [SerializeField, Min(0)] private int _swayingTreeCount = 7;
 
         private Transform _stormRoot;
-        private Transform _cameraDropletRoot;
         private ParticleSystem _rainSystem;
         private ParticleSystem _leafGustSystem;
         private Light _lightningLight;
         private Material _rainMaterial;
-        private Material _cameraWaterMaterial;
         private Material _wetGroundMaterial;
         private Material _puddleMaterial;
         private Material _cloudShadowMaterial;
@@ -99,15 +93,13 @@ namespace MOBA.Core.Infrastructure
         {
             UpdateLightning();
             UpdateSwayingTrees();
-            UpdateCameraWaterOverlay();
         }
 
         private void OnDestroy()
         {
             RestoreLightingState();
-            DestroyCameraDroplets();
+            DestroyCameraRainOverlays();
             DestroyMaterial(_rainMaterial);
-            DestroyMaterial(_cameraWaterMaterial);
             DestroyMaterial(_wetGroundMaterial);
             DestroyMaterial(_puddleMaterial);
             DestroyMaterial(_cloudShadowMaterial);
@@ -127,7 +119,7 @@ namespace MOBA.Core.Infrastructure
             EnsureStormRoot();
             EnsureMaterials();
             BuildRain(bounds);
-            BuildCameraDroplets();
+            DestroyCameraRainOverlays();
             BuildGroundWetness(bounds);
             BuildWindAmbience(bounds);
             EnsureLightningLight(bounds);
@@ -209,83 +201,13 @@ namespace MOBA.Core.Infrastructure
             _rainSystem.Play(true);
         }
 
-        private void BuildCameraDroplets()
+        private static void DestroyCameraRainOverlays()
         {
             Camera camera = Camera.main;
             if (camera == null)
                 return;
 
-            DestroyLegacyCameraDropletObjects(camera);
-
-            if (_cameraWaterMaterial == null)
-            {
-                DestroyCameraDroplets();
-                return;
-            }
-
-            if (_cameraDropletRoot != null && _cameraDropletRoot.parent != camera.transform)
-                DestroyCameraDroplets();
-
-            if (_cameraDropletRoot == null)
-            {
-                Transform existing = camera.transform.Find(CameraWaterOverlayName);
-                if (existing != null)
-                    _cameraDropletRoot = existing;
-            }
-
-            if (_cameraDropletRoot == null)
-            {
-                GameObject dropletObject = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                dropletObject.name = CameraWaterOverlayName;
-                dropletObject.transform.SetParent(camera.transform, false);
-                _cameraDropletRoot = dropletObject.transform;
-            }
-
-            Collider collider = _cameraDropletRoot.GetComponent<Collider>();
-            if (collider != null)
-                Destroy(collider);
-
-            Renderer renderer = _cameraDropletRoot.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                renderer.sharedMaterial = _cameraWaterMaterial;
-                renderer.shadowCastingMode = ShadowCastingMode.Off;
-                renderer.receiveShadows = false;
-                renderer.sortingOrder = 1;
-            }
-
-            UpdateCameraWaterOverlay();
-        }
-
-        private void UpdateCameraWaterOverlay()
-        {
-            if (_cameraDropletRoot == null)
-                return;
-
-            Camera camera = Camera.main;
-            if (camera == null || _cameraDropletRoot.parent != camera.transform)
-                return;
-
-            float distance = ResolveCameraOverlayDistance(camera);
-            float halfHeight = camera.orthographic
-                ? Mathf.Max(0.5f, camera.orthographicSize)
-                : Mathf.Tan(camera.fieldOfView * 0.5f * Mathf.Deg2Rad) * distance;
-            float halfWidth = halfHeight * Mathf.Max(0.1f, camera.aspect);
-
-            _cameraDropletRoot.localPosition = new Vector3(0f, 0f, distance);
-            _cameraDropletRoot.localRotation = Quaternion.identity;
-            _cameraDropletRoot.localScale = new Vector3(halfWidth * 2.0f, halfHeight * 2.0f, 1f);
-        }
-
-        private static float ResolveCameraOverlayDistance(Camera camera)
-        {
-            return camera.orthographic
-                ? Mathf.Max(0.65f, camera.nearClipPlane + 0.55f)
-                : Mathf.Max(2.0f, camera.nearClipPlane + 1.5f);
-        }
-
-        private static void DestroyLegacyCameraDropletObjects(Camera camera)
-        {
+            DestroyCameraChild(camera, CameraWaterOverlayName);
             DestroyCameraChild(camera, LegacyCameraDropletsName);
             DestroyCameraChild(camera, LegacyLensOverlayName);
         }
@@ -659,36 +581,12 @@ namespace MOBA.Core.Infrastructure
         private void EnsureMaterials()
         {
             _rainMaterial = EnsureMaterial(_rainMaterial, "Runtime_StormRain", new Color(0.92f, 0.96f, 1f, 0.78f), true);
-            _cameraWaterMaterial = EnsureCameraWaterMaterial(_cameraWaterMaterial);
             _wetGroundMaterial = EnsureMaterial(_wetGroundMaterial, "Runtime_StormWetGround", new Color(0.05f, 0.09f, 0.12f, 0.32f), true);
             _puddleMaterial = EnsureMaterial(_puddleMaterial, "Runtime_StormPuddles", new Color(0.13f, 0.25f, 0.31f, 0.50f), true);
             _cloudShadowMaterial = EnsureMaterial(_cloudShadowMaterial, "Runtime_StormCloudShadow", new Color(0.02f, 0.03f, 0.05f, 0.18f), true);
             _leafMaterial = EnsureMaterial(_leafMaterial, "Runtime_StormLeaves", new Color(0.77f, 0.62f, 0.24f, 0.72f), true);
             _treeTrunkMaterial = EnsureMaterial(_treeTrunkMaterial, "Runtime_StormTreeTrunk", new Color(0.34f, 0.22f, 0.11f, 1f), false);
             _treeCanopyMaterial = EnsureMaterial(_treeCanopyMaterial, "Runtime_StormTreeCanopy", new Color(0.54f, 0.49f, 0.25f, 1f), false);
-        }
-
-        private static Material EnsureCameraWaterMaterial(Material current)
-        {
-            if (current != null)
-                return current;
-
-            Shader shader = Shader.Find("MOBA/Storm/LensWaterDroplets");
-            if (shader == null)
-                return null;
-
-            Material material = new Material(shader)
-            {
-                name = "Runtime_StormLensWaterDroplets",
-                enableInstancing = false
-            };
-
-            SetMaterialColorIfPresent(material, TintId, new Color(0.88f, 0.96f, 1f, 0.30f));
-            SetMaterialFloatIfPresent(material, IntensityId, 0.48f);
-            SetMaterialFloatIfPresent(material, ScaleId, 1.0f);
-            SetMaterialFloatIfPresent(material, SpeedId, 1.08f);
-            material.renderQueue = (int)RenderQueue.Transparent + 80;
-            return material;
         }
 
         private static Material EnsureMaterial(Material current, string materialName, Color color, bool transparent)
@@ -794,19 +692,6 @@ namespace MOBA.Core.Infrastructure
             return primitive;
         }
 
-        private void DestroyCameraDroplets()
-        {
-            if (_cameraDropletRoot != null)
-            {
-                if (Application.isPlaying)
-                    Destroy(_cameraDropletRoot.gameObject);
-                else
-                    DestroyImmediate(_cameraDropletRoot.gameObject);
-
-                _cameraDropletRoot = null;
-            }
-        }
-
         private void ClearChildren(Transform root)
         {
             if (root == null)
@@ -907,12 +792,6 @@ namespace MOBA.Core.Infrastructure
         {
             if (material != null && material.HasProperty(propertyId))
                 material.SetInt(propertyId, value);
-        }
-
-        private static void SetMaterialColorIfPresent(Material material, int propertyId, Color value)
-        {
-            if (material != null && material.HasProperty(propertyId))
-                material.SetColor(propertyId, value);
         }
 
         private static void DestroyMaterial(Material material)
