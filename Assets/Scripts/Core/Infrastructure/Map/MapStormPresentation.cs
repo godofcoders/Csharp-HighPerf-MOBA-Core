@@ -246,16 +246,16 @@ namespace MOBA.Core.Infrastructure
             main.loop = true;
             main.duration = 4f;
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.maxParticles = 70;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(1.1f, 2.4f);
+            main.maxParticles = 180;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.35f, 2.8f);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.028f, 0.072f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.92f, 0.98f, 1f, 0.22f));
+            main.startSize = new ParticleSystem.MinMaxCurve(0.075f, 0.18f);
+            main.startColor = new ParticleSystem.MinMaxGradient(new Color(0.95f, 1f, 1f, 0.52f));
             main.gravityModifier = 0f;
 
             ParticleSystem.EmissionModule emission = _cameraDropletSystem.emission;
             emission.enabled = true;
-            emission.rateOverTime = new ParticleSystem.MinMaxCurve(8f);
+            emission.rateOverTime = new ParticleSystem.MinMaxCurve(28f);
 
             ParticleSystem.ShapeModule shape = _cameraDropletSystem.shape;
             shape.enabled = true;
@@ -281,8 +281,8 @@ namespace MOBA.Core.Infrastructure
                 new[]
                 {
                     new GradientAlphaKey(0f, 0f),
-                    new GradientAlphaKey(0.24f, 0.16f),
-                    new GradientAlphaKey(0.16f, 0.82f),
+                    new GradientAlphaKey(0.48f, 0.12f),
+                    new GradientAlphaKey(0.34f, 0.82f),
                     new GradientAlphaKey(0f, 1f)
                 });
             colorOverLifetime.color = new ParticleSystem.MinMaxGradient(gradient);
@@ -292,8 +292,8 @@ namespace MOBA.Core.Infrastructure
             {
                 renderer.sharedMaterial = _lensDropletMaterial;
                 renderer.renderMode = ParticleSystemRenderMode.Stretch;
-                renderer.lengthScale = 0.72f;
-                renderer.velocityScale = 0.58f;
+                renderer.lengthScale = 1.05f;
+                renderer.velocityScale = 0.78f;
                 renderer.cameraVelocityScale = 0f;
                 renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.receiveShadows = false;
@@ -494,24 +494,24 @@ namespace MOBA.Core.Infrastructure
                     tree.transform,
                     "TreeTrunk",
                     PrimitiveType.Cylinder,
-                    new Vector3(0f, 0.72f, 0f),
-                    new Vector3(0.16f, 0.72f, 0.16f),
+                    new Vector3(0f, 1.0f, 0f),
+                    new Vector3(0.24f, 1.0f, 0.24f),
                     _treeTrunkMaterial);
 
                 CreateTreePart(
                     tree.transform,
                     "TreeCanopy",
                     PrimitiveType.Sphere,
-                    new Vector3(0.08f, 1.55f, -0.04f),
-                    new Vector3(0.72f, 0.58f, 0.72f),
+                    new Vector3(0.12f, 2.12f, -0.06f),
+                    new Vector3(1.05f, 0.86f, 1.05f),
                     _treeCanopyMaterial);
 
                 CreateTreePart(
                     tree.transform,
                     "TreeCanopy_Offset",
                     PrimitiveType.Sphere,
-                    new Vector3(-0.25f, 1.34f, 0.18f),
-                    new Vector3(0.48f, 0.42f, 0.48f),
+                    new Vector3(-0.36f, 1.82f, 0.26f),
+                    new Vector3(0.74f, 0.62f, 0.74f),
                     _treeCanopyMaterial);
 
                 _treeRoots[i] = tree.transform;
@@ -721,7 +721,7 @@ namespace MOBA.Core.Infrastructure
         private void EnsureMaterials()
         {
             _rainMaterial = EnsureMaterial(_rainMaterial, "Runtime_StormRain", new Color(0.92f, 0.96f, 1f, 0.78f), true);
-            _lensDropletMaterial = EnsureMaterial(_lensDropletMaterial, "Runtime_StormLensDrops", new Color(0.9f, 0.98f, 1f, 0.22f), true);
+            _lensDropletMaterial = EnsureMaterial(_lensDropletMaterial, "Runtime_StormLensDrops", new Color(0.94f, 1f, 1f, 0.52f), true);
             _wetGroundMaterial = EnsureMaterial(_wetGroundMaterial, "Runtime_StormWetGround", new Color(0.05f, 0.09f, 0.12f, 0.32f), true);
             _puddleMaterial = EnsureMaterial(_puddleMaterial, "Runtime_StormPuddles", new Color(0.13f, 0.25f, 0.31f, 0.50f), true);
             _cloudShadowMaterial = EnsureMaterial(_cloudShadowMaterial, "Runtime_StormCloudShadow", new Color(0.02f, 0.03f, 0.05f, 0.18f), true);

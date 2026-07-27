@@ -21,6 +21,7 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Mine")]
         [SerializeField, Min(0.5f)] private float _mineRadius = 2.45f;
+        [SerializeField, Min(0)] private int _mountainRockClusterCount = 6;
 
         private Transform _stageRoot;
         private Material _darkSandMaterial;
@@ -113,12 +114,19 @@ namespace MOBA.Core.Infrastructure
                 "GemMine_SewerInnerGlow",
                 PrimitiveType.Cylinder,
                 center + new Vector3(0f, 0.126f, 0f),
-                new Vector3(_mineRadius * 0.34f, 0.01f, _mineRadius * 0.34f),
+                new Vector3(_mineRadius * 0.42f, 0.01f, _mineRadius * 0.42f),
                 Quaternion.identity,
                 _lampMaterial,
                 false);
 
-            CreateSewerRimSegments(center, rimY);
+            CreatePrimitive(
+                "GemMine_MetalSpawnRim",
+                PrimitiveType.Cylinder,
+                new Vector3(center.x, rimY, center.z),
+                new Vector3(_mineRadius * 0.62f, 0.035f, _mineRadius * 0.62f),
+                Quaternion.identity,
+                _metalMaterial,
+                false);
 
             CreatePrimitive(
                 "GemMine_MovedSewerLid",
@@ -174,28 +182,14 @@ namespace MOBA.Core.Infrastructure
                 _lampMaterial,
                 false);
 
-        }
-
-        private void CreateSewerRimSegments(Vector3 center, float rimY)
-        {
-            const int segmentCount = 10;
-            float radius = _mineRadius * 0.55f;
-            for (int i = 0; i < segmentCount; i++)
-            {
-                float angle = i / (float)segmentCount * Mathf.PI * 2f;
-                float degrees = angle * Mathf.Rad2Deg;
-                Vector3 position = center + new Vector3(Mathf.Cos(angle) * radius, 0f, Mathf.Sin(angle) * radius);
-                position.y = rimY;
-
-                CreatePrimitive(
-                    "GemMine_MetalRimSegment_" + i,
-                    PrimitiveType.Cube,
-                    position,
-                    new Vector3(0.52f, 0.06f, 0.15f),
-                    Quaternion.Euler(0f, -degrees, 0f),
-                    _metalMaterial,
-                    false);
-            }
+            CreatePrimitive(
+                "GemMine_GemSpawnClearMarker",
+                PrimitiveType.Cylinder,
+                new Vector3(center.x, groundY + 0.17f, center.z),
+                new Vector3(0.26f, 0.008f, 0.26f),
+                Quaternion.identity,
+                _metalMaterial,
+                false);
         }
 
         private void BuildAmbientProps(Bounds bounds, Vector3 mineCenter, float groundY)
@@ -203,6 +197,7 @@ namespace MOBA.Core.Infrastructure
             CreateRockPile("GemRockPile_A", new Vector3(bounds.min.x + 2.3f, groundY, mineCenter.z - 4.6f));
             CreateRockPile("GemRockPile_B", new Vector3(bounds.max.x - 2.5f, groundY, mineCenter.z + 3.8f));
             CreateRockPile("GemRockPile_C", new Vector3(mineCenter.x + 4.3f, groundY, bounds.min.z + 2.5f));
+            CreateMountainRockClusters(bounds, groundY);
         }
 
         private void CreateRockPile(string prefix, Vector3 basePosition)
@@ -210,6 +205,55 @@ namespace MOBA.Core.Infrastructure
             CreatePrimitive(prefix + "_0", PrimitiveType.Sphere, basePosition + new Vector3(0f, 0.18f, 0f), new Vector3(0.62f, 0.36f, 0.5f), Quaternion.identity, _rockMaterial, false);
             CreatePrimitive(prefix + "_1", PrimitiveType.Sphere, basePosition + new Vector3(0.42f, 0.14f, -0.16f), new Vector3(0.42f, 0.28f, 0.38f), Quaternion.identity, _darkSandMaterial, false);
             CreatePrimitive(prefix + "_2", PrimitiveType.Sphere, basePosition + new Vector3(-0.38f, 0.13f, 0.18f), new Vector3(0.38f, 0.26f, 0.34f), Quaternion.identity, _rockMaterial, false);
+        }
+
+        private void CreateMountainRockClusters(Bounds bounds, float groundY)
+        {
+            int count = Mathf.Clamp(_mountainRockClusterCount, 0, 10);
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 basePosition = ResolveMountainRockPosition(bounds, groundY, i, count);
+                CreatePrimitive(
+                    "MountainRock_" + i + "_Core",
+                    PrimitiveType.Sphere,
+                    basePosition + new Vector3(0f, 0.58f, 0f),
+                    new Vector3(1.25f, 1.05f, 0.95f),
+                    Quaternion.Euler(0f, i * 37f, 0f),
+                    _rockMaterial,
+                    false);
+
+                CreatePrimitive(
+                    "MountainRock_" + i + "_ShoulderA",
+                    PrimitiveType.Sphere,
+                    basePosition + new Vector3(0.72f, 0.34f, -0.24f),
+                    new Vector3(0.82f, 0.62f, 0.72f),
+                    Quaternion.Euler(0f, i * 23f, 0f),
+                    _darkSandMaterial,
+                    false);
+
+                CreatePrimitive(
+                    "MountainRock_" + i + "_ShoulderB",
+                    PrimitiveType.Sphere,
+                    basePosition + new Vector3(-0.58f, 0.28f, 0.3f),
+                    new Vector3(0.72f, 0.54f, 0.62f),
+                    Quaternion.Euler(0f, i * -29f, 0f),
+                    _rockMaterial,
+                    false);
+            }
+        }
+
+        private static Vector3 ResolveMountainRockPosition(Bounds bounds, float groundY, int index, int count)
+        {
+            float t = (index + 0.37f) / Mathf.Max(1, count);
+            bool sideEdge = index % 2 == 0;
+            float x = sideEdge
+                ? (index % 4 == 0 ? bounds.min.x + 1.75f : bounds.max.x - 1.75f)
+                : Mathf.Lerp(bounds.min.x + 3.2f, bounds.max.x - 3.2f, Mathf.Repeat(t * 1.71f, 1f));
+            float z = sideEdge
+                ? Mathf.Lerp(bounds.min.z + 2.8f, bounds.max.z - 2.8f, Mathf.Repeat(t * 2.11f, 1f))
+                : (index % 4 == 1 ? bounds.min.z + 1.65f : bounds.max.z - 1.65f);
+
+            return new Vector3(x, groundY, z);
         }
 
         private GameObject CreatePrimitive(
