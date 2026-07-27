@@ -2483,10 +2483,16 @@ namespace MOBA.Core.Simulation.AI
                 AIValidationGauntletSignal.GemPickupIntent,
                 currentTick);
 
-            RequestMapAwareDestination(
+            _lastMapRequestIntent = AIMapRouteIntent.Objective;
+            _lastMapRouteDebug =
+                $"Route=GemPickup Direct Raw={FormatVector(decision.Position)} " +
+                $"Dest={FormatVector(validation.ResolvedDestination)} " +
+                $"Reason={validation.Reason}";
+
+            _navAgent.RequestDestination(
                 validation.ResolvedDestination,
-                0.65f,
-                AIMapRouteIntent.Objective);
+                0.45f,
+                highPriority: true);
 
             return true;
         }

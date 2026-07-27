@@ -59,14 +59,9 @@ namespace MOBA.Core.Simulation.AI
             if (delta.sqrMagnitude > searchRadius * searchRadius * 1.44f)
                 return AIIntentValidationResult.Invalid(decision.Position, "gem_outside_search");
 
-            Vector3 resolved = AIMapNavigationUtility.ResolveBudgetSafeDestination(
-                pathfinder,
-                profile,
-                decision.Position);
-
-            return IsWalkable(pathfinder, resolved)
-                ? AIIntentValidationResult.Valid(resolved, "gem_valid")
-                : AIIntentValidationResult.Invalid(resolved, "gem_unwalkable");
+            return IsWalkable(pathfinder, decision.Position)
+                ? AIIntentValidationResult.Valid(decision.Position, "gem_valid")
+                : AIIntentValidationResult.Invalid(decision.Position, "gem_unwalkable");
         }
 
         public static AIIntentValidationResult ValidateObjectiveIntent(

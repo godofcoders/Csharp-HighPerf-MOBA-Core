@@ -42,7 +42,7 @@ namespace MOBA.Core.Simulation
 
         [Tooltip("Pickup radius in world units. Brawlers within this distance get the gem.")]
         [Min(0.1f)]
-        [SerializeField] private float _pickupRadius = 1.0f;
+        [SerializeField] private float _pickupRadius = 1.35f;
 
         [Header("Presentation")]
         [SerializeField] private bool _useRuntimeDiamondVisual = true;
@@ -157,6 +157,7 @@ namespace MOBA.Core.Simulation
         }
 
         public int Value => _value;
+        public float PickupRadius => Mathf.Max(0.1f, _pickupRadius);
         public bool IsPickedUp { get; private set; }
 
         /// <summary>Convenience setter used by the gem-spawner / death-drop

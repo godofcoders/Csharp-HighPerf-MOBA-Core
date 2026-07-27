@@ -250,17 +250,21 @@ namespace MOBA.Core.Simulation.AI
                     continue;
 
                 Vector3 gemPosition = gem.transform.position;
-                float dx = gemPosition.x - self.Position.x;
-                float dz = gemPosition.z - self.Position.z;
-                float distanceSq = dx * dx + dz * dz;
-                if (distanceSq > searchRadiusSq)
-                    continue;
-
-                if (pathfinder != null &&
-                    !pathfinder.IsWalkable(pathfinder.GetGridCoords(gemPosition)))
+                if (!TryResolveGemPickupDestination(
+                        gem,
+                        gemPosition,
+                        self.Position,
+                        pathfinder,
+                        out Vector3 pickupDestination))
                 {
                     continue;
                 }
+
+                float dx = pickupDestination.x - self.Position.x;
+                float dz = pickupDestination.z - self.Position.z;
+                float distanceSq = dx * dx + dz * dz;
+                if (distanceSq > searchRadiusSq)
+                    continue;
 
                 float distance = Mathf.Sqrt(distanceSq);
                 int clusterValue = CountClusterValue(
@@ -303,7 +307,7 @@ namespace MOBA.Core.Simulation.AI
                     best = new AIGemPickupDecision(
                         true,
                         evaluation.ShouldPickup,
-                        gemPosition,
+                        pickupDestination,
                         gem.Value,
                         clusterValue,
                         distance,
@@ -324,6 +328,79 @@ namespace MOBA.Core.Simulation.AI
 
             decision = best;
             return best.ShouldPickup;
+        }
+
+        private static bool TryResolveGemPickupDestination(
+            Gem gem,
+            Vector3 gemPosition,
+            Vector3 selfPosition,
+            AStarSolver pathfinder,
+            out Vector3 destination)
+        {
+            destination = gemPosition;
+
+            if (gem == null)
+                return false;
+
+            if (pathfinder == null)
+                return true;
+
+            float pickupRadius = Mathf.Max(0.1f, gem.PickupRadius);
+            float pickupRadiusSq = pickupRadius * pickupRadius;
+            float cellSize = Mathf.Max(0.1f, pathfinder.CellSize);
+            int cellRadius = Mathf.Max(1, Mathf.CeilToInt(pickupRadius / cellSize) + 1);
+            Vector2Int center = pathfinder.GetGridCoords(gemPosition);
+            bool found = false;
+            float bestScore = float.MinValue;
+            Vector3 bestDestination = gemPosition;
+
+            for (int x = -cellRadius; x <= cellRadius; x++)
+            {
+                for (int y = -cellRadius; y <= cellRadius; y++)
+                {
+                    Vector2Int coords = new Vector2Int(center.x + x, center.y + y);
+                    if (!pathfinder.IsInBounds(coords) ||
+                        !pathfinder.IsWalkable(coords))
+                    {
+                        continue;
+                    }
+
+                    Vector3 candidate = pathfinder.GetWorldPos(coords);
+                    float pickupDistanceSq = PlanarDistanceSq(candidate, gemPosition);
+                    if (pickupDistanceSq > pickupRadiusSq)
+                        continue;
+
+                    float selfDistanceSq = PlanarDistanceSq(candidate, selfPosition);
+                    float score =
+                        -selfDistanceSq -
+                        pickupDistanceSq * 3f;
+
+                    if (pathfinder.IsWalkableWithNavigationClearance(coords))
+                        score += 1000f;
+                    else if (pathfinder.IsWalkableWithBoundaryClearance(coords))
+                        score += 250f;
+
+                    if (!found || score > bestScore)
+                    {
+                        found = true;
+                        bestScore = score;
+                        bestDestination = candidate;
+                    }
+                }
+            }
+
+            if (!found)
+                return false;
+
+            destination = bestDestination;
+            return true;
+        }
+
+        private static float PlanarDistanceSq(Vector3 a, Vector3 b)
+        {
+            float dx = a.x - b.x;
+            float dz = a.z - b.z;
+            return dx * dx + dz * dz;
         }
 
         public static AIGemPickupEvaluation EvaluateCandidate(
@@ -364,6 +441,16 @@ namespace MOBA.Core.Simulation.AI
                 isDenyPickup ||
                 context.MacroCall == AIGameModeMacroCall.Reset ||
                 context.MacroCall == AIGameModeMacroCall.Push;
+            bool closePickup = context.Distance <= 2.75f;
+            bool carrierShouldAvoid =
+                isCarrier &&
+                context.SelfCarriedGems >= Mathf.Max(3, gemsToWin / 2) &&
+                context.ThreatPressure >= 0.75f &&
+                !strategicPickup;
+            bool objectivePickupWindow =
+                closePickup &&
+                !carrierShouldAvoid &&
+                context.HealthRatio > Mathf.Max(0.22f, profile.LowHealthRetreatRatio - 0.05f);
             float countdownUrgency = context.EnemyCountdown
                 ? CalculateCountdownUrgency(context.WinTimerRemainingSeconds)
                 : 0f;
@@ -373,6 +460,11 @@ namespace MOBA.Core.Simulation.AI
                 pickupValue * profile.GemPickupValueScore +
                 closeFactor * profile.GemPickupCloseRangeBonus;
             string reason = "base";
+
+            if (objectivePickupWindow)
+                reason += "|objective_window";
+            else if (carrierShouldAvoid)
+                reason += "|carrier_hold";
 
             if (pickupValue > context.GemValue)
             {
@@ -431,6 +523,8 @@ namespace MOBA.Core.Simulation.AI
             float threatPenaltyScale = strategicPickup ? 0.45f : 1f;
             if (context.EnemyCountdown && countdownUrgency >= 0.50f)
                 threatPenaltyScale = Mathf.Min(threatPenaltyScale, 0.30f);
+            if (closePickup && !carrierShouldAvoid)
+                threatPenaltyScale = Mathf.Min(threatPenaltyScale, 0.65f);
 
             score -= context.ThreatPressure *
                      profile.GemPickupThreatPenalty *
@@ -463,9 +557,12 @@ namespace MOBA.Core.Simulation.AI
                 context.ThreatPressure < 0.55f &&
                 (!isCarrier || context.Distance <= 2.5f || strategicPickup) &&
                 (!lowHealth || strategicPickup);
+            float requiredScore = objectivePickupWindow
+                ? Mathf.Max(0f, context.MinimumScore * 0.75f)
+                : Mathf.Max(0f, context.MinimumScore);
             bool shouldPickup =
-                score >= Mathf.Max(0f, context.MinimumScore) &&
-                (isSafe || strategicPickup || context.Distance <= 1.5f);
+                score >= requiredScore &&
+                (isSafe || strategicPickup || context.Distance <= 1.5f || objectivePickupWindow);
 
             return new AIGemPickupEvaluation(
                 shouldPickup,

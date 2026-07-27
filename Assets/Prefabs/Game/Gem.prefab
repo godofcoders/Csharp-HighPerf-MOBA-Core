@@ -122,7 +122,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _value: 1
-  _pickupRadius: 1
+  _pickupRadius: 1.35
   _useRuntimeDiamondVisual: 1
   _diamondColor: {r: 1, g: 0.18, b: 0.92, a: 1}
   _diamondRestHeight: 0.58
