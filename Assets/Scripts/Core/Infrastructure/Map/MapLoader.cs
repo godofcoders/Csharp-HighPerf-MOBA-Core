@@ -63,6 +63,7 @@ namespace MOBA.Core.Infrastructure
             MapDesertThemePresentation.InstallUnder(SpawnedMapInstance);
             BushPatchPresentation.InstallUnder(SpawnedMapInstance);
             MapArenaBoundaryPresentation.InstallUnder(SpawnedMapInstance);
+            GemGrabStageDressingPresentation.InstallUnder(SpawnedMapInstance);
 
             HandSpawnPointsToSpawnManager();
         }
