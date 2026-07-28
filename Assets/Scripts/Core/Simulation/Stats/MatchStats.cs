@@ -15,6 +15,7 @@ namespace MOBA.Core.Simulation
         public int Assists;
         public int Deaths;
         public int GemsCollected;
+        public int GoalsScored;
         public float DamageDealt;
         public float DamageTaken;
         public float HealingDone;
@@ -24,6 +25,7 @@ namespace MOBA.Core.Simulation
         public float ComputeMvpScore()
         {
             return GemsCollected * 100f
+                 + GoalsScored * 160f
                  + Kills * 50f
                  + Assists * 28f
                  + DamageDealt * 0.05f;

@@ -100,9 +100,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             bool soloShowdown = SceneSelection.SelectedMode == GameModeId.SoloShowdown;
-            BrawlerController localPlayer = soloShowdown
-                ? ResolveLocalPlayerBrawler()
-                : null;
+            BrawlerController localPlayer = ResolveLocalPlayerBrawler();
             bool restrictToLocalPlayer = soloShowdown && localPlayer != null;
             BrawlerController starPlayer = null;
             float bestScore = float.NegativeInfinity;
@@ -170,6 +168,27 @@ namespace MOBA.Core.Infrastructure
 
             entries.Sort(CompareResultEntries);
             MatchResultBoard.CaptureEntries(entries.ToArray());
+            CaptureQuestProgress(localPlayer, winner, tracker);
+        }
+
+        private static void CaptureQuestProgress(
+            BrawlerController localPlayer,
+            TeamType winner,
+            MatchStatsTracker tracker)
+        {
+            if (localPlayer == null || tracker == null)
+                return;
+
+            MatchStats stats = tracker.GetStats(localPlayer);
+            bool wonMatch = localPlayer.Team != TeamType.Neutral &&
+                            localPlayer.Team == winner;
+
+            QuestProgressionService.ApplyMatchReport(new QuestMatchReport(
+                localPlayer.Definition,
+                ResolveBrawlerName(localPlayer),
+                SceneSelection.SelectedMode,
+                wonMatch,
+                stats));
         }
 
         private static bool ShouldSkipResultEntry(

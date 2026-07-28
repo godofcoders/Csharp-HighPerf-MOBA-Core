@@ -33,7 +33,12 @@ namespace MOBA.Core.Infrastructure
         // OnDisable (event-bus same-delegate-instance discipline).
         private Action<BrawlerState, int> _gemHandler;
         private Action<DamageResultContext> _damageHandler;
+        private Action<BrawlerController, Vector3> _ballPickedUpHandler;
+        private Action<BrawlerController, Vector3, Vector3, bool> _ballKickedHandler;
+        private Action<TeamType, int, int> _goalScoredHandler;
+        private Action<Vector3> _ballClearedHandler;
         private readonly List<Action> _deathHandlers = new List<Action>(8);
+        private BrawlerController _lastBrawlBallScoringCandidate;
 
         public IReadOnlyDictionary<BrawlerController, MatchStats> Stats => _stats;
 
@@ -92,6 +97,16 @@ namespace MOBA.Core.Infrastructure
 
             _damageHandler = HandleDamageApplied;
             DamageEventBus.OnDamageApplied += _damageHandler;
+
+            _ballPickedUpHandler = HandleBrawlBallPickedUp;
+            _ballKickedHandler = HandleBrawlBallKicked;
+            _goalScoredHandler = HandleBrawlBallGoalScored;
+            _ballClearedHandler = HandleBrawlBallCleared;
+            BrawlBallEventBus.OnBallPickedUp += _ballPickedUpHandler;
+            BrawlBallEventBus.OnBallKicked += _ballKickedHandler;
+            BrawlBallEventBus.OnGoalScored += _goalScoredHandler;
+            BrawlBallEventBus.OnBallDropped += _ballClearedHandler;
+            BrawlBallEventBus.OnBallReset += _ballClearedHandler;
         }
 
         private void Update()
@@ -120,6 +135,30 @@ namespace MOBA.Core.Infrastructure
                 DamageEventBus.OnDamageApplied -= _damageHandler;
                 _damageHandler = null;
             }
+            if (_ballPickedUpHandler != null)
+            {
+                BrawlBallEventBus.OnBallPickedUp -= _ballPickedUpHandler;
+                _ballPickedUpHandler = null;
+            }
+            if (_ballKickedHandler != null)
+            {
+                BrawlBallEventBus.OnBallKicked -= _ballKickedHandler;
+                _ballKickedHandler = null;
+            }
+            if (_goalScoredHandler != null)
+            {
+                BrawlBallEventBus.OnGoalScored -= _goalScoredHandler;
+                _goalScoredHandler = null;
+            }
+            if (_ballClearedHandler != null)
+            {
+                BrawlBallEventBus.OnBallDropped -= _ballClearedHandler;
+                BrawlBallEventBus.OnBallReset -= _ballClearedHandler;
+                _ballClearedHandler = null;
+            }
+
+            _lastBrawlBallScoringCandidate = null;
+
             // Death handlers are per-instance lambdas; the BrawlerState
             // references die with the scene so leaks are bounded to Match.
             // We still remove cleanly to support same-scene re-runs.
@@ -188,6 +227,44 @@ namespace MOBA.Core.Infrastructure
                 s.DamageTaken += dealt;
                 _stats[victim] = s;
             }
+        }
+
+        private void HandleBrawlBallPickedUp(BrawlerController carrier, Vector3 position)
+        {
+            if (carrier != null)
+                _lastBrawlBallScoringCandidate = carrier;
+        }
+
+        private void HandleBrawlBallKicked(
+            BrawlerController kicker,
+            Vector3 position,
+            Vector3 direction,
+            bool isSuperKick)
+        {
+            if (kicker != null)
+                _lastBrawlBallScoringCandidate = kicker;
+        }
+
+        private void HandleBrawlBallGoalScored(TeamType scoringTeam, int blueGoals, int redGoals)
+        {
+            BrawlerController scorer = _lastBrawlBallScoringCandidate;
+            _lastBrawlBallScoringCandidate = null;
+
+            if (scorer == null ||
+                scorer.Team != scoringTeam ||
+                !_stats.ContainsKey(scorer))
+            {
+                return;
+            }
+
+            MatchStats stats = _stats[scorer];
+            stats.GoalsScored += 1;
+            _stats[scorer] = stats;
+        }
+
+        private void HandleBrawlBallCleared(Vector3 position)
+        {
+            _lastBrawlBallScoringCandidate = null;
         }
 
         private void HandleDeath(BrawlerController dying)
