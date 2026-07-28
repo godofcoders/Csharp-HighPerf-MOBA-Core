@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -44,7 +45,16 @@ namespace MOBA.Core.Infrastructure
             if (existing != null)
             {
                 _root = existing as RectTransform;
-                if (_root != null)
+                _cardContent = existing.Find("QuestWindow/QuestListPanel/Viewport/Content");
+                _summaryText = FindText(existing, "QuestWindow/Summary/SummaryText");
+                _closeButton = FindButton(existing, "QuestWindow/Header/CloseButton");
+                if (_closeButton != null)
+                {
+                    _closeButton.onClick.RemoveListener(Hide);
+                    _closeButton.onClick.AddListener(Hide);
+                }
+
+                if (_root != null && _cardContent != null)
                     return;
             }
 
@@ -148,6 +158,8 @@ namespace MOBA.Core.Infrastructure
             ClearChildren(_cardContent);
 
             QuestProgressSnapshot[] snapshots = PlayerQuestProgress.GetAllSnapshots();
+            Array.Sort(snapshots, CompareSnapshots);
+
             int completed = 0;
             for (int i = 0; i < snapshots.Length; i++)
             {
@@ -163,6 +175,24 @@ namespace MOBA.Core.Infrastructure
 
             for (int i = 0; i < snapshots.Length; i++)
                 CreateQuestCard(_cardContent, snapshots[i]);
+        }
+
+        private static int CompareSnapshots(QuestProgressSnapshot left, QuestProgressSnapshot right)
+        {
+            if (left.IsComplete != right.IsComplete)
+                return left.IsComplete ? 1 : -1;
+
+            QuestDefinition leftQuest = left.Definition;
+            QuestDefinition rightQuest = right.Definition;
+            string leftCategory = leftQuest != null ? leftQuest.Category : string.Empty;
+            string rightCategory = rightQuest != null ? rightQuest.Category : string.Empty;
+            int categoryCompare = string.Compare(leftCategory, rightCategory, StringComparison.Ordinal);
+            if (categoryCompare != 0)
+                return categoryCompare;
+
+            string leftTitle = leftQuest != null ? leftQuest.Title : string.Empty;
+            string rightTitle = rightQuest != null ? rightQuest.Title : string.Empty;
+            return string.Compare(leftTitle, rightTitle, StringComparison.Ordinal);
         }
 
         private static void CreateQuestCard(Transform parent, QuestProgressSnapshot snapshot)
@@ -272,6 +302,18 @@ namespace MOBA.Core.Infrastructure
             label.color = color;
             label.raycastTarget = false;
             return label;
+        }
+
+        private static TMP_Text FindText(Transform root, string path)
+        {
+            Transform child = root != null ? root.Find(path) : null;
+            return child != null ? child.GetComponent<TMP_Text>() : null;
+        }
+
+        private static Button FindButton(Transform root, string path)
+        {
+            Transform child = root != null ? root.Find(path) : null;
+            return child != null ? child.GetComponent<Button>() : null;
         }
 
         private static void Anchor(RectTransform rect, Vector2 min, Vector2 max, Vector2 offsetMin, Vector2 offsetMax)

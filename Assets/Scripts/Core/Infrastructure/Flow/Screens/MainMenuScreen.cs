@@ -86,6 +86,14 @@ namespace MOBA.Core.Infrastructure
 
         private Button CreateRuntimeQuestButton()
         {
+            Transform existing = transform.Find("RuntimeQuestsButton");
+            if (existing != null)
+            {
+                Button existingButton = existing.GetComponent<Button>();
+                if (existingButton != null)
+                    return existingButton;
+            }
+
             GameObject buttonObject = new GameObject("RuntimeQuestsButton", typeof(RectTransform));
             buttonObject.transform.SetParent(transform, false);
 
