@@ -13,15 +13,7 @@ namespace MOBA.Core.Infrastructure
     {
         private const string RuntimeHeaderName = "RuntimeHomeHeader";
         private const string RuntimeActionRailName = "RuntimeHomeActionRail";
-        private const string RuntimeButtonAccentName = "RuntimeButtonAccent";
-
-        private static readonly Color MenuBackgroundColor = new Color(0.018f, 0.034f, 0.075f, 1f);
-        private static readonly Color HeaderColor = new Color(0.012f, 0.028f, 0.07f, 0.92f);
-        private static readonly Color ActionRailColor = new Color(0.012f, 0.024f, 0.058f, 0.88f);
-        private static readonly Color PlayColor = new Color(0.94f, 0.64f, 0.11f, 1f);
-        private static readonly Color MapColor = new Color(0.12f, 0.36f, 0.72f, 1f);
-        private static readonly Color QuestColor = new Color(0.38f, 0.22f, 0.78f, 1f);
-        private static readonly Color ButtonAccentColor = new Color(1f, 1f, 1f, 0.18f);
+        private const string RuntimeButtonAccentName = MenuUITheme.ButtonAccentName;
 
         [Header("Buttons")]
         [SerializeField] private Button _playButton;
@@ -106,7 +98,7 @@ namespace MOBA.Core.Infrastructure
             StyleMenuButton(
                 _mapSelectButton,
                 "MAP",
-                MapColor,
+                MenuUITheme.SecondaryButton,
                 new Vector2(0.5f, 0f),
                 new Vector2(0.5f, 0f),
                 new Vector2(0.5f, 0f),
@@ -116,7 +108,7 @@ namespace MOBA.Core.Infrastructure
             StyleMenuButton(
                 _questsButton,
                 "QUESTS",
-                QuestColor,
+                MenuUITheme.QuestButton,
                 new Vector2(0.5f, 0f),
                 new Vector2(0.5f, 0f),
                 new Vector2(0.5f, 0f),
@@ -126,7 +118,7 @@ namespace MOBA.Core.Infrastructure
             StyleMenuButton(
                 _playButton,
                 "PLAY",
-                PlayColor,
+                MenuUITheme.PrimaryButton,
                 new Vector2(1f, 0f),
                 new Vector2(1f, 0f),
                 new Vector2(1f, 0f),
@@ -139,7 +131,7 @@ namespace MOBA.Core.Infrastructure
             Transform background = transform.Find("Background");
             Image image = background != null ? background.GetComponent<Image>() : null;
             if (image != null)
-                image.color = MenuBackgroundColor;
+                image.color = MenuUITheme.ScreenBackground;
         }
 
         private void EnsureHomeHeader()
@@ -151,7 +143,7 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            GameObject header = CreatePanel(transform, RuntimeHeaderName, HeaderColor);
+            GameObject header = CreatePanel(transform, RuntimeHeaderName, MenuUITheme.Header);
             RectTransform rect = header.GetComponent<RectTransform>();
             Anchor(rect, new Vector2(0.045f, 0.82f), new Vector2(0.43f, 0.95f), Vector2.zero, Vector2.zero);
 
@@ -165,7 +157,7 @@ namespace MOBA.Core.Infrastructure
                 "Brawlers, maps, quests",
                 17f,
                 TextAlignmentOptions.Left,
-                new Color(0.78f, 0.88f, 1f, 1f));
+                MenuUITheme.TextMuted);
             Anchor(subtitle.rectTransform, new Vector2(0.048f, 0.14f), new Vector2(0.96f, 0.42f), Vector2.zero, Vector2.zero);
 
             header.transform.SetAsLastSibling();
@@ -176,7 +168,7 @@ namespace MOBA.Core.Infrastructure
             Transform existing = transform.Find(RuntimeActionRailName);
             if (existing == null)
             {
-                GameObject rail = CreatePanel(transform, RuntimeActionRailName, ActionRailColor);
+                GameObject rail = CreatePanel(transform, RuntimeActionRailName, MenuUITheme.ActionRail);
                 RectTransform rect = rail.GetComponent<RectTransform>();
                 Anchor(rect, new Vector2(0f, 0f), new Vector2(1f, 0.145f), Vector2.zero, Vector2.zero);
                 existing = rail.transform;
@@ -232,7 +224,7 @@ namespace MOBA.Core.Infrastructure
             Transform accent = button.transform.Find(RuntimeButtonAccentName);
             if (accent == null)
             {
-                GameObject accentObject = CreatePanel(button.transform, RuntimeButtonAccentName, ButtonAccentColor);
+                GameObject accentObject = CreatePanel(button.transform, RuntimeButtonAccentName, MenuUITheme.ButtonAccent);
                 accent = accentObject.transform;
             }
 
@@ -320,14 +312,7 @@ namespace MOBA.Core.Infrastructure
 
         private static GameObject CreatePanel(Transform parent, string name, Color color)
         {
-            GameObject panel = new GameObject(name, typeof(RectTransform));
-            panel.transform.SetParent(parent, false);
-
-            Image image = panel.AddComponent<Image>();
-            image.sprite = RuntimeUISpriteUtility.GetSolidWhiteSprite();
-            image.color = color;
-            image.raycastTarget = true;
-            return panel;
+            return MenuUITheme.CreatePanel(name, parent, color);
         }
 
         private static TMP_Text CreateText(
@@ -338,38 +323,17 @@ namespace MOBA.Core.Infrastructure
             TextAlignmentOptions alignment,
             Color color)
         {
-            GameObject textObject = new GameObject(name, typeof(RectTransform));
-            textObject.transform.SetParent(parent, false);
-
-            TMP_Text label = textObject.AddComponent<TextMeshProUGUI>();
-            label.text = text;
-            label.fontSize = size;
-            label.alignment = alignment;
-            label.color = color;
-            label.raycastTarget = false;
-            return label;
+            return MenuUITheme.CreateText(parent, name, text, size, alignment, color);
         }
 
         private static void EnsureShadow(GameObject target)
         {
-            if (target == null || target.GetComponent<Shadow>() != null)
-                return;
-
-            Shadow shadow = target.AddComponent<Shadow>();
-            shadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
-            shadow.effectDistance = new Vector2(2f, -2f);
-            shadow.useGraphicAlpha = true;
+            MenuUITheme.EnsureShadow(target);
         }
 
         private static void Anchor(RectTransform rect, Vector2 min, Vector2 max, Vector2 offsetMin, Vector2 offsetMax)
         {
-            if (rect == null)
-                return;
-
-            rect.anchorMin = min;
-            rect.anchorMax = max;
-            rect.offsetMin = offsetMin;
-            rect.offsetMax = offsetMax;
+            MenuUITheme.Anchor(rect, min, max, offsetMin, offsetMax);
         }
     }
 }

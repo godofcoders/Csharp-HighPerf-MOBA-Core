@@ -37,11 +37,11 @@ namespace MOBA.Core.Infrastructure
         [Header("Runtime View")]
         [SerializeField] private bool _useBrawlInspiredRuntimeView = true;
         [SerializeField] private bool _hideLegacySceneWidgetsWhenRuntimeViewActive = true;
-        [SerializeField] private Color _screenBackground = new Color(0.025f, 0.055f, 0.14f, 1f);
-        [SerializeField] private Color _panelColor = new Color(0.055f, 0.115f, 0.25f, 0.98f);
-        [SerializeField] private Color _panelDarkColor = new Color(0.018f, 0.035f, 0.095f, 0.98f);
-        [SerializeField] private Color _goldColor = new Color(1f, 0.76f, 0.12f, 1f);
-        [SerializeField] private Color _cyanColor = new Color(0.12f, 0.76f, 1f, 1f);
+        [SerializeField] private Color _screenBackground = MenuUITheme.ScreenBackground;
+        [SerializeField] private Color _panelColor = MenuUITheme.Panel;
+        [SerializeField] private Color _panelDarkColor = MenuUITheme.PanelDark;
+        [SerializeField] private Color _goldColor = MenuUITheme.Gold;
+        [SerializeField] private Color _cyanColor = MenuUITheme.Cyan;
 
         private static readonly GameModeId[] ModeDisplayOrder =
         {
@@ -74,6 +74,7 @@ namespace MOBA.Core.Infrastructure
 
         private void Start()
         {
+            ApplyRuntimeTheme();
             NormalizeSelectedMode();
 
             if (_useBrawlInspiredRuntimeView)
@@ -95,6 +96,15 @@ namespace MOBA.Core.Infrastructure
         {
             if (_backButton != null) _backButton.onClick.RemoveListener(OnBack);
             if (_confirmButton != null) _confirmButton.onClick.RemoveListener(OnConfirm);
+        }
+
+        private void ApplyRuntimeTheme()
+        {
+            _screenBackground = MenuUITheme.ScreenBackground;
+            _panelColor = MenuUITheme.Panel;
+            _panelDarkColor = MenuUITheme.PanelDark;
+            _goldColor = MenuUITheme.Gold;
+            _cyanColor = MenuUITheme.Cyan;
         }
 
         private void NormalizeSelectedMode()
@@ -161,7 +171,7 @@ namespace MOBA.Core.Infrastructure
 
         private void BuildHeader(Transform parent)
         {
-            GameObject header = CreatePanel("Header", parent, new Color(0.04f, 0.13f, 0.32f, 0.98f));
+            GameObject header = CreatePanel("Header", parent, MenuUITheme.Header);
             RectTransform rect = header.GetComponent<RectTransform>();
             Anchor(rect, new Vector2(0f, 0.90f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
 
@@ -182,7 +192,7 @@ namespace MOBA.Core.Infrastructure
 
         private void BuildModeTabs(Transform parent)
         {
-            GameObject tabs = CreatePanel("ModeTabs", parent, new Color(0.020f, 0.048f, 0.13f, 0.98f));
+            GameObject tabs = CreatePanel("ModeTabs", parent, MenuUITheme.ActionRail);
             RectTransform rect = tabs.GetComponent<RectTransform>();
             Anchor(rect, new Vector2(0.035f, 0.805f), new Vector2(0.965f, 0.885f), Vector2.zero, Vector2.zero);
 
@@ -227,6 +237,7 @@ namespace MOBA.Core.Infrastructure
             label.fontSizeMin = 12f;
             label.fontSizeMax = 18f;
             Anchor(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(8f, 2f), new Vector2(-8f, -2f));
+            MenuUITheme.StyleButton(button, ResolveModeLabel(mode), _panelColor, 18f);
 
             _runtimeModeTabs[mode] = new RuntimeModeTabView(tab.GetComponent<Image>(), label);
         }
@@ -290,7 +301,7 @@ namespace MOBA.Core.Infrastructure
             RectTransform rect = panel.GetComponent<RectTransform>();
             Anchor(rect, new Vector2(0.655f, 0.16f), new Vector2(0.965f, 0.78f), Vector2.zero, Vector2.zero);
 
-            _detailPreviewBackground = CreatePanel("MapPreview", panel.transform, new Color(0.12f, 0.24f, 0.42f, 1f)).GetComponent<Image>();
+            _detailPreviewBackground = CreatePanel("MapPreview", panel.transform, MenuUITheme.PreviewPanel).GetComponent<Image>();
             Anchor(_detailPreviewBackground.rectTransform, new Vector2(0.07f, 0.52f), new Vector2(0.93f, 0.94f), Vector2.zero, Vector2.zero);
             BuildPreviewGraphic(_detailPreviewBackground.transform);
 
@@ -316,10 +327,10 @@ namespace MOBA.Core.Infrastructure
             _detailTagText.fontStyle = FontStyles.Bold;
             Anchor(_detailTagText.rectTransform, new Vector2(0.07f, 0.275f), new Vector2(0.93f, 0.33f), Vector2.zero, Vector2.zero);
 
-            _detailDescriptionText = CreateText(panel.transform, "MapDescription", "", 15, TextAlignmentOptions.Left, new Color(0.88f, 0.94f, 1f, 1f));
+            _detailDescriptionText = CreateText(panel.transform, "MapDescription", "", 15, TextAlignmentOptions.Left, MenuUITheme.TextSoft);
             Anchor(_detailDescriptionText.rectTransform, new Vector2(0.07f, 0.14f), new Vector2(0.93f, 0.265f), Vector2.zero, Vector2.zero);
 
-            _detailPrefabText = CreateText(panel.transform, "MapPrefab", "", 13, TextAlignmentOptions.Left, new Color(0.62f, 0.74f, 0.92f, 1f));
+            _detailPrefabText = CreateText(panel.transform, "MapPrefab", "", 13, TextAlignmentOptions.Left, MenuUITheme.TextMuted);
             Anchor(_detailPrefabText.rectTransform, new Vector2(0.07f, 0.055f), new Vector2(0.93f, 0.12f), Vector2.zero, Vector2.zero);
         }
 
@@ -343,10 +354,10 @@ namespace MOBA.Core.Infrastructure
 
         private void BuildActionButtons(Transform parent)
         {
-            _backButton = CreateButton(parent, "BackButton", "BACK", new Color(0.18f, 0.26f, 0.42f, 1f), null);
+            _backButton = CreateButton(parent, "BackButton", "BACK", MenuUITheme.SecondaryButton, null);
             Anchor(_backButton.GetComponent<RectTransform>(), new Vector2(0.035f, 0.045f), new Vector2(0.18f, 0.12f), Vector2.zero, Vector2.zero);
 
-            _confirmButton = CreateButton(parent, "SelectButton", "SELECT", new Color(0.96f, 0.66f, 0.10f, 1f), null);
+            _confirmButton = CreateButton(parent, "SelectButton", "SELECT", MenuUITheme.PrimaryButton, null);
             Anchor(_confirmButton.GetComponent<RectTransform>(), new Vector2(0.735f, 0.045f), new Vector2(0.965f, 0.12f), Vector2.zero, Vector2.zero);
         }
 
@@ -425,7 +436,7 @@ namespace MOBA.Core.Infrastructure
             mode.fontStyle = FontStyles.Bold;
             Anchor(mode.rectTransform, new Vector2(0.10f, 0.27f), new Vector2(0.94f, 0.45f), Vector2.zero, Vector2.zero);
 
-            TMP_Text tag = CreateText(card.transform, "Tag", ResolveMapTag(map, SceneSelection.SelectedMode), 13, TextAlignmentOptions.Left, new Color(0.84f, 0.93f, 1f, 1f));
+            TMP_Text tag = CreateText(card.transform, "Tag", ResolveMapTag(map, SceneSelection.SelectedMode), 13, TextAlignmentOptions.Left, MenuUITheme.TextSoft);
             Anchor(tag.rectTransform, new Vector2(0.10f, 0.08f), new Vector2(0.94f, 0.26f), Vector2.zero, Vector2.zero);
 
             _runtimeCards[map] = new RuntimeMapCardView(card.GetComponent<Image>(), accent, selectedOverlay, selectedLabel);
@@ -707,13 +718,7 @@ namespace MOBA.Core.Infrastructure
 
         private static GameObject CreatePanel(string name, Transform parent, Color color)
         {
-            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
-
-            Image image = go.GetComponent<Image>();
-            image.color = color;
-            image.raycastTarget = true;
-            return go;
+            return MenuUITheme.CreatePanel(name, parent, color);
         }
 
         private static Button CreateButton(
@@ -733,6 +738,7 @@ namespace MOBA.Core.Infrastructure
             TMP_Text text = CreateText(go.transform, "Label", label, 17, TextAlignmentOptions.Center, Color.white);
             text.fontStyle = FontStyles.Bold;
             Anchor(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(8f, 4f), new Vector2(-8f, -4f));
+            MenuUITheme.StyleButton(button, label, color, 17f);
 
             return button;
         }
@@ -745,23 +751,12 @@ namespace MOBA.Core.Infrastructure
             TextAlignmentOptions alignment,
             Color color)
         {
-            GameObject go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
-            go.transform.SetParent(parent, false);
-
-            TextMeshProUGUI label = go.GetComponent<TextMeshProUGUI>();
-            label.text = text;
-            label.fontSize = fontSize;
-            label.alignment = alignment;
-            label.color = color;
-            label.raycastTarget = false;
-            label.enableWordWrapping = true;
-
-            return label;
+            return MenuUITheme.CreateText(parent, name, text, fontSize, alignment, color);
         }
 
         private static void Stretch(RectTransform rect)
         {
-            Anchor(rect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            MenuUITheme.Stretch(rect);
         }
 
         private static void Anchor(
@@ -771,13 +766,7 @@ namespace MOBA.Core.Infrastructure
             Vector2 offsetMin,
             Vector2 offsetMax)
         {
-            if (rect == null)
-                return;
-
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.offsetMin = offsetMin;
-            rect.offsetMax = offsetMax;
+            MenuUITheme.Anchor(rect, anchorMin, anchorMax, offsetMin, offsetMax);
         }
 
         private sealed class RuntimeMapCardView

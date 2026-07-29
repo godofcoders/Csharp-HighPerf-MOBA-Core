@@ -10,12 +10,12 @@ namespace MOBA.Core.Infrastructure
     {
         private const string RootName = "RuntimeQuestsPanel";
 
-        private static readonly Color BackgroundColor = new Color(0.012f, 0.018f, 0.045f, 1f);
-        private static readonly Color PanelColor = new Color(0.045f, 0.085f, 0.18f, 0.98f);
-        private static readonly Color CardColor = new Color(0.075f, 0.12f, 0.24f, 0.96f);
+        private static readonly Color BackgroundColor = MenuUITheme.ScreenBackground;
+        private static readonly Color PanelColor = MenuUITheme.Panel;
+        private static readonly Color CardColor = MenuUITheme.PanelRaised;
         private static readonly Color CompletedCardColor = new Color(0.06f, 0.18f, 0.13f, 0.96f);
-        private static readonly Color GoldColor = new Color(1f, 0.78f, 0.16f, 1f);
-        private static readonly Color CyanColor = new Color(0.18f, 0.78f, 1f, 1f);
+        private static readonly Color GoldColor = MenuUITheme.Gold;
+        private static readonly Color CyanColor = MenuUITheme.Cyan;
         private static readonly Color GreenColor = new Color(0.25f, 0.92f, 0.48f, 1f);
 
         private RectTransform _root;
@@ -131,7 +131,7 @@ namespace MOBA.Core.Infrastructure
 
         private void BuildHeader(Transform parent)
         {
-            GameObject header = CreatePanel(parent, "Header", new Color(0.02f, 0.05f, 0.13f, 0.98f));
+            GameObject header = CreatePanel(parent, "Header", MenuUITheme.Header);
             RectTransform headerRect = header.GetComponent<RectTransform>();
             Anchor(headerRect, new Vector2(0f, 0.86f), new Vector2(1f, 1f), Vector2.zero, Vector2.zero);
 
@@ -145,17 +145,17 @@ namespace MOBA.Core.Infrastructure
                 "Universal quest board for every brawler and mode",
                 17f,
                 TextAlignmentOptions.Left,
-                new Color(0.78f, 0.88f, 1f, 1f));
+                MenuUITheme.TextMuted);
             Anchor(subtitle.rectTransform, new Vector2(0.037f, 0.12f), new Vector2(0.72f, 0.42f), Vector2.zero, Vector2.zero);
 
-            _closeButton = CreateButton(header.transform, "CloseButton", "BACK", new Color(0.18f, 0.27f, 0.44f, 1f));
+            _closeButton = CreateButton(header.transform, "CloseButton", "BACK", MenuUITheme.SecondaryButton);
             Anchor(_closeButton.GetComponent<RectTransform>(), new Vector2(0.82f, 0.24f), new Vector2(0.965f, 0.78f), Vector2.zero, Vector2.zero);
             _closeButton.onClick.AddListener(Hide);
         }
 
         private void BuildSummary(Transform parent)
         {
-            GameObject summary = CreatePanel(parent, "Summary", new Color(0.035f, 0.075f, 0.16f, 0.98f));
+            GameObject summary = CreatePanel(parent, "Summary", MenuUITheme.ActionRail);
             RectTransform summaryRect = summary.GetComponent<RectTransform>();
             Anchor(summaryRect, new Vector2(0.035f, 0.75f), new Vector2(0.965f, 0.835f), Vector2.zero, Vector2.zero);
 
@@ -166,7 +166,7 @@ namespace MOBA.Core.Infrastructure
 
         private void BuildQuestList(Transform parent)
         {
-            GameObject listPanel = CreatePanel(parent, "QuestListPanel", new Color(0.018f, 0.038f, 0.095f, 0.98f));
+            GameObject listPanel = CreatePanel(parent, "QuestListPanel", MenuUITheme.PanelDark);
             RectTransform listRect = listPanel.GetComponent<RectTransform>();
             Anchor(listRect, new Vector2(0.035f, 0.055f), new Vector2(0.965f, 0.725f), Vector2.zero, Vector2.zero);
 
@@ -362,7 +362,7 @@ namespace MOBA.Core.Infrastructure
             title.fontSizeMax = 24f;
             Anchor(title.rectTransform, new Vector2(0.035f, 0.45f), new Vector2(0.62f, 0.74f), Vector2.zero, Vector2.zero);
 
-            TMP_Text description = CreateText(card.transform, "Description", quest.Description, 15f, TextAlignmentOptions.Left, new Color(0.82f, 0.90f, 1f, 1f));
+            TMP_Text description = CreateText(card.transform, "Description", quest.Description, 15f, TextAlignmentOptions.Left, MenuUITheme.TextSoft);
             Anchor(description.rectTransform, new Vector2(0.035f, 0.18f), new Vector2(0.66f, 0.44f), Vector2.zero, Vector2.zero);
 
             TMP_Text progress = CreateText(card.transform, "Progress", snapshot.ProgressLabel, 22f, TextAlignmentOptions.Right, snapshot.IsComplete ? GreenColor : GoldColor);
@@ -378,7 +378,7 @@ namespace MOBA.Core.Infrastructure
 
         private static void CreateProgressBar(Transform parent, float normalized, bool complete)
         {
-            GameObject back = CreatePanel(parent, "ProgressBack", new Color(0.012f, 0.022f, 0.05f, 0.95f));
+            GameObject back = CreatePanel(parent, "ProgressBack", MenuUITheme.PanelDark);
             RectTransform backRect = back.GetComponent<RectTransform>();
             Anchor(backRect, new Vector2(0.70f, 0.24f), new Vector2(0.965f, 0.42f), Vector2.zero, Vector2.zero);
 
@@ -414,6 +414,7 @@ namespace MOBA.Core.Infrastructure
             TMP_Text text = CreateText(buttonObject.transform, "Label", label, 18f, TextAlignmentOptions.Center, Color.white);
             text.fontStyle = FontStyles.Bold;
             Anchor(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(6f, 2f), new Vector2(-6f, -2f));
+            MenuUITheme.StyleButton(button, label, color, 18f);
             return button;
         }
 
@@ -440,12 +441,7 @@ namespace MOBA.Core.Infrastructure
 
         private static GameObject CreatePanel(Transform parent, string name, Color color)
         {
-            GameObject panel = new GameObject(name, typeof(RectTransform));
-            panel.transform.SetParent(parent, false);
-            Image image = panel.AddComponent<Image>();
-            image.sprite = RuntimeUISpriteUtility.GetSolidWhiteSprite();
-            image.color = color;
-            return panel;
+            return MenuUITheme.CreatePanel(name, parent, color);
         }
 
         private static TMP_Text CreateText(
@@ -456,15 +452,7 @@ namespace MOBA.Core.Infrastructure
             TextAlignmentOptions alignment,
             Color color)
         {
-            GameObject textObject = new GameObject(name, typeof(RectTransform));
-            textObject.transform.SetParent(parent, false);
-            TMP_Text label = textObject.AddComponent<TextMeshProUGUI>();
-            label.text = text;
-            label.fontSize = size;
-            label.alignment = alignment;
-            label.color = color;
-            label.raycastTarget = false;
-            return label;
+            return MenuUITheme.CreateText(parent, name, text, size, alignment, color);
         }
 
         private static TMP_Text FindText(Transform root, string path)
@@ -481,15 +469,12 @@ namespace MOBA.Core.Infrastructure
 
         private static void Anchor(RectTransform rect, Vector2 min, Vector2 max, Vector2 offsetMin, Vector2 offsetMax)
         {
-            rect.anchorMin = min;
-            rect.anchorMax = max;
-            rect.offsetMin = offsetMin;
-            rect.offsetMax = offsetMax;
+            MenuUITheme.Anchor(rect, min, max, offsetMin, offsetMax);
         }
 
         private static void Stretch(RectTransform rect)
         {
-            Anchor(rect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            MenuUITheme.Stretch(rect);
         }
 
         private static void ClearChildren(Transform parent)

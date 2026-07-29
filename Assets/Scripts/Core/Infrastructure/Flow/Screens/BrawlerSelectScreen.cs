@@ -36,11 +36,11 @@ namespace MOBA.Core.Infrastructure
         [Header("Runtime Revamp")]
         [SerializeField] private bool _useBrawlInspiredRuntimeView = true;
         [SerializeField] private bool _hideLegacySceneWidgetsWhenRuntimeViewActive = true;
-        [SerializeField] private Color _screenBackground = new Color(0.035f, 0.075f, 0.18f, 1f);
-        [SerializeField] private Color _panelColor = new Color(0.06f, 0.11f, 0.24f, 0.96f);
-        [SerializeField] private Color _panelDarkColor = new Color(0.025f, 0.045f, 0.11f, 0.98f);
-        [SerializeField] private Color _goldColor = new Color(1f, 0.76f, 0.12f, 1f);
-        [SerializeField] private Color _cyanColor = new Color(0.12f, 0.76f, 1f, 1f);
+        [SerializeField] private Color _screenBackground = MenuUITheme.ScreenBackground;
+        [SerializeField] private Color _panelColor = MenuUITheme.Panel;
+        [SerializeField] private Color _panelDarkColor = MenuUITheme.PanelDark;
+        [SerializeField] private Color _goldColor = MenuUITheme.Gold;
+        [SerializeField] private Color _cyanColor = MenuUITheme.Cyan;
         private const string LockIcon = "\uD83D\uDD12";
 
         [Header("Loadout preview")]
@@ -99,6 +99,8 @@ namespace MOBA.Core.Infrastructure
 
         private void Start()
         {
+            ApplyRuntimeTheme();
+
             if (_useBrawlInspiredRuntimeView)
             {
                 BuildRuntimeView();
@@ -131,6 +133,15 @@ namespace MOBA.Core.Infrastructure
                 _confirmButton.onClick.RemoveListener(OnConfirm);
             if (_upgradeButton != null)
                 _upgradeButton.onClick.RemoveListener(OnUpgrade);
+        }
+
+        private void ApplyRuntimeTheme()
+        {
+            _screenBackground = MenuUITheme.ScreenBackground;
+            _panelColor = MenuUITheme.Panel;
+            _panelDarkColor = MenuUITheme.PanelDark;
+            _goldColor = MenuUITheme.Gold;
+            _cyanColor = MenuUITheme.Cyan;
         }
 
         private void PreviewInitialBrawler()
@@ -256,7 +267,7 @@ namespace MOBA.Core.Infrastructure
             GameObject header = CreatePanel(
                 "Header",
                 parent,
-                new Color(0.04f, 0.13f, 0.32f, 0.98f));
+                MenuUITheme.Header);
             RectTransform rect = header.GetComponent<RectTransform>();
             Anchor(rect, new Vector2(0f, 0.89f), new Vector2(1f, 1f), new Vector2(0f, 0f), new Vector2(0f, 0f));
 
@@ -356,7 +367,7 @@ namespace MOBA.Core.Infrastructure
             GameObject portraitFrame = CreatePanel(
                 "PortraitFrame",
                 panel.transform,
-                new Color(0.08f, 0.20f, 0.42f, 1f));
+                MenuUITheme.PreviewPanel);
             RectTransform portraitFrameRect = portraitFrame.GetComponent<RectTransform>();
             Anchor(portraitFrameRect, new Vector2(0.16f, 0.32f), new Vector2(0.84f, 0.73f), Vector2.zero, Vector2.zero);
 
@@ -392,7 +403,7 @@ namespace MOBA.Core.Infrastructure
                 panel.transform,
                 "UpgradeButton",
                 "UPGRADE",
-                new Color(0.10f, 0.66f, 0.26f, 1f),
+                MenuUITheme.PositiveButton,
                 null);
             _upgradeButtonText = _upgradeButton.GetComponentInChildren<TMP_Text>();
             Anchor(_upgradeButton.GetComponent<RectTransform>(), new Vector2(0.28f, 0.145f), new Vector2(0.72f, 0.22f), Vector2.zero, Vector2.zero);
@@ -403,7 +414,7 @@ namespace MOBA.Core.Infrastructure
                 "",
                 17,
                 TextAlignmentOptions.Center,
-                new Color(0.88f, 0.94f, 1f, 1f));
+                MenuUITheme.TextSoft);
             Anchor(_heroSummaryText.rectTransform, new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.13f), Vector2.zero, Vector2.zero);
         }
 
@@ -444,7 +455,7 @@ namespace MOBA.Core.Infrastructure
 
         private void BuildLoadoutBar(Transform parent)
         {
-            GameObject panel = CreatePanel("LoadoutPanel", parent, new Color(0.035f, 0.07f, 0.16f, 0.98f));
+            GameObject panel = CreatePanel("LoadoutPanel", parent, MenuUITheme.ActionRail);
             RectTransform rect = panel.GetComponent<RectTransform>();
             Anchor(rect, new Vector2(0.34f, 0.025f), new Vector2(0.975f, 0.125f), Vector2.zero, Vector2.zero);
 
@@ -477,7 +488,7 @@ namespace MOBA.Core.Infrastructure
                 parent,
                 "BackButton",
                 "BACK",
-                new Color(0.18f, 0.26f, 0.42f, 1f),
+                MenuUITheme.SecondaryButton,
                 null);
             Anchor(_backButton.GetComponent<RectTransform>(), new Vector2(0.025f, 0.025f), new Vector2(0.145f, 0.105f), Vector2.zero, Vector2.zero);
 
@@ -485,7 +496,7 @@ namespace MOBA.Core.Infrastructure
                 parent,
                 "SelectButton",
                 "SELECT",
-                new Color(0.96f, 0.66f, 0.10f, 1f),
+                MenuUITheme.PrimaryButton,
                 null);
             Anchor(_confirmButton.GetComponent<RectTransform>(), new Vector2(0.16f, 0.025f), new Vector2(0.32f, 0.105f), Vector2.zero, Vector2.zero);
         }
@@ -549,7 +560,7 @@ namespace MOBA.Core.Infrastructure
                     def.Archetype.ToString().ToUpperInvariant(),
                     11,
                     TextAlignmentOptions.Left,
-                    new Color(0.88f, 0.94f, 1f, 1f));
+                    MenuUITheme.TextSoft);
                 Anchor(role.rectTransform, new Vector2(0.44f, 0.22f), new Vector2(0.96f, 0.48f), Vector2.zero, Vector2.zero);
 
                 TMP_Text power = CreateText(
@@ -815,7 +826,7 @@ namespace MOBA.Core.Infrastructure
             GameObject panel = CreatePanel(
                 "RuntimeLoadoutPanel",
                 parent,
-                new Color(0.08f, 0.10f, 0.14f, 0.92f));
+                MenuUITheme.PanelDark);
 
             RectTransform panelRect = panel.GetComponent<RectTransform>();
             Anchor(panelRect, new Vector2(0.56f, 0.08f), new Vector2(0.96f, 0.46f), Vector2.zero, Vector2.zero);
@@ -837,7 +848,7 @@ namespace MOBA.Core.Infrastructure
                     "Choose loadout",
                     18,
                     TextAlignmentOptions.Center,
-                    new Color(0.90f, 0.94f, 1f, 1f));
+                    MenuUITheme.TextSoft);
 
                 _loadoutStatusText.gameObject.AddComponent<LayoutElement>().preferredHeight = 34f;
             }
@@ -867,7 +878,7 @@ namespace MOBA.Core.Infrastructure
                     panel.transform,
                     "RuntimeConfirmButton",
                     "PLAY",
-                    new Color(0.16f, 0.64f, 0.86f, 1f),
+                    MenuUITheme.PrimaryButton,
                     null);
             }
         }
@@ -1045,7 +1056,7 @@ namespace MOBA.Core.Infrastructure
                     _loadoutContainer,
                     $"LoadoutSlot_{slot.SlotId}",
                     label,
-                    locked ? new Color(0.16f, 0.18f, 0.24f, 0.88f) : ResolveSlotColor(slot.SlotType),
+                    locked ? MenuUITheme.DisabledButton : ResolveSlotColor(slot.SlotType),
                     () => CycleSlot(slot));
                 button.interactable = !locked && options.Count > 0;
 
@@ -1065,7 +1076,7 @@ namespace MOBA.Core.Infrastructure
                 _loadoutContainer,
                 "LoadoutRow",
                 text,
-                new Color(0.20f, 0.22f, 0.28f, 0.92f),
+                MenuUITheme.SecondaryButton,
                 action);
             button.interactable = action != null;
 
@@ -1411,7 +1422,7 @@ namespace MOBA.Core.Infrastructure
 
         private StatRowView CreateStatRow(Transform parent, string label)
         {
-            GameObject row = CreatePanel("Stat_" + label, parent, new Color(0.08f, 0.13f, 0.26f, 0.86f));
+            GameObject row = CreatePanel("Stat_" + label, parent, MenuUITheme.PanelRaised);
             LayoutElement rowLayout = row.AddComponent<LayoutElement>();
             rowLayout.preferredHeight = 34f;
 
@@ -1419,7 +1430,7 @@ namespace MOBA.Core.Infrastructure
             labelText.fontStyle = FontStyles.Bold;
             Anchor(labelText.rectTransform, new Vector2(0.04f, 0f), new Vector2(0.31f, 1f), Vector2.zero, Vector2.zero);
 
-            GameObject barBack = CreatePanel("BarBack", row.transform, new Color(0.02f, 0.04f, 0.08f, 0.9f));
+            GameObject barBack = CreatePanel("BarBack", row.transform, MenuUITheme.PanelDark);
             Anchor(barBack.GetComponent<RectTransform>(), new Vector2(0.33f, 0.28f), new Vector2(0.73f, 0.72f), Vector2.zero, Vector2.zero);
 
             Image fill = CreatePanel("Fill", barBack.transform, _goldColor).GetComponent<Image>();
@@ -1438,7 +1449,7 @@ namespace MOBA.Core.Infrastructure
             out TMP_Text title,
             out TMP_Text detailText)
         {
-            GameObject box = CreatePanel("Ability_" + label, parent, new Color(0.08f, 0.13f, 0.26f, 0.90f));
+            GameObject box = CreatePanel("Ability_" + label, parent, MenuUITheme.PanelRaised);
             LayoutElement boxLayout = box.AddComponent<LayoutElement>();
             boxLayout.preferredHeight = 68f;
 
@@ -1446,7 +1457,7 @@ namespace MOBA.Core.Infrastructure
             title.fontStyle = FontStyles.Bold;
             Anchor(title.rectTransform, new Vector2(0.05f, 0.48f), new Vector2(0.95f, 0.96f), Vector2.zero, Vector2.zero);
 
-            detailText = CreateText(box.transform, "Detail", "", 12, TextAlignmentOptions.Left, new Color(0.88f, 0.94f, 1f, 1f));
+            detailText = CreateText(box.transform, "Detail", "", 12, TextAlignmentOptions.Left, MenuUITheme.TextSoft);
             Anchor(detailText.rectTransform, new Vector2(0.05f, 0.05f), new Vector2(0.95f, 0.52f), Vector2.zero, Vector2.zero);
 
             return box;
@@ -1457,7 +1468,7 @@ namespace MOBA.Core.Infrastructure
             _nanopowerSection = CreatePanel(
                 "Nanopowers",
                 parent,
-                new Color(0.07f, 0.12f, 0.24f, 0.92f));
+                MenuUITheme.PanelRaised);
 
             LayoutElement sectionLayout = _nanopowerSection.AddComponent<LayoutElement>();
             sectionLayout.preferredHeight = 172f;
@@ -1480,7 +1491,7 @@ namespace MOBA.Core.Infrastructure
                 GameObject row = CreatePanel(
                     $"Nanopower_{i + 1}",
                     _nanopowerSection.transform,
-                    new Color(0.035f, 0.065f, 0.14f, 0.94f));
+                    MenuUITheme.PanelDark);
                 Anchor(row.GetComponent<RectTransform>(), new Vector2(0.05f, bottom), new Vector2(0.95f, top), Vector2.zero, Vector2.zero);
 
                 Image accent = CreatePanel("Accent", row.transform, _cyanColor).GetComponent<Image>();
@@ -1504,7 +1515,7 @@ namespace MOBA.Core.Infrastructure
                     "",
                     10,
                     TextAlignmentOptions.Left,
-                    new Color(0.88f, 0.94f, 1f, 1f));
+                    MenuUITheme.TextSoft);
                 description.enableWordWrapping = false;
                 description.overflowMode = TextOverflowModes.Ellipsis;
                 Anchor(description.rectTransform, new Vector2(0.07f, 0.05f), new Vector2(0.96f, 0.54f), Vector2.zero, Vector2.zero);
@@ -1521,13 +1532,7 @@ namespace MOBA.Core.Infrastructure
             Transform parent,
             Color color)
         {
-            GameObject go = new GameObject(name, typeof(RectTransform), typeof(Image));
-            go.transform.SetParent(parent, false);
-
-            Image image = go.GetComponent<Image>();
-            image.color = color;
-            image.raycastTarget = true;
-            return go;
+            return MenuUITheme.CreatePanel(name, parent, color);
         }
 
         private static Button CreateButton(
@@ -1555,6 +1560,7 @@ namespace MOBA.Core.Infrastructure
 
             RectTransform textRect = text.GetComponent<RectTransform>();
             Anchor(textRect, Vector2.zero, Vector2.one, new Vector2(8f, 4f), new Vector2(-8f, -4f));
+            MenuUITheme.StyleButton(button, label, color, 16f);
 
             return button;
         }
@@ -1567,23 +1573,12 @@ namespace MOBA.Core.Infrastructure
             TextAlignmentOptions alignment,
             Color color)
         {
-            GameObject go = new GameObject(name, typeof(RectTransform), typeof(TextMeshProUGUI));
-            go.transform.SetParent(parent, false);
-
-            TextMeshProUGUI label = go.GetComponent<TextMeshProUGUI>();
-            label.text = text;
-            label.fontSize = fontSize;
-            label.alignment = alignment;
-            label.color = color;
-            label.raycastTarget = false;
-            label.enableWordWrapping = true;
-
-            return label;
+            return MenuUITheme.CreateText(parent, name, text, fontSize, alignment, color);
         }
 
         private static void Stretch(RectTransform rect)
         {
-            Anchor(rect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            MenuUITheme.Stretch(rect);
         }
 
         private static void Anchor(
@@ -1593,13 +1588,7 @@ namespace MOBA.Core.Infrastructure
             Vector2 offsetMin,
             Vector2 offsetMax)
         {
-            if (rect == null)
-                return;
-
-            rect.anchorMin = anchorMin;
-            rect.anchorMax = anchorMax;
-            rect.offsetMin = offsetMin;
-            rect.offsetMax = offsetMax;
+            MenuUITheme.Anchor(rect, anchorMin, anchorMax, offsetMin, offsetMax);
         }
 
         private int ResolvePreviewPowerLevel(BrawlerDefinition brawler)
