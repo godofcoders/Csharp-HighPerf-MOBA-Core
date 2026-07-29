@@ -16,6 +16,8 @@ namespace MOBA.Core.Infrastructure
     /// </summary>
     public class ResultsScreen : MonoBehaviour
     {
+        private const string RuntimeResultsBackgroundName = "RuntimeResultsBackground";
+
         [Header("Texts")]
         [SerializeField] private TMP_Text _winnerTextTmp;
         [SerializeField] private Text _winnerTextLegacy;
@@ -46,6 +48,8 @@ namespace MOBA.Core.Infrastructure
             string winnerStr = ResolveWinnerText();
             string scoreStr = ResolveScoreText();
 
+            EnsureResultsPresentation();
+
             if (_winnerTextTmp != null) _winnerTextTmp.text = winnerStr;
             else if (_winnerTextLegacy != null) _winnerTextLegacy.text = winnerStr;
 
@@ -55,7 +59,7 @@ namespace MOBA.Core.Infrastructure
             if (hasRuntimeEntries)
             {
                 SetLegacyScoreText(string.Empty);
-                MoveResultText(_winnerTextTmp, _winnerTextLegacy, new Vector2(0f, 435f), new Vector2(980f, 86f), 54);
+                MoveResultText(_winnerTextTmp, _winnerTextLegacy, new Vector2(0f, 422f), new Vector2(960f, 76f), 50);
             }
 
             // MVP block — show only if MatchResultBoard has a name set.
@@ -100,8 +104,8 @@ namespace MOBA.Core.Infrastructure
                     "YOUR STATS",
                     string.Empty);
 
-                MoveButton(_continueButton, new Vector2(-170f, -482f));
-                MoveButton(_rematchButton, new Vector2(170f, -482f));
+                MoveButton(_continueButton, new Vector2(-165f, -458f));
+                MoveButton(_rematchButton, new Vector2(165f, -458f));
                 return;
             }
 
@@ -109,18 +113,74 @@ namespace MOBA.Core.Infrastructure
                 parent,
                 TeamType.Blue,
                 CollectTeamEntries(entries, TeamType.Blue),
-                new Vector2(-445f, -142f),
+                new Vector2(-360f, -148f),
                 MatchResultBoard.WinnerKnown && MatchResultBoard.Winner == TeamType.Blue);
 
             CreateTeamPanel(
                 parent,
                 TeamType.Red,
                 CollectTeamEntries(entries, TeamType.Red),
-                new Vector2(445f, -142f),
+                new Vector2(360f, -148f),
                 MatchResultBoard.WinnerKnown && MatchResultBoard.Winner == TeamType.Red);
 
-            MoveButton(_continueButton, new Vector2(-170f, -482f));
-            MoveButton(_rematchButton, new Vector2(170f, -482f));
+            MoveButton(_continueButton, new Vector2(-165f, -458f));
+            MoveButton(_rematchButton, new Vector2(165f, -458f));
+        }
+
+        private void EnsureResultsPresentation()
+        {
+            EnsureResultsBackground();
+            StyleResultButton(_continueButton, "CONTINUE", MenuUITheme.SecondaryButton);
+            StyleResultButton(_rematchButton, "REMATCH", MenuUITheme.PrimaryButton);
+        }
+
+        private void EnsureResultsBackground()
+        {
+            Transform existing = transform.Find(RuntimeResultsBackgroundName);
+            if (existing != null)
+            {
+                existing.SetAsFirstSibling();
+                return;
+            }
+
+            GameObject background = CreatePanel(transform, RuntimeResultsBackgroundName, MenuUITheme.ScreenBackground);
+            RectTransform backgroundRect = background.GetComponent<RectTransform>();
+            backgroundRect.anchorMin = Vector2.zero;
+            backgroundRect.anchorMax = Vector2.one;
+            backgroundRect.offsetMin = Vector2.zero;
+            backgroundRect.offsetMax = Vector2.zero;
+
+            CreateResultsLayer(background.transform, "ResultsSky", new Vector2(0f, 0.50f), Vector2.one, new Color(0.020f, 0.060f, 0.120f, 1f));
+            CreateResultsLayer(background.transform, "ResultsFloor", Vector2.zero, new Vector2(1f, 0.50f), new Color(0.012f, 0.024f, 0.058f, 1f));
+            CreateResultsLayer(background.transform, "ResultsCenterBand", new Vector2(0.08f, 0.24f), new Vector2(0.92f, 0.77f), new Color(0.040f, 0.075f, 0.160f, 0.72f));
+            CreateResultsGlow(background.transform, "BlueGlow", new Vector2(0.04f, 0.15f), new Vector2(0.38f, 0.82f), new Color(0.16f, 0.42f, 1f, 0.14f));
+            CreateResultsGlow(background.transform, "GoldGlow", new Vector2(0.62f, 0.10f), new Vector2(0.96f, 0.72f), new Color(1f, 0.68f, 0.16f, 0.10f));
+
+            background.transform.SetAsFirstSibling();
+        }
+
+        private static void CreateResultsLayer(Transform parent, string name, Vector2 min, Vector2 max, Color color)
+        {
+            GameObject layer = CreatePanel(parent, name, color);
+            RectTransform rect = layer.GetComponent<RectTransform>();
+            rect.anchorMin = min;
+            rect.anchorMax = max;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        private static void CreateResultsGlow(Transform parent, string name, Vector2 min, Vector2 max, Color color)
+        {
+            GameObject glowObject = CreatePanel(parent, name, color);
+            Image glow = glowObject.GetComponent<Image>();
+            if (glow != null)
+                glow.sprite = RuntimeUISpriteUtility.GetSoftCircleSprite();
+
+            RectTransform rect = glowObject.GetComponent<RectTransform>();
+            rect.anchorMin = min;
+            rect.anchorMax = max;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         private void Update()
@@ -202,7 +262,9 @@ namespace MOBA.Core.Infrastructure
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.anchoredPosition = anchoredPosition;
-            panelRect.sizeDelta = new Vector2(800f, 392f);
+            panelRect.sizeDelta = SceneSelection.SelectedMode == GameModeId.SoloShowdown
+                ? new Vector2(760f, 318f)
+                : new Vector2(690f, 360f);
 
             VerticalLayoutGroup layout = panel.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(16, 16, 14, 14);
@@ -301,19 +363,19 @@ namespace MOBA.Core.Infrastructure
             rowGroup.childForceExpandHeight = true;
 
             Color headerColor = new Color(0.78f, 0.86f, 1f, 1f);
-            CreateCell(header.transform, "PLAYER", 220f, 14, TextAnchor.MiddleLeft, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "K/D/A", 92f, 14, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "DAMAGE", 104f, 14, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "TAKEN", 96f, 14, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "GEMS", 58f, 14, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "RATING", 82f, 14, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "PLAYER", 178f, 13, TextAnchor.MiddleLeft, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "K/D/A", 76f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "DAMAGE", 92f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "TAKEN", 86f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "GEMS", 52f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "RATING", 74f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
         }
 
         private static void CreateTeamStatsRow(Transform parent, MatchResultEntry entry)
         {
             GameObject row = CreatePanel(parent, "StatsRow_" + SanitizeName(entry.DisplayName), ResolveRowColor(entry));
             LayoutElement rowLayout = row.AddComponent<LayoutElement>();
-            rowLayout.preferredHeight = 82f;
+            rowLayout.preferredHeight = 72f;
 
             HorizontalLayoutGroup rowGroup = row.AddComponent<HorizontalLayoutGroup>();
             rowGroup.padding = new RectOffset(12, 12, 7, 7);
@@ -325,12 +387,12 @@ namespace MOBA.Core.Infrastructure
             string displayName = entry.IsStarPlayer
                 ? "* " + entry.DisplayName.ToUpperInvariant()
                 : entry.DisplayName.ToUpperInvariant();
-            CreateCell(row.transform, displayName, 220f, 18, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
-            CreateCell(row.transform, $"{entry.Stats.Kills} / {entry.Stats.Deaths} / {entry.Stats.Assists}", 92f, 17, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
-            CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageDealt).ToString(), 104f, 16, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
-            CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageTaken).ToString(), 96f, 16, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
-            CreateCell(row.transform, entry.Stats.GemsCollected.ToString(), 58f, 16, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
-            CreateCell(row.transform, Mathf.RoundToInt(entry.StarScore).ToString(), 82f, 17, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.22f, 1f), FontStyle.Bold);
+            CreateCell(row.transform, displayName, 178f, 16, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
+            CreateCell(row.transform, $"{entry.Stats.Kills} / {entry.Stats.Deaths} / {entry.Stats.Assists}", 76f, 15, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
+            CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageDealt).ToString(), 92f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
+            CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageTaken).ToString(), 86f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
+            CreateCell(row.transform, entry.Stats.GemsCollected.ToString(), 52f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
+            CreateCell(row.transform, Mathf.RoundToInt(entry.StarScore).ToString(), 74f, 15, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.22f, 1f), FontStyle.Bold);
         }
 
         private static void CreateCell(
@@ -358,8 +420,8 @@ namespace MOBA.Core.Infrastructure
             frameRect.anchorMin = new Vector2(0.5f, 0.5f);
             frameRect.anchorMax = new Vector2(0.5f, 0.5f);
             frameRect.pivot = new Vector2(0.5f, 0.5f);
-            frameRect.anchoredPosition = new Vector2(0f, 190f);
-            frameRect.sizeDelta = new Vector2(1210f, 245f);
+            frameRect.anchoredPosition = new Vector2(0f, 188f);
+            frameRect.sizeDelta = new Vector2(1120f, 220f);
 
             Text star = CreateText(
                 frame.transform,
@@ -648,7 +710,18 @@ namespace MOBA.Core.Infrastructure
 
             RectTransform rect = button.GetComponent<RectTransform>();
             if (rect != null)
+            {
                 rect.anchoredPosition = anchoredPosition;
+                rect.sizeDelta = new Vector2(270f, 74f);
+            }
+        }
+
+        private static void StyleResultButton(Button button, string label, Color color)
+        {
+            if (button == null)
+                return;
+
+            MenuUITheme.StyleButton(button, label, color, 23f);
         }
 
         private void SetLegacyScoreText(string text)

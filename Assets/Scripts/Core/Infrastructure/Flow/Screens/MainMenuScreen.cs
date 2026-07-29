@@ -109,8 +109,8 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
-                new Vector2(34f, 64f),
-                new Vector2(230f, 70f));
+                new Vector2(42f, 48f),
+                new Vector2(220f, 64f));
 
             StyleMenuButton(
                 _questsButton,
@@ -119,8 +119,8 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
-                new Vector2(34f, -22f),
-                new Vector2(230f, 70f));
+                new Vector2(42f, -32f),
+                new Vector2(220f, 64f));
 
             StyleMenuButton(
                 _playButton,
@@ -129,8 +129,8 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(1f, 0f),
                 new Vector2(1f, 0f),
                 new Vector2(1f, 0f),
-                new Vector2(-38f, 30f),
-                new Vector2(360f, 104f));
+                new Vector2(-48f, 30f),
+                new Vector2(330f, 92f));
         }
 
         private void StyleBackground()
@@ -145,7 +145,7 @@ namespace MOBA.Core.Infrastructure
             if (image != null)
             {
                 image.sprite = RuntimeUISpriteUtility.GetSolidWhiteSprite();
-                image.color = new Color(0.065f, 0.100f, 0.128f, 1f);
+                image.color = new Color(0.018f, 0.034f, 0.075f, 1f);
                 image.preserveAspect = false;
                 image.raycastTarget = false;
             }
@@ -166,7 +166,7 @@ namespace MOBA.Core.Infrastructure
             Image vignetteImage = vignette.GetComponent<Image>();
             if (vignetteImage != null)
             {
-                vignetteImage.color = new Color(0.005f, 0.011f, 0.030f, 0.14f);
+                vignetteImage.color = new Color(0.005f, 0.011f, 0.030f, 0.20f);
                 vignetteImage.raycastTarget = false;
             }
 
@@ -189,46 +189,36 @@ namespace MOBA.Core.Infrastructure
         {
             Transform existing = transform.Find(RuntimeArenaBackdropName);
             if (existing != null)
-            {
-                existing.SetSiblingIndex(Mathf.Min(1, transform.childCount - 1));
-                return;
-            }
+                DestroyRuntimeObject(existing.gameObject);
 
             GameObject arena = CreatePanel(transform, RuntimeArenaBackdropName, Color.clear);
             SetPassive(arena);
             RectTransform arenaRect = arena.GetComponent<RectTransform>();
             Anchor(arenaRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
-            CreateArenaLayer(arena.transform, "Sky", new Vector2(0f, 0.48f), Vector2.one, new Color(0.070f, 0.160f, 0.220f, 1f));
-            CreateArenaLayer(arena.transform, "Horizon", new Vector2(0f, 0.42f), new Vector2(1f, 0.64f), new Color(0.160f, 0.260f, 0.250f, 1f));
-            CreateArenaLayer(arena.transform, "SandFloor", Vector2.zero, new Vector2(1f, 0.54f), new Color(0.565f, 0.390f, 0.220f, 1f));
-            CreateArenaLayer(arena.transform, "ArenaBoard", new Vector2(0.23f, 0.14f), new Vector2(0.83f, 0.62f), new Color(0.400f, 0.560f, 0.370f, 0.96f));
+            CreateArenaLayer(arena.transform, "Sky", new Vector2(0f, 0.47f), Vector2.one, new Color(0.030f, 0.095f, 0.150f, 1f));
+            CreateArenaLayer(arena.transform, "Horizon", new Vector2(0f, 0.43f), new Vector2(1f, 0.56f), new Color(0.075f, 0.165f, 0.180f, 1f));
+            CreateArenaLayer(arena.transform, "Floor", Vector2.zero, new Vector2(1f, 0.48f), new Color(0.175f, 0.125f, 0.080f, 1f));
+            CreateArenaLayer(arena.transform, "ArenaMat", new Vector2(0.25f, 0.14f), new Vector2(0.83f, 0.62f), new Color(0.110f, 0.240f, 0.215f, 0.92f));
+            CreateArenaLayer(arena.transform, "ArenaMatSoftEdge", new Vector2(0.25f, 0.14f), new Vector2(0.83f, 0.62f), new Color(0.44f, 0.74f, 0.64f, 0.08f));
+
+            for (int i = 0; i < 6; i++)
+            {
+                float y = Mathf.Lerp(0.18f, 0.58f, i / 5f);
+                CreateArenaLine(arena.transform, $"LaneH{i}", new Vector2(0.26f, y), new Vector2(0.82f, y + 0.003f), new Color(0.43f, 0.78f, 0.68f, 0.16f));
+            }
 
             for (int i = 0; i < 7; i++)
             {
-                float t = i / 6f;
-                float y = Mathf.Lerp(0.16f, 0.60f, t);
-                CreateArenaLine(arena.transform, $"LaneH{i}", new Vector2(0.24f, y), new Vector2(0.82f, y + 0.004f), new Color(0.220f, 0.390f, 0.260f, 0.42f));
+                float x = Mathf.Lerp(0.28f, 0.80f, i / 6f);
+                CreateArenaLine(arena.transform, $"LaneV{i}", new Vector2(x, 0.16f), new Vector2(x + 0.002f, 0.60f), new Color(0.43f, 0.78f, 0.68f, 0.12f));
             }
 
-            for (int i = 0; i < 8; i++)
-            {
-                float x = Mathf.Lerp(0.26f, 0.80f, i / 7f);
-                CreateArenaLine(arena.transform, $"LaneV{i}", new Vector2(x, 0.15f), new Vector2(x + 0.003f, 0.61f), new Color(0.235f, 0.415f, 0.275f, 0.32f));
-            }
-
-            CreateArenaBlock(arena.transform, "LeftCover", new Vector2(0.19f, 0.35f), new Vector2(0.31f, 0.52f), new Color(0.750f, 0.500f, 0.285f, 1f));
-            CreateArenaBlock(arena.transform, "RightCover", new Vector2(0.75f, 0.24f), new Vector2(0.88f, 0.42f), new Color(0.710f, 0.455f, 0.260f, 1f));
-            CreateArenaBlock(arena.transform, "BackCover", new Vector2(0.47f, 0.55f), new Vector2(0.61f, 0.72f), new Color(0.650f, 0.410f, 0.245f, 1f));
-            CreateArenaBlock(arena.transform, "FrontCover", new Vector2(0.42f, 0.04f), new Vector2(0.57f, 0.17f), new Color(0.700f, 0.445f, 0.250f, 1f));
-
-            CreateArenaPatch(arena.transform, "WheatPatchLeft", new Vector2(0.08f, 0.12f), new Vector2(0.22f, 0.24f));
-            CreateArenaPatch(arena.transform, "WheatPatchRight", new Vector2(0.83f, 0.54f), new Vector2(0.98f, 0.69f));
-            CreateArenaPatch(arena.transform, "WheatPatchCenter", new Vector2(0.50f, 0.30f), new Vector2(0.63f, 0.42f));
-
-            CreateArenaMine(arena.transform);
-            CreateArenaLight(arena.transform, new Vector2(0.49f, 0.60f), new Vector2(0.72f, 0.84f), new Color(0.550f, 0.900f, 1f, 0.10f));
-            CreateArenaLight(arena.transform, new Vector2(0.08f, 0.58f), new Vector2(0.30f, 0.82f), new Color(1f, 0.730f, 0.320f, 0.10f));
+            CreateArenaLayer(arena.transform, "LeftSilhouette", new Vector2(0.05f, 0.22f), new Vector2(0.22f, 0.43f), new Color(0.075f, 0.055f, 0.075f, 0.42f));
+            CreateArenaLayer(arena.transform, "RightSilhouette", new Vector2(0.82f, 0.21f), new Vector2(0.98f, 0.44f), new Color(0.075f, 0.055f, 0.075f, 0.42f));
+            CreateArenaLayer(arena.transform, "CenterGlowBase", new Vector2(0.39f, 0.16f), new Vector2(0.68f, 0.50f), new Color(0.32f, 0.64f, 1f, 0.08f));
+            CreateArenaLight(arena.transform, new Vector2(0.36f, 0.17f), new Vector2(0.67f, 0.58f), new Color(0.300f, 0.760f, 1f, 0.14f));
+            CreateArenaLight(arena.transform, new Vector2(0.09f, 0.57f), new Vector2(0.27f, 0.82f), new Color(1f, 0.620f, 0.220f, 0.08f));
 
             arena.transform.SetSiblingIndex(Mathf.Min(1, transform.childCount - 1));
         }
@@ -243,65 +233,6 @@ namespace MOBA.Core.Infrastructure
         private static void CreateArenaLine(Transform parent, string name, Vector2 min, Vector2 max, Color color)
         {
             CreateArenaLayer(parent, name, min, max, color);
-        }
-
-        private static void CreateArenaBlock(Transform parent, string name, Vector2 min, Vector2 max, Color color)
-        {
-            GameObject shadow = CreatePanel(parent, name + "Shadow", new Color(0f, 0f, 0f, 0.28f));
-            SetPassive(shadow);
-            Anchor(shadow.GetComponent<RectTransform>(), min + new Vector2(0.012f, -0.016f), max + new Vector2(0.012f, -0.016f), Vector2.zero, Vector2.zero);
-
-            GameObject block = CreatePanel(parent, name, color);
-            SetPassive(block);
-            RectTransform blockRect = block.GetComponent<RectTransform>();
-            Anchor(blockRect, min, max, Vector2.zero, Vector2.zero);
-            blockRect.localRotation = Quaternion.Euler(0f, 0f, -3.5f);
-
-            GameObject top = CreatePanel(block.transform, "TopFace", new Color(
-                Mathf.Min(color.r + 0.12f, 1f),
-                Mathf.Min(color.g + 0.10f, 1f),
-                Mathf.Min(color.b + 0.08f, 1f),
-                0.96f));
-            SetPassive(top);
-            Anchor(top.GetComponent<RectTransform>(), new Vector2(0f, 0.64f), Vector2.one, Vector2.zero, Vector2.zero);
-        }
-
-        private static void CreateArenaPatch(Transform parent, string name, Vector2 min, Vector2 max)
-        {
-            GameObject patch = CreatePanel(parent, name, new Color(0.760f, 0.615f, 0.235f, 0.86f));
-            SetPassive(patch);
-            Anchor(patch.GetComponent<RectTransform>(), min, max, Vector2.zero, Vector2.zero);
-
-            for (int i = 0; i < 8; i++)
-            {
-                float x = 0.08f + i * 0.11f;
-                GameObject stalk = CreatePanel(patch.transform, "Stalk" + i, i % 2 == 0
-                    ? new Color(0.950f, 0.750f, 0.250f, 0.78f)
-                    : new Color(0.640f, 0.510f, 0.160f, 0.78f));
-                SetPassive(stalk);
-                RectTransform rect = stalk.GetComponent<RectTransform>();
-                Anchor(rect, new Vector2(x, 0.08f), new Vector2(x + 0.045f, 0.94f), Vector2.zero, Vector2.zero);
-                rect.localRotation = Quaternion.Euler(0f, 0f, i % 2 == 0 ? -10f : 10f);
-            }
-        }
-
-        private static void CreateArenaMine(Transform parent)
-        {
-            Image glow = CreatePanel(parent, "GemMineGlow", new Color(0.800f, 0.160f, 1f, 0.18f)).GetComponent<Image>();
-            SetPassive(glow.gameObject);
-            glow.sprite = RuntimeUISpriteUtility.GetSoftCircleSprite();
-            Anchor(glow.rectTransform, new Vector2(0.435f, 0.285f), new Vector2(0.585f, 0.465f), Vector2.zero, Vector2.zero);
-
-            Image hole = CreatePanel(parent, "GemMineHole", new Color(0.030f, 0.020f, 0.055f, 0.92f)).GetComponent<Image>();
-            SetPassive(hole.gameObject);
-            hole.sprite = RuntimeUISpriteUtility.GetSoftCircleSprite();
-            Anchor(hole.rectTransform, new Vector2(0.475f, 0.345f), new Vector2(0.545f, 0.425f), Vector2.zero, Vector2.zero);
-
-            GameObject gem = CreatePanel(parent, "GemMineShard", new Color(1.000f, 0.220f, 0.920f, 0.96f));
-            SetPassive(gem);
-            RectTransform gemRect = gem.GetComponent<RectTransform>();
-            Anchor(gemRect, new Vector2(0.505f, 0.405f), new Vector2(0.525f, 0.440f), Vector2.zero, Vector2.zero);
-            gemRect.localRotation = Quaternion.Euler(0f, 0f, 45f);
         }
 
         private static void CreateArenaLight(Transform parent, Vector2 min, Vector2 max, Color color)
@@ -323,7 +254,7 @@ namespace MOBA.Core.Infrastructure
 
             GameObject header = CreatePanel(transform, RuntimeHeaderName, MenuUITheme.Header);
             RectTransform rect = header.GetComponent<RectTransform>();
-            Anchor(rect, new Vector2(0.035f, 0.84f), new Vector2(0.39f, 0.955f), Vector2.zero, Vector2.zero);
+            Anchor(rect, new Vector2(0.045f, 0.805f), new Vector2(0.415f, 0.940f), Vector2.zero, Vector2.zero);
 
             TMP_Text title = CreateText(header.transform, "Title", "MOBA CORE", 36f, TextAlignmentOptions.Left, Color.white);
             title.fontStyle = FontStyles.Bold;
@@ -348,7 +279,7 @@ namespace MOBA.Core.Infrastructure
             {
                 GameObject rail = CreatePanel(transform, RuntimeSideRailName, new Color(0.012f, 0.026f, 0.068f, 0.76f));
                 existing = rail.transform;
-                Anchor(rail.GetComponent<RectTransform>(), new Vector2(0.018f, 0.31f), new Vector2(0.185f, 0.62f), Vector2.zero, Vector2.zero);
+                Anchor(rail.GetComponent<RectTransform>(), new Vector2(0.035f, 0.360f), new Vector2(0.205f, 0.620f), Vector2.zero, Vector2.zero);
             }
 
             Image image = existing.GetComponent<Image>();
@@ -369,7 +300,7 @@ namespace MOBA.Core.Infrastructure
                 GameObject dock = CreatePanel(transform, RuntimeEventDockName, new Color(0.010f, 0.020f, 0.048f, 0.88f));
                 existing = dock.transform;
                 RectTransform rect = dock.GetComponent<RectTransform>();
-                Anchor(rect, new Vector2(0.34f, 0.03f), new Vector2(0.70f, 0.135f), Vector2.zero, Vector2.zero);
+                Anchor(rect, new Vector2(0.345f, 0.034f), new Vector2(0.700f, 0.135f), Vector2.zero, Vector2.zero);
 
                 TMP_Text eyebrow = CreateText(dock.transform, "Eyebrow", "SELECTED EVENT", 13f, TextAlignmentOptions.Left, MenuUITheme.Cyan);
                 eyebrow.fontStyle = FontStyles.Bold;
