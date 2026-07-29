@@ -39,6 +39,30 @@ namespace MOBA.Core.Infrastructure
             StartCoroutine(PresentRoutine());
         }
 
+        public static void DismissAll()
+        {
+            MatchVersusScreenOverlay[] overlays = FindObjectsOfType<MatchVersusScreenOverlay>();
+            for (int i = 0; i < overlays.Length; i++)
+            {
+                MatchVersusScreenOverlay overlay = overlays[i];
+                if (overlay != null)
+                    overlay.DismissImmediate();
+            }
+        }
+
+        public void DismissImmediate()
+        {
+            StopAllCoroutines();
+
+            if (_root != null)
+            {
+                Destroy(_root);
+                _root = null;
+            }
+
+            Destroy(this);
+        }
+
         private IEnumerator PresentRoutine()
         {
             BuildShell();
@@ -87,7 +111,7 @@ namespace MOBA.Core.Infrastructure
 
             _group = _root.GetComponent<CanvasGroup>();
             _group.alpha = 1f;
-            _group.blocksRaycasts = true;
+            _group.blocksRaycasts = false;
             _group.interactable = false;
 
             Sprite backgroundSprite = BrawlerGeneratedArtLibrary.LoadLoadingHomeBackground();

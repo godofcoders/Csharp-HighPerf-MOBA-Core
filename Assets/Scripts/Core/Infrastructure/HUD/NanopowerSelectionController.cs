@@ -272,6 +272,8 @@ namespace MOBA.Core.Infrastructure
 
         private void ShowSelection()
         {
+            MatchVersusScreenOverlay.DismissAll();
+
             for (int i = 0; i < _offers.Length; i++)
             {
                 NanopowerDefinition offer = _offers[i];

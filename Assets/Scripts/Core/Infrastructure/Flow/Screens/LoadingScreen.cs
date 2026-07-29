@@ -11,6 +11,7 @@ namespace MOBA.Core.Infrastructure
     /// player sees motion. If you wire actual async asset loading later,
     /// swap the timer for AsyncOperation.progress.
     /// </summary>
+    [ExecuteAlways]
     public class LoadingScreen : MonoBehaviour
     {
         private const string RuntimePresentationName = "RuntimeLoadingPresentation";
@@ -32,12 +33,30 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private string _progressFormat = "Loading... {0}%";
         [SerializeField] private string _readyLabel = "Ready";
 
+        private void OnEnable()
+        {
+            if (!Application.isPlaying)
+                RefreshEditorPreview();
+        }
+
         private void Start()
         {
+            if (!Application.isPlaying)
+                return;
+
             BuildRuntimePresentation();
             SetStatus(_statusLabel);
             if (_progressFill != null) _progressFill.fillAmount = 0f;
             StartCoroutine(LoadFlow());
+        }
+
+        private void RefreshEditorPreview()
+        {
+            BuildRuntimePresentation();
+            SetStatus(_statusLabel);
+
+            if (_progressFill != null)
+                _progressFill.fillAmount = 0f;
         }
 
         private void BuildRuntimePresentation()
@@ -48,6 +67,7 @@ namespace MOBA.Core.Infrastructure
             Transform existing = root.Find(RuntimePresentationName);
             if (existing != null)
             {
+                BindRuntimePresentation(existing);
                 existing.SetAsLastSibling();
                 return;
             }
@@ -114,7 +134,44 @@ namespace MOBA.Core.Infrastructure
             MenuUITheme.Anchor(status.rectTransform, new Vector2(0.26f, 0.075f), new Vector2(0.74f, 0.112f), Vector2.zero, Vector2.zero);
             _statusTextTmp = status;
 
+            BindRuntimePresentation(presentation.transform);
             presentation.transform.SetAsLastSibling();
+        }
+
+        private void BindRuntimePresentation(Transform presentation)
+        {
+            if (presentation == null)
+                return;
+
+            Transform background = presentation.Find("Background");
+            Image backgroundImage = background != null ? background.GetComponent<Image>() : null;
+            ApplyGeneratedBackground(backgroundImage);
+
+            Transform progressFill = presentation.Find("ProgressFrame/ProgressFill");
+            Image fill = progressFill != null ? progressFill.GetComponent<Image>() : null;
+            if (fill != null)
+                _progressFill = fill;
+
+            Transform status = presentation.Find("Status");
+            TMP_Text statusTmp = status != null ? status.GetComponent<TMP_Text>() : null;
+            if (statusTmp != null)
+                _statusTextTmp = statusTmp;
+        }
+
+        private static void ApplyGeneratedBackground(Image image)
+        {
+            if (image == null)
+                return;
+
+            Sprite backgroundSprite = BrawlerGeneratedArtLibrary.LoadLoadingHomeBackground();
+            image.sprite = backgroundSprite != null
+                ? backgroundSprite
+                : RuntimeUISpriteUtility.GetSolidWhiteSprite();
+            image.color = backgroundSprite != null
+                ? Color.white
+                : MenuUITheme.ScreenBackground;
+            image.raycastTarget = false;
+            image.preserveAspect = false;
         }
 
         private IEnumerator LoadFlow()
