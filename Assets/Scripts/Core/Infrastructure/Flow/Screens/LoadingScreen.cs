@@ -13,6 +13,8 @@ namespace MOBA.Core.Infrastructure
     /// </summary>
     public class LoadingScreen : MonoBehaviour
     {
+        private const string RuntimePresentationName = "RuntimeLoadingPresentation";
+
         [Header("References")]
         [SerializeField] private Image _progressFill;
         [SerializeField] private TMP_Text _statusTextTmp;
@@ -32,9 +34,87 @@ namespace MOBA.Core.Infrastructure
 
         private void Start()
         {
+            BuildRuntimePresentation();
             SetStatus(_statusLabel);
             if (_progressFill != null) _progressFill.fillAmount = 0f;
             StartCoroutine(LoadFlow());
+        }
+
+        private void BuildRuntimePresentation()
+        {
+            Canvas canvas = GetComponentInParent<Canvas>();
+            Transform root = canvas != null ? canvas.transform : transform;
+
+            Transform existing = root.Find(RuntimePresentationName);
+            if (existing != null)
+            {
+                existing.SetAsLastSibling();
+                return;
+            }
+
+            GameObject presentation = new GameObject(RuntimePresentationName, typeof(RectTransform), typeof(CanvasGroup));
+            presentation.transform.SetParent(root, false);
+            RectTransform presentationRect = presentation.GetComponent<RectTransform>();
+            MenuUITheme.Anchor(presentationRect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            Sprite backgroundSprite = BrawlerGeneratedArtLibrary.LoadLoadingHomeBackground();
+            GameObject background = MenuUITheme.CreatePanel("Background", presentation.transform, Color.white);
+            Image backgroundImage = background.GetComponent<Image>();
+            backgroundImage.sprite = backgroundSprite != null ? backgroundSprite : RuntimeUISpriteUtility.GetSolidWhiteSprite();
+            backgroundImage.color = backgroundSprite != null ? Color.white : MenuUITheme.ScreenBackground;
+            backgroundImage.raycastTarget = false;
+            MenuUITheme.Anchor(background.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            GameObject veil = MenuUITheme.CreatePanel("Vignette", presentation.transform, new Color(0.005f, 0.011f, 0.030f, 0.36f));
+            veil.GetComponent<Image>().raycastTarget = false;
+            MenuUITheme.Anchor(veil.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+
+            TMP_Text title = MenuUITheme.CreateText(
+                presentation.transform,
+                "Title",
+                "MOBA CORE",
+                60f,
+                TextAlignmentOptions.Center,
+                Color.white);
+            title.fontStyle = FontStyles.Bold;
+            MenuUITheme.EnsureShadow(title.gameObject);
+            MenuUITheme.Anchor(title.rectTransform, new Vector2(0.20f, 0.62f), new Vector2(0.80f, 0.76f), Vector2.zero, Vector2.zero);
+
+            TMP_Text subtitle = MenuUITheme.CreateText(
+                presentation.transform,
+                "Subtitle",
+                "Advanced Game AI Arena",
+                24f,
+                TextAlignmentOptions.Center,
+                MenuUITheme.TextMuted);
+            subtitle.fontStyle = FontStyles.Bold;
+            MenuUITheme.EnsureShadow(subtitle.gameObject);
+            MenuUITheme.Anchor(subtitle.rectTransform, new Vector2(0.24f, 0.56f), new Vector2(0.76f, 0.63f), Vector2.zero, Vector2.zero);
+
+            GameObject barFrame = MenuUITheme.CreatePanel("ProgressFrame", presentation.transform, new Color(0.010f, 0.020f, 0.048f, 0.92f));
+            MenuUITheme.Anchor(barFrame.GetComponent<RectTransform>(), new Vector2(0.26f, 0.115f), new Vector2(0.74f, 0.155f), Vector2.zero, Vector2.zero);
+
+            GameObject fillObject = MenuUITheme.CreatePanel("ProgressFill", barFrame.transform, MenuUITheme.Gold);
+            Image fill = fillObject.GetComponent<Image>();
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = 0;
+            fill.fillAmount = 0f;
+            MenuUITheme.Anchor(fillObject.GetComponent<RectTransform>(), new Vector2(0.015f, 0.18f), new Vector2(0.985f, 0.82f), Vector2.zero, Vector2.zero);
+            _progressFill = fill;
+
+            TMP_Text status = MenuUITheme.CreateText(
+                presentation.transform,
+                "Status",
+                _statusLabel,
+                19f,
+                TextAlignmentOptions.Center,
+                MenuUITheme.TextSoft);
+            status.fontStyle = FontStyles.Bold;
+            MenuUITheme.Anchor(status.rectTransform, new Vector2(0.26f, 0.075f), new Vector2(0.74f, 0.112f), Vector2.zero, Vector2.zero);
+            _statusTextTmp = status;
+
+            presentation.transform.SetAsLastSibling();
         }
 
         private IEnumerator LoadFlow()

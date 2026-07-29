@@ -14,6 +14,9 @@ namespace MOBA.Core.Infrastructure
         private const string RuntimeHeaderName = "RuntimeHomeHeader";
         private const string RuntimeActionRailName = "RuntimeHomeActionRail";
         private const string RuntimeButtonAccentName = MenuUITheme.ButtonAccentName;
+        private const string RuntimeVignetteName = "RuntimeHomeVignette";
+        private const string RuntimeSideRailName = "RuntimeHomeSideRail";
+        private const string RuntimeEventDockName = "RuntimeHomeEventDock";
 
         [Header("Buttons")]
         [SerializeField] private Button _playButton;
@@ -93,27 +96,29 @@ namespace MOBA.Core.Infrastructure
         {
             StyleBackground();
             EnsureHomeHeader();
+            EnsureSideRail();
+            EnsureEventDock();
             EnsureActionRail();
 
             StyleMenuButton(
                 _mapSelectButton,
                 "MAP",
                 MenuUITheme.SecondaryButton,
-                new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f),
-                new Vector2(-250f, 34f),
-                new Vector2(320f, 86f));
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(34f, 64f),
+                new Vector2(230f, 70f));
 
             StyleMenuButton(
                 _questsButton,
                 "QUESTS",
                 MenuUITheme.QuestButton,
-                new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f),
-                new Vector2(96f, 34f),
-                new Vector2(300f, 86f));
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(0f, 0.5f),
+                new Vector2(34f, -22f),
+                new Vector2(230f, 70f));
 
             StyleMenuButton(
                 _playButton,
@@ -122,16 +127,46 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(1f, 0f),
                 new Vector2(1f, 0f),
                 new Vector2(1f, 0f),
-                new Vector2(-34f, 34f),
-                new Vector2(300f, 86f));
+                new Vector2(-38f, 30f),
+                new Vector2(360f, 104f));
         }
 
         private void StyleBackground()
         {
             Transform background = transform.Find("Background");
-            Image image = background != null ? background.GetComponent<Image>() : null;
+            if (background == null)
+                background = CreatePanel(transform, "Background", Color.white).transform;
+
+            Image image = background.GetComponent<Image>();
             if (image != null)
-                image.color = MenuUITheme.ScreenBackground;
+            {
+                Sprite scenic = BrawlerGeneratedArtLibrary.LoadLoadingHomeBackground();
+                image.sprite = scenic != null ? scenic : RuntimeUISpriteUtility.GetSolidWhiteSprite();
+                image.color = scenic != null ? Color.white : MenuUITheme.ScreenBackground;
+                image.preserveAspect = false;
+                image.raycastTarget = false;
+            }
+
+            RectTransform rect = background.GetComponent<RectTransform>();
+            Anchor(rect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            background.SetAsFirstSibling();
+
+            Transform vignette = transform.Find(RuntimeVignetteName);
+            if (vignette == null)
+            {
+                GameObject overlay = CreatePanel(transform, RuntimeVignetteName, new Color(0.005f, 0.011f, 0.030f, 0.30f));
+                vignette = overlay.transform;
+            }
+
+            Image vignetteImage = vignette.GetComponent<Image>();
+            if (vignetteImage != null)
+            {
+                vignetteImage.color = new Color(0.005f, 0.011f, 0.030f, 0.30f);
+                vignetteImage.raycastTarget = false;
+            }
+
+            Anchor(vignette.GetComponent<RectTransform>(), Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            vignette.SetSiblingIndex(Mathf.Min(1, transform.childCount - 1));
         }
 
         private void EnsureHomeHeader()
@@ -145,22 +180,76 @@ namespace MOBA.Core.Infrastructure
 
             GameObject header = CreatePanel(transform, RuntimeHeaderName, MenuUITheme.Header);
             RectTransform rect = header.GetComponent<RectTransform>();
-            Anchor(rect, new Vector2(0.045f, 0.82f), new Vector2(0.43f, 0.95f), Vector2.zero, Vector2.zero);
+            Anchor(rect, new Vector2(0.035f, 0.84f), new Vector2(0.39f, 0.955f), Vector2.zero, Vector2.zero);
 
-            TMP_Text title = CreateText(header.transform, "Title", "MOBA CORE", 34f, TextAlignmentOptions.Left, Color.white);
+            TMP_Text title = CreateText(header.transform, "Title", "MOBA CORE", 36f, TextAlignmentOptions.Left, Color.white);
             title.fontStyle = FontStyles.Bold;
-            Anchor(title.rectTransform, new Vector2(0.045f, 0.42f), new Vector2(0.96f, 0.88f), Vector2.zero, Vector2.zero);
+            Anchor(title.rectTransform, new Vector2(0.05f, 0.42f), new Vector2(0.96f, 0.90f), Vector2.zero, Vector2.zero);
 
             TMP_Text subtitle = CreateText(
                 header.transform,
                 "Subtitle",
-                "Brawlers, maps, quests",
+                "Storm Arena lobby",
                 17f,
                 TextAlignmentOptions.Left,
                 MenuUITheme.TextMuted);
-            Anchor(subtitle.rectTransform, new Vector2(0.048f, 0.14f), new Vector2(0.96f, 0.42f), Vector2.zero, Vector2.zero);
+            Anchor(subtitle.rectTransform, new Vector2(0.052f, 0.14f), new Vector2(0.96f, 0.42f), Vector2.zero, Vector2.zero);
 
             header.transform.SetAsLastSibling();
+        }
+
+        private void EnsureSideRail()
+        {
+            Transform existing = transform.Find(RuntimeSideRailName);
+            if (existing == null)
+            {
+                GameObject rail = CreatePanel(transform, RuntimeSideRailName, new Color(0.012f, 0.026f, 0.068f, 0.76f));
+                existing = rail.transform;
+                Anchor(rail.GetComponent<RectTransform>(), new Vector2(0.018f, 0.31f), new Vector2(0.185f, 0.62f), Vector2.zero, Vector2.zero);
+            }
+
+            Image image = existing.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = new Color(0.012f, 0.026f, 0.068f, 0.76f);
+                image.raycastTarget = false;
+            }
+
+            existing.SetSiblingIndex(Mathf.Min(2, transform.childCount - 1));
+        }
+
+        private void EnsureEventDock()
+        {
+            Transform existing = transform.Find(RuntimeEventDockName);
+            if (existing == null)
+            {
+                GameObject dock = CreatePanel(transform, RuntimeEventDockName, new Color(0.010f, 0.020f, 0.048f, 0.88f));
+                existing = dock.transform;
+                RectTransform rect = dock.GetComponent<RectTransform>();
+                Anchor(rect, new Vector2(0.34f, 0.03f), new Vector2(0.70f, 0.135f), Vector2.zero, Vector2.zero);
+
+                TMP_Text eyebrow = CreateText(dock.transform, "Eyebrow", "SELECTED EVENT", 13f, TextAlignmentOptions.Left, MenuUITheme.Cyan);
+                eyebrow.fontStyle = FontStyles.Bold;
+                Anchor(eyebrow.rectTransform, new Vector2(0.055f, 0.54f), new Vector2(0.45f, 0.86f), Vector2.zero, Vector2.zero);
+
+                TMP_Text title = CreateText(dock.transform, "Title", string.Empty, 25f, TextAlignmentOptions.Left, Color.white);
+                title.fontStyle = FontStyles.Bold;
+                Anchor(title.rectTransform, new Vector2(0.055f, 0.14f), new Vector2(0.74f, 0.58f), Vector2.zero, Vector2.zero);
+
+                TMP_Text mode = CreateText(dock.transform, "Mode", string.Empty, 18f, TextAlignmentOptions.Right, MenuUITheme.Gold);
+                mode.fontStyle = FontStyles.Bold;
+                Anchor(mode.rectTransform, new Vector2(0.70f, 0.18f), new Vector2(0.94f, 0.76f), Vector2.zero, Vector2.zero);
+            }
+
+            TMP_Text titleText = existing.Find("Title")?.GetComponent<TMP_Text>();
+            if (titleText != null)
+                titleText.text = ResolveSelectedMapName().ToUpperInvariant();
+
+            TMP_Text modeText = existing.Find("Mode")?.GetComponent<TMP_Text>();
+            if (modeText != null)
+                modeText.text = FormatMode(SceneSelection.SelectedMode).ToUpperInvariant();
+
+            existing.SetAsLastSibling();
         }
 
         private void EnsureActionRail()
@@ -174,7 +263,14 @@ namespace MOBA.Core.Infrastructure
                 existing = rail.transform;
             }
 
-            existing.SetSiblingIndex(Mathf.Min(1, transform.childCount - 1));
+            Image image = existing.GetComponent<Image>();
+            if (image != null)
+            {
+                image.color = new Color(0.012f, 0.024f, 0.058f, 0.80f);
+                image.raycastTarget = false;
+            }
+
+            existing.SetSiblingIndex(Mathf.Min(3, transform.childCount - 1));
         }
 
         private static void StyleMenuButton(
@@ -263,6 +359,37 @@ namespace MOBA.Core.Infrastructure
             }
 
             button.transform.SetAsLastSibling();
+        }
+
+        private string ResolveSelectedMapName()
+        {
+            MapDefinition selected = SceneSelection.SelectedMap != null
+                ? SceneSelection.SelectedMap
+                : _defaultMap;
+
+            if (selected == null)
+                return "Crystal Yard";
+
+            return !string.IsNullOrWhiteSpace(selected.DisplayName)
+                ? selected.DisplayName
+                : selected.name;
+        }
+
+        private static string FormatMode(GameModeId mode)
+        {
+            switch (mode)
+            {
+                case GameModeId.GemGrab:
+                    return "Gem Grab";
+                case GameModeId.Knockout:
+                    return "Knockout";
+                case GameModeId.BrawlBall:
+                    return "Brawl Ball";
+                case GameModeId.SoloShowdown:
+                    return "Solo Showdown";
+                default:
+                    return mode.ToString();
+            }
         }
 
         private Button CreateRuntimeQuestButton()
