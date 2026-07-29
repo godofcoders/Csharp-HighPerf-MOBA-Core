@@ -103,6 +103,7 @@ namespace MOBA.Core.Infrastructure
             CreateCountdownOverlay(canvasTransform);
             CreateGemGrabCountdownOverlay(canvasTransform);
             CreateDeathOverlay(canvasTransform);
+            canvasGo.AddComponent<MatchVersusScreenOverlay>();
 
             SetLayerRecursively(canvasGo, LayerMask.NameToLayer("UI"));
         }
