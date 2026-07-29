@@ -474,16 +474,14 @@ namespace MOBA.Core.Infrastructure
                 parent,
                 "HyperchargeButton",
                 new Vector2(1f, 0f),
-                new Vector2(-260f, 112f),
-                86f,
+                new Vector2(-260f, 122f),
+                104f,
                 new Color(0.68f, 0.22f, 1f, 0.96f),
                 "HYPER",
                 out Image hyperchargeFill,
                 out GameObject hyperchargeActiveVisual);
 
             Text hyperchargeText = FindButtonValueText(hyperRoot);
-
-            hyperRoot.SetActive(false);
 
             GameObject gadgetRoot = CreateScreenAbilityButton(
                 parent,

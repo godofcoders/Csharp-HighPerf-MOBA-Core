@@ -288,9 +288,22 @@ namespace MOBA.Core.Infrastructure
         private void UpdateHypercharge(BrawlerState state)
         {
             bool hasHypercharge = state.GetCurrentHyperchargeDefinition() != null;
-            SetActive(_hyperchargeRoot, hasHypercharge);
+            SetActive(_hyperchargeRoot, true);
             if (!hasHypercharge)
+            {
+                if (_hyperchargeFill != null)
+                    _hyperchargeFill.fillAmount = 0f;
+
+                SetText(
+                    _hyperchargeChargeTmp,
+                    _hyperchargeChargeLegacy,
+                    "0%");
+
+                if (_hyperchargeActiveVisual != null && _hyperchargeActiveVisual.activeSelf)
+                    _hyperchargeActiveVisual.SetActive(false);
+
                 return;
+            }
 
             HyperchargeTracker hc = state.Hypercharge;
             if (hc == null) return;
@@ -317,8 +330,12 @@ namespace MOBA.Core.Infrastructure
                 _hyperchargeChargeLegacy,
                 displayText);
 
-            if (_hyperchargeActiveVisual != null && _hyperchargeActiveVisual.activeSelf != hc.IsActive)
-                _hyperchargeActiveVisual.SetActive(hc.IsActive);
+            if (_hyperchargeActiveVisual != null)
+            {
+                bool highlighted = hc.IsActive || (!hc.IsActive && hc.ChargePercent >= 0.999f);
+                if (_hyperchargeActiveVisual.activeSelf != highlighted)
+                    _hyperchargeActiveVisual.SetActive(highlighted);
+            }
         }
 
         private void UpdateGadget(BrawlerState state)
