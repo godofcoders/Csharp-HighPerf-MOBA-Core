@@ -1,7 +1,6 @@
 using System;
 using System.Reflection;
 using UnityEngine;
-using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 
 namespace MOBA.Core.Infrastructure
@@ -16,7 +15,7 @@ namespace MOBA.Core.Infrastructure
         private const string MatchSceneName = "Match";
         private const string RuntimeVolumeName = "RuntimeMatchPostProcessing";
 
-        private VolumeProfile _runtimeProfile;
+        private ScriptableObject _runtimeProfile;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void RegisterSceneHook()
@@ -79,28 +78,37 @@ namespace MOBA.Core.Infrastructure
 
         private void InstallVolume()
         {
-            Volume volume = gameObject.AddComponent<Volume>();
-            volume.isGlobal = true;
-            volume.priority = 20f;
-            volume.weight = 1f;
+            Type volumeType = FindType("UnityEngine.Rendering.Volume");
+            Type profileType = FindType("UnityEngine.Rendering.VolumeProfile");
+            if (volumeType == null || profileType == null)
+                return;
 
-            _runtimeProfile = ScriptableObject.CreateInstance<VolumeProfile>();
+            if (!typeof(Component).IsAssignableFrom(volumeType) || !typeof(ScriptableObject).IsAssignableFrom(profileType))
+                return;
+
+            Component volume = gameObject.AddComponent(volumeType);
+            SetMember(volume, "isGlobal", true);
+            SetMember(volume, "priority", 20f);
+            SetMember(volume, "weight", 1f);
+
+            _runtimeProfile = ScriptableObject.CreateInstance(profileType);
             _runtimeProfile.name = "Runtime Match Polish";
             _runtimeProfile.hideFlags = HideFlags.HideAndDontSave;
 
-            AddBloom(_runtimeProfile);
-            AddMotionBlur(_runtimeProfile);
+            AddBloom(_runtimeProfile, profileType);
+            AddMotionBlur(_runtimeProfile, profileType);
 
-            volume.profile = _runtimeProfile;
+            SetMember(volume, "profile", _runtimeProfile);
+            SetMember(volume, "sharedProfile", _runtimeProfile);
         }
 
-        private static void AddBloom(VolumeProfile profile)
+        private static void AddBloom(ScriptableObject profile, Type profileType)
         {
             Type bloomType = FindType("UnityEngine.Rendering.Universal.Bloom");
-            if (bloomType == null || !typeof(VolumeComponent).IsAssignableFrom(bloomType))
+            object bloom = AddVolumeComponent(profile, profileType, bloomType);
+            if (bloom == null)
                 return;
 
-            VolumeComponent bloom = profile.Add(bloomType, true);
             SetVolumeParameter(bloom, "threshold", 0.82f);
             SetVolumeParameter(bloom, "intensity", 0.18f);
             SetVolumeParameter(bloom, "scatter", 0.56f);
@@ -110,17 +118,36 @@ namespace MOBA.Core.Infrastructure
             SetVolumeParameter(bloom, "maxIterations", 4);
         }
 
-        private static void AddMotionBlur(VolumeProfile profile)
+        private static void AddMotionBlur(ScriptableObject profile, Type profileType)
         {
             Type motionBlurType = FindType("UnityEngine.Rendering.Universal.MotionBlur");
-            if (motionBlurType == null || !typeof(VolumeComponent).IsAssignableFrom(motionBlurType))
+            object motionBlur = AddVolumeComponent(profile, profileType, motionBlurType);
+            if (motionBlur == null)
                 return;
 
-            VolumeComponent motionBlur = profile.Add(motionBlurType, true);
             SetEnumVolumeParameter(motionBlur, "mode", "UnityEngine.Rendering.Universal.MotionBlurMode", "CameraOnly");
             SetEnumVolumeParameter(motionBlur, "quality", "UnityEngine.Rendering.Universal.MotionBlurQuality", "Low");
             SetVolumeParameter(motionBlur, "intensity", 0.12f);
             SetVolumeParameter(motionBlur, "clamp", 0.035f);
+        }
+
+        private static object AddVolumeComponent(ScriptableObject profile, Type profileType, Type componentType)
+        {
+            if (profile == null || profileType == null || componentType == null)
+                return null;
+
+            Type volumeComponentType = FindType("UnityEngine.Rendering.VolumeComponent");
+            if (volumeComponentType != null && !volumeComponentType.IsAssignableFrom(componentType))
+                return null;
+
+            MethodInfo addMethod = profileType.GetMethod(
+                "Add",
+                BindingFlags.Instance | BindingFlags.Public,
+                null,
+                new[] { typeof(Type), typeof(bool) },
+                null);
+
+            return addMethod != null ? addMethod.Invoke(profile, new object[] { componentType, true }) : null;
         }
 
         private static void EnableMainCameraPostProcessing()
@@ -145,7 +172,7 @@ namespace MOBA.Core.Infrastructure
         }
 
         private static void SetEnumVolumeParameter(
-            VolumeComponent component,
+            object component,
             string fieldName,
             string enumTypeName,
             string enumValueName)
@@ -158,7 +185,7 @@ namespace MOBA.Core.Infrastructure
             SetVolumeParameter(component, fieldName, enumValue);
         }
 
-        private static void SetVolumeParameter(VolumeComponent component, string fieldName, object value)
+        private static void SetVolumeParameter(object component, string fieldName, object value)
         {
             if (component == null)
                 return;
