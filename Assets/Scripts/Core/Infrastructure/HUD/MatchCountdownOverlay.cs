@@ -40,13 +40,13 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private string _redRoundWinLabel = "RED WINS ROUND";
         [SerializeField] private string _roundDrawLabel = "ROUND DRAW";
         [SerializeField] private string _matchStartsFormat = "MATCH STARTS IN {0}";
-        [SerializeField] private Color _countdownBadgeColor = new Color(0f, 0f, 0f, 0.52f);
-        [SerializeField] private Color _goalBadgeColor = new Color(0f, 0f, 0f, 0.36f);
-        [SerializeField] private Vector2 _countdownBadgeSize = new Vector2(390f, 86f);
+        [SerializeField] private Color _countdownBadgeColor = new Color(0.015f, 0.034f, 0.088f, 0.94f);
+        [SerializeField] private Color _goalBadgeColor = new Color(0.015f, 0.034f, 0.088f, 0.96f);
+        [SerializeField] private Vector2 _countdownBadgeSize = new Vector2(430f, 96f);
         [SerializeField] private Vector2 _countdownBadgePosition = new Vector2(-42f, 126f);
-        [SerializeField] private Vector2 _goalBadgeSize = new Vector2(820f, 156f);
-        [SerializeField] private int _countdownFontSize = 34;
-        [SerializeField] private int _goalFontSize = 76;
+        [SerializeField] private Vector2 _goalBadgeSize = new Vector2(920f, 170f);
+        [SerializeField] private int _countdownFontSize = 38;
+        [SerializeField] private int _goalFontSize = 82;
 
         // Tracks when the match transitioned to Active so we know when to
         // stop holding the GO! flash.

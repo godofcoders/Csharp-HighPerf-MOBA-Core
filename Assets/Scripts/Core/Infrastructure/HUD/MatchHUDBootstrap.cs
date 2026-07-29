@@ -15,6 +15,18 @@ namespace MOBA.Core.Infrastructure
         private const int CanvasSortingOrder = 80;
         private const int RuntimeAmmoSlotCount = 5;
 
+        private static readonly Color HudPanel = new Color(0.012f, 0.026f, 0.066f, 0.88f);
+        private static readonly Color HudPanelSolid = new Color(0.015f, 0.034f, 0.088f, 0.96f);
+        private static readonly Color HudPanelRaised = new Color(0.055f, 0.096f, 0.190f, 0.92f);
+        private static readonly Color HudPanelInset = new Color(0.004f, 0.012f, 0.034f, 0.72f);
+        private static readonly Color HudGold = new Color(1.000f, 0.745f, 0.145f, 0.98f);
+        private static readonly Color HudCyan = new Color(0.160f, 0.780f, 1.000f, 0.98f);
+        private static readonly Color HudMutedText = new Color(0.760f, 0.850f, 1.000f, 0.88f);
+        private static readonly Color HudSoftText = new Color(0.920f, 0.960f, 1.000f, 0.96f);
+        private static readonly Color BlueTeamAccent = new Color(0.180f, 0.460f, 1.000f, 0.98f);
+        private static readonly Color RedTeamAccent = new Color(1.000f, 0.220f, 0.280f, 0.98f);
+        private static readonly Color GemMagenta = new Color(1.000f, 0.225f, 0.920f, 0.98f);
+
         private static Font _runtimeFont;
 
         private bool _installed;
@@ -100,60 +112,112 @@ namespace MOBA.Core.Infrastructure
         {
             GameObject panel = CreateRectPanel(
                 parent,
-                "GemScorePanel",
+                "MatchStatusPanel",
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
-                new Vector2(0f, -16f),
-                new Vector2(780f, 128f),
-                new Color(0f, 0f, 0f, 0.32f));
+                new Vector2(0f, -18f),
+                new Vector2(940f, 156f),
+                HudPanel);
+            AddPanelShadow(panel, new Vector2(0f, -7f), 0.34f);
+
+            CreateRectPanel(
+                panel.transform,
+                "MatchStatusTopAccent",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                Vector2.zero,
+                new Vector2(0f, 5f),
+                HudGold);
+
+            CreateRectPanel(
+                panel.transform,
+                "MatchStatusInnerShade",
+                new Vector2(0f, 0f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0f, -5f),
+                new Vector2(-22f, -24f),
+                HudPanelInset);
 
             Text blueGemText = CreateTeamGemCard(
                 panel.transform,
                 "BlueGemScore",
-                new Vector2(18f, 20f),
+                new Vector2(24f, 28f),
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
                 "BLUE",
-                new Color(0.22f, 0.48f, 1f, 0.34f),
+                BlueTeamAccent,
                 out GameObject blueLeaderHighlight);
 
             Text redGemText = CreateTeamGemCard(
                 panel.transform,
                 "RedGemScore",
-                new Vector2(-18f, 20f),
+                new Vector2(-24f, 28f),
                 new Vector2(1f, 0.5f),
                 new Vector2(1f, 0.5f),
                 "RED",
-                new Color(1f, 0.22f, 0.28f, 0.34f),
+                RedTeamAccent,
                 out GameObject redLeaderHighlight);
 
-            Text timerText = CreateText(
+            GameObject timerCapsule = CreateRectPanel(
                 panel.transform,
+                "MatchTimerCapsule",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0f, 34f),
+                new Vector2(176f, 58f),
+                HudPanelSolid);
+            AddPanelShadow(timerCapsule, new Vector2(0f, -3f), 0.22f);
+
+            CreateRectPanel(
+                timerCapsule.transform,
+                "TimerTopAccent",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                Vector2.zero,
+                new Vector2(0f, 4f),
+                HudCyan);
+
+            Text timerText = CreateText(
+                timerCapsule.transform,
                 "MatchTimerText",
                 "--:--",
+                Vector2.zero,
+                Vector2.one,
                 new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 28f),
-                new Vector2(150f, 32f),
-                28,
-                TextAnchor.UpperCenter,
+                Vector2.zero,
+                Vector2.zero,
+                32,
+                TextAnchor.MiddleCenter,
                 Color.white,
                 FontStyle.Bold);
 
-            Text statusText = CreateText(
+            GameObject statusChip = CreateRectPanel(
                 panel.transform,
+                "MatchStatusChip",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0f, -30f),
+                new Vector2(438f, 34f),
+                new Color(0f, 0f, 0f, 0.36f));
+
+            Text statusText = CreateText(
+                statusChip.transform,
                 "HoldStatusText",
                 string.Empty,
-                new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f),
-                new Vector2(0.5f, 0f),
-                new Vector2(0f, 38f),
-                new Vector2(300f, 22f),
-                16,
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                new Vector2(10f, 0f),
+                new Vector2(-20f, 0f),
+                17,
                 TextAnchor.MiddleCenter,
-                new Color(1f, 1f, 1f, 0.82f),
+                HudMutedText,
                 FontStyle.Bold);
 
             GameObject knockoutRoot = CreateController(panel.transform, "KnockoutWidgets");
@@ -226,9 +290,20 @@ namespace MOBA.Core.Infrastructure
                     anchor,
                     anchor,
                     pivot,
-                    new Vector2(direction * (24f + i * 43f), -34f),
-                    new Vector2(36f, 36f),
-                    new Color(0f, 0f, 0f, 0.35f));
+                    new Vector2(direction * (28f + i * 46f), -45f),
+                    new Vector2(39f, 39f),
+                    HudPanelSolid);
+                AddPanelShadow(slot, new Vector2(0f, -2f), 0.22f);
+
+                CreateRectPanel(
+                    slot.transform,
+                    $"{prefix}SlotAccent{i + 1}",
+                    new Vector2(0f, 1f),
+                    new Vector2(1f, 1f),
+                    new Vector2(0.5f, 1f),
+                    Vector2.zero,
+                    new Vector2(0f, 3f),
+                    teamColor);
 
                 portraits[i] = CreateImage(
                     slot.transform,
@@ -238,7 +313,7 @@ namespace MOBA.Core.Infrastructure
                     new Vector2(0.5f, 0.5f),
                     Vector2.zero,
                     Vector2.zero,
-                    teamColor);
+                    new Color(teamColor.r, teamColor.g, teamColor.b, 0.72f));
 
                 labels[i] = CreateText(
                     slot.transform,
@@ -249,9 +324,9 @@ namespace MOBA.Core.Infrastructure
                     new Vector2(0.5f, 0f),
                     new Vector2(0f, 1f),
                     Vector2.zero,
-                    9,
+                    8,
                     TextAnchor.LowerCenter,
-                    Color.white,
+                    HudSoftText,
                     FontStyle.Bold);
 
                 crosses[i] = CreateKnockoutCross(slot.transform, $"{prefix}Cross{i + 1}");
@@ -273,7 +348,7 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
                 new Vector2(44f, 5f),
-                new Color(1f, 0.08f, 0.08f, 0.94f));
+                new Color(1f, 0.05f, 0.09f, 0.96f));
             slashA.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
             GameObject slashB = CreateRectPanel(
@@ -284,7 +359,7 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
                 new Vector2(44f, 5f),
-                new Color(1f, 0.08f, 0.08f, 0.94f));
+                new Color(1f, 0.05f, 0.09f, 0.96f));
             slashB.transform.localRotation = Quaternion.Euler(0f, 0f, -45f);
             return root;
         }
@@ -302,9 +377,9 @@ namespace MOBA.Core.Infrastructure
                     new Vector2(0.5f, 0.5f),
                     new Vector2(0.5f, 0.5f),
                     new Vector2(0.5f, 0.5f),
-                    new Vector2(-30f + i * 30f, -35f),
-                    new Vector2(22f, 14f),
-                    new Color(1f, 1f, 1f, 0.18f));
+                    new Vector2(-34f + i * 34f, -51f),
+                    new Vector2(26f, 13f),
+                    new Color(1f, 1f, 1f, 0.16f));
 
                 markers[i] = marker.GetComponent<Image>();
             }
@@ -329,8 +404,9 @@ namespace MOBA.Core.Infrastructure
                 anchor,
                 pivot,
                 anchoredPosition,
-                new Vector2(160f, 52f),
-                new Color(0f, 0f, 0f, 0.24f));
+                new Vector2(236f, 78f),
+                HudPanelRaised);
+            AddPanelShadow(card, new Vector2(0f, -3f), 0.24f);
 
             leaderHighlight = CreateRectPanel(
                 card.transform,
@@ -340,8 +416,28 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
                 Vector2.zero,
-                teamColor);
+                new Color(teamColor.r, teamColor.g, teamColor.b, 0.22f));
             leaderHighlight.SetActive(false);
+
+            CreateRectPanel(
+                card.transform,
+                name + "SideAccent",
+                new Vector2(0f, 0f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, 0.5f),
+                Vector2.zero,
+                new Vector2(7f, 0f),
+                teamColor);
+
+            CreateRectPanel(
+                card.transform,
+                name + "TopSheen",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                Vector2.zero,
+                new Vector2(0f, 4f),
+                new Color(1f, 1f, 1f, 0.10f));
 
             Image gemIcon = CreateImage(
                 card.transform,
@@ -349,9 +445,9 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(26f, 0f),
-                new Vector2(22f, 22f),
-                new Color(1f, 0.24f, 0.92f, 0.94f));
+                new Vector2(34f, 0f),
+                new Vector2(27f, 27f),
+                GemMagenta);
             gemIcon.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
             CreateText(
@@ -361,11 +457,11 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
-                new Vector2(52f, 10f),
-                new Vector2(86f, 18f),
-                12,
+                new Vector2(64f, 14f),
+                new Vector2(126f, 22f),
+                13,
                 TextAnchor.MiddleLeft,
-                new Color(1f, 1f, 1f, 0.68f),
+                HudMutedText,
                 FontStyle.Bold);
 
             return CreateText(
@@ -375,9 +471,9 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
                 new Vector2(0f, 0.5f),
-                new Vector2(52f, -9f),
-                new Vector2(92f, 30f),
-                24,
+                new Vector2(64f, -11f),
+                new Vector2(140f, 34f),
+                28,
                 TextAnchor.MiddleLeft,
                 Color.white,
                 FontStyle.Bold);
@@ -393,8 +489,29 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0f),
                 new Vector2(0.5f, 0f),
                 new Vector2(0f, 24f),
-                new Vector2(590f, 124f),
-                new Color(0f, 0f, 0f, 0.34f));
+                new Vector2(740f, 140f),
+                HudPanel);
+            AddPanelShadow(panel, new Vector2(0f, 7f), 0.32f);
+
+            CreateRectPanel(
+                panel.transform,
+                "PlayerHudTopAccent",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                Vector2.zero,
+                new Vector2(0f, 5f),
+                HudGold);
+
+            CreateRectPanel(
+                panel.transform,
+                "AmmoClusterPanel",
+                Vector2.zero,
+                Vector2.zero,
+                Vector2.zero,
+                new Vector2(18f, 18f),
+                new Vector2(260f, 104f),
+                HudPanelInset);
 
             CreateText(
                 panel.transform,
@@ -403,11 +520,11 @@ namespace MOBA.Core.Infrastructure
                 Vector2.zero,
                 Vector2.zero,
                 Vector2.zero,
-                new Vector2(24f, 92f),
+                new Vector2(34f, 98f),
                 new Vector2(146f, 22f),
                 16,
                 TextAnchor.MiddleLeft,
-                new Color(1f, 1f, 1f, 0.72f),
+                HudMutedText,
                 FontStyle.Bold);
 
             Text ammoCount = CreateText(
@@ -417,11 +534,11 @@ namespace MOBA.Core.Infrastructure
                 Vector2.zero,
                 Vector2.zero,
                 Vector2.zero,
-                new Vector2(154f, 92f),
+                new Vector2(178f, 98f),
                 new Vector2(74f, 22f),
                 17,
                 TextAnchor.MiddleRight,
-                new Color(1f, 0.88f, 0.34f, 0.95f),
+                HudGold,
                 FontStyle.Bold);
 
             Image[] ammoSlots = new Image[RuntimeAmmoSlotCount];
@@ -434,9 +551,19 @@ namespace MOBA.Core.Infrastructure
                     Vector2.zero,
                     Vector2.zero,
                     Vector2.zero,
-                    new Vector2(24f + (i * 45f), 68f),
-                    new Vector2(35f, 16f),
-                    new Color(1f, 1f, 1f, 0.14f));
+                    new Vector2(34f + (i * 44f), 66f),
+                    new Vector2(35f, 20f),
+                    new Color(1f, 1f, 1f, 0.13f));
+
+                CreateRectPanel(
+                    slotRoot.transform,
+                    $"AmmoSlot{i + 1}Sheen",
+                    new Vector2(0f, 1f),
+                    new Vector2(1f, 1f),
+                    new Vector2(0.5f, 1f),
+                    Vector2.zero,
+                    new Vector2(0f, 3f),
+                    new Color(1f, 1f, 1f, 0.16f));
 
                 Image fill = CreateFilledImage(
                     slotRoot.transform,
@@ -446,7 +573,7 @@ namespace MOBA.Core.Infrastructure
                     new Vector2(0.5f, 0.5f),
                     Vector2.zero,
                     Vector2.zero,
-                    new Color(1f, 0.84f, 0.22f, 0.96f),
+                    HudGold,
                     Image.FillMethod.Horizontal,
                     (int)Image.OriginHorizontal.Left);
 
@@ -461,19 +588,20 @@ namespace MOBA.Core.Infrastructure
                 Vector2.zero,
                 Vector2.zero,
                 Vector2.zero,
-                new Vector2(24f, 18f),
-                new Vector2(92f, 38f),
-                new Color(0.85f, 0.16f, 0.74f, 0.28f));
+                new Vector2(34f, 24f),
+                new Vector2(116f, 34f),
+                new Color(0.850f, 0.160f, 0.740f, 0.34f));
 
-            CreateRectPanel(
+            GameObject carrierGemIcon = CreateRectPanel(
                 carrierBadge.transform,
                 "CarrierGemIcon",
                 Vector2.zero,
                 Vector2.zero,
                 new Vector2(0.5f, 0.5f),
-                new Vector2(20f, 19f),
+                new Vector2(24f, 17f),
                 new Vector2(20f, 20f),
-                new Color(1f, 0.26f, 0.92f, 0.92f));
+                GemMagenta);
+            carrierGemIcon.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
             Text carriedGemCount = CreateText(
                 carrierBadge.transform,
@@ -482,8 +610,8 @@ namespace MOBA.Core.Infrastructure
                 Vector2.zero,
                 Vector2.one,
                 new Vector2(0.5f, 0.5f),
-                new Vector2(14f, 0f),
-                new Vector2(-28f, 0f),
+                new Vector2(18f, 0f),
+                new Vector2(-34f, 0f),
                 21,
                 TextAnchor.MiddleCenter,
                 Color.white,
@@ -494,8 +622,8 @@ namespace MOBA.Core.Infrastructure
             GameObject superRoot = CreateAbilityMeter(
                 panel.transform,
                 "SuperMeter",
-                new Vector2(326f, 24f),
-                new Color(0.18f, 0.36f, 0.92f, 0.42f),
+                new Vector2(330f, 28f),
+                new Color(0.18f, 0.42f, 1f, 0.46f),
                 out Image superFill,
                 out GameObject superReadyVisual);
 
@@ -530,8 +658,8 @@ namespace MOBA.Core.Infrastructure
             GameObject hyperRoot = CreateAbilityMeter(
                 panel.transform,
                 "HyperchargeMeter",
-                new Vector2(416f, 24f),
-                new Color(0.64f, 0.20f, 1f, 0.36f),
+                new Vector2(440f, 28f),
+                new Color(0.64f, 0.20f, 1f, 0.42f),
                 out Image hyperchargeFill,
                 out GameObject hyperchargeActiveVisual);
 
@@ -568,8 +696,8 @@ namespace MOBA.Core.Infrastructure
             GameObject gadgetRoot = CreateAbilityMeter(
                 panel.transform,
                 "GadgetMeter",
-                new Vector2(506f, 24f),
-                new Color(0.10f, 0.72f, 0.42f, 0.35f),
+                new Vector2(550f, 28f),
+                new Color(0.10f, 0.72f, 0.42f, 0.42f),
                 out Image gadgetCooldownOverlay,
                 out GameObject gadgetReadyVisual);
 
@@ -623,9 +751,34 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 1f),
                 new Vector2(0f, 1f),
                 new Vector2(0f, 1f),
-                new Vector2(20f, -84f),
-                new Vector2(570f, 198f),
-                new Color(0f, 0f, 0f, 0.28f));
+                new Vector2(24f, -100f),
+                new Vector2(520f, 174f),
+                new Color(0.008f, 0.020f, 0.052f, 0.56f));
+            AddPanelShadow(panel, new Vector2(0f, -4f), 0.20f);
+
+            CreateRectPanel(
+                panel.transform,
+                "CombatFeedAccent",
+                new Vector2(0f, 0f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, 0.5f),
+                Vector2.zero,
+                new Vector2(5f, 0f),
+                new Color(1f, 0.28f, 0.22f, 0.92f));
+
+            CreateText(
+                panel.transform,
+                "CombatFeedLabel",
+                "FEED",
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(0f, 1f),
+                new Vector2(18f, -8f),
+                new Vector2(120f, 20f),
+                12,
+                TextAnchor.UpperLeft,
+                HudMutedText,
+                FontStyle.Bold);
 
             Text feedText = CreateText(
                 panel.transform,
@@ -634,11 +787,11 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 1f),
                 new Vector2(0f, 1f),
                 new Vector2(0f, 1f),
-                new Vector2(14f, -10f),
-                new Vector2(542f, 176f),
-                19,
+                new Vector2(18f, -30f),
+                new Vector2(486f, 132f),
+                17,
                 TextAnchor.UpperLeft,
-                new Color(1f, 1f, 1f, 0.95f),
+                HudSoftText,
                 FontStyle.Bold);
 
             feedText.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -651,21 +804,37 @@ namespace MOBA.Core.Infrastructure
         private static void CreateCountdownOverlay(Transform parent)
         {
             GameObject controller = CreateController(parent, "CountdownOverlayController");
-            GameObject root = CreatePanel(
+            GameObject root = CreateRectPanel(
                 parent,
                 "CountdownOverlay",
-                new Color(0f, 0f, 0f, 0.16f));
+                new Vector2(1f, 0f),
+                new Vector2(1f, 0f),
+                new Vector2(1f, 0f),
+                new Vector2(-42f, 126f),
+                new Vector2(430f, 96f),
+                HudPanelSolid);
+            AddPanelShadow(root, new Vector2(0f, -6f), 0.32f);
+
+            CreateRectPanel(
+                root.transform,
+                "CountdownAccent",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                Vector2.zero,
+                new Vector2(0f, 5f),
+                HudGold);
 
             Text countdownText = CreateText(
                 root.transform,
                 "CountdownText",
                 string.Empty,
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.one,
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
-                new Vector2(680f, 180f),
-                96,
+                Vector2.zero,
+                38,
                 TextAnchor.MiddleCenter,
                 Color.white,
                 FontStyle.Bold);
@@ -686,9 +855,20 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
                 new Vector2(0.5f, 1f),
-                new Vector2(0f, -150f),
-                new Vector2(760f, 86f),
-                new Color(0f, 0f, 0f, 0.34f));
+                new Vector2(0f, -178f),
+                new Vector2(800f, 72f),
+                new Color(0.012f, 0.026f, 0.066f, 0.82f));
+            AddPanelShadow(root, new Vector2(0f, -4f), 0.24f);
+
+            CreateRectPanel(
+                root.transform,
+                "GemCountdownAccent",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                Vector2.zero,
+                new Vector2(0f, 5f),
+                GemMagenta);
 
             Text countdownText = CreateText(
                 root.transform,
@@ -699,7 +879,7 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
                 Vector2.zero,
-                48,
+                40,
                 TextAnchor.MiddleCenter,
                 Color.white,
                 FontStyle.Bold);
@@ -717,45 +897,66 @@ namespace MOBA.Core.Infrastructure
             GameObject root = CreatePanel(
                 parent,
                 "DeathOverlay",
-                new Color(0f, 0f, 0f, 0.56f));
+                new Color(0.004f, 0.010f, 0.026f, 0.68f));
+
+            GameObject card = CreateRectPanel(
+                root.transform,
+                "DeathOverlayCard",
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                new Vector2(640f, 230f),
+                HudPanelSolid);
+            AddPanelShadow(card, new Vector2(0f, -8f), 0.38f);
+
+            CreateRectPanel(
+                card.transform,
+                "DeathOverlayAccent",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                Vector2.zero,
+                new Vector2(0f, 6f),
+                new Color(1f, 0.22f, 0.28f, 0.94f));
 
             Text titleText = CreateText(
-                root.transform,
+                card.transform,
                 "DeathTitleText",
                 "You died",
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 72f),
-                new Vector2(720f, 80f),
-                46,
+                new Vector2(0f, 62f),
+                new Vector2(580f, 72f),
+                50,
                 TextAnchor.MiddleCenter,
                 Color.white,
                 FontStyle.Bold);
 
             Text countdownText = CreateText(
-                root.transform,
+                card.transform,
                 "RespawnCountdownText",
                 string.Empty,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 10f),
-                new Vector2(720f, 54f),
-                28,
+                new Vector2(0f, 2f),
+                new Vector2(580f, 54f),
+                30,
                 TextAnchor.MiddleCenter,
-                new Color(1f, 1f, 1f, 0.92f),
+                HudMutedText,
                 FontStyle.Bold);
 
             Text killerText = CreateText(
-                root.transform,
+                card.transform,
                 "KilledByText",
                 string.Empty,
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(0f, -44f),
-                new Vector2(720f, 44f),
+                new Vector2(0f, -54f),
+                new Vector2(580f, 44f),
                 22,
                 TextAnchor.MiddleCenter,
                 new Color(1f, 0.82f, 0.82f, 0.92f),
@@ -834,6 +1035,17 @@ namespace MOBA.Core.Infrastructure
             return panel;
         }
 
+        private static void AddPanelShadow(GameObject target, Vector2 distance, float alpha)
+        {
+            if (target == null || target.GetComponent<Shadow>() != null)
+                return;
+
+            Shadow shadow = target.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, Mathf.Clamp01(alpha));
+            shadow.effectDistance = distance;
+            shadow.useGraphicAlpha = true;
+        }
+
         private static GameObject CreateAbilityMeter(
             Transform parent,
             string name,
@@ -849,18 +1061,39 @@ namespace MOBA.Core.Infrastructure
                 Vector2.zero,
                 Vector2.zero,
                 anchoredPosition,
-                new Vector2(64f, 64f),
-                baseColor);
+                new Vector2(82f, 82f),
+                HudPanelRaised);
+            AddPanelShadow(root, new Vector2(0f, -3f), 0.22f);
+
+            CreateRectPanel(
+                root.transform,
+                name + "Accent",
+                new Vector2(0f, 1f),
+                new Vector2(1f, 1f),
+                new Vector2(0.5f, 1f),
+                Vector2.zero,
+                new Vector2(0f, 5f),
+                new Color(baseColor.r, baseColor.g, baseColor.b, 0.92f));
+
+            CreateRectPanel(
+                root.transform,
+                name + "Inset",
+                new Vector2(0.08f, 0.08f),
+                new Vector2(0.92f, 0.92f),
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                HudPanelInset);
 
             fill = CreateFilledImage(
                 root.transform,
                 name + "Fill",
-                Vector2.zero,
-                Vector2.one,
+                new Vector2(0.08f, 0.08f),
+                new Vector2(0.92f, 0.92f),
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
                 Vector2.zero,
-                new Color(1f, 1f, 1f, 0.32f),
+                new Color(baseColor.r, baseColor.g, baseColor.b, 0.56f),
                 Image.FillMethod.Radial360,
                 (int)Image.Origin360.Bottom);
 
@@ -875,7 +1108,7 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
                 Vector2.zero,
-                new Color(1f, 0.96f, 0.44f, 0.22f));
+                new Color(1f, 0.92f, 0.22f, 0.20f));
 
             readyVisual.SetActive(false);
             return root;
