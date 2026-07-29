@@ -109,77 +109,44 @@ namespace MOBA.Core.Infrastructure
 
         private static void CreateMatchStatus(Transform parent)
         {
-            GameObject panel = CreateRectPanel(
-                parent,
-                "MatchStatusPanel",
-                new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 1f),
-                new Vector2(0.5f, 1f),
-                new Vector2(0f, -18f),
-                new Vector2(940f, 156f),
-                HudPanel);
-            AddPanelShadow(panel, new Vector2(0f, -7f), 0.34f);
+            GameObject root = CreateController(parent, "MatchStatusRoot");
 
-            CreateRectPanel(
-                panel.transform,
-                "MatchStatusTopAccent",
+            Text blueLabel;
+            Text blueGemText = CreateTeamScoreWing(
+                root.transform,
+                "BlueScoreWing",
+                new Vector2(30f, -24f),
                 new Vector2(0f, 1f),
-                new Vector2(1f, 1f),
-                new Vector2(0.5f, 1f),
-                Vector2.zero,
-                new Vector2(0f, 5f),
-                HudGold);
-
-            CreateRectPanel(
-                panel.transform,
-                "MatchStatusInnerShade",
-                new Vector2(0f, 0f),
-                new Vector2(1f, 1f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0f, -5f),
-                new Vector2(-22f, -24f),
-                HudPanelInset);
-
-            Text blueGemText = CreateTeamGemCard(
-                panel.transform,
-                "BlueGemScore",
-                new Vector2(24f, 28f),
-                new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f),
+                new Vector2(0f, 1f),
                 "BLUE",
                 BlueTeamAccent,
+                true,
+                out blueLabel,
                 out GameObject blueLeaderHighlight);
 
-            Text redGemText = CreateTeamGemCard(
-                panel.transform,
-                "RedGemScore",
-                new Vector2(-24f, 28f),
-                new Vector2(1f, 0.5f),
-                new Vector2(1f, 0.5f),
+            Text redLabel;
+            Text redGemText = CreateTeamScoreWing(
+                root.transform,
+                "RedScoreWing",
+                new Vector2(-30f, -24f),
+                new Vector2(1f, 1f),
+                new Vector2(1f, 1f),
                 "RED",
                 RedTeamAccent,
+                false,
+                out redLabel,
                 out GameObject redLeaderHighlight);
 
             GameObject timerCapsule = CreateRectPanel(
-                panel.transform,
+                root.transform,
                 "MatchTimerCapsule",
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0f, 34f),
-                new Vector2(176f, 58f),
-                HudPanelSolid);
-            AddPanelShadow(timerCapsule, new Vector2(0f, -3f), 0.22f);
-
-            CreateRectPanel(
-                timerCapsule.transform,
-                "TimerTopAccent",
-                new Vector2(0f, 1f),
-                new Vector2(1f, 1f),
                 new Vector2(0.5f, 1f),
-                Vector2.zero,
-                new Vector2(0f, 4f),
-                HudCyan);
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0f, -20f),
+                new Vector2(150f, 44f),
+                new Color(0.004f, 0.011f, 0.028f, 0.78f));
+            AddPanelShadow(timerCapsule, new Vector2(0f, -3f), 0.24f);
 
             Text timerText = CreateText(
                 timerCapsule.transform,
@@ -190,36 +157,26 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
                 Vector2.zero,
-                32,
+                30,
                 TextAnchor.MiddleCenter,
                 Color.white,
                 FontStyle.Bold);
 
-            GameObject statusChip = CreateRectPanel(
-                panel.transform,
-                "MatchStatusChip",
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0.5f, 0.5f),
-                new Vector2(0f, -30f),
-                new Vector2(438f, 34f),
-                new Color(0f, 0f, 0f, 0.36f));
-
             Text statusText = CreateText(
-                statusChip.transform,
+                root.transform,
                 "HoldStatusText",
                 string.Empty,
-                Vector2.zero,
-                Vector2.one,
-                new Vector2(0.5f, 0.5f),
-                new Vector2(10f, 0f),
-                new Vector2(-20f, 0f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0f, -74f),
+                new Vector2(620f, 30f),
                 17,
                 TextAnchor.MiddleCenter,
-                HudMutedText,
+                HudSoftText,
                 FontStyle.Bold);
 
-            GameObject knockoutRoot = CreateController(panel.transform, "KnockoutWidgets");
+            GameObject knockoutRoot = CreateController(root.transform, "KnockoutWidgets");
             CreateKnockoutTeamSlots(
                 knockoutRoot.transform,
                 "BlueKnockout",
@@ -241,7 +198,7 @@ namespace MOBA.Core.Infrastructure
             Image[] roundMarkers = CreateKnockoutRoundMarkers(knockoutRoot.transform);
             knockoutRoot.SetActive(false);
 
-            MatchHUD hud = panel.AddComponent<MatchHUD>();
+            MatchHUD hud = root.AddComponent<MatchHUD>();
             hud.BindTextTargets(null, statusText);
             hud.BindGemScoreWidgets(
                 null,
@@ -252,6 +209,13 @@ namespace MOBA.Core.Infrastructure
                 timerText,
                 blueLeaderHighlight,
                 redLeaderHighlight);
+            hud.BindTopLayoutWidgets(
+                blueGemText.transform.parent.gameObject,
+                redGemText.transform.parent.gameObject,
+                timerCapsule,
+                statusText.gameObject,
+                blueLabel,
+                redLabel);
             hud.BindKnockoutWidgets(
                 knockoutRoot,
                 bluePortraits,
@@ -277,8 +241,8 @@ namespace MOBA.Core.Infrastructure
             crosses = new GameObject[slotCount];
             labels = new Text[slotCount];
 
-            Vector2 anchor = leftSide ? new Vector2(0f, 0.5f) : new Vector2(1f, 0.5f);
-            Vector2 pivot = leftSide ? new Vector2(0f, 0.5f) : new Vector2(1f, 0.5f);
+            Vector2 anchor = leftSide ? new Vector2(0f, 1f) : new Vector2(1f, 1f);
+            Vector2 pivot = leftSide ? new Vector2(0f, 1f) : new Vector2(1f, 1f);
             float direction = leftSide ? 1f : -1f;
 
             for (int i = 0; i < slotCount; i++)
@@ -289,7 +253,7 @@ namespace MOBA.Core.Infrastructure
                     anchor,
                     anchor,
                     pivot,
-                    new Vector2(direction * (28f + i * 46f), -45f),
+                    new Vector2(direction * (32f + i * 46f), -92f),
                     new Vector2(39f, 39f),
                     HudPanelSolid);
                 AddPanelShadow(slot, new Vector2(0f, -2f), 0.22f);
@@ -373,10 +337,10 @@ namespace MOBA.Core.Infrastructure
                 GameObject marker = CreateRectPanel(
                     parent,
                     $"KnockoutRoundMarker{i + 1}",
-                    new Vector2(0.5f, 0.5f),
-                    new Vector2(0.5f, 0.5f),
-                    new Vector2(0.5f, 0.5f),
-                    new Vector2(-34f + i * 34f, -51f),
+                    new Vector2(0.5f, 1f),
+                    new Vector2(0.5f, 1f),
+                    new Vector2(0.5f, 1f),
+                    new Vector2(-34f + i * 34f, -78f),
                     new Vector2(26f, 13f),
                     new Color(1f, 1f, 1f, 0.16f));
 
@@ -386,7 +350,7 @@ namespace MOBA.Core.Infrastructure
             return markers;
         }
 
-        private static Text CreateTeamGemCard(
+        private static Text CreateTeamScoreWing(
             Transform parent,
             string name,
             Vector2 anchoredPosition,
@@ -394,6 +358,8 @@ namespace MOBA.Core.Infrastructure
             Vector2 pivot,
             string label,
             Color teamColor,
+            bool leftSide,
+            out Text labelText,
             out GameObject leaderHighlight)
         {
             GameObject card = CreateRectPanel(
@@ -403,9 +369,9 @@ namespace MOBA.Core.Infrastructure
                 anchor,
                 pivot,
                 anchoredPosition,
-                new Vector2(236f, 78f),
-                HudPanelRaised);
-            AddPanelShadow(card, new Vector2(0f, -3f), 0.24f);
+                new Vector2(318f, 58f),
+                new Color(0.004f, 0.010f, 0.030f, 0.76f));
+            AddPanelShadow(card, new Vector2(0f, -3f), 0.22f);
 
             leaderHighlight = CreateRectPanel(
                 card.transform,
@@ -418,12 +384,17 @@ namespace MOBA.Core.Infrastructure
                 new Color(teamColor.r, teamColor.g, teamColor.b, 0.22f));
             leaderHighlight.SetActive(false);
 
+            Vector2 sideAnchor = leftSide ? new Vector2(0f, 0f) : new Vector2(1f, 0f);
+            Vector2 sideAnchorTop = leftSide ? new Vector2(0f, 1f) : new Vector2(1f, 1f);
+            Vector2 sidePivot = leftSide ? new Vector2(0f, 0.5f) : new Vector2(1f, 0.5f);
+            float direction = leftSide ? 1f : -1f;
+
             CreateRectPanel(
                 card.transform,
                 name + "SideAccent",
-                new Vector2(0f, 0f),
-                new Vector2(0f, 1f),
-                new Vector2(0f, 0.5f),
+                sideAnchor,
+                sideAnchorTop,
+                sidePivot,
                 Vector2.zero,
                 new Vector2(7f, 0f),
                 teamColor);
@@ -441,25 +412,29 @@ namespace MOBA.Core.Infrastructure
             Image gemIcon = CreateImage(
                 card.transform,
                 name + "GemIcon",
-                new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f),
+                leftSide ? new Vector2(0f, 0.5f) : new Vector2(1f, 0.5f),
+                leftSide ? new Vector2(0f, 0.5f) : new Vector2(1f, 0.5f),
                 new Vector2(0.5f, 0.5f),
-                new Vector2(34f, 0f),
-                new Vector2(27f, 27f),
+                new Vector2(direction * 36f, 0f),
+                new Vector2(30f, 30f),
                 GemMagenta);
             gemIcon.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
-            CreateText(
+            TextAnchor labelAnchor = leftSide ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
+            Vector2 textAnchor = leftSide ? new Vector2(0f, 0.5f) : new Vector2(1f, 0.5f);
+            Vector2 textPivot = leftSide ? new Vector2(0f, 0.5f) : new Vector2(1f, 0.5f);
+
+            labelText = CreateText(
                 card.transform,
                 name + "Label",
                 label,
-                new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f),
-                new Vector2(64f, 14f),
-                new Vector2(126f, 22f),
+                textAnchor,
+                textAnchor,
+                textPivot,
+                new Vector2(direction * 72f, 11f),
+                new Vector2(186f, 20f),
                 13,
-                TextAnchor.MiddleLeft,
+                labelAnchor,
                 HudMutedText,
                 FontStyle.Bold);
 
@@ -467,13 +442,13 @@ namespace MOBA.Core.Infrastructure
                 card.transform,
                 name + "CountText",
                 "--",
-                new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f),
-                new Vector2(0f, 0.5f),
-                new Vector2(64f, -11f),
-                new Vector2(140f, 34f),
+                textAnchor,
+                textAnchor,
+                textPivot,
+                new Vector2(direction * 72f, -10f),
+                new Vector2(186f, 34f),
                 28,
-                TextAnchor.MiddleLeft,
+                labelAnchor,
                 Color.white,
                 FontStyle.Bold);
         }

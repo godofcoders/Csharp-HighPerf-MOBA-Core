@@ -39,6 +39,12 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Text _matchTimerLegacy;
         [SerializeField] private GameObject _blueLeaderHighlight;
         [SerializeField] private GameObject _redLeaderHighlight;
+        [SerializeField] private GameObject _blueScoreRoot;
+        [SerializeField] private GameObject _redScoreRoot;
+        [SerializeField] private GameObject _matchTimerRoot;
+        [SerializeField] private GameObject _statusRoot;
+        [SerializeField] private Text _blueScoreLabelLegacy;
+        [SerializeField] private Text _redScoreLabelLegacy;
 
         [Header("Knockout targets")]
         [SerializeField] private GameObject _knockoutWidgetsRoot;
@@ -91,6 +97,22 @@ namespace MOBA.Core.Infrastructure
             _tmpText = tmpText;
             _legacyText = legacyText;
             AutoBindTextTargets();
+        }
+
+        public void BindTopLayoutWidgets(
+            GameObject blueScoreRoot,
+            GameObject redScoreRoot,
+            GameObject matchTimerRoot,
+            GameObject statusRoot,
+            Text blueScoreLabelLegacy,
+            Text redScoreLabelLegacy)
+        {
+            _blueScoreRoot = blueScoreRoot;
+            _redScoreRoot = redScoreRoot;
+            _matchTimerRoot = matchTimerRoot;
+            _statusRoot = statusRoot;
+            _blueScoreLabelLegacy = blueScoreLabelLegacy;
+            _redScoreLabelLegacy = redScoreLabelLegacy;
         }
 
         public void BindKnockoutWidgets(
@@ -229,7 +251,25 @@ namespace MOBA.Core.Infrastructure
             KnockoutMode knockout = KnockoutMode.Instance;
             BrawlBallMode brawlBall = BrawlBallMode.Instance;
             GemGrabMode gg = GemGrabMode.Instance;
+            SoloShowdownMode soloShowdown = SoloShowdownMode.Instance;
             bool active = mm != null && mm.CurrentState == MatchState.Active;
+
+            if (soloShowdown != null && (mm == null || mm.CurrentState != MatchState.Ended))
+            {
+                ApplyTopModeLayout(showBlue: true, showRed: false, showTimer: false, showStatus: false);
+                SetText(_blueGemTmp, _blueGemLegacy, soloShowdown.AliveCount.ToString());
+                SetText(_redGemTmp, _redGemLegacy, string.Empty);
+                SetText(_matchTimerTmp, _matchTimerLegacy, string.Empty);
+                SetLabel(_blueScoreLabelLegacy, "BRAWLERS LEFT");
+                SetLabel(_redScoreLabelLegacy, string.Empty);
+                SetActive(_blueLeaderHighlight, false);
+                SetActive(_redLeaderHighlight, false);
+                return;
+            }
+
+            ApplyTopModeLayout(showBlue: true, showRed: true, showTimer: true, showStatus: true);
+            SetLabel(_blueScoreLabelLegacy, "BLUE");
+            SetLabel(_redScoreLabelLegacy, "RED");
 
             if (knockout != null && (mm == null || mm.CurrentState != MatchState.Ended))
             {
@@ -282,8 +322,16 @@ namespace MOBA.Core.Infrastructure
                 _matchTimerLegacy,
                 MatchHUDFormatter.FormatClock(gg.MatchTimeRemainingSeconds));
 
-            SetActive(_blueLeaderHighlight, gg.HasLeader && gg.LeadingTeam == TeamType.Blue);
-            SetActive(_redLeaderHighlight, gg.HasLeader && gg.LeadingTeam == TeamType.Red);
+                SetActive(_blueLeaderHighlight, gg.HasLeader && gg.LeadingTeam == TeamType.Blue);
+                SetActive(_redLeaderHighlight, gg.HasLeader && gg.LeadingTeam == TeamType.Red);
+        }
+
+        private void ApplyTopModeLayout(bool showBlue, bool showRed, bool showTimer, bool showStatus)
+        {
+            SetActive(_blueScoreRoot, showBlue);
+            SetActive(_redScoreRoot, showRed);
+            SetActive(_matchTimerRoot, showTimer);
+            SetActive(_statusRoot, showStatus);
         }
 
         private bool HasDedicatedGemScoreWidgets()
@@ -424,6 +472,12 @@ namespace MOBA.Core.Infrastructure
                 tmp.text = text;
             else if (legacy != null)
                 legacy.text = text;
+        }
+
+        private static void SetLabel(Text label, string text)
+        {
+            if (label != null)
+                label.text = text;
         }
 
         private static void SetActive(GameObject root, bool active)
