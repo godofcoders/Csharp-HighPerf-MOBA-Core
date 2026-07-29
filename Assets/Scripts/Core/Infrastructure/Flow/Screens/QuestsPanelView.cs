@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,19 +22,54 @@ namespace MOBA.Core.Infrastructure
         private Transform _cardContent;
         private TMP_Text _summaryText;
         private Button _closeButton;
+        private readonly List<SiblingState> _hiddenSiblings = new List<SiblingState>(16);
+        private bool _siblingsHidden;
+
+        private struct SiblingState
+        {
+            public GameObject Object;
+            public bool WasActive;
+
+            public SiblingState(GameObject target, bool wasActive)
+            {
+                Object = target;
+                WasActive = wasActive;
+            }
+        }
 
         public void Show()
         {
             EnsureBuilt();
-            Refresh();
+            HideSiblingContent();
+
             if (_root != null)
+            {
+                _root.SetAsLastSibling();
                 _root.gameObject.SetActive(true);
+            }
+
+            Refresh();
         }
 
         public void Hide()
         {
             if (_root != null)
                 _root.gameObject.SetActive(false);
+
+            RestoreSiblingContent();
+        }
+
+        private void OnDisable()
+        {
+            RestoreSiblingContent();
+        }
+
+        private void OnDestroy()
+        {
+            RestoreSiblingContent();
+
+            if (_closeButton != null)
+                _closeButton.onClick.RemoveListener(Hide);
         }
 
         private void EnsureBuilt()
@@ -45,6 +81,7 @@ namespace MOBA.Core.Infrastructure
             if (existing != null)
             {
                 _root = existing as RectTransform;
+                ConfigureOverlayCanvas(existing.gameObject);
                 _cardContent = existing.Find("QuestWindow/QuestListPanel/Viewport/Content");
                 _summaryText = FindText(existing, "QuestWindow/Summary/SummaryText");
                 _closeButton = FindButton(existing, "QuestWindow/Header/CloseButton");
@@ -59,6 +96,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             GameObject rootObject = CreatePanel(transform, RootName, BackgroundColor);
+            ConfigureOverlayCanvas(rootObject);
             _root = rootObject.GetComponent<RectTransform>();
             Stretch(_root);
             _root.SetAsLastSibling();
@@ -70,7 +108,7 @@ namespace MOBA.Core.Infrastructure
             BuildHeader(panel.transform);
             BuildSummary(panel.transform);
             BuildQuestList(panel.transform);
-            Hide();
+            _root.gameObject.SetActive(false);
         }
 
         private void BuildHeader(Transform parent)
@@ -86,7 +124,7 @@ namespace MOBA.Core.Infrastructure
             TMP_Text subtitle = CreateText(
                 header.transform,
                 "Subtitle",
-                "Track brawler mastery, combat goals, and mode objectives",
+                "Universal quest board for every brawler and mode",
                 17f,
                 TextAlignmentOptions.Left,
                 new Color(0.78f, 0.88f, 1f, 1f));
@@ -122,8 +160,11 @@ namespace MOBA.Core.Infrastructure
             GameObject viewport = CreatePanel(listPanel.transform, "Viewport", new Color(0f, 0f, 0f, 0f));
             RectTransform viewportRect = viewport.GetComponent<RectTransform>();
             Anchor(viewportRect, Vector2.zero, Vector2.one, new Vector2(14f, 14f), new Vector2(-14f, -14f));
-            Mask mask = viewport.AddComponent<Mask>();
-            mask.showMaskGraphic = false;
+            Image viewportImage = viewport.GetComponent<Image>();
+            if (viewportImage != null)
+                viewportImage.raycastTarget = false;
+
+            viewport.AddComponent<RectMask2D>();
             scrollRect.viewport = viewportRect;
 
             GameObject content = new GameObject("Content", typeof(RectTransform));
@@ -175,6 +216,48 @@ namespace MOBA.Core.Infrastructure
 
             for (int i = 0; i < snapshots.Length; i++)
                 CreateQuestCard(_cardContent, snapshots[i]);
+
+            Canvas.ForceUpdateCanvases();
+        }
+
+        private void HideSiblingContent()
+        {
+            if (_siblingsHidden || _root == null)
+                return;
+
+            Transform parent = _root.parent;
+            if (parent == null)
+                return;
+
+            _hiddenSiblings.Clear();
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                Transform child = parent.GetChild(i);
+                if (child == null || child == _root)
+                    continue;
+
+                GameObject sibling = child.gameObject;
+                _hiddenSiblings.Add(new SiblingState(sibling, sibling.activeSelf));
+                sibling.SetActive(false);
+            }
+
+            _siblingsHidden = true;
+        }
+
+        private void RestoreSiblingContent()
+        {
+            if (!_siblingsHidden)
+                return;
+
+            for (int i = 0; i < _hiddenSiblings.Count; i++)
+            {
+                SiblingState state = _hiddenSiblings[i];
+                if (state.Object != null)
+                    state.Object.SetActive(state.WasActive);
+            }
+
+            _hiddenSiblings.Clear();
+            _siblingsHidden = false;
         }
 
         private static int CompareSnapshots(QuestProgressSnapshot left, QuestProgressSnapshot right)
@@ -273,6 +356,27 @@ namespace MOBA.Core.Infrastructure
             text.fontStyle = FontStyles.Bold;
             Anchor(text.rectTransform, Vector2.zero, Vector2.one, new Vector2(6f, 2f), new Vector2(-6f, -2f));
             return button;
+        }
+
+        private static void ConfigureOverlayCanvas(GameObject rootObject)
+        {
+            Canvas canvas = rootObject.GetComponent<Canvas>();
+            if (canvas == null)
+                canvas = rootObject.AddComponent<Canvas>();
+
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = 5000;
+
+            if (rootObject.GetComponent<GraphicRaycaster>() == null)
+                rootObject.AddComponent<GraphicRaycaster>();
+
+            CanvasGroup group = rootObject.GetComponent<CanvasGroup>();
+            if (group == null)
+                group = rootObject.AddComponent<CanvasGroup>();
+
+            group.alpha = 1f;
+            group.interactable = true;
+            group.blocksRaycasts = true;
         }
 
         private static GameObject CreatePanel(Transform parent, string name, Color color)
