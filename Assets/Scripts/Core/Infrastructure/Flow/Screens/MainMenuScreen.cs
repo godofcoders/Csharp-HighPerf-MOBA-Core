@@ -11,6 +11,18 @@ namespace MOBA.Core.Infrastructure
     /// </summary>
     public class MainMenuScreen : MonoBehaviour
     {
+        private const string RuntimeHeaderName = "RuntimeHomeHeader";
+        private const string RuntimeActionRailName = "RuntimeHomeActionRail";
+        private const string RuntimeButtonAccentName = "RuntimeButtonAccent";
+
+        private static readonly Color MenuBackgroundColor = new Color(0.018f, 0.034f, 0.075f, 1f);
+        private static readonly Color HeaderColor = new Color(0.012f, 0.028f, 0.07f, 0.92f);
+        private static readonly Color ActionRailColor = new Color(0.012f, 0.024f, 0.058f, 0.88f);
+        private static readonly Color PlayColor = new Color(0.94f, 0.64f, 0.11f, 1f);
+        private static readonly Color MapColor = new Color(0.12f, 0.36f, 0.72f, 1f);
+        private static readonly Color QuestColor = new Color(0.38f, 0.22f, 0.78f, 1f);
+        private static readonly Color ButtonAccentColor = new Color(1f, 1f, 1f, 0.18f);
+
         [Header("Buttons")]
         [SerializeField] private Button _playButton;
         [SerializeField] private Button _mapSelectButton;
@@ -32,6 +44,7 @@ namespace MOBA.Core.Infrastructure
             // when Play goes straight to Match with the current selection.
 
             EnsureQuestSection();
+            EnsureHomePresentation();
 
             if (_playButton != null) _playButton.onClick.AddListener(OnPlay);
             if (_mapSelectButton != null) _mapSelectButton.onClick.AddListener(OnMapSelect);
@@ -84,6 +97,182 @@ namespace MOBA.Core.Infrastructure
                 _questsButton = CreateRuntimeQuestButton();
         }
 
+        private void EnsureHomePresentation()
+        {
+            StyleBackground();
+            EnsureHomeHeader();
+            EnsureActionRail();
+
+            StyleMenuButton(
+                _mapSelectButton,
+                "MAP",
+                MapColor,
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(-250f, 34f),
+                new Vector2(320f, 86f));
+
+            StyleMenuButton(
+                _questsButton,
+                "QUESTS",
+                QuestColor,
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(0.5f, 0f),
+                new Vector2(96f, 34f),
+                new Vector2(300f, 86f));
+
+            StyleMenuButton(
+                _playButton,
+                "PLAY",
+                PlayColor,
+                new Vector2(1f, 0f),
+                new Vector2(1f, 0f),
+                new Vector2(1f, 0f),
+                new Vector2(-34f, 34f),
+                new Vector2(300f, 86f));
+        }
+
+        private void StyleBackground()
+        {
+            Transform background = transform.Find("Background");
+            Image image = background != null ? background.GetComponent<Image>() : null;
+            if (image != null)
+                image.color = MenuBackgroundColor;
+        }
+
+        private void EnsureHomeHeader()
+        {
+            Transform existing = transform.Find(RuntimeHeaderName);
+            if (existing != null)
+            {
+                existing.SetAsLastSibling();
+                return;
+            }
+
+            GameObject header = CreatePanel(transform, RuntimeHeaderName, HeaderColor);
+            RectTransform rect = header.GetComponent<RectTransform>();
+            Anchor(rect, new Vector2(0.045f, 0.82f), new Vector2(0.43f, 0.95f), Vector2.zero, Vector2.zero);
+
+            TMP_Text title = CreateText(header.transform, "Title", "MOBA CORE", 34f, TextAlignmentOptions.Left, Color.white);
+            title.fontStyle = FontStyles.Bold;
+            Anchor(title.rectTransform, new Vector2(0.045f, 0.42f), new Vector2(0.96f, 0.88f), Vector2.zero, Vector2.zero);
+
+            TMP_Text subtitle = CreateText(
+                header.transform,
+                "Subtitle",
+                "Brawlers, maps, quests",
+                17f,
+                TextAlignmentOptions.Left,
+                new Color(0.78f, 0.88f, 1f, 1f));
+            Anchor(subtitle.rectTransform, new Vector2(0.048f, 0.14f), new Vector2(0.96f, 0.42f), Vector2.zero, Vector2.zero);
+
+            header.transform.SetAsLastSibling();
+        }
+
+        private void EnsureActionRail()
+        {
+            Transform existing = transform.Find(RuntimeActionRailName);
+            if (existing == null)
+            {
+                GameObject rail = CreatePanel(transform, RuntimeActionRailName, ActionRailColor);
+                RectTransform rect = rail.GetComponent<RectTransform>();
+                Anchor(rect, new Vector2(0f, 0f), new Vector2(1f, 0.145f), Vector2.zero, Vector2.zero);
+                existing = rail.transform;
+            }
+
+            existing.SetSiblingIndex(Mathf.Min(1, transform.childCount - 1));
+        }
+
+        private static void StyleMenuButton(
+            Button button,
+            string label,
+            Color color,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 pivot,
+            Vector2 anchoredPosition,
+            Vector2 size)
+        {
+            if (button == null)
+                return;
+
+            RectTransform rect = button.GetComponent<RectTransform>();
+            if (rect != null)
+            {
+                rect.anchorMin = anchorMin;
+                rect.anchorMax = anchorMax;
+                rect.pivot = pivot;
+                rect.anchoredPosition = anchoredPosition;
+                rect.sizeDelta = size;
+            }
+
+            Image image = button.targetGraphic as Image;
+            if (image == null)
+                image = button.GetComponent<Image>();
+
+            if (image != null)
+            {
+                image.sprite = RuntimeUISpriteUtility.GetSolidWhiteSprite();
+                image.color = color;
+                image.raycastTarget = true;
+                button.targetGraphic = image;
+            }
+
+            ColorBlock colors = button.colors;
+            colors.normalColor = Color.white;
+            colors.highlightedColor = new Color(1.08f, 1.08f, 1.08f, 1f);
+            colors.pressedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
+            colors.selectedColor = Color.white;
+            colors.disabledColor = new Color(0.45f, 0.48f, 0.55f, 0.62f);
+            colors.fadeDuration = 0.08f;
+            button.colors = colors;
+
+            Transform accent = button.transform.Find(RuntimeButtonAccentName);
+            if (accent == null)
+            {
+                GameObject accentObject = CreatePanel(button.transform, RuntimeButtonAccentName, ButtonAccentColor);
+                accent = accentObject.transform;
+            }
+
+            RectTransform accentRect = accent.GetComponent<RectTransform>();
+            Anchor(accentRect, new Vector2(0f, 0.78f), Vector2.one, Vector2.zero, Vector2.zero);
+            accent.SetAsFirstSibling();
+
+            TMP_Text tmp = button.GetComponentInChildren<TMP_Text>(true);
+            Text legacy = button.GetComponentInChildren<Text>(true);
+            if (tmp != null)
+            {
+                tmp.text = label;
+                tmp.fontSize = 24f;
+                tmp.fontStyle = FontStyles.Bold;
+                tmp.alignment = TextAlignmentOptions.Center;
+                tmp.color = Color.white;
+                tmp.raycastTarget = false;
+                Anchor(tmp.rectTransform, Vector2.zero, Vector2.one, new Vector2(10f, 3f), new Vector2(-10f, -3f));
+                EnsureShadow(tmp.gameObject);
+            }
+            else if (legacy != null)
+            {
+                legacy.text = label;
+                legacy.fontSize = 26;
+                legacy.fontStyle = FontStyle.Bold;
+                legacy.alignment = TextAnchor.MiddleCenter;
+                legacy.color = Color.white;
+                legacy.raycastTarget = false;
+                legacy.resizeTextForBestFit = true;
+                legacy.resizeTextMinSize = 16;
+                legacy.resizeTextMaxSize = 30;
+
+                RectTransform legacyRect = legacy.GetComponent<RectTransform>();
+                Anchor(legacyRect, Vector2.zero, Vector2.one, new Vector2(10f, 3f), new Vector2(-10f, -3f));
+                EnsureShadow(legacy.gameObject);
+            }
+
+            button.transform.SetAsLastSibling();
+        }
+
         private Button CreateRuntimeQuestButton()
         {
             Transform existing = transform.Find("RuntimeQuestsButton");
@@ -127,6 +316,60 @@ namespace MOBA.Core.Infrastructure
             label.raycastTarget = false;
 
             return button;
+        }
+
+        private static GameObject CreatePanel(Transform parent, string name, Color color)
+        {
+            GameObject panel = new GameObject(name, typeof(RectTransform));
+            panel.transform.SetParent(parent, false);
+
+            Image image = panel.AddComponent<Image>();
+            image.sprite = RuntimeUISpriteUtility.GetSolidWhiteSprite();
+            image.color = color;
+            image.raycastTarget = true;
+            return panel;
+        }
+
+        private static TMP_Text CreateText(
+            Transform parent,
+            string name,
+            string text,
+            float size,
+            TextAlignmentOptions alignment,
+            Color color)
+        {
+            GameObject textObject = new GameObject(name, typeof(RectTransform));
+            textObject.transform.SetParent(parent, false);
+
+            TMP_Text label = textObject.AddComponent<TextMeshProUGUI>();
+            label.text = text;
+            label.fontSize = size;
+            label.alignment = alignment;
+            label.color = color;
+            label.raycastTarget = false;
+            return label;
+        }
+
+        private static void EnsureShadow(GameObject target)
+        {
+            if (target == null || target.GetComponent<Shadow>() != null)
+                return;
+
+            Shadow shadow = target.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.45f);
+            shadow.effectDistance = new Vector2(2f, -2f);
+            shadow.useGraphicAlpha = true;
+        }
+
+        private static void Anchor(RectTransform rect, Vector2 min, Vector2 max, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            if (rect == null)
+                return;
+
+            rect.anchorMin = min;
+            rect.anchorMax = max;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
         }
     }
 }

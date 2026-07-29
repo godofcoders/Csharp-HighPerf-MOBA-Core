@@ -10,7 +10,7 @@ namespace MOBA.Core.Infrastructure
     {
         private const string RootName = "RuntimeQuestsPanel";
 
-        private static readonly Color BackgroundColor = new Color(0.015f, 0.025f, 0.06f, 0.93f);
+        private static readonly Color BackgroundColor = new Color(0.012f, 0.018f, 0.045f, 1f);
         private static readonly Color PanelColor = new Color(0.045f, 0.085f, 0.18f, 0.98f);
         private static readonly Color CardColor = new Color(0.075f, 0.12f, 0.24f, 0.96f);
         private static readonly Color CompletedCardColor = new Color(0.06f, 0.18f, 0.13f, 0.96f);
@@ -23,7 +23,9 @@ namespace MOBA.Core.Infrastructure
         private TMP_Text _summaryText;
         private Button _closeButton;
         private readonly List<SiblingState> _hiddenSiblings = new List<SiblingState>(16);
+        private readonly List<PreviewState> _hiddenPreviews = new List<PreviewState>(4);
         private bool _siblingsHidden;
+        private bool _previewsHidden;
 
         private struct SiblingState
         {
@@ -37,9 +39,22 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        private struct PreviewState
+        {
+            public MainMenuBrawlerPreview Preview;
+            public bool WasVisible;
+
+            public PreviewState(MainMenuBrawlerPreview preview, bool wasVisible)
+            {
+                Preview = preview;
+                WasVisible = wasVisible;
+            }
+        }
+
         public void Show()
         {
             EnsureBuilt();
+            SuspendMenuPreviews();
             HideSiblingContent();
 
             if (_root != null)
@@ -57,16 +72,19 @@ namespace MOBA.Core.Infrastructure
                 _root.gameObject.SetActive(false);
 
             RestoreSiblingContent();
+            RestoreMenuPreviews();
         }
 
         private void OnDisable()
         {
             RestoreSiblingContent();
+            RestoreMenuPreviews();
         }
 
         private void OnDestroy()
         {
             RestoreSiblingContent();
+            RestoreMenuPreviews();
 
             if (_closeButton != null)
                 _closeButton.onClick.RemoveListener(Hide);
@@ -242,6 +260,47 @@ namespace MOBA.Core.Infrastructure
             }
 
             _siblingsHidden = true;
+        }
+
+        private void SuspendMenuPreviews()
+        {
+            if (_previewsHidden)
+                return;
+
+            _hiddenPreviews.Clear();
+            Transform searchRoot = transform.root != null ? transform.root : transform;
+            MainMenuBrawlerPreview[] previews = searchRoot.GetComponentsInChildren<MainMenuBrawlerPreview>(true);
+
+            for (int i = 0; i < previews.Length; i++)
+            {
+                MainMenuBrawlerPreview preview = previews[i];
+                if (preview == null)
+                    continue;
+
+                bool wasVisible = preview.IsPreviewVisible;
+                _hiddenPreviews.Add(new PreviewState(preview, wasVisible));
+
+                if (wasVisible)
+                    preview.SetPreviewVisible(false);
+            }
+
+            _previewsHidden = true;
+        }
+
+        private void RestoreMenuPreviews()
+        {
+            if (!_previewsHidden)
+                return;
+
+            for (int i = 0; i < _hiddenPreviews.Count; i++)
+            {
+                PreviewState state = _hiddenPreviews[i];
+                if (state.Preview != null)
+                    state.Preview.SetPreviewVisible(state.WasVisible);
+            }
+
+            _hiddenPreviews.Clear();
+            _previewsHidden = false;
         }
 
         private void RestoreSiblingContent()

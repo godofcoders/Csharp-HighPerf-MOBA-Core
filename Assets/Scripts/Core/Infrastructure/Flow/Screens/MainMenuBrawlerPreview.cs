@@ -47,6 +47,17 @@ namespace MOBA.Core.Infrastructure
 
         private void Start() => Refresh();
 
+        public bool IsPreviewVisible => _modelAnchor == null || _modelAnchor.gameObject.activeSelf;
+
+        public void SetPreviewVisible(bool visible)
+        {
+            if (_modelAnchor != null)
+                _modelAnchor.gameObject.SetActive(visible);
+
+            if (visible && _spawned == null)
+                Refresh();
+        }
+
         private void Update()
         {
             if (_spawned == null)
