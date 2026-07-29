@@ -16,6 +16,7 @@ namespace MOBA.Core.Infrastructure
         private const float CanvasScale = 0.01f;
         private const float BarHeightWorld = 1.42f;
         private const int CanvasSortingOrder = 30;
+        private const int RuntimeAmmoSlotCount = 5;
 
         private static Font _runtimeFont;
         private float _nextScanTime;
@@ -103,7 +104,7 @@ namespace MOBA.Core.Infrastructure
             root.transform.localScale = Vector3.one * CanvasScale;
 
             RectTransform rootRect = root.GetComponent<RectTransform>();
-            rootRect.sizeDelta = new Vector2(168f, 52f);
+            rootRect.sizeDelta = new Vector2(176f, 66f);
 
             Canvas canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -143,8 +144,44 @@ namespace MOBA.Core.Infrastructure
             fillImage.type = Image.Type.Simple;
             fillImage.fillAmount = 1f;
 
+            Image ammoFrame = CreateImage(
+                root.transform,
+                "AmmoFrame",
+                new Vector2(0f, -25f),
+                new Vector2(156f, 14f),
+                new Color(0f, 0f, 0f, 0.62f));
+
+            Image[] ammoSlots = new Image[RuntimeAmmoSlotCount];
+            for (int i = 0; i < RuntimeAmmoSlotCount; i++)
+            {
+                Image ammoSlot = CreateImage(
+                    ammoFrame.transform,
+                    $"AmmoSlot{i + 1}",
+                    new Vector2(-58f + (i * 23f), 0f),
+                    new Vector2(18f, 6f),
+                    new Color(1f, 0.84f, 0.18f, 0.96f));
+
+                ammoSlot.type = Image.Type.Filled;
+                ammoSlot.fillMethod = Image.FillMethod.Horizontal;
+                ammoSlot.fillOrigin = (int)Image.OriginHorizontal.Left;
+                ammoSlot.fillAmount = 1f;
+                ammoSlots[i] = ammoSlot;
+            }
+
+            Text ammoCountText = CreateText(
+                ammoFrame.transform,
+                "AmmoCount",
+                "0/0",
+                new Vector2(57f, 0f),
+                new Vector2(40f, 12f),
+                10,
+                TextAnchor.MiddleRight,
+                new Color(1f, 0.88f, 0.34f, 0.98f),
+                FontStyle.Bold);
+
             BrawlerHealthBarView view = root.GetComponent<BrawlerHealthBarView>();
             view.Bind(brawler, fillImage, backgroundImage, frameImage, canvas);
+            view.BindAmmoWidgets(ammoSlots, ammoCountText);
             CreateCarrierBadge(root.transform, brawler, canvas);
             CreatePowerCubeBadge(root.transform, brawler, canvas);
 

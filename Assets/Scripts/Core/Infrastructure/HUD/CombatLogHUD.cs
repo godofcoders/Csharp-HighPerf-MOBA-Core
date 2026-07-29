@@ -27,13 +27,14 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Filtering")]
         [Min(1)]
-        [SerializeField] private int _maxLines = 5;
+        [SerializeField] private int _maxLines = 3;
 
         [Min(8)]
         [SerializeField] private int _maxEntriesToScan = 128;
 
-        [SerializeField] private bool _showAssists = true;
-        [SerializeField] private bool _showHeals = true;
+        [SerializeField] private bool _killFeedOnly = true;
+        [SerializeField] private bool _showAssists = false;
+        [SerializeField] private bool _showHeals = false;
         [SerializeField] private bool _showFatalDamage = false;
         [SerializeField] private bool _showStatusEvents = false;
         [SerializeField] private bool _includeTick = false;
@@ -42,7 +43,14 @@ namespace MOBA.Core.Infrastructure
 
         [Tooltip("0 keeps entries until the combat log service drops them. Non-zero hides older feed lines by simulation tick age.")]
         [Min(0)]
-        [SerializeField] private int _maxEntryAgeTicks = 0;
+        [SerializeField] private int _maxEntryAgeTicks = 180;
+
+        [Header("Graphic rows")]
+        [SerializeField] private GameObject[] _rowRoots;
+        [SerializeField] private Image[] _rowAccentImages;
+        [SerializeField] private Image[] _rowBadgeImages;
+        [SerializeField] private Text[] _rowIconTexts;
+        [SerializeField] private Text[] _rowLineTexts;
 
         [Header("Performance")]
         [Min(0.05f)]
@@ -58,6 +66,8 @@ namespace MOBA.Core.Infrastructure
             new Dictionary<int, TeamType>(16);
 
         private readonly StringBuilder _builder = new StringBuilder(256);
+        private readonly List<string> _renderedLines = new List<string>(5);
+        private readonly List<TeamType> _renderedSourceTeams = new List<TeamType>(5);
         private Func<int, string> _entityLabelResolver;
         private ICombatLogService _combatLogService;
         private ISimulationClock _clock;
@@ -80,6 +90,20 @@ namespace MOBA.Core.Infrastructure
             _feedRoot = feedRoot;
             AutoBindTextTargets();
             ConfigureTextTargets();
+        }
+
+        public void BindGraphicRows(
+            GameObject[] rowRoots,
+            Image[] rowAccentImages,
+            Image[] rowBadgeImages,
+            Text[] rowIconTexts,
+            Text[] rowLineTexts)
+        {
+            _rowRoots = rowRoots;
+            _rowAccentImages = rowAccentImages;
+            _rowBadgeImages = rowBadgeImages;
+            _rowIconTexts = rowIconTexts;
+            _rowLineTexts = rowLineTexts;
         }
 
         private void AutoBindTextTargets()
@@ -130,7 +154,8 @@ namespace MOBA.Core.Infrastructure
 
             string nextText = _builder.ToString();
             RenderText(nextText);
-            SetFeedVisible(nextText.Length > 0);
+            RenderGraphicRows();
+            SetFeedVisible(_renderedLines.Count > 0);
         }
 
         private bool ResolveServices()
@@ -152,6 +177,8 @@ namespace MOBA.Core.Infrastructure
         private void RebuildFeedText(IReadOnlyList<CombatLogEntry> entries, uint currentTick)
         {
             _builder.Length = 0;
+            _renderedLines.Clear();
+            _renderedSourceTeams.Clear();
 
             if (entries == null || entries.Count == 0)
                 return;
@@ -167,6 +194,9 @@ namespace MOBA.Core.Infrastructure
 
                 scanned++;
                 CombatLogEntry entry = entries[i];
+
+                if (_killFeedOnly && entry.EventType != CombatLogEventType.Kill)
+                    continue;
 
                 if (!CombatLogHUDFormatter.ShouldDisplay(
                         entry,
@@ -188,7 +218,7 @@ namespace MOBA.Core.Infrastructure
                 if (written > 0)
                     _builder.AppendLine();
 
-                _builder.Append(CombatLogHUDFormatter.FormatFeedLine(
+                string line = CombatLogHUDFormatter.FormatFeedLine(
                     entry,
                     _entityLabelResolver,
                     ResolveEntityTeam,
@@ -196,7 +226,11 @@ namespace MOBA.Core.Infrastructure
                     _localEntityId,
                     _includeTick,
                     _useLocalPerspectiveLabels,
-                    _useRichText));
+                    _useRichText);
+
+                _builder.Append(line);
+                _renderedLines.Add(line);
+                _renderedSourceTeams.Add(ResolveEntityTeam(entry.SourceEntityId));
 
                 written++;
             }
@@ -268,6 +302,9 @@ namespace MOBA.Core.Infrastructure
 
         private void RenderText(string text)
         {
+            if (HasGraphicRows())
+                text = string.Empty;
+
             if (string.Equals(_lastRenderedText, text, StringComparison.Ordinal))
                 return;
 
@@ -277,6 +314,54 @@ namespace MOBA.Core.Infrastructure
                 _tmpText.text = text;
             else if (_legacyText != null)
                 _legacyText.text = text;
+        }
+
+        private void RenderGraphicRows()
+        {
+            if (!HasGraphicRows())
+                return;
+
+            int rowCount = _rowRoots != null ? _rowRoots.Length : 0;
+            for (int i = 0; i < rowCount; i++)
+            {
+                GameObject row = _rowRoots[i];
+                bool show = i < _renderedLines.Count;
+
+                if (row != null && row.activeSelf != show)
+                    row.SetActive(show);
+
+                if (!show)
+                    continue;
+
+                Color rowColor = ResolveKillRowColor(_renderedSourceTeams[i]);
+
+                if (_rowAccentImages != null && i < _rowAccentImages.Length && _rowAccentImages[i] != null)
+                    _rowAccentImages[i].color = rowColor;
+
+                if (_rowBadgeImages != null && i < _rowBadgeImages.Length && _rowBadgeImages[i] != null)
+                    _rowBadgeImages[i].color = new Color(rowColor.r, rowColor.g, rowColor.b, 0.88f);
+
+                if (_rowIconTexts != null && i < _rowIconTexts.Length && _rowIconTexts[i] != null)
+                    _rowIconTexts[i].text = "KO";
+
+                if (_rowLineTexts != null && i < _rowLineTexts.Length && _rowLineTexts[i] != null)
+                    _rowLineTexts[i].text = _renderedLines[i];
+            }
+        }
+
+        private bool HasGraphicRows()
+        {
+            return _rowRoots != null && _rowRoots.Length > 0;
+        }
+
+        private Color ResolveKillRowColor(TeamType sourceTeam)
+        {
+            if (_localTeam == TeamType.Neutral || sourceTeam == TeamType.Neutral)
+                return new Color(1f, 0.80f, 0.22f, 0.96f);
+
+            return TeamRelationshipUtility.AreAllies(sourceTeam, _localTeam)
+                ? new Color(0.18f, 0.72f, 1f, 0.96f)
+                : new Color(1f, 0.22f, 0.30f, 0.96f);
         }
 
         private void SetFeedVisible(bool visible)

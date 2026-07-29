@@ -45,6 +45,12 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Optional dark frame/edge image for readability over map geometry.")]
         [SerializeField] private Image _frameImage;
 
+        [Tooltip("Optional mini ammo pips shown below the health bar.")]
+        [SerializeField] private Image[] _ammoSlots;
+
+        [Tooltip("Optional compact ammo count shown beside the mini ammo pips.")]
+        [SerializeField] private Text _ammoCountText;
+
         [Tooltip("Canvas to billboard. If null, GetComponentInChildren finds it on Awake.")]
         [SerializeField] private Canvas _canvas;
 
@@ -70,6 +76,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Color _regenerationTint = new Color(0.60f, 1.00f, 0.55f);
         [SerializeField] private Color _backgroundColor = new Color(0.05f, 0.05f, 0.06f, 0.88f);
         [SerializeField] private Color _frameColor = new Color(0f, 0f, 0f, 0.78f);
+        [SerializeField] private Color _ammoReadyColor = new Color(1.00f, 0.84f, 0.18f, 0.96f);
+        [SerializeField] private Color _ammoEmptyColor = new Color(0.12f, 0.13f, 0.16f, 0.64f);
         [Tooltip("Health ratio at or below which the low-health tint kicks in.")]
         [Range(0f, 1f)]
         [SerializeField] private float _lowHealthThreshold = 0.30f;
@@ -128,6 +136,14 @@ namespace MOBA.Core.Infrastructure
             _hasDisplayedHealthRatio = false;
             SubscribeToHealthEvents();
             RefreshImmediate();
+        }
+
+        public void BindAmmoWidgets(Image[] ammoSlots, Text ammoCountText)
+        {
+            _ammoSlots = ammoSlots;
+            _ammoCountText = ammoCountText;
+            if (_brawlerController != null && _brawlerController.State != null)
+                ApplyAmmoVisuals(_brawlerController.State);
         }
 
         private void AutoBindReferences()
@@ -221,6 +237,7 @@ namespace MOBA.Core.Infrastructure
 
             float displayedRatio = ResolveDisplayedRatio(ratio);
             ApplyHealthVisuals(state, ratio, displayedRatio);
+            ApplyAmmoVisuals(state);
 
             BillboardToCamera();
         }
@@ -288,6 +305,7 @@ namespace MOBA.Core.Infrastructure
             _hasDisplayedHealthRatio = true;
             SetVisible(true);
             ApplyHealthVisuals(state, ratio, ratio);
+            ApplyAmmoVisuals(state);
         }
 
         private bool IsHiddenFromLocalObserver(BrawlerState state)
@@ -322,6 +340,58 @@ namespace MOBA.Core.Infrastructure
                 _fillRect.SetSizeWithCurrentAnchors(
                     RectTransform.Axis.Horizontal,
                     Mathf.Max(0f, _fillFullWidth * clampedRatio));
+            }
+        }
+
+        private void ApplyAmmoVisuals(BrawlerState state)
+        {
+            ResourceStorage ammo = state != null ? state.Ammo : null;
+            if (ammo == null)
+            {
+                SetAmmoVisible(false);
+                return;
+            }
+
+            int available = ammo.AvailableBars;
+            int maxBars = Mathf.Max(1, ammo.MaxAmmo);
+            float current = ammo.CurrentAmmo;
+
+            if (_ammoCountText != null)
+            {
+                _ammoCountText.enabled = true;
+                _ammoCountText.text = $"{Mathf.Clamp(available, 0, maxBars)}/{maxBars}";
+            }
+
+            if (_ammoSlots == null || _ammoSlots.Length == 0)
+                return;
+
+            for (int i = 0; i < _ammoSlots.Length; i++)
+            {
+                Image slot = _ammoSlots[i];
+                if (slot == null)
+                    continue;
+
+                bool withinMax = i < maxBars;
+                slot.enabled = withinMax;
+                if (!withinMax)
+                    continue;
+
+                if (i < available)
+                {
+                    slot.color = _ammoReadyColor;
+                    slot.fillAmount = 1f;
+                }
+                else if (i == available)
+                {
+                    float partial = Mathf.Clamp01(current - available);
+                    slot.color = Color.Lerp(_ammoEmptyColor, _ammoReadyColor, partial);
+                    slot.fillAmount = partial;
+                }
+                else
+                {
+                    slot.color = _ammoEmptyColor;
+                    slot.fillAmount = 1f;
+                }
             }
         }
 
@@ -450,6 +520,22 @@ namespace MOBA.Core.Infrastructure
             if (_fillImage != null) _fillImage.enabled = visible;
             if (_backgroundImage != null) _backgroundImage.enabled = visible;
             if (_frameImage != null) _frameImage.enabled = visible;
+            SetAmmoVisible(visible);
+        }
+
+        private void SetAmmoVisible(bool visible)
+        {
+            if (_ammoSlots != null)
+            {
+                for (int i = 0; i < _ammoSlots.Length; i++)
+                {
+                    if (_ammoSlots[i] != null)
+                        _ammoSlots[i].enabled = visible;
+                }
+            }
+
+            if (_ammoCountText != null)
+                _ammoCountText.enabled = visible;
         }
 
         private void ApplyStaticColors()
