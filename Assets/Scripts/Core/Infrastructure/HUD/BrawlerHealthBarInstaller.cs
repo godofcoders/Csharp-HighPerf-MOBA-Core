@@ -104,7 +104,7 @@ namespace MOBA.Core.Infrastructure
             root.transform.localScale = Vector3.one * CanvasScale;
 
             RectTransform rootRect = root.GetComponent<RectTransform>();
-            rootRect.sizeDelta = new Vector2(176f, 66f);
+            rootRect.sizeDelta = new Vector2(176f, 82f);
 
             Canvas canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -157,8 +157,8 @@ namespace MOBA.Core.Infrastructure
                 Image ammoSlot = CreateImage(
                     ammoFrame.transform,
                     $"AmmoSlot{i + 1}",
-                    new Vector2(-58f + (i * 23f), 0f),
-                    new Vector2(18f, 6f),
+                    Vector2.zero,
+                    new Vector2(18f, 7f),
                     new Color(1f, 0.84f, 0.18f, 0.96f));
 
                 ammoSlot.type = Image.Type.Filled;
@@ -169,13 +169,13 @@ namespace MOBA.Core.Infrastructure
             }
 
             Text ammoCountText = CreateText(
-                ammoFrame.transform,
+                root.transform,
                 "AmmoCount",
                 "0/0",
-                new Vector2(57f, 0f),
-                new Vector2(40f, 12f),
-                10,
-                TextAnchor.MiddleRight,
+                new Vector2(0f, -39f),
+                new Vector2(70f, 12f),
+                9,
+                TextAnchor.MiddleCenter,
                 new Color(1f, 0.88f, 0.34f, 0.98f),
                 FontStyle.Bold);
 

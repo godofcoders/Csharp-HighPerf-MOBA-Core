@@ -365,6 +365,8 @@ namespace MOBA.Core.Infrastructure
             if (_ammoSlots == null || _ammoSlots.Length == 0)
                 return;
 
+            LayoutAmmoSlots(maxBars);
+
             for (int i = 0; i < _ammoSlots.Length; i++)
             {
                 Image slot = _ammoSlots[i];
@@ -392,6 +394,52 @@ namespace MOBA.Core.Infrastructure
                     slot.color = _ammoEmptyColor;
                     slot.fillAmount = 1f;
                 }
+            }
+        }
+
+        private void LayoutAmmoSlots(int maxBars)
+        {
+            if (_ammoSlots == null || _ammoSlots.Length == 0)
+                return;
+
+            RectTransform frameRect = null;
+            for (int i = 0; i < _ammoSlots.Length; i++)
+            {
+                if (_ammoSlots[i] != null && _ammoSlots[i].rectTransform != null)
+                {
+                    frameRect = _ammoSlots[i].rectTransform.parent as RectTransform;
+                    break;
+                }
+            }
+
+            if (frameRect == null)
+                return;
+
+            float frameWidth = frameRect.rect.width;
+            if (frameWidth <= 0f)
+                frameWidth = frameRect.sizeDelta.x;
+
+            frameWidth = Mathf.Max(1f, frameWidth);
+            int activeBars = Mathf.Clamp(maxBars, 1, _ammoSlots.Length);
+            float gap = activeBars > 1 ? 3f : 0f;
+            float slotWidth = Mathf.Max(1f, (frameWidth - gap * (activeBars - 1)) / activeBars);
+            float startX = -frameWidth * 0.5f + slotWidth * 0.5f;
+
+            for (int i = 0; i < _ammoSlots.Length; i++)
+            {
+                Image slot = _ammoSlots[i];
+                if (slot == null)
+                    continue;
+
+                RectTransform rect = slot.rectTransform;
+                if (rect == null)
+                    continue;
+
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = new Vector2(startX + i * (slotWidth + gap), 0f);
+                rect.sizeDelta = new Vector2(slotWidth, 7f);
             }
         }
 
