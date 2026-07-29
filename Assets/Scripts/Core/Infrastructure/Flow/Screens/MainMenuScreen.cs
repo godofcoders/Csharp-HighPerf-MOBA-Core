@@ -100,7 +100,7 @@ namespace MOBA.Core.Infrastructure
             StyleBackground();
             EnsureHomeHeader();
             EnsureTopStatus();
-            EnsureSideRail();
+            RemoveSideRailBackdrop();
             EnsureEventDock();
             EnsureActionRail();
 
@@ -146,8 +146,13 @@ namespace MOBA.Core.Infrastructure
             Image image = background.GetComponent<Image>();
             if (image != null)
             {
-                image.sprite = RuntimeUISpriteUtility.GetSolidWhiteSprite();
-                image.color = new Color(0.018f, 0.034f, 0.075f, 1f);
+                Sprite lobbyBackground = BrawlerGeneratedArtLibrary.LoadHomeLobbyBackground();
+                image.sprite = lobbyBackground != null
+                    ? lobbyBackground
+                    : RuntimeUISpriteUtility.GetSolidWhiteSprite();
+                image.color = lobbyBackground != null
+                    ? Color.white
+                    : new Color(0.018f, 0.034f, 0.075f, 1f);
                 image.preserveAspect = false;
                 image.raycastTarget = false;
             }
@@ -156,7 +161,10 @@ namespace MOBA.Core.Infrastructure
             Anchor(rect, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
             background.SetAsFirstSibling();
 
-            EnsureArenaBackdrop();
+            if (BrawlerGeneratedArtLibrary.LoadHomeLobbyBackground() != null)
+                RemoveArenaBackdrop();
+            else
+                EnsureArenaBackdrop();
 
             Transform vignette = transform.Find(RuntimeVignetteName);
             if (vignette == null)
@@ -225,6 +233,13 @@ namespace MOBA.Core.Infrastructure
             CreateArenaLight(arena.transform, new Vector2(0.82f, 0.61f), new Vector2(0.98f, 0.84f), new Color(0.090f, 0.280f, 0.420f, 0.12f));
 
             arena.transform.SetSiblingIndex(Mathf.Min(1, transform.childCount - 1));
+        }
+
+        private void RemoveArenaBackdrop()
+        {
+            Transform existing = transform.Find(RuntimeArenaBackdropName);
+            if (existing != null)
+                DestroyRuntimeObject(existing.gameObject);
         }
 
         private static void CreateArenaLayer(Transform parent, string name, Vector2 min, Vector2 max, Color color)
@@ -330,24 +345,11 @@ namespace MOBA.Core.Infrastructure
             EnsureShadow(valueText.gameObject);
         }
 
-        private void EnsureSideRail()
+        private void RemoveSideRailBackdrop()
         {
             Transform existing = transform.Find(RuntimeSideRailName);
             if (existing != null)
                 DestroyRuntimeObject(existing.gameObject);
-
-            GameObject rail = CreatePanel(transform, RuntimeSideRailName, new Color(0.005f, 0.016f, 0.040f, 0.62f));
-            existing = rail.transform;
-            Anchor(rail.GetComponent<RectTransform>(), new Vector2(0.018f, 0.390f), new Vector2(0.155f, 0.620f), Vector2.zero, Vector2.zero);
-
-            Image image = existing.GetComponent<Image>();
-            if (image != null)
-            {
-                image.color = new Color(0.005f, 0.016f, 0.040f, 0.62f);
-                image.raycastTarget = false;
-            }
-
-            existing.SetSiblingIndex(Mathf.Min(2, transform.childCount - 1));
         }
 
         private void EnsureEventDock()
@@ -455,6 +457,7 @@ namespace MOBA.Core.Infrastructure
             colors.disabledColor = new Color(0.45f, 0.48f, 0.55f, 0.62f);
             colors.fadeDuration = 0.08f;
             button.colors = colors;
+            EnsureShadow(button.gameObject);
 
             Transform accent = button.transform.Find(RuntimeButtonAccentName);
             if (accent == null)

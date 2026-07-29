@@ -11,10 +11,16 @@ namespace MOBA.Core.Infrastructure
     public static class BrawlerGeneratedArtLibrary
     {
         public const string LoadingHomeBackgroundPath = "UI/Generated/loading_home_bg";
+        public const string HomeLobbyBackgroundPath = "UI/Generated/home_lobby_bg";
 
         public static Sprite LoadLoadingHomeBackground()
         {
             return Resources.Load<Sprite>(LoadingHomeBackgroundPath);
+        }
+
+        public static Sprite LoadHomeLobbyBackground()
+        {
+            return Resources.Load<Sprite>(HomeLobbyBackgroundPath);
         }
 
         public static Sprite LoadPortrait(BrawlerDefinition definition, bool preferDefinitionSprite = true)
