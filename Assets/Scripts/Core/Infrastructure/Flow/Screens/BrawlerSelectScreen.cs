@@ -573,9 +573,10 @@ namespace MOBA.Core.Infrastructure
                 power.fontStyle = FontStyles.Bold;
                 Anchor(power.rectTransform, new Vector2(0.60f, 0.02f), new Vector2(0.95f, 0.24f), Vector2.zero, Vector2.zero);
 
-                if (def.Portrait != null)
+                Sprite generatedPortrait = BrawlerGeneratedArtLibrary.LoadPortrait(def);
+                if (generatedPortrait != null)
                 {
-                    portrait.sprite = def.Portrait;
+                    portrait.sprite = generatedPortrait;
                     portrait.enabled = true;
                     initial.enabled = false;
                 }
@@ -679,9 +680,10 @@ namespace MOBA.Core.Infrastructure
 
             if (_heroPortraitImage != null && _heroInitialText != null)
             {
-                if (_previewed.Portrait != null)
+                Sprite generatedPortrait = BrawlerGeneratedArtLibrary.LoadPortrait(_previewed);
+                if (generatedPortrait != null)
                 {
-                    _heroPortraitImage.sprite = _previewed.Portrait;
+                    _heroPortraitImage.sprite = generatedPortrait;
                     _heroPortraitImage.color = Color.white;
                     _heroPortraitImage.enabled = true;
                     _heroInitialText.enabled = false;

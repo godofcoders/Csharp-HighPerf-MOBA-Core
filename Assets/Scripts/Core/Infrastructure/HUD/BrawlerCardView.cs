@@ -79,9 +79,10 @@ namespace MOBA.Core.Infrastructure
             // Portrait — hide if no sprite assigned (avoids a default white quad).
             if (_portraitImage != null)
             {
-                if (def.Portrait != null)
+                Sprite portrait = BrawlerGeneratedArtLibrary.LoadPortrait(def);
+                if (portrait != null)
                 {
-                    _portraitImage.sprite = def.Portrait;
+                    _portraitImage.sprite = portrait;
                     _portraitImage.enabled = true;
                 }
                 else

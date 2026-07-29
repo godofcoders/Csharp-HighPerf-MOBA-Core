@@ -402,7 +402,7 @@ namespace MOBA.Core.Infrastructure
                 if (portrait != null)
                 {
                     Sprite sprite = hasBrawler && brawler.Definition != null
-                        ? brawler.Definition.Portrait
+                        ? BrawlerGeneratedArtLibrary.LoadPortrait(brawler.Definition)
                         : null;
 
                     portrait.sprite = sprite;
