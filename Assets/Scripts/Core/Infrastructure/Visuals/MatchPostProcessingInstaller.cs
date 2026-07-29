@@ -1,6 +1,7 @@
+using System;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 namespace MOBA.Core.Infrastructure
@@ -87,22 +88,39 @@ namespace MOBA.Core.Infrastructure
             _runtimeProfile.name = "Runtime Match Polish";
             _runtimeProfile.hideFlags = HideFlags.HideAndDontSave;
 
-            Bloom bloom = _runtimeProfile.Add<Bloom>(true);
-            bloom.threshold.Override(0.82f);
-            bloom.intensity.Override(0.18f);
-            bloom.scatter.Override(0.56f);
-            bloom.tint.Override(new Color(1f, 0.92f, 0.78f, 1f));
-            bloom.highQualityFiltering.Override(false);
-            bloom.downscale.Override(BloomDownscaleMode.Quarter);
-            bloom.maxIterations.Override(4);
-
-            MotionBlur motionBlur = _runtimeProfile.Add<MotionBlur>(true);
-            motionBlur.mode.Override(MotionBlurMode.CameraOnly);
-            motionBlur.quality.Override(MotionBlurQuality.Low);
-            motionBlur.intensity.Override(0.12f);
-            motionBlur.clamp.Override(0.035f);
+            AddBloom(_runtimeProfile);
+            AddMotionBlur(_runtimeProfile);
 
             volume.profile = _runtimeProfile;
+        }
+
+        private static void AddBloom(VolumeProfile profile)
+        {
+            Type bloomType = FindType("UnityEngine.Rendering.Universal.Bloom");
+            if (bloomType == null || !typeof(VolumeComponent).IsAssignableFrom(bloomType))
+                return;
+
+            VolumeComponent bloom = profile.Add(bloomType, true);
+            SetVolumeParameter(bloom, "threshold", 0.82f);
+            SetVolumeParameter(bloom, "intensity", 0.18f);
+            SetVolumeParameter(bloom, "scatter", 0.56f);
+            SetVolumeParameter(bloom, "tint", new Color(1f, 0.92f, 0.78f, 1f));
+            SetVolumeParameter(bloom, "highQualityFiltering", false);
+            SetEnumVolumeParameter(bloom, "downscale", "UnityEngine.Rendering.Universal.BloomDownscaleMode", "Quarter");
+            SetVolumeParameter(bloom, "maxIterations", 4);
+        }
+
+        private static void AddMotionBlur(VolumeProfile profile)
+        {
+            Type motionBlurType = FindType("UnityEngine.Rendering.Universal.MotionBlur");
+            if (motionBlurType == null || !typeof(VolumeComponent).IsAssignableFrom(motionBlurType))
+                return;
+
+            VolumeComponent motionBlur = profile.Add(motionBlurType, true);
+            SetEnumVolumeParameter(motionBlur, "mode", "UnityEngine.Rendering.Universal.MotionBlurMode", "CameraOnly");
+            SetEnumVolumeParameter(motionBlur, "quality", "UnityEngine.Rendering.Universal.MotionBlurQuality", "Low");
+            SetVolumeParameter(motionBlur, "intensity", 0.12f);
+            SetVolumeParameter(motionBlur, "clamp", 0.035f);
         }
 
         private static void EnableMainCameraPostProcessing()
@@ -114,10 +132,106 @@ namespace MOBA.Core.Infrastructure
             if (camera == null)
                 return;
 
-            UniversalAdditionalCameraData cameraData =
-                camera.GetComponent<UniversalAdditionalCameraData>();
+            Type cameraDataType = FindType("UnityEngine.Rendering.Universal.UniversalAdditionalCameraData");
+            if (cameraDataType == null || !typeof(Component).IsAssignableFrom(cameraDataType))
+                return;
+
+            Component cameraData = camera.GetComponent(cameraDataType);
+            if (cameraData == null)
+                cameraData = camera.gameObject.AddComponent(cameraDataType);
+
             if (cameraData != null)
-                cameraData.renderPostProcessing = true;
+                SetMember(cameraData, "renderPostProcessing", true);
+        }
+
+        private static void SetEnumVolumeParameter(
+            VolumeComponent component,
+            string fieldName,
+            string enumTypeName,
+            string enumValueName)
+        {
+            Type enumType = FindType(enumTypeName);
+            if (enumType == null || !enumType.IsEnum)
+                return;
+
+            object enumValue = Enum.Parse(enumType, enumValueName);
+            SetVolumeParameter(component, fieldName, enumValue);
+        }
+
+        private static void SetVolumeParameter(VolumeComponent component, string fieldName, object value)
+        {
+            if (component == null)
+                return;
+
+            FieldInfo field = component.GetType().GetField(
+                fieldName,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            object parameter = field != null ? field.GetValue(component) : null;
+            if (parameter == null)
+                return;
+
+            SetMember(parameter, "value", value);
+        }
+
+        private static void SetMember(object target, string memberName, object value)
+        {
+            if (target == null)
+                return;
+
+            Type targetType = target.GetType();
+
+            PropertyInfo property = targetType.GetProperty(
+                memberName,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (property != null && property.CanWrite)
+            {
+                property.SetValue(target, CoerceValue(value, property.PropertyType));
+                return;
+            }
+
+            FieldInfo field = targetType.GetField(
+                memberName,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (field != null)
+                field.SetValue(target, CoerceValue(value, field.FieldType));
+        }
+
+        private static object CoerceValue(object value, Type targetType)
+        {
+            if (value == null || targetType == null)
+                return value;
+
+            Type valueType = value.GetType();
+            if (targetType.IsAssignableFrom(valueType))
+                return value;
+
+            if (targetType.IsEnum && value is string enumName)
+                return Enum.Parse(targetType, enumName);
+
+            if (value is IConvertible && typeof(IConvertible).IsAssignableFrom(targetType))
+                return Convert.ChangeType(value, targetType);
+
+            return value;
+        }
+
+        private static Type FindType(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName))
+                return null;
+
+            Type direct = Type.GetType(fullName);
+            if (direct != null)
+                return direct;
+
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            for (int i = 0; i < assemblies.Length; i++)
+            {
+                Type type = assemblies[i].GetType(fullName);
+                if (type != null)
+                    return type;
+            }
+
+            return null;
         }
     }
 }
