@@ -292,10 +292,10 @@ namespace MOBA.Core.Infrastructure
                 if (_offerBackgrounds[i] != null)
                 {
                     _offerBackgrounds[i].color = new Color(
-                        Mathf.Lerp(0.04f, accent.r, 0.16f),
-                        Mathf.Lerp(0.05f, accent.g, 0.16f),
-                        Mathf.Lerp(0.06f, accent.b, 0.16f),
-                        0.94f);
+                        Mathf.Lerp(0.120f, accent.r, 0.26f),
+                        Mathf.Lerp(0.180f, accent.g, 0.26f),
+                        Mathf.Lerp(0.245f, accent.b, 0.26f),
+                        0.985f);
                 }
 
                 if (_offerNames[i] != null)
@@ -425,7 +425,10 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 Vector2.zero,
                 Vector2.zero,
-                new Color(0f, 0f, 0f, 0.34f));
+                new Color(0f, 0f, 0f, 0f));
+            Image rootImage = _root.GetComponent<Image>();
+            if (rootImage != null)
+                rootImage.raycastTarget = false;
 
             GameObject panel = CreatePanel(
                 _root.transform,
@@ -434,8 +437,11 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0f, -42f),
-                new Vector2(840f, 330f),
-                new Color(0.035f, 0.04f, 0.052f, 0.94f));
+                new Vector2(940f, 330f),
+                new Color(0f, 0f, 0f, 0f));
+            Image panelImage = panel.GetComponent<Image>();
+            if (panelImage != null)
+                panelImage.raycastTarget = false;
 
             CreateText(
                 panel.transform,
@@ -465,8 +471,8 @@ namespace MOBA.Core.Infrastructure
                 new Color(1f, 0.88f, 0.32f, 1f),
                 FontStyle.Bold);
 
-            CreateOffer(panel.transform, 0, new Vector2(-206f, -34f), "1");
-            CreateOffer(panel.transform, 1, new Vector2(206f, -34f), "2");
+            CreateOffer(panel.transform, 0, new Vector2(-250f, -34f), "1");
+            CreateOffer(panel.transform, 1, new Vector2(250f, -34f), "2");
 
             int uiLayer = LayerMask.NameToLayer("UI");
             if (uiLayer >= 0)
@@ -485,8 +491,8 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0.5f, 0.5f),
                 new Vector2(0.5f, 0.5f),
                 anchoredPosition,
-                new Vector2(360f, 196f),
-                new Color(0.08f, 0.09f, 0.11f, 0.95f));
+                new Vector2(430f, 214f),
+                new Color(0.120f, 0.180f, 0.245f, 0.98f));
 
             Image background = card.GetComponent<Image>();
             Button button = card.AddComponent<Button>();
@@ -523,7 +529,7 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 1f),
                 new Vector2(26f, -24f),
                 new Vector2(42f, 42f),
-                new Color(1f, 1f, 1f, 0.16f));
+                new Color(0.020f, 0.030f, 0.060f, 0.46f));
 
             CreateText(
                 badge.transform,
@@ -547,7 +553,7 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 1f),
                 new Vector2(0f, 1f),
                 new Vector2(82f, -18f),
-                new Vector2(250f, 48f),
+                new Vector2(306f, 48f),
                 25,
                 TextAnchor.MiddleLeft,
                 Color.white,
@@ -561,10 +567,10 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(0f, 1f),
                 new Vector2(0f, 1f),
                 new Vector2(28f, -86f),
-                new Vector2(304f, 86f),
+                new Vector2(372f, 92f),
                 18,
                 TextAnchor.UpperLeft,
-                new Color(1f, 1f, 1f, 0.82f),
+                new Color(1f, 1f, 1f, 0.90f),
                 FontStyle.Normal);
 
             _offerSelectionFrames[index] = CreateSelectionFrame(card.transform);
