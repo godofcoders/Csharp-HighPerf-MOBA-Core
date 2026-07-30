@@ -52,7 +52,7 @@ namespace MOBA.Core.Infrastructure
             Transform bodyRoot = new GameObject("BodyRig").transform;
             bodyRoot.SetParent(root.transform, false);
             bodyRoot.localPosition = Vector3.zero;
-            bodyRoot.localRotation = Quaternion.identity;
+            bodyRoot.localRotation = Quaternion.Euler(0f, 180f, 0f);
             bodyRoot.localScale = Vector3.one;
             bodyRoot.gameObject.layer = layer;
 
@@ -160,11 +160,13 @@ namespace MOBA.Core.Infrastructure
 
         private static Material CreateMaterial(string name, Color color, float smoothness)
         {
-            Shader shader = Shader.Find("Standard");
-            if (shader == null)
-                shader = Shader.Find("Diffuse");
-            if (shader == null)
-                shader = Shader.Find("Sprites/Default");
+            Shader shader =
+                Shader.Find("Universal Render Pipeline/Unlit") ??
+                Shader.Find("Unlit/Color") ??
+                Shader.Find("Universal Render Pipeline/Lit") ??
+                Shader.Find("Sprites/Default") ??
+                Shader.Find("Standard") ??
+                Shader.Find("Diffuse");
 
             Material material = new Material(shader)
             {
@@ -173,8 +175,14 @@ namespace MOBA.Core.Infrastructure
                 hideFlags = HideFlags.DontSave
             };
 
+            if (material.HasProperty("_BaseColor"))
+                material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color"))
+                material.SetColor("_Color", color);
             if (material.HasProperty("_Glossiness"))
                 material.SetFloat("_Glossiness", Mathf.Clamp01(smoothness));
+            if (material.HasProperty("_Smoothness"))
+                material.SetFloat("_Smoothness", Mathf.Clamp01(smoothness));
 
             return material;
         }
