@@ -110,6 +110,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _worldCollisionRadius = 0.45f;
         [SerializeField] private float _worldCollisionProbeHeight = 0.5f;
         [SerializeField] private float _worldCollisionSkin = 0.03f;
+        [Tooltip("Maximum overlap recovery applied in one simulation tick. Prevents visible snap/teleport when a brawler briefly clips a wall or spawn-side blocker.")]
+        [SerializeField, Min(0.02f)] private float _maxWorldOverlapCorrectionPerTick = 0.12f;
         [SerializeField] private bool _slideAlongWorldCollision = true;
 
         private bool _hasResolvedWorldCollisionMask;
@@ -847,7 +849,13 @@ namespace MOBA.Core.Infrastructure
 
             float radius = Mathf.Max(0.01f, _worldCollisionRadius);
             float skin = Mathf.Max(0f, _worldCollisionSkin);
-            Vector3 startCorrection = ResolveWorldOverlap(transform.position, radius, skin, collisionMask);
+            Vector3 startCorrection = ClampWorldOverlapCorrection(
+                ResolveWorldOverlap(transform.position, radius, skin, collisionMask),
+                out bool overlapCorrectionWasCapped);
+
+            if (overlapCorrectionWasCapped)
+                return startCorrection;
+
             Vector3 startPosition = transform.position + startCorrection;
 
             Vector3 resolvedMovement = SweepWorldMovement(
@@ -860,6 +868,21 @@ namespace MOBA.Core.Infrastructure
                 collisionMask);
 
             return startCorrection + resolvedMovement;
+        }
+
+        private Vector3 ClampWorldOverlapCorrection(Vector3 correction, out bool wasCapped)
+        {
+            wasCapped = false;
+            correction.y = 0f;
+
+            float maxCorrection = Mathf.Max(0.02f, _maxWorldOverlapCorrectionPerTick);
+            float maxCorrectionSq = maxCorrection * maxCorrection;
+
+            if (correction.sqrMagnitude <= maxCorrectionSq)
+                return correction;
+
+            wasCapped = true;
+            return correction.normalized * maxCorrection;
         }
 
         private Vector3 SweepWorldMovement(
