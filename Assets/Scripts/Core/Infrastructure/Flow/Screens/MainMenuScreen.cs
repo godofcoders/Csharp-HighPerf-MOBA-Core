@@ -6,8 +6,8 @@ using MOBA.Core.Definitions;
 namespace MOBA.Core.Infrastructure
 {
     /// <summary>
-    /// Main menu landing screen. Play advances to brawler selection, while
-    /// Map opens the combined mode/map picker.
+    /// Main menu landing screen. Play starts the match with the current
+    /// brawler/map selection, while Map opens the combined mode/map picker.
     /// </summary>
     public class MainMenuScreen : MonoBehaviour
     {
@@ -61,18 +61,15 @@ namespace MOBA.Core.Infrastructure
 
         private void OnPlay()
         {
-            SceneFlow.Instance?.LoadScene(SceneId.BrawlerSelect);
+            EnsureSelectedBrawlerLoaded(false);
+            EnsureSelectedMapLoaded();
+            SceneFlow.Instance?.LoadScene(SceneId.Match);
         }
 
         private void OnMapSelect()
         {
             EnsureSelectedBrawlerLoaded(false);
-            if (SceneSelection.SelectedMap == null)
-                SceneSelection.SelectedMap = _defaultMap;
-            SceneSelection.SelectedMode = SceneSelection.SelectedMap != null &&
-                                          SceneSelection.SelectedMap.SupportsMode(SceneSelection.SelectedMode)
-                ? SceneSelection.SelectedMode
-                : _defaultMode;
+            EnsureSelectedMapLoaded();
             SceneSelection.MapSelectReturnScene = SceneId.MainMenu;
 
             SceneFlow.Instance?.LoadScene(SceneId.MapSelect);
@@ -97,6 +94,34 @@ namespace MOBA.Core.Infrastructure
 
             if (allowDefaultFallback || !PlayerBrawlerProgress.HasSavedSelectedBrawler())
                 AssignSelectedBrawler(_defaultBrawler);
+        }
+
+        private void EnsureSelectedMapLoaded()
+        {
+            if (SceneSelection.SelectedMap == null)
+                SceneSelection.SelectedMap = _defaultMap;
+
+            if (SceneSelection.SelectedMap == null)
+            {
+                SceneSelection.SelectedMode = _defaultMode;
+                return;
+            }
+
+            if (SceneSelection.SelectedMap.SupportsMode(SceneSelection.SelectedMode))
+                return;
+
+            SceneSelection.SelectedMode = ResolvePlayableMode(SceneSelection.SelectedMap);
+        }
+
+        private GameModeId ResolvePlayableMode(MapDefinition map)
+        {
+            if (map != null && map.SupportsMode(_defaultMode))
+                return _defaultMode;
+
+            if (map != null && map.SupportedModes != null && map.SupportedModes.Length > 0)
+                return map.SupportedModes[0];
+
+            return _defaultMode;
         }
 
         private static void AssignSelectedBrawler(BrawlerDefinition brawler)

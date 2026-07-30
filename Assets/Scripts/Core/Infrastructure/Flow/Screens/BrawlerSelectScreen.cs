@@ -227,16 +227,9 @@ namespace MOBA.Core.Infrastructure
             SceneSelection.SelectedBuildPowerLevel = ResolvePreviewPowerLevel(def);
             ReleaseRuntimeSelectedBuild();
             SceneSelection.SelectedBuild = CreateSelectedBuild(def, true);
+            SceneSelection.PickerReturnsToMainMenu = false;
 
-            if (SceneSelection.PickerReturnsToMainMenu)
-            {
-                SceneSelection.PickerReturnsToMainMenu = false;
-                SceneFlow.Instance?.LoadScene(SceneId.MainMenu);
-                return;
-            }
-
-            SceneSelection.MapSelectReturnScene = SceneId.BrawlerSelect;
-            SceneFlow.Instance?.LoadScene(SceneId.MapSelect);
+            SceneFlow.Instance?.LoadScene(SceneId.MainMenu);
         }
 
         private BrawlerDefinition FindAvailableBrawler(BrawlerDefinition candidate)
@@ -921,7 +914,7 @@ namespace MOBA.Core.Infrastructure
                 _confirmButton = CreateButton(
                     panel.transform,
                     "RuntimeConfirmButton",
-                    "PLAY",
+                    "SELECT",
                     MenuUITheme.PrimaryButton,
                     null);
             }

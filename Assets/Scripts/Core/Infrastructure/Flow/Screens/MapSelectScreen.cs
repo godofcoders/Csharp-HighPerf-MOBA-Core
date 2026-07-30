@@ -9,7 +9,7 @@ namespace MOBA.Core.Infrastructure
 {
     /// <summary>
     /// Combined mode/map picker. Mode tabs filter MapCatalog, then the
-    /// chosen map commits SceneSelection.SelectedMap before loading Match.
+    /// chosen map commits SceneSelection.SelectedMap before returning Home.
     /// </summary>
     public class MapSelectScreen : MonoBehaviour
     {
@@ -611,7 +611,9 @@ namespace MOBA.Core.Infrastructure
                 else if (!PlayerBrawlerProgress.HasSavedSelectedBrawler())
                     AssignSelectedBrawler(_defaultBrawler);
             }
-            SceneFlow.Instance?.LoadScene(SceneId.Match);
+
+            SceneSelection.MapSelectReturnScene = SceneId.MainMenu;
+            SceneFlow.Instance?.LoadScene(SceneId.MainMenu);
         }
 
         private static void AssignSelectedBrawler(BrawlerDefinition brawler)
