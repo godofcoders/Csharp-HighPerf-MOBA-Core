@@ -39,6 +39,12 @@ namespace MOBA.Core.Infrastructure
                 return instance != null;
             }
 
+            if (IsBrawler(definition, "ElPrimo") || IsBrawler(definition, "El Primo"))
+            {
+                instance = BuildElPrimo(parent, owner);
+                return instance != null;
+            }
+
             return false;
         }
 
@@ -227,6 +233,70 @@ namespace MOBA.Core.Infrastructure
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
             animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, bottle);
+
+            return root;
+        }
+
+        private static GameObject BuildElPrimo(Transform parent, BrawlerController owner)
+        {
+            int layer = parent.gameObject.layer;
+            Material skin = CreateMaterial("Procedural El Primo Skin", new Color(0.93f, 0.50f, 0.27f, 1f), 0.24f);
+            Material mask = CreateMaterial("Procedural El Primo Mask", new Color(0.05f, 0.33f, 0.95f, 1f), 0.34f);
+            Material maskTrim = CreateMaterial("Procedural El Primo Mask Trim", new Color(0.95f, 0.10f, 0.12f, 1f), 0.32f);
+            Material pants = CreateMaterial("Procedural El Primo Pants", new Color(0.04f, 0.20f, 0.84f, 1f), 0.30f);
+            Material belt = CreateMaterial("Procedural El Primo Belt", new Color(0.88f, 0.11f, 0.09f, 1f), 0.28f);
+            Material gold = CreateMaterial("Procedural El Primo Gold", new Color(1.00f, 0.72f, 0.14f, 1f), 0.36f);
+            Material white = CreateMaterial("Procedural El Primo White", new Color(0.96f, 0.96f, 0.90f, 1f), 0.22f);
+
+            GameObject root = new GameObject("Procedural_ElPrimo_Model");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+            root.layer = layer;
+
+            Transform bodyRoot = new GameObject("BodyRig").transform;
+            bodyRoot.SetParent(root.transform, false);
+            bodyRoot.localPosition = Vector3.zero;
+            bodyRoot.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            bodyRoot.localScale = new Vector3(1.16f, 1.13f, 1.16f);
+            bodyRoot.gameObject.layer = layer;
+
+            CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.57f, 0f), new Vector3(0.62f, 0.20f, 0.38f), Quaternion.identity, pants, layer);
+            Transform torso = CreatePart(bodyRoot, "Muscle_Torso", PrimitiveType.Capsule, new Vector3(0f, 0.98f, 0f), new Vector3(0.74f, 0.72f, 0.48f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Chest_Highlight", PrimitiveType.Cube, new Vector3(0f, 1.05f, -0.285f), new Vector3(0.36f, 0.38f, 0.035f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Belt", PrimitiveType.Cube, new Vector3(0f, 0.67f, -0.22f), new Vector3(0.66f, 0.09f, 0.06f), Quaternion.identity, belt, layer);
+            CreatePart(bodyRoot, "Belt_Emblem", PrimitiveType.Cylinder, new Vector3(0f, 0.68f, -0.28f), new Vector3(0.13f, 0.035f, 0.13f), Quaternion.Euler(90f, 0f, 0f), gold, layer);
+            CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.36f, 0f), new Vector3(0.18f, 0.11f, 0.18f), Quaternion.identity, skin, layer);
+            Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.60f, -0.01f), new Vector3(0.43f, 0.45f, 0.39f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Mask_Front", PrimitiveType.Sphere, new Vector3(0f, 1.61f, -0.08f), new Vector3(0.44f, 0.46f, 0.35f), Quaternion.identity, mask, layer);
+            CreatePart(bodyRoot, "Mask_Left_Trim", PrimitiveType.Cube, new Vector3(-0.18f, 1.62f, -0.31f), new Vector3(0.08f, 0.31f, 0.035f), Quaternion.Euler(0f, 0f, -18f), maskTrim, layer);
+            CreatePart(bodyRoot, "Mask_Right_Trim", PrimitiveType.Cube, new Vector3(0.18f, 1.62f, -0.31f), new Vector3(0.08f, 0.31f, 0.035f), Quaternion.Euler(0f, 0f, 18f), maskTrim, layer);
+            CreatePart(bodyRoot, "Left_Eye", PrimitiveType.Sphere, new Vector3(-0.10f, 1.63f, -0.34f), new Vector3(0.10f, 0.07f, 0.035f), Quaternion.identity, white, layer);
+            CreatePart(bodyRoot, "Right_Eye", PrimitiveType.Sphere, new Vector3(0.10f, 1.63f, -0.34f), new Vector3(0.10f, 0.07f, 0.035f), Quaternion.identity, white, layer);
+            CreatePart(bodyRoot, "Smile", PrimitiveType.Cube, new Vector3(0f, 1.48f, -0.36f), new Vector3(0.24f, 0.055f, 0.025f), Quaternion.identity, white, layer);
+            CreatePart(bodyRoot, "Mask_Crest", PrimitiveType.Sphere, new Vector3(0f, 1.86f, -0.11f), new Vector3(0.11f, 0.12f, 0.05f), Quaternion.identity, gold, layer);
+
+            Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.20f, 0.30f, 0.02f), new Vector3(0.23f, 0.48f, 0.22f), Quaternion.identity, pants, layer);
+            Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.20f, 0.30f, 0.02f), new Vector3(0.23f, 0.48f, 0.22f), Quaternion.identity, pants, layer);
+            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.20f, 0.07f, -0.07f), new Vector3(0.27f, 0.12f, 0.35f), Quaternion.identity, pants, layer);
+            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.20f, 0.07f, -0.07f), new Vector3(0.27f, 0.12f, 0.35f), Quaternion.identity, pants, layer);
+
+            Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Muscle_Arm", PrimitiveType.Capsule, new Vector3(-0.55f, 0.98f, -0.10f), new Vector3(0.24f, 0.58f, 0.24f), Quaternion.Euler(44f, 0f, -30f), skin, layer);
+            Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Muscle_Arm", PrimitiveType.Capsule, new Vector3(0.55f, 0.98f, -0.10f), new Vector3(0.24f, 0.58f, 0.24f), Quaternion.Euler(44f, 0f, 30f), skin, layer);
+            CreatePart(bodyRoot, "Left_Wristband", PrimitiveType.Cylinder, new Vector3(-0.63f, 0.75f, -0.22f), new Vector3(0.13f, 0.055f, 0.13f), Quaternion.Euler(70f, 0f, -30f), mask, layer);
+            CreatePart(bodyRoot, "Right_Wristband", PrimitiveType.Cylinder, new Vector3(0.63f, 0.75f, -0.22f), new Vector3(0.13f, 0.055f, 0.13f), Quaternion.Euler(70f, 0f, 30f), mask, layer);
+            CreatePart(bodyRoot, "Left_Shoulder", PrimitiveType.Sphere, new Vector3(-0.40f, 1.17f, -0.01f), new Vector3(0.27f, 0.27f, 0.24f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Right_Shoulder", PrimitiveType.Sphere, new Vector3(0.40f, 1.17f, -0.01f), new Vector3(0.27f, 0.27f, 0.24f), Quaternion.identity, skin, layer);
+
+            Transform rightFist = CreateAnchor(rightArm, "Right_Fist_Point", new Vector3(0f, -0.03f, -0.34f), layer);
+            Transform leftFist = CreateAnchor(leftArm, "Left_Fist_Point", new Vector3(0f, -0.03f, -0.34f), layer);
+            Transform castPoint = CreateAnchor(bodyRoot, "CastPoint", new Vector3(0f, 1.10f, -0.58f), layer);
+            BrawlerPresentationAnchors anchors = root.AddComponent<BrawlerPresentationAnchors>();
+            anchors.Configure(rightFist, leftFist, castPoint);
+
+            BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, null);
 
             return root;
         }
