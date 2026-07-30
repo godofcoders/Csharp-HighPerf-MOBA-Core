@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Barley_puddle_hazard
   m_EditorClassIdentifier: 
   HazardName: Area Hazard
-  Radius: 2.25
+  Radius: 2.45
   DurationSeconds: 2.5
   TickIntervalSeconds: 0.5
   DamagePerTick: 108
