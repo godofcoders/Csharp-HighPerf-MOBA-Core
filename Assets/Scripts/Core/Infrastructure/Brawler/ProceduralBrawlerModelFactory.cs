@@ -39,6 +39,12 @@ namespace MOBA.Core.Infrastructure
                 return instance != null;
             }
 
+            if (IsBrawler(definition, "Bo"))
+            {
+                instance = BuildBo(parent, owner);
+                return instance != null;
+            }
+
             if (IsBrawler(definition, "ElPrimo") || IsBrawler(definition, "El Primo"))
             {
                 instance = BuildElPrimo(parent, owner);
@@ -251,6 +257,65 @@ namespace MOBA.Core.Infrastructure
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
             animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, bottle);
+
+            return root;
+        }
+
+        private static GameObject BuildBo(Transform parent, BrawlerController owner)
+        {
+            int layer = parent.gameObject.layer;
+            Material skin = CreateMaterial("Procedural Bo Skin", new Color(0.66f, 0.36f, 0.20f, 1f), 0.18f);
+            Material hair = CreateMaterial("Procedural Bo Hair", new Color(0.08f, 0.06f, 0.04f, 1f), 0.24f);
+            Material vest = CreateMaterial("Procedural Bo Vest", new Color(0.86f, 0.66f, 0.28f, 1f), 0.26f);
+            Material teal = CreateMaterial("Procedural Bo Teal Trim", new Color(0.03f, 0.58f, 0.56f, 1f), 0.32f);
+            Material pants = CreateMaterial("Procedural Bo Pants", new Color(0.24f, 0.12f, 0.08f, 1f), 0.24f);
+            Material boot = CreateMaterial("Procedural Bo Boots", new Color(0.08f, 0.04f, 0.025f, 1f), 0.18f);
+            Material bowWood = CreateMaterial("Procedural Bo Bow Wood", new Color(0.54f, 0.27f, 0.10f, 1f), 0.30f);
+            Material bowString = CreateMaterial("Procedural Bo Bow String", new Color(0.88f, 0.88f, 0.78f, 1f), 0.24f);
+            Material feather = CreateMaterial("Procedural Bo Feather", new Color(0.94f, 0.20f, 0.12f, 1f), 0.28f);
+
+            GameObject root = new GameObject("Procedural_Bo_Model");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+            root.layer = layer;
+
+            Transform bodyRoot = new GameObject("BodyRig").transform;
+            bodyRoot.SetParent(root.transform, false);
+            bodyRoot.localPosition = Vector3.zero;
+            bodyRoot.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            bodyRoot.localScale = new Vector3(0.98f, 1.00f, 0.98f);
+            bodyRoot.gameObject.layer = layer;
+
+            CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.56f, 0f), new Vector3(0.54f, 0.18f, 0.34f), Quaternion.identity, pants, layer);
+            Transform torso = CreatePart(bodyRoot, "Torso_Vest", PrimitiveType.Capsule, new Vector3(0f, 0.94f, 0f), new Vector3(0.58f, 0.62f, 0.40f), Quaternion.identity, vest, layer);
+            CreatePart(bodyRoot, "Chest_Trim", PrimitiveType.Cube, new Vector3(0f, 0.98f, -0.235f), new Vector3(0.34f, 0.36f, 0.04f), Quaternion.identity, teal, layer);
+            CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.30f, 0f), new Vector3(0.15f, 0.09f, 0.15f), Quaternion.identity, skin, layer);
+            Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.52f, -0.01f), new Vector3(0.39f, 0.43f, 0.36f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Hair", PrimitiveType.Sphere, new Vector3(0f, 1.68f, 0.00f), new Vector3(0.40f, 0.20f, 0.35f), Quaternion.identity, hair, layer);
+            CreatePart(bodyRoot, "Headband", PrimitiveType.Cube, new Vector3(0f, 1.62f, -0.29f), new Vector3(0.40f, 0.06f, 0.035f), Quaternion.identity, teal, layer);
+            CreatePart(bodyRoot, "Feather", PrimitiveType.Cube, new Vector3(0.18f, 1.84f, -0.07f), new Vector3(0.08f, 0.30f, 0.035f), Quaternion.Euler(0f, 0f, -22f), feather, layer);
+
+            Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.17f, 0.30f, 0.02f), new Vector3(0.18f, 0.46f, 0.18f), Quaternion.identity, pants, layer);
+            Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.17f, 0.30f, 0.02f), new Vector3(0.18f, 0.46f, 0.18f), Quaternion.identity, pants, layer);
+            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
+            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
+
+            Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.45f, 0.92f, -0.12f), new Vector3(0.15f, 0.47f, 0.15f), Quaternion.Euler(62f, 0f, -20f), skin, layer);
+            Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.47f, 0.92f, -0.12f), new Vector3(0.15f, 0.47f, 0.15f), Quaternion.Euler(62f, 0f, 20f), skin, layer);
+            CreatePart(bodyRoot, "Left_Shoulder", PrimitiveType.Sphere, new Vector3(-0.32f, 1.09f, -0.01f), new Vector3(0.20f, 0.20f, 0.18f), Quaternion.identity, teal, layer);
+            CreatePart(bodyRoot, "Right_Shoulder", PrimitiveType.Sphere, new Vector3(0.32f, 1.09f, -0.01f), new Vector3(0.20f, 0.20f, 0.18f), Quaternion.identity, teal, layer);
+
+            Transform bow = CreateBow(bodyRoot, "Bow", new Vector3(0.44f, 0.80f, -0.50f), 6f, bowWood, bowString, layer, out Transform bowMuzzle);
+            AttachKeepingWorld(bow, rightArm);
+
+            Transform castPoint = CreateAnchor(bodyRoot, "CastPoint", new Vector3(0f, 1.04f, -0.55f), layer);
+            BrawlerPresentationAnchors anchors = root.AddComponent<BrawlerPresentationAnchors>();
+            anchors.Configure(bowMuzzle, bowMuzzle, castPoint);
+
+            BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, bow);
 
             return root;
         }
@@ -619,6 +684,31 @@ namespace MOBA.Core.Infrastructure
             CreatePart(root, "Umbrella_Canopy", PrimitiveType.Sphere, new Vector3(0f, 0.02f, -0.45f), new Vector3(0.26f, 0.12f, 0.26f), Quaternion.identity, canopyMaterial, layer);
             CreatePart(root, "Umbrella_Tip", PrimitiveType.Cylinder, new Vector3(0f, 0.02f, -0.69f), new Vector3(0.045f, 0.075f, 0.045f), Quaternion.Euler(90f, 0f, 0f), tipMaterial, layer);
             muzzle = CreateAnchor(root, "Umbrella_Muzzle", new Vector3(0f, 0.02f, -0.80f), layer);
+            return root;
+        }
+
+        private static Transform CreateBow(
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            float yawDegrees,
+            Material woodMaterial,
+            Material stringMaterial,
+            int layer,
+            out Transform muzzle)
+        {
+            Transform root = new GameObject(name).transform;
+            root.SetParent(parent, false);
+            root.localPosition = localPosition;
+            root.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            root.localScale = Vector3.one;
+            root.gameObject.layer = layer;
+
+            CreatePart(root, "Grip", PrimitiveType.Cube, new Vector3(0f, 0f, -0.06f), new Vector3(0.09f, 0.26f, 0.07f), Quaternion.identity, woodMaterial, layer);
+            CreatePart(root, "Upper_Limb", PrimitiveType.Cylinder, new Vector3(0f, 0.30f, -0.07f), new Vector3(0.035f, 0.30f, 0.035f), Quaternion.Euler(0f, 0f, -16f), woodMaterial, layer);
+            CreatePart(root, "Lower_Limb", PrimitiveType.Cylinder, new Vector3(0f, -0.30f, -0.07f), new Vector3(0.035f, 0.30f, 0.035f), Quaternion.Euler(0f, 0f, 16f), woodMaterial, layer);
+            CreatePart(root, "String", PrimitiveType.Cube, new Vector3(0f, 0f, -0.21f), new Vector3(0.018f, 0.70f, 0.018f), Quaternion.identity, stringMaterial, layer);
+            muzzle = CreateAnchor(root, "Bow_Muzzle", new Vector3(0f, 0f, -0.42f), layer);
             return root;
         }
 
