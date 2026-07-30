@@ -100,11 +100,11 @@ namespace MOBA.Core.Infrastructure
 
             CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.56f, 0f), new Vector3(0.52f, 0.18f, 0.34f), Quaternion.identity, pants, layer);
             Transform torso = CreatePart(bodyRoot, "Torso_Jacket", PrimitiveType.Capsule, new Vector3(0f, 0.93f, 0f), new Vector3(0.62f, 0.62f, 0.42f), Quaternion.identity, jacket, layer);
-            CreatePart(bodyRoot, "Chest_Shirt", PrimitiveType.Cube, new Vector3(0f, 0.95f, -0.235f), new Vector3(0.32f, 0.46f, 0.045f), Quaternion.identity, shirt, layer);
-            CreatePart(bodyRoot, "Cowboy_Belt", PrimitiveType.Cube, new Vector3(0f, 0.66f, -0.205f), new Vector3(0.58f, 0.055f, 0.055f), Quaternion.identity, boots, layer);
-            CreatePart(bodyRoot, "Belt_Buckle", PrimitiveType.Cube, new Vector3(0f, 0.66f, -0.255f), new Vector3(0.13f, 0.09f, 0.035f), Quaternion.identity, barrel, layer);
-            CreatePart(bodyRoot, "Left_Holster", PrimitiveType.Cube, new Vector3(-0.32f, 0.55f, -0.10f), new Vector3(0.10f, 0.25f, 0.10f), Quaternion.Euler(0f, 0f, -10f), boots, layer);
-            CreatePart(bodyRoot, "Right_Holster", PrimitiveType.Cube, new Vector3(0.32f, 0.55f, -0.10f), new Vector3(0.10f, 0.25f, 0.10f), Quaternion.Euler(0f, 0f, 10f), boots, layer);
+            CreatePart(bodyRoot, "Chest_Shirt", PrimitiveType.Cube, new Vector3(0f, 0.95f, -0.30f), new Vector3(0.32f, 0.46f, 0.045f), Quaternion.identity, shirt, layer);
+            CreatePart(bodyRoot, "Cowboy_Belt", PrimitiveType.Cube, new Vector3(0f, 0.66f, -0.30f), new Vector3(0.58f, 0.055f, 0.055f), Quaternion.identity, boots, layer);
+            CreatePart(bodyRoot, "Belt_Buckle", PrimitiveType.Cube, new Vector3(0f, 0.66f, -0.35f), new Vector3(0.13f, 0.09f, 0.035f), Quaternion.identity, barrel, layer);
+            CreatePart(bodyRoot, "Left_Holster", PrimitiveType.Cube, new Vector3(-0.32f, 0.55f, -0.22f), new Vector3(0.10f, 0.25f, 0.10f), Quaternion.Euler(0f, 0f, -10f), boots, layer);
+            CreatePart(bodyRoot, "Right_Holster", PrimitiveType.Cube, new Vector3(0.32f, 0.55f, -0.22f), new Vector3(0.10f, 0.25f, 0.10f), Quaternion.Euler(0f, 0f, 10f), boots, layer);
             CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.29f, 0f), new Vector3(0.16f, 0.10f, 0.16f), Quaternion.identity, skin, layer);
             Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.52f, -0.01f), new Vector3(0.42f, 0.46f, 0.38f), Quaternion.identity, skin, layer);
             CreatePart(bodyRoot, "Hair_Cap", PrimitiveType.Sphere, new Vector3(0f, 1.67f, -0.03f), new Vector3(0.45f, 0.21f, 0.40f), Quaternion.identity, hair, layer);
@@ -164,9 +164,9 @@ namespace MOBA.Core.Infrastructure
 
             CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.56f, 0f), new Vector3(0.48f, 0.18f, 0.32f), Quaternion.identity, overalls, layer);
             Transform torso = CreatePart(bodyRoot, "Torso_Overalls", PrimitiveType.Capsule, new Vector3(0f, 0.91f, 0f), new Vector3(0.56f, 0.58f, 0.40f), Quaternion.identity, overalls, layer);
-            CreatePart(bodyRoot, "Chest_Shirt", PrimitiveType.Cube, new Vector3(0f, 0.96f, -0.23f), new Vector3(0.34f, 0.34f, 0.045f), Quaternion.identity, shirt, layer);
-            CreatePart(bodyRoot, "Overall_Strap_L", PrimitiveType.Cube, new Vector3(-0.12f, 1.02f, -0.265f), new Vector3(0.065f, 0.36f, 0.04f), Quaternion.Euler(0f, 0f, -8f), overalls, layer);
-            CreatePart(bodyRoot, "Overall_Strap_R", PrimitiveType.Cube, new Vector3(0.12f, 1.02f, -0.265f), new Vector3(0.065f, 0.36f, 0.04f), Quaternion.Euler(0f, 0f, 8f), overalls, layer);
+            CreatePart(bodyRoot, "Chest_Shirt", PrimitiveType.Cube, new Vector3(0f, 0.96f, -0.30f), new Vector3(0.34f, 0.34f, 0.045f), Quaternion.identity, shirt, layer);
+            CreatePart(bodyRoot, "Overall_Strap_L", PrimitiveType.Cube, new Vector3(-0.12f, 1.02f, -0.34f), new Vector3(0.065f, 0.36f, 0.04f), Quaternion.Euler(0f, 0f, -8f), overalls, layer);
+            CreatePart(bodyRoot, "Overall_Strap_R", PrimitiveType.Cube, new Vector3(0.12f, 1.02f, -0.34f), new Vector3(0.065f, 0.36f, 0.04f), Quaternion.Euler(0f, 0f, 8f), overalls, layer);
             CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.27f, 0f), new Vector3(0.15f, 0.09f, 0.15f), Quaternion.identity, skin, layer);
             Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.49f, -0.01f), new Vector3(0.40f, 0.43f, 0.37f), Quaternion.identity, skin, layer);
             CreatePart(bodyRoot, "Hair_Back", PrimitiveType.Sphere, new Vector3(0f, 1.47f, 0.16f), new Vector3(0.44f, 0.34f, 0.28f), Quaternion.identity, hair, layer);
@@ -230,8 +230,8 @@ namespace MOBA.Core.Infrastructure
 
             CreatePart(bodyRoot, "Base", PrimitiveType.Cylinder, new Vector3(0f, 0.50f, 0f), new Vector3(0.34f, 0.12f, 0.34f), Quaternion.identity, darkMetal, layer);
             Transform torso = CreatePart(bodyRoot, "Torso_Canister", PrimitiveType.Capsule, new Vector3(0f, 0.90f, 0f), new Vector3(0.52f, 0.58f, 0.42f), Quaternion.identity, metal, layer);
-            CreatePart(bodyRoot, "Vest_Front", PrimitiveType.Cube, new Vector3(0f, 0.92f, -0.25f), new Vector3(0.36f, 0.45f, 0.045f), Quaternion.identity, vest, layer);
-            CreatePart(bodyRoot, "Bow_Tie", PrimitiveType.Cube, new Vector3(0f, 1.20f, -0.28f), new Vector3(0.22f, 0.08f, 0.05f), Quaternion.Euler(0f, 0f, 45f), trim, layer);
+            CreatePart(bodyRoot, "Vest_Front", PrimitiveType.Cube, new Vector3(0f, 0.92f, -0.31f), new Vector3(0.36f, 0.45f, 0.045f), Quaternion.identity, vest, layer);
+            CreatePart(bodyRoot, "Bow_Tie", PrimitiveType.Cube, new Vector3(0f, 1.20f, -0.34f), new Vector3(0.22f, 0.08f, 0.05f), Quaternion.Euler(0f, 0f, 45f), trim, layer);
             CreatePart(bodyRoot, "Neck_Post", PrimitiveType.Cylinder, new Vector3(0f, 1.26f, 0f), new Vector3(0.13f, 0.10f, 0.13f), Quaternion.identity, darkMetal, layer);
             Transform head = CreatePart(bodyRoot, "Robot_Head", PrimitiveType.Cylinder, new Vector3(0f, 1.50f, -0.01f), new Vector3(0.36f, 0.25f, 0.36f), Quaternion.identity, metal, layer);
             CreatePart(bodyRoot, "Eye_Lens", PrimitiveType.Sphere, new Vector3(0f, 1.51f, -0.30f), new Vector3(0.14f, 0.14f, 0.045f), Quaternion.identity, eye, layer);
@@ -290,7 +290,7 @@ namespace MOBA.Core.Infrastructure
 
             CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.56f, 0f), new Vector3(0.54f, 0.18f, 0.34f), Quaternion.identity, pants, layer);
             Transform torso = CreatePart(bodyRoot, "Torso_Vest", PrimitiveType.Capsule, new Vector3(0f, 0.94f, 0f), new Vector3(0.58f, 0.62f, 0.40f), Quaternion.identity, vest, layer);
-            CreatePart(bodyRoot, "Chest_Trim", PrimitiveType.Cube, new Vector3(0f, 0.98f, -0.235f), new Vector3(0.34f, 0.36f, 0.04f), Quaternion.identity, teal, layer);
+            CreatePart(bodyRoot, "Chest_Trim", PrimitiveType.Cube, new Vector3(0f, 0.98f, -0.30f), new Vector3(0.34f, 0.36f, 0.04f), Quaternion.identity, teal, layer);
             CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.30f, 0f), new Vector3(0.15f, 0.09f, 0.15f), Quaternion.identity, skin, layer);
             Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.52f, -0.01f), new Vector3(0.39f, 0.43f, 0.36f), Quaternion.identity, skin, layer);
             CreatePart(bodyRoot, "Hair", PrimitiveType.Sphere, new Vector3(0f, 1.68f, 0.00f), new Vector3(0.40f, 0.20f, 0.35f), Quaternion.identity, hair, layer);
@@ -347,9 +347,9 @@ namespace MOBA.Core.Infrastructure
 
             CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.57f, 0f), new Vector3(0.62f, 0.20f, 0.38f), Quaternion.identity, pants, layer);
             Transform torso = CreatePart(bodyRoot, "Muscle_Torso", PrimitiveType.Capsule, new Vector3(0f, 0.98f, 0f), new Vector3(0.74f, 0.72f, 0.48f), Quaternion.identity, skin, layer);
-            CreatePart(bodyRoot, "Chest_Highlight", PrimitiveType.Cube, new Vector3(0f, 1.05f, -0.285f), new Vector3(0.36f, 0.38f, 0.035f), Quaternion.identity, skin, layer);
-            CreatePart(bodyRoot, "Belt", PrimitiveType.Cube, new Vector3(0f, 0.67f, -0.22f), new Vector3(0.66f, 0.09f, 0.06f), Quaternion.identity, belt, layer);
-            CreatePart(bodyRoot, "Belt_Emblem", PrimitiveType.Cylinder, new Vector3(0f, 0.68f, -0.28f), new Vector3(0.13f, 0.035f, 0.13f), Quaternion.Euler(90f, 0f, 0f), gold, layer);
+            CreatePart(bodyRoot, "Chest_Highlight", PrimitiveType.Cube, new Vector3(0f, 1.05f, -0.34f), new Vector3(0.36f, 0.38f, 0.035f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Belt", PrimitiveType.Cube, new Vector3(0f, 0.67f, -0.33f), new Vector3(0.66f, 0.09f, 0.06f), Quaternion.identity, belt, layer);
+            CreatePart(bodyRoot, "Belt_Emblem", PrimitiveType.Cylinder, new Vector3(0f, 0.68f, -0.40f), new Vector3(0.13f, 0.035f, 0.13f), Quaternion.Euler(90f, 0f, 0f), gold, layer);
             CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.36f, 0f), new Vector3(0.18f, 0.11f, 0.18f), Quaternion.identity, skin, layer);
             Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.60f, -0.01f), new Vector3(0.43f, 0.45f, 0.39f), Quaternion.identity, skin, layer);
             CreatePart(bodyRoot, "Mask_Front", PrimitiveType.Sphere, new Vector3(0f, 1.61f, -0.08f), new Vector3(0.44f, 0.46f, 0.35f), Quaternion.identity, mask, layer);
@@ -413,8 +413,8 @@ namespace MOBA.Core.Infrastructure
 
             CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.56f, 0f), new Vector3(0.50f, 0.18f, 0.34f), Quaternion.identity, pants, layer);
             Transform torso = CreatePart(bodyRoot, "Torso_Coat", PrimitiveType.Capsule, new Vector3(0f, 0.94f, 0f), new Vector3(0.58f, 0.68f, 0.42f), Quaternion.identity, coat, layer);
-            CreatePart(bodyRoot, "Vest_Front", PrimitiveType.Cube, new Vector3(0f, 0.98f, -0.245f), new Vector3(0.30f, 0.46f, 0.045f), Quaternion.identity, vest, layer);
-            CreatePart(bodyRoot, "Tie", PrimitiveType.Cube, new Vector3(0f, 1.10f, -0.29f), new Vector3(0.10f, 0.20f, 0.035f), Quaternion.identity, glass, layer);
+            CreatePart(bodyRoot, "Vest_Front", PrimitiveType.Cube, new Vector3(0f, 0.98f, -0.31f), new Vector3(0.30f, 0.46f, 0.045f), Quaternion.identity, vest, layer);
+            CreatePart(bodyRoot, "Tie", PrimitiveType.Cube, new Vector3(0f, 1.10f, -0.36f), new Vector3(0.10f, 0.20f, 0.035f), Quaternion.identity, glass, layer);
             CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.32f, 0f), new Vector3(0.15f, 0.09f, 0.15f), Quaternion.identity, skin, layer);
             Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.55f, -0.01f), new Vector3(0.40f, 0.45f, 0.36f), Quaternion.identity, skin, layer);
             CreatePart(bodyRoot, "Hair_Swept_Back", PrimitiveType.Sphere, new Vector3(0f, 1.72f, 0.02f), new Vector3(0.42f, 0.20f, 0.34f), Quaternion.identity, hair, layer);
@@ -475,7 +475,7 @@ namespace MOBA.Core.Infrastructure
             CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.56f, 0f), new Vector3(0.46f, 0.16f, 0.32f), Quaternion.identity, dress, layer);
             Transform torso = CreatePart(bodyRoot, "Dress_Torso", PrimitiveType.Capsule, new Vector3(0f, 0.92f, 0f), new Vector3(0.50f, 0.58f, 0.36f), Quaternion.identity, dress, layer);
             CreatePart(bodyRoot, "Dress_Skirt", PrimitiveType.Cylinder, new Vector3(0f, 0.62f, 0f), new Vector3(0.36f, 0.13f, 0.36f), Quaternion.identity, sash, layer);
-            CreatePart(bodyRoot, "Sash_Front", PrimitiveType.Cube, new Vector3(0f, 0.96f, -0.22f), new Vector3(0.30f, 0.38f, 0.04f), Quaternion.Euler(0f, 0f, -8f), sash, layer);
+            CreatePart(bodyRoot, "Sash_Front", PrimitiveType.Cube, new Vector3(0f, 0.96f, -0.30f), new Vector3(0.30f, 0.38f, 0.04f), Quaternion.Euler(0f, 0f, -8f), sash, layer);
             CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.29f, 0f), new Vector3(0.14f, 0.08f, 0.14f), Quaternion.identity, skin, layer);
             Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.51f, -0.01f), new Vector3(0.38f, 0.43f, 0.35f), Quaternion.identity, skin, layer);
             CreatePart(bodyRoot, "Hair_Crown", PrimitiveType.Sphere, new Vector3(0f, 1.67f, -0.02f), new Vector3(0.41f, 0.20f, 0.37f), Quaternion.identity, hair, layer);
@@ -532,8 +532,8 @@ namespace MOBA.Core.Infrastructure
 
             CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.55f, 0f), new Vector3(0.48f, 0.16f, 0.32f), Quaternion.identity, shorts, layer);
             Transform torso = CreatePart(bodyRoot, "Hoodie_Torso", PrimitiveType.Capsule, new Vector3(0f, 0.90f, 0f), new Vector3(0.54f, 0.56f, 0.38f), Quaternion.identity, hoodie, layer);
-            CreatePart(bodyRoot, "Zipper", PrimitiveType.Cube, new Vector3(0f, 0.98f, -0.235f), new Vector3(0.055f, 0.42f, 0.035f), Quaternion.identity, zipper, layer);
-            CreatePart(bodyRoot, "Hoodie_Pocket", PrimitiveType.Cube, new Vector3(0f, 0.78f, -0.245f), new Vector3(0.28f, 0.12f, 0.035f), Quaternion.identity, hoodAccent, layer);
+            CreatePart(bodyRoot, "Zipper", PrimitiveType.Cube, new Vector3(0f, 0.98f, -0.30f), new Vector3(0.055f, 0.42f, 0.035f), Quaternion.identity, zipper, layer);
+            CreatePart(bodyRoot, "Hoodie_Pocket", PrimitiveType.Cube, new Vector3(0f, 0.78f, -0.31f), new Vector3(0.28f, 0.12f, 0.035f), Quaternion.identity, hoodAccent, layer);
             CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.25f, 0f), new Vector3(0.13f, 0.08f, 0.13f), Quaternion.identity, skin, layer);
             Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.46f, -0.01f), new Vector3(0.36f, 0.39f, 0.34f), Quaternion.identity, skin, layer);
             CreatePart(bodyRoot, "Hood", PrimitiveType.Sphere, new Vector3(0f, 1.50f, 0.01f), new Vector3(0.46f, 0.44f, 0.40f), Quaternion.identity, hoodie, layer);
@@ -707,8 +707,9 @@ namespace MOBA.Core.Infrastructure
             CreatePart(root, "Grip", PrimitiveType.Cube, new Vector3(0f, 0f, -0.06f), new Vector3(0.09f, 0.26f, 0.07f), Quaternion.identity, woodMaterial, layer);
             CreatePart(root, "Upper_Limb", PrimitiveType.Cylinder, new Vector3(0f, 0.30f, -0.07f), new Vector3(0.035f, 0.30f, 0.035f), Quaternion.Euler(0f, 0f, -16f), woodMaterial, layer);
             CreatePart(root, "Lower_Limb", PrimitiveType.Cylinder, new Vector3(0f, -0.30f, -0.07f), new Vector3(0.035f, 0.30f, 0.035f), Quaternion.Euler(0f, 0f, 16f), woodMaterial, layer);
-            CreatePart(root, "String", PrimitiveType.Cube, new Vector3(0f, 0f, -0.21f), new Vector3(0.018f, 0.70f, 0.018f), Quaternion.identity, stringMaterial, layer);
-            muzzle = CreateAnchor(root, "Bow_Muzzle", new Vector3(0f, 0f, -0.42f), layer);
+            CreatePart(root, "String", PrimitiveType.Cube, new Vector3(0f, 0f, 0.12f), new Vector3(0.018f, 0.70f, 0.018f), Quaternion.identity, stringMaterial, layer);
+            CreatePart(root, "Arrow_Rest", PrimitiveType.Cylinder, new Vector3(0f, 0f, -0.25f), new Vector3(0.018f, 0.34f, 0.018f), Quaternion.Euler(90f, 0f, 0f), stringMaterial, layer);
+            muzzle = CreateAnchor(root, "Bow_Muzzle", new Vector3(0f, 0f, -0.50f), layer);
             return root;
         }
 

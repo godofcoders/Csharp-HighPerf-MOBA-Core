@@ -24,6 +24,10 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Initial Y rotation of the spawned model.")]
         [SerializeField] private float _initialYaw = 180f;
 
+        [Header("Preview Placement")]
+        [Tooltip("Local Y level where the bottom of the preview model should sit. The home stage was authored around the old cube center, so procedural characters need a small downward grounding offset.")]
+        [SerializeField] private float _previewGroundLocalY = -0.45f;
+
         [Tooltip("Drag distance threshold (in screen pixels) above which a pointer-up is treated as a drag instead of a click.")]
         [Min(0f)]
         [SerializeField] private float _clickDragThreshold = 8f;
@@ -121,6 +125,9 @@ namespace MOBA.Core.Infrastructure
 
             _baseLocalPosition = Vector3.zero;
             _currentYaw = _initialYaw;
+            ApplyPreviewPose();
+
+            _baseLocalPosition = CalculateGroundedLocalPosition(_spawned);
             ApplyPreviewPose();
 
             StripGameplayComponents(_spawned);
@@ -231,6 +238,31 @@ namespace MOBA.Core.Infrastructure
 
             _spawned.transform.localPosition = _baseLocalPosition;
             _spawned.transform.localRotation = Quaternion.Euler(0f, _currentYaw, 0f);
+        }
+
+        private Vector3 CalculateGroundedLocalPosition(GameObject root)
+        {
+            if (root == null || _modelAnchor == null)
+                return Vector3.zero;
+
+            Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+            float minWorldY = float.PositiveInfinity;
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer r = renderers[i];
+                if (r == null)
+                    continue;
+
+                minWorldY = Mathf.Min(minWorldY, r.bounds.min.y);
+            }
+
+            if (float.IsInfinity(minWorldY))
+                return Vector3.zero;
+
+            float scaleY = Mathf.Max(0.0001f, Mathf.Abs(_modelAnchor.lossyScale.y));
+            float minLocalY = (minWorldY - _modelAnchor.position.y) / scaleY;
+            return Vector3.up * (_previewGroundLocalY - minLocalY);
         }
     }
 }
