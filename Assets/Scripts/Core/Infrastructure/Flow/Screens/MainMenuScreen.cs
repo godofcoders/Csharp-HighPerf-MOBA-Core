@@ -29,6 +29,8 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Defaults (used if nothing was picked yet)")]
         [SerializeField] private BrawlerDefinition _defaultBrawler;
+        [Tooltip("Optional roster used to resolve the last selected brawler after a fresh app launch.")]
+        [SerializeField] private BrawlerDefinition[] _availableBrawlers;
         [SerializeField] private MapDefinition _defaultMap;
 
         [SerializeField] private GameModeId _defaultMode = GameModeId.GemGrab;
@@ -42,6 +44,7 @@ namespace MOBA.Core.Infrastructure
             // when Play goes straight to Match with the current selection.
 
             EnsureQuestSection();
+            EnsureSelectedBrawlerLoaded(false);
             EnsureHomePresentation();
 
             if (_playButton != null) _playButton.onClick.AddListener(OnPlay);
@@ -63,8 +66,7 @@ namespace MOBA.Core.Infrastructure
 
         private void OnMapSelect()
         {
-            if (SceneSelection.SelectedBrawler == null)
-                SceneSelection.SelectedBrawler = _defaultBrawler;
+            EnsureSelectedBrawlerLoaded(false);
             if (SceneSelection.SelectedMap == null)
                 SceneSelection.SelectedMap = _defaultMap;
             SceneSelection.SelectedMode = SceneSelection.SelectedMap != null &&
@@ -80,6 +82,29 @@ namespace MOBA.Core.Infrastructure
         {
             EnsureQuestSection();
             _questsView?.Show();
+        }
+
+        private void EnsureSelectedBrawlerLoaded(bool allowDefaultFallback)
+        {
+            if (SceneSelection.SelectedBrawler != null)
+                return;
+
+            if (PlayerBrawlerProgress.TryGetSelectedBrawler(_availableBrawlers, out BrawlerDefinition saved))
+            {
+                AssignSelectedBrawler(saved);
+                return;
+            }
+
+            if (allowDefaultFallback || !PlayerBrawlerProgress.HasSavedSelectedBrawler())
+                AssignSelectedBrawler(_defaultBrawler);
+        }
+
+        private static void AssignSelectedBrawler(BrawlerDefinition brawler)
+        {
+            SceneSelection.SelectedBrawler = brawler;
+
+            if (brawler != null)
+                SceneSelection.SelectedBuildPowerLevel = PlayerBrawlerProgress.GetLevel(brawler);
         }
 
         private void EnsureQuestSection()
@@ -307,7 +332,7 @@ namespace MOBA.Core.Infrastructure
 
             BrawlerDefinition selected = SceneSelection.SelectedBrawler != null
                 ? SceneSelection.SelectedBrawler
-                : _defaultBrawler;
+                : PlayerBrawlerProgress.ResolveSelectedBrawler(_availableBrawlers, _defaultBrawler);
             string brawlerName = selected != null && !string.IsNullOrWhiteSpace(selected.BrawlerName)
                 ? selected.BrawlerName
                 : selected != null ? selected.name : "Brawler";

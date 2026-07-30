@@ -149,6 +149,23 @@ namespace MOBA.Core.Infrastructure
             if (_availableBrawlers == null)
                 return;
 
+            BrawlerDefinition initial = null;
+            if (PlayerBrawlerProgress.TryGetSelectedBrawler(_availableBrawlers, out BrawlerDefinition saved))
+            {
+                initial = saved;
+                SceneSelection.SelectedBrawler = saved;
+                SceneSelection.SelectedBuildPowerLevel = PlayerBrawlerProgress.GetLevel(saved);
+            }
+
+            if (initial == null)
+                initial = FindAvailableBrawler(SceneSelection.SelectedBrawler);
+
+            if (initial != null)
+            {
+                SetPreview(initial);
+                return;
+            }
+
             for (int i = 0; i < _availableBrawlers.Length; i++)
             {
                 if (_availableBrawlers[i] == null)
@@ -205,6 +222,7 @@ namespace MOBA.Core.Infrastructure
         private void Commit(BrawlerDefinition def)
         {
             SaveCurrentLoadoutSelection(def);
+            PlayerBrawlerProgress.SetSelectedBrawler(def);
             SceneSelection.SelectedBrawler = def;
             SceneSelection.SelectedBuildPowerLevel = ResolvePreviewPowerLevel(def);
             ReleaseRuntimeSelectedBuild();
@@ -219,6 +237,30 @@ namespace MOBA.Core.Infrastructure
 
             SceneSelection.MapSelectReturnScene = SceneId.BrawlerSelect;
             SceneFlow.Instance?.LoadScene(SceneId.MapSelect);
+        }
+
+        private BrawlerDefinition FindAvailableBrawler(BrawlerDefinition candidate)
+        {
+            if (candidate == null || _availableBrawlers == null)
+                return null;
+
+            string candidateId = PlayerBrawlerProgress.BuildBrawlerPersistenceId(candidate);
+            for (int i = 0; i < _availableBrawlers.Length; i++)
+            {
+                if (_availableBrawlers[i] == candidate)
+                    return _availableBrawlers[i];
+
+                if (!string.IsNullOrWhiteSpace(candidateId) &&
+                    string.Equals(
+                        PlayerBrawlerProgress.BuildBrawlerPersistenceId(_availableBrawlers[i]),
+                        candidateId,
+                        System.StringComparison.Ordinal))
+                {
+                    return _availableBrawlers[i];
+                }
+            }
+
+            return null;
         }
 
         private void OnBack()

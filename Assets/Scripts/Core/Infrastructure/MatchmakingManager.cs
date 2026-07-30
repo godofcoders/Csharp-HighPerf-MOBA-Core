@@ -37,7 +37,7 @@ namespace MOBA.Core.Infrastructure
             // inspector-assigned _playerBrawler so launching the Match
             // scene directly (skipping the menu flow) still works for
             // test play.
-            BrawlerDefinition brawler = SceneSelection.SelectedBrawler ?? _playerBrawler;
+            BrawlerDefinition brawler = ResolvePlayerBrawler();
             if (brawler != null)
             {
                 JoinLocalPlayer(brawler);
@@ -45,6 +45,38 @@ namespace MOBA.Core.Infrastructure
             else
             {
                 Debug.LogError("[Lobby] No Player Brawler available (neither SceneSelection nor inspector fallback set).");
+            }
+        }
+
+        private BrawlerDefinition ResolvePlayerBrawler()
+        {
+            if (SceneSelection.SelectedBrawler != null)
+                return SceneSelection.SelectedBrawler;
+
+            if (PlayerBrawlerProgress.TryGetSelectedBrawler(
+                    EnumeratePlayerBrawlerCandidates(),
+                    out BrawlerDefinition saved))
+            {
+                SceneSelection.SelectedBrawler = saved;
+                SceneSelection.SelectedBuildPowerLevel = PlayerBrawlerProgress.GetLevel(saved);
+                return saved;
+            }
+
+            return _playerBrawler;
+        }
+
+        private IEnumerable<BrawlerDefinition> EnumeratePlayerBrawlerCandidates()
+        {
+            if (_playerBrawler != null)
+                yield return _playerBrawler;
+
+            if (_botBrawlerPool == null)
+                yield break;
+
+            for (int i = 0; i < _botBrawlerPool.Length; i++)
+            {
+                if (_botBrawlerPool[i] != null)
+                    yield return _botBrawlerPool[i];
             }
         }
 

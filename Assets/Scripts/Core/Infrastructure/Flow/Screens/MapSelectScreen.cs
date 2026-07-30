@@ -19,6 +19,8 @@ namespace MOBA.Core.Infrastructure
         [Header("Defaults (used if nothing was picked yet)")]
         [Tooltip("Used when SceneSelection.SelectedBrawler is null on Confirm.")]
         [SerializeField] private BrawlerDefinition _defaultBrawler;
+        [Tooltip("Optional roster used to restore the player's saved brawler when opening Map Select directly.")]
+        [SerializeField] private BrawlerDefinition[] _availableBrawlers;
 
         [Header("Legacy card spawning")]
         [SerializeField] private GameObject _cardPrefab;
@@ -602,8 +604,22 @@ namespace MOBA.Core.Infrastructure
         {
             if (_previewed == null) return;
             SceneSelection.SelectedMap = _previewed;
-            if (SceneSelection.SelectedBrawler == null) SceneSelection.SelectedBrawler = _defaultBrawler;
+            if (SceneSelection.SelectedBrawler == null)
+            {
+                if (PlayerBrawlerProgress.TryGetSelectedBrawler(_availableBrawlers, out BrawlerDefinition saved))
+                    AssignSelectedBrawler(saved);
+                else if (!PlayerBrawlerProgress.HasSavedSelectedBrawler())
+                    AssignSelectedBrawler(_defaultBrawler);
+            }
             SceneFlow.Instance?.LoadScene(SceneId.Match);
+        }
+
+        private static void AssignSelectedBrawler(BrawlerDefinition brawler)
+        {
+            SceneSelection.SelectedBrawler = brawler;
+
+            if (brawler != null)
+                SceneSelection.SelectedBuildPowerLevel = PlayerBrawlerProgress.GetLevel(brawler);
         }
 
         private void UpdateConfirmInteractable()

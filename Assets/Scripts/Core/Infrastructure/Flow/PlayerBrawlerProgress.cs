@@ -18,6 +18,10 @@ namespace MOBA.Core.Infrastructure
             new Dictionary<string, string>(16);
         private const string LevelKeyPrefix = "MOBA.BrawlerPowerLevel.";
         private const string LoadoutKeyPrefix = "MOBA.BrawlerLoadout.";
+        private const string SelectedBrawlerKey = "MOBA.SelectedBrawler";
+
+        private static bool _hasLoadedSelectedBrawler;
+        private static string _selectedBrawlerId;
 
         public const int MinLevel = 1;
         public const int MaxLevel = 11;
@@ -63,6 +67,56 @@ namespace MOBA.Core.Infrastructure
             int next = ClampLevel(GetLevel(def) + 1);
             SetLevel(def, next);
             return next;
+        }
+
+        public static void SetSelectedBrawler(BrawlerDefinition def)
+        {
+            string id = BuildBrawlerPersistenceId(def);
+            _hasLoadedSelectedBrawler = true;
+            _selectedBrawlerId = id;
+
+            if (string.IsNullOrWhiteSpace(id))
+                PlayerPrefs.DeleteKey(SelectedBrawlerKey);
+            else
+                PlayerPrefs.SetString(SelectedBrawlerKey, id);
+
+            PlayerPrefs.Save();
+        }
+
+        public static bool TryGetSelectedBrawler(
+            IEnumerable<BrawlerDefinition> candidates,
+            out BrawlerDefinition selected)
+        {
+            selected = null;
+
+            string savedId = GetSelectedBrawlerId();
+            if (string.IsNullOrWhiteSpace(savedId) || candidates == null)
+                return false;
+
+            foreach (BrawlerDefinition candidate in candidates)
+            {
+                if (!MatchesBrawlerPersistenceId(candidate, savedId))
+                    continue;
+
+                selected = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
+        public static BrawlerDefinition ResolveSelectedBrawler(
+            IEnumerable<BrawlerDefinition> candidates,
+            BrawlerDefinition fallback)
+        {
+            return TryGetSelectedBrawler(candidates, out BrawlerDefinition selected)
+                ? selected
+                : fallback;
+        }
+
+        public static bool HasSavedSelectedBrawler()
+        {
+            return !string.IsNullOrWhiteSpace(GetSelectedBrawlerId());
         }
 
         public static string GetSelectedLoadoutOptionId(
@@ -121,6 +175,37 @@ namespace MOBA.Core.Infrastructure
             return !string.IsNullOrWhiteSpace(option.name)
                 ? option.name
                 : option.OptionName;
+        }
+
+        public static string BuildBrawlerPersistenceId(BrawlerDefinition def)
+        {
+            if (def == null)
+                return string.Empty;
+
+            return !string.IsNullOrWhiteSpace(def.name)
+                ? def.name
+                : def.BrawlerName;
+        }
+
+        private static string GetSelectedBrawlerId()
+        {
+            if (_hasLoadedSelectedBrawler)
+                return _selectedBrawlerId;
+
+            _hasLoadedSelectedBrawler = true;
+            _selectedBrawlerId = PlayerPrefs.GetString(SelectedBrawlerKey, string.Empty);
+            return _selectedBrawlerId;
+        }
+
+        private static bool MatchesBrawlerPersistenceId(
+            BrawlerDefinition def,
+            string savedId)
+        {
+            if (def == null || string.IsNullOrWhiteSpace(savedId))
+                return false;
+
+            return string.Equals(BuildBrawlerPersistenceId(def), savedId, System.StringComparison.Ordinal) ||
+                   string.Equals(def.BrawlerName, savedId, System.StringComparison.Ordinal);
         }
 
         private static int ClampLevel(int level)
