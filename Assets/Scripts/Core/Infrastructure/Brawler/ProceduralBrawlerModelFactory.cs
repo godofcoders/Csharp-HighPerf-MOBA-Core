@@ -57,6 +57,12 @@ namespace MOBA.Core.Infrastructure
                 return instance != null;
             }
 
+            if (IsBrawler(definition, "Leon"))
+            {
+                instance = BuildLeon(parent, owner);
+                return instance != null;
+            }
+
             return false;
         }
 
@@ -430,6 +436,67 @@ namespace MOBA.Core.Infrastructure
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
             animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, umbrella);
+
+            return root;
+        }
+
+        private static GameObject BuildLeon(Transform parent, BrawlerController owner)
+        {
+            int layer = parent.gameObject.layer;
+            Material skin = CreateMaterial("Procedural Leon Skin", new Color(0.48f, 0.28f, 0.18f, 1f), 0.18f);
+            Material hoodie = CreateMaterial("Procedural Leon Hoodie", new Color(0.08f, 0.72f, 0.39f, 1f), 0.32f);
+            Material hoodAccent = CreateMaterial("Procedural Leon Hood Accent", new Color(0.98f, 0.76f, 0.10f, 1f), 0.30f);
+            Material shorts = CreateMaterial("Procedural Leon Shorts", new Color(0.09f, 0.32f, 0.86f, 1f), 0.30f);
+            Material shoe = CreateMaterial("Procedural Leon Shoes", new Color(0.18f, 0.10f, 0.06f, 1f), 0.20f);
+            Material zipper = CreateMaterial("Procedural Leon Zipper", new Color(0.90f, 0.95f, 0.92f, 1f), 0.28f);
+            Material button = CreateMaterial("Procedural Leon Button", new Color(0.05f, 0.10f, 0.15f, 1f), 0.25f);
+
+            GameObject root = new GameObject("Procedural_Leon_Model");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+            root.layer = layer;
+
+            Transform bodyRoot = new GameObject("BodyRig").transform;
+            bodyRoot.SetParent(root.transform, false);
+            bodyRoot.localPosition = Vector3.zero;
+            bodyRoot.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            bodyRoot.localScale = new Vector3(0.82f, 0.88f, 0.82f);
+            bodyRoot.gameObject.layer = layer;
+
+            CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.55f, 0f), new Vector3(0.48f, 0.16f, 0.32f), Quaternion.identity, shorts, layer);
+            Transform torso = CreatePart(bodyRoot, "Hoodie_Torso", PrimitiveType.Capsule, new Vector3(0f, 0.90f, 0f), new Vector3(0.54f, 0.56f, 0.38f), Quaternion.identity, hoodie, layer);
+            CreatePart(bodyRoot, "Zipper", PrimitiveType.Cube, new Vector3(0f, 0.98f, -0.235f), new Vector3(0.055f, 0.42f, 0.035f), Quaternion.identity, zipper, layer);
+            CreatePart(bodyRoot, "Hoodie_Pocket", PrimitiveType.Cube, new Vector3(0f, 0.78f, -0.245f), new Vector3(0.28f, 0.12f, 0.035f), Quaternion.identity, hoodAccent, layer);
+            CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.25f, 0f), new Vector3(0.13f, 0.08f, 0.13f), Quaternion.identity, skin, layer);
+            Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.46f, -0.01f), new Vector3(0.36f, 0.39f, 0.34f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Hood", PrimitiveType.Sphere, new Vector3(0f, 1.50f, 0.01f), new Vector3(0.46f, 0.44f, 0.40f), Quaternion.identity, hoodie, layer);
+            CreatePart(bodyRoot, "Hood_Face_Open", PrimitiveType.Sphere, new Vector3(0f, 1.47f, -0.19f), new Vector3(0.32f, 0.31f, 0.18f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Hood_Brow", PrimitiveType.Cube, new Vector3(0f, 1.67f, -0.25f), new Vector3(0.36f, 0.07f, 0.055f), Quaternion.identity, hoodAccent, layer);
+            CreatePart(bodyRoot, "Hood_Button_Left", PrimitiveType.Cylinder, new Vector3(-0.18f, 1.70f, -0.20f), new Vector3(0.07f, 0.025f, 0.07f), Quaternion.Euler(90f, 0f, 0f), button, layer);
+            CreatePart(bodyRoot, "Hood_Button_Right", PrimitiveType.Cylinder, new Vector3(0.18f, 1.70f, -0.20f), new Vector3(0.07f, 0.025f, 0.07f), Quaternion.Euler(90f, 0f, 0f), button, layer);
+
+            Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.14f, 0.28f, 0.02f), new Vector3(0.14f, 0.40f, 0.14f), Quaternion.identity, skin, layer);
+            Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.14f, 0.28f, 0.02f), new Vector3(0.14f, 0.40f, 0.14f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Left_Shoe", PrimitiveType.Cube, new Vector3(-0.14f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.29f), Quaternion.identity, shoe, layer);
+            CreatePart(bodyRoot, "Right_Shoe", PrimitiveType.Cube, new Vector3(0.14f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.29f), Quaternion.identity, shoe, layer);
+
+            Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Sleeve", PrimitiveType.Capsule, new Vector3(-0.41f, 0.91f, -0.10f), new Vector3(0.14f, 0.42f, 0.14f), Quaternion.Euler(48f, 0f, -18f), hoodie, layer);
+            Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Sleeve", PrimitiveType.Capsule, new Vector3(0.41f, 0.91f, -0.10f), new Vector3(0.14f, 0.42f, 0.14f), Quaternion.Euler(48f, 0f, 18f), hoodie, layer);
+            CreatePart(leftArm, "Left_Hand", PrimitiveType.Sphere, new Vector3(0f, -0.03f, -0.30f), new Vector3(0.12f, 0.10f, 0.12f), Quaternion.identity, skin, layer);
+            CreatePart(rightArm, "Right_Hand", PrimitiveType.Sphere, new Vector3(0f, -0.03f, -0.30f), new Vector3(0.12f, 0.10f, 0.12f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Left_Shoulder", PrimitiveType.Sphere, new Vector3(-0.30f, 1.06f, -0.01f), new Vector3(0.18f, 0.18f, 0.16f), Quaternion.identity, hoodie, layer);
+            CreatePart(bodyRoot, "Right_Shoulder", PrimitiveType.Sphere, new Vector3(0.30f, 1.06f, -0.01f), new Vector3(0.18f, 0.18f, 0.16f), Quaternion.identity, hoodie, layer);
+
+            Transform rightThrow = CreateAnchor(rightArm, "Right_Throw_Point", new Vector3(0f, -0.03f, -0.40f), layer);
+            Transform leftThrow = CreateAnchor(leftArm, "Left_Throw_Point", new Vector3(0f, -0.03f, -0.40f), layer);
+            Transform castPoint = CreateAnchor(bodyRoot, "CastPoint", new Vector3(0f, 1.02f, -0.52f), layer);
+            BrawlerPresentationAnchors anchors = root.AddComponent<BrawlerPresentationAnchors>();
+            anchors.Configure(rightThrow, leftThrow, castPoint);
+
+            BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, null);
 
             return root;
         }
