@@ -115,19 +115,22 @@ namespace MOBA.Core.Infrastructure
             if (def == null)
                 return;
 
-            if (def.ModelPrefab == null)
-            {
-                Debug.LogWarning("[MMBP] def.ModelPrefab null on " + def.name);
-                return;
-            }
-
             if (_modelAnchor == null)
             {
                 Debug.LogWarning("[MMBP] _modelAnchor null");
                 return;
             }
 
-            _spawned = Instantiate(def.ModelPrefab, _modelAnchor);
+            if (!ProceduralBrawlerModelFactory.TryCreate(def, _modelAnchor, null, out _spawned))
+            {
+                if (def.ModelPrefab == null)
+                {
+                    Debug.LogWarning("[MMBP] def.ModelPrefab null on " + def.name);
+                    return;
+                }
+
+                _spawned = Instantiate(def.ModelPrefab, _modelAnchor);
+            }
 
             _baseLocalPosition = Vector3.zero;
             _currentYaw = _initialYaw;

@@ -2243,6 +2243,17 @@ namespace MOBA.Core.Infrastructure
             _presentationAnchors = null;
             _visualModel = null;
 
+            if (ProceduralBrawlerModelFactory.TryCreate(
+                    _definition,
+                    _visualRoot,
+                    this,
+                    out _spawnedVisualInstance))
+            {
+                _presentationAnchors = _spawnedVisualInstance.GetComponentInChildren<BrawlerPresentationAnchors>();
+                _visualModel = _spawnedVisualInstance;
+                return;
+            }
+
             if (_definition == null || _definition.ModelPrefab == null)
                 return;
 

@@ -12,6 +12,16 @@ namespace MOBA.Core.Infrastructure
         public Transform SecondaryFirePoint => _secondaryFirePoint;
         public Transform CastPoint => _castPoint;
 
+        public void Configure(
+            Transform primaryFirePoint,
+            Transform secondaryFirePoint,
+            Transform castPoint)
+        {
+            _primaryFirePoint = primaryFirePoint;
+            _secondaryFirePoint = secondaryFirePoint;
+            _castPoint = castPoint;
+        }
+
         public Vector3 GetPrimaryFirePosition(Transform fallback)
         {
             return _primaryFirePoint != null ? _primaryFirePoint.position : fallback.position;
