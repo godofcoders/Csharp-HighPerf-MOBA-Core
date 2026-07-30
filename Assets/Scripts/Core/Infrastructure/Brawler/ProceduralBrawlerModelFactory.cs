@@ -27,6 +27,12 @@ namespace MOBA.Core.Infrastructure
                 return instance != null;
             }
 
+            if (IsBrawler(definition, "Jessie") || IsBrawler(definition, "Jesse"))
+            {
+                instance = BuildJessie(parent, owner);
+                return instance != null;
+            }
+
             return false;
         }
 
@@ -89,6 +95,67 @@ namespace MOBA.Core.Infrastructure
             return root;
         }
 
+        private static GameObject BuildJessie(Transform parent, BrawlerController owner)
+        {
+            int layer = parent.gameObject.layer;
+            Material skin = CreateMaterial("Procedural Jessie Skin", new Color(1.00f, 0.66f, 0.46f, 1f), 0.18f);
+            Material hair = CreateMaterial("Procedural Jessie Hair", new Color(0.88f, 0.24f, 0.12f, 1f), 0.26f);
+            Material cap = CreateMaterial("Procedural Jessie Cap", new Color(0.98f, 0.77f, 0.16f, 1f), 0.30f);
+            Material shirt = CreateMaterial("Procedural Jessie Shirt", new Color(0.95f, 0.24f, 0.17f, 1f), 0.24f);
+            Material overalls = CreateMaterial("Procedural Jessie Overalls", new Color(0.08f, 0.27f, 0.92f, 1f), 0.34f);
+            Material boots = CreateMaterial("Procedural Jessie Boots", new Color(0.10f, 0.06f, 0.04f, 1f), 0.18f);
+            Material metal = CreateMaterial("Procedural Jessie Blaster Metal", new Color(0.20f, 0.22f, 0.27f, 1f), 0.55f);
+            Material energy = CreateMaterial("Procedural Jessie Blaster Energy", new Color(0.16f, 0.88f, 1.00f, 1f), 0.42f);
+
+            GameObject root = new GameObject("Procedural_Jessie_Model");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+            root.layer = layer;
+
+            Transform bodyRoot = new GameObject("BodyRig").transform;
+            bodyRoot.SetParent(root.transform, false);
+            bodyRoot.localPosition = Vector3.zero;
+            bodyRoot.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            bodyRoot.localScale = Vector3.one;
+            bodyRoot.gameObject.layer = layer;
+
+            CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.56f, 0f), new Vector3(0.48f, 0.18f, 0.32f), Quaternion.identity, overalls, layer);
+            Transform torso = CreatePart(bodyRoot, "Torso_Overalls", PrimitiveType.Capsule, new Vector3(0f, 0.91f, 0f), new Vector3(0.56f, 0.58f, 0.40f), Quaternion.identity, overalls, layer);
+            CreatePart(bodyRoot, "Chest_Shirt", PrimitiveType.Cube, new Vector3(0f, 0.96f, -0.23f), new Vector3(0.34f, 0.34f, 0.045f), Quaternion.identity, shirt, layer);
+            CreatePart(bodyRoot, "Overall_Strap_L", PrimitiveType.Cube, new Vector3(-0.12f, 1.02f, -0.265f), new Vector3(0.065f, 0.36f, 0.04f), Quaternion.Euler(0f, 0f, -8f), overalls, layer);
+            CreatePart(bodyRoot, "Overall_Strap_R", PrimitiveType.Cube, new Vector3(0.12f, 1.02f, -0.265f), new Vector3(0.065f, 0.36f, 0.04f), Quaternion.Euler(0f, 0f, 8f), overalls, layer);
+            CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.27f, 0f), new Vector3(0.15f, 0.09f, 0.15f), Quaternion.identity, skin, layer);
+            Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.49f, -0.01f), new Vector3(0.40f, 0.43f, 0.37f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Hair_Back", PrimitiveType.Sphere, new Vector3(0f, 1.47f, 0.16f), new Vector3(0.44f, 0.34f, 0.28f), Quaternion.identity, hair, layer);
+            CreatePart(bodyRoot, "Cap_Crown", PrimitiveType.Sphere, new Vector3(0f, 1.64f, -0.02f), new Vector3(0.45f, 0.18f, 0.40f), Quaternion.identity, cap, layer);
+            CreatePart(bodyRoot, "Cap_Brim", PrimitiveType.Cube, new Vector3(0f, 1.60f, -0.26f), new Vector3(0.38f, 0.055f, 0.23f), Quaternion.Euler(-6f, 0f, 0f), cap, layer);
+            CreatePart(bodyRoot, "Side_Ponytail", PrimitiveType.Sphere, new Vector3(-0.34f, 1.38f, 0.04f), new Vector3(0.20f, 0.28f, 0.20f), Quaternion.identity, hair, layer);
+
+            Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.15f, 0.29f, 0.02f), new Vector3(0.17f, 0.44f, 0.17f), Quaternion.identity, overalls, layer);
+            Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.15f, 0.29f, 0.02f), new Vector3(0.17f, 0.44f, 0.17f), Quaternion.identity, overalls, layer);
+            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.15f, 0.06f, -0.06f), new Vector3(0.21f, 0.11f, 0.32f), Quaternion.identity, boots, layer);
+            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.15f, 0.06f, -0.06f), new Vector3(0.21f, 0.11f, 0.32f), Quaternion.identity, boots, layer);
+
+            Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.43f, 0.94f, -0.08f), new Vector3(0.15f, 0.42f, 0.15f), Quaternion.Euler(44f, 0f, -18f), skin, layer);
+            Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.46f, 0.92f, -0.14f), new Vector3(0.15f, 0.45f, 0.15f), Quaternion.Euler(66f, 0f, 18f), skin, layer);
+            CreatePart(bodyRoot, "Left_Shoulder", PrimitiveType.Sphere, new Vector3(-0.31f, 1.08f, -0.01f), new Vector3(0.20f, 0.20f, 0.18f), Quaternion.identity, shirt, layer);
+            CreatePart(bodyRoot, "Right_Shoulder", PrimitiveType.Sphere, new Vector3(0.31f, 1.08f, -0.01f), new Vector3(0.20f, 0.20f, 0.18f), Quaternion.identity, shirt, layer);
+
+            Transform blaster = CreateBlaster(bodyRoot, "Shock_Blaster", new Vector3(0.42f, 0.78f, -0.53f), 5f, metal, energy, layer, out Transform muzzle);
+            AttachKeepingWorld(blaster, rightArm);
+
+            Transform castPoint = CreateAnchor(bodyRoot, "CastPoint", new Vector3(0f, 1.03f, -0.52f), layer);
+            BrawlerPresentationAnchors anchors = root.AddComponent<BrawlerPresentationAnchors>();
+            anchors.Configure(muzzle, muzzle, castPoint);
+
+            BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, blaster);
+
+            return root;
+        }
+
         private static Transform CreatePistol(
             Transform parent,
             string name,
@@ -110,6 +177,31 @@ namespace MOBA.Core.Infrastructure
             CreatePart(root, "Body", PrimitiveType.Cube, new Vector3(0f, 0.02f, -0.08f), new Vector3(0.16f, 0.14f, 0.26f), Quaternion.identity, gripMaterial, layer);
             CreatePart(root, "Barrel", PrimitiveType.Cylinder, new Vector3(0f, 0.04f, -0.31f), new Vector3(0.055f, 0.25f, 0.055f), Quaternion.Euler(90f, 0f, 0f), barrelMaterial, layer);
             muzzle = CreateAnchor(root, "Muzzle", new Vector3(0f, 0.04f, -0.58f), layer);
+            return root;
+        }
+
+        private static Transform CreateBlaster(
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            float yawDegrees,
+            Material bodyMaterial,
+            Material energyMaterial,
+            int layer,
+            out Transform muzzle)
+        {
+            Transform root = new GameObject(name).transform;
+            root.SetParent(parent, false);
+            root.localPosition = localPosition;
+            root.localRotation = Quaternion.Euler(0f, yawDegrees, 0f);
+            root.localScale = Vector3.one;
+            root.gameObject.layer = layer;
+
+            CreatePart(root, "Grip", PrimitiveType.Cube, new Vector3(0f, -0.11f, 0.06f), new Vector3(0.12f, 0.25f, 0.10f), Quaternion.Euler(-16f, 0f, 0f), bodyMaterial, layer);
+            CreatePart(root, "Body", PrimitiveType.Cube, new Vector3(0f, 0.02f, -0.10f), new Vector3(0.22f, 0.18f, 0.30f), Quaternion.identity, bodyMaterial, layer);
+            CreatePart(root, "Core", PrimitiveType.Sphere, new Vector3(0f, 0.04f, -0.22f), new Vector3(0.15f, 0.15f, 0.10f), Quaternion.identity, energyMaterial, layer);
+            CreatePart(root, "Nozzle", PrimitiveType.Cylinder, new Vector3(0f, 0.04f, -0.39f), new Vector3(0.075f, 0.20f, 0.075f), Quaternion.Euler(90f, 0f, 0f), energyMaterial, layer);
+            muzzle = CreateAnchor(root, "Muzzle", new Vector3(0f, 0.04f, -0.62f), layer);
             return root;
         }
 
