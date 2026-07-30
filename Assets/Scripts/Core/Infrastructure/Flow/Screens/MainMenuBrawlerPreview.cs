@@ -24,15 +24,6 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Initial Y rotation of the spawned model.")]
         [SerializeField] private float _initialYaw = 180f;
 
-        [Header("Idle Motion")]
-        [SerializeField] private bool _enableIdleMotion = true;
-        [SerializeField] private float _autoRotateDegreesPerSecond = 10f;
-        [SerializeField] private float _bobAmplitude = 0.06f;
-        [SerializeField] private float _bobFrequency = 1.45f;
-        [SerializeField] private float _jumpAmplitude = 0.14f;
-        [SerializeField] private float _jumpFrequency = 0.32f;
-        [SerializeField] private float _tiltAmplitude = 3.5f;
-
         [Tooltip("Drag distance threshold (in screen pixels) above which a pointer-up is treated as a drag instead of a click.")]
         [Min(0f)]
         [SerializeField] private float _clickDragThreshold = 8f;
@@ -54,7 +45,6 @@ namespace MOBA.Core.Infrastructure
         // Inertial rotation state
         private float _rotationVelocity;
         private float _currentYaw;
-        private float _spawnTime;
         private Vector3 _baseLocalPosition;
 
         private void Start() => Refresh();
@@ -91,9 +81,6 @@ namespace MOBA.Core.Infrastructure
             else
             {
                 _rotationVelocity = 0f;
-
-                if (_enableIdleMotion)
-                    _currentYaw += _autoRotateDegreesPerSecond * deltaTime;
             }
 
             ApplyPreviewPose();
@@ -134,7 +121,6 @@ namespace MOBA.Core.Infrastructure
 
             _baseLocalPosition = Vector3.zero;
             _currentYaw = _initialYaw;
-            _spawnTime = Time.unscaledTime;
             ApplyPreviewPose();
 
             StripGameplayComponents(_spawned);
@@ -156,6 +142,12 @@ namespace MOBA.Core.Infrastructure
                     continue;
 
                 if (s is Animator)
+                    continue;
+
+                if (s is BrawlerProceduralModelAnimator)
+                    continue;
+
+                if (s is BrawlerPresentationAnchors)
                     continue;
 
                 Destroy(s);
@@ -237,20 +229,8 @@ namespace MOBA.Core.Infrastructure
             if (_spawned == null)
                 return;
 
-            float life = Mathf.Max(0f, Time.unscaledTime - _spawnTime);
-            float bob = _enableIdleMotion
-                ? Mathf.Sin(life * Mathf.PI * 2f * _bobFrequency) * _bobAmplitude
-                : 0f;
-            float jumpPhase = Mathf.Sin(life * Mathf.PI * 2f * _jumpFrequency);
-            float jump = _enableIdleMotion
-                ? Mathf.Pow(Mathf.Max(0f, jumpPhase), 3f) * _jumpAmplitude
-                : 0f;
-            float tilt = _enableIdleMotion
-                ? Mathf.Sin(life * Mathf.PI * 2f * 0.45f) * _tiltAmplitude
-                : 0f;
-
-            _spawned.transform.localPosition = _baseLocalPosition + Vector3.up * (bob + jump);
-            _spawned.transform.localRotation = Quaternion.Euler(tilt, _currentYaw, 0f);
+            _spawned.transform.localPosition = _baseLocalPosition;
+            _spawned.transform.localRotation = Quaternion.Euler(0f, _currentYaw, 0f);
         }
     }
 }
