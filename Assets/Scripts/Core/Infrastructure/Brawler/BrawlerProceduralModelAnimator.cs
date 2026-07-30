@@ -143,38 +143,38 @@ namespace MOBA.Core.Infrastructure
 
             float breathe = Mathf.Sin(_poseTime * Mathf.PI * 2f * 0.42f);
             float smallSway = Mathf.Sin(_poseTime * Mathf.PI * 2f * 0.27f);
-            float cycle = Mathf.Repeat(_poseTime + 0.8f, 13.5f);
+            float cycle = Mathf.Repeat(_poseTime + 0.8f, 12.0f);
 
-            float inspect = SmoothWindow(cycle, 1.1f, 3.4f) * idleWeight;
-            float wave = SmoothWindow(cycle, 5.0f, 6.9f) * idleWeight;
-            float stretch = SmoothWindow(cycle, 9.0f, 11.1f) * idleWeight;
-            float waveFlutter = Mathf.Sin(_poseTime * Mathf.PI * 2f * 2.7f);
+            float inspect = SmoothWindow(cycle, 1.2f, 3.2f) * idleWeight;
+            float handShift = SmoothWindow(cycle, 5.0f, 6.6f) * idleWeight;
+            float stretch = SmoothWindow(cycle, 8.4f, 10.4f) * idleWeight;
+            float handPulse = Mathf.Sin(_poseTime * Mathf.PI * 2f * 1.3f);
 
             IdlePose pose = default(IdlePose);
             pose.BodyLift = idleWeight * (0.012f + Mathf.Max(0f, breathe) * 0.018f);
-            pose.BodyPitch = idleWeight * (smallSway * 0.8f - stretch * 2.2f);
-            pose.BodyRoll = idleWeight * smallSway * 1.2f;
+            pose.BodyPitch = idleWeight * (smallSway * 0.5f - stretch * 1.4f);
+            pose.BodyRoll = idleWeight * smallSway * 0.7f;
 
-            pose.TorsoPitch = idleWeight * (breathe * 1.4f - inspect * 4.5f - stretch * 5.0f);
-            pose.TorsoYaw = inspect * -5f;
-            pose.TorsoRoll = wave * -3.0f + stretch * 2.0f;
+            pose.TorsoPitch = idleWeight * (breathe * 1.1f - inspect * 2.5f - stretch * 2.4f);
+            pose.TorsoYaw = inspect * -2.5f;
+            pose.TorsoRoll = handShift * -1.0f + stretch * 1.2f;
 
-            pose.HeadPitch = idleWeight * (breathe * 0.8f + inspect * 8.0f - stretch * 5.0f);
-            pose.HeadYaw = inspect * -22f + wave * 8f;
-            pose.HeadRoll = idleWeight * smallSway * 1.6f + inspect * -5f;
+            pose.HeadPitch = idleWeight * (breathe * 0.6f + inspect * 5.0f - stretch * 2.0f);
+            pose.HeadYaw = inspect * -11f + handShift * 4f;
+            pose.HeadRoll = idleWeight * smallSway * 0.8f + inspect * -2f;
 
-            pose.RightArmPitch = inspect * -42f + stretch * -62f;
-            pose.RightArmYaw = inspect * -8f;
-            pose.RightArmRoll = inspect * 7f + stretch * 30f;
-            pose.RightWeaponPitch = inspect * -18f;
-            pose.RightWeaponYaw = inspect * -6f;
-            pose.RightWeaponRoll = inspect * 6f;
+            pose.RightArmPitch = inspect * -8f + stretch * -7f;
+            pose.RightArmYaw = inspect * -2f;
+            pose.RightArmRoll = inspect * 2f + stretch * 4f;
+            pose.RightWeaponPitch = inspect * -3f;
+            pose.RightWeaponYaw = inspect * -1f;
+            pose.RightWeaponRoll = inspect * 1f;
 
-            pose.LeftArmPitch = wave * (-72f + waveFlutter * 10f) + stretch * -60f;
-            pose.LeftArmYaw = wave * -12f;
-            pose.LeftArmRoll = wave * -35f + stretch * -32f;
-            pose.LeftWeaponPitch = wave * -8f + stretch * -12f;
-            pose.LeftWeaponRoll = wave * -8f;
+            pose.LeftArmPitch = handShift * (-8f + handPulse * 2f) + stretch * -7f;
+            pose.LeftArmYaw = handShift * -2f;
+            pose.LeftArmRoll = handShift * -5f + stretch * -4f;
+            pose.LeftWeaponPitch = handShift * -2f + stretch * -2f;
+            pose.LeftWeaponRoll = handShift * -2f;
 
             return pose;
         }

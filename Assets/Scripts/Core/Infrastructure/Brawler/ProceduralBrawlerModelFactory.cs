@@ -69,13 +69,15 @@ namespace MOBA.Core.Infrastructure
             CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.34f), Quaternion.identity, boots, layer);
             CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.34f), Quaternion.identity, boots, layer);
 
-            Transform leftArm = CreatePart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.48f, 0.93f, -0.12f), new Vector3(0.16f, 0.48f, 0.16f), Quaternion.Euler(68f, 0f, -20f), skin, layer);
-            Transform rightArm = CreatePart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.48f, 0.93f, -0.12f), new Vector3(0.16f, 0.48f, 0.16f), Quaternion.Euler(68f, 0f, 20f), skin, layer);
+            Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.48f, 0.93f, -0.12f), new Vector3(0.16f, 0.48f, 0.16f), Quaternion.Euler(68f, 0f, -20f), skin, layer);
+            Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.48f, 0.93f, -0.12f), new Vector3(0.16f, 0.48f, 0.16f), Quaternion.Euler(68f, 0f, 20f), skin, layer);
             CreatePart(bodyRoot, "Left_Shoulder", PrimitiveType.Sphere, new Vector3(-0.34f, 1.10f, -0.02f), new Vector3(0.22f, 0.22f, 0.20f), Quaternion.identity, jacket, layer);
             CreatePart(bodyRoot, "Right_Shoulder", PrimitiveType.Sphere, new Vector3(0.34f, 1.10f, -0.02f), new Vector3(0.22f, 0.22f, 0.20f), Quaternion.identity, jacket, layer);
 
             Transform leftWeapon = CreatePistol(bodyRoot, "Left_Pistol", new Vector3(-0.45f, 0.78f, -0.50f), -7f, metal, barrel, layer, out Transform leftMuzzle);
             Transform rightWeapon = CreatePistol(bodyRoot, "Right_Pistol", new Vector3(0.45f, 0.78f, -0.50f), 7f, metal, barrel, layer, out Transform rightMuzzle);
+            AttachKeepingWorld(leftWeapon, leftArm);
+            AttachKeepingWorld(rightWeapon, rightArm);
 
             Transform castPoint = CreateAnchor(bodyRoot, "CastPoint", new Vector3(0f, 1.02f, -0.55f), layer);
             BrawlerPresentationAnchors anchors = root.AddComponent<BrawlerPresentationAnchors>();
@@ -124,6 +126,35 @@ namespace MOBA.Core.Infrastructure
             anchor.transform.localScale = Vector3.one;
             anchor.layer = layer;
             return anchor.transform;
+        }
+
+        private static Transform CreateRiggedPart(
+            Transform parent,
+            string name,
+            PrimitiveType type,
+            Vector3 localPosition,
+            Vector3 visualScale,
+            Quaternion localRotation,
+            Material material,
+            int layer)
+        {
+            GameObject rig = new GameObject(name);
+            rig.transform.SetParent(parent, false);
+            rig.transform.localPosition = localPosition;
+            rig.transform.localRotation = localRotation;
+            rig.transform.localScale = Vector3.one;
+            rig.layer = layer;
+
+            CreatePart(rig.transform, name + "_Mesh", type, Vector3.zero, visualScale, Quaternion.identity, material, layer);
+            return rig.transform;
+        }
+
+        private static void AttachKeepingWorld(Transform child, Transform parent)
+        {
+            if (child == null || parent == null)
+                return;
+
+            child.SetParent(parent, true);
         }
 
         private static Transform CreatePart(
