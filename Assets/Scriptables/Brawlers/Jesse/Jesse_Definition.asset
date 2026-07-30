@@ -15,7 +15,7 @@ MonoBehaviour:
   BrawlerName: Jessie
   ModelPrefab: {fileID: 4919742288424262853, guid: 8f96b613f2df8408a83802b375c892f1, type: 3}
   BaseHealth: 3200
-  BaseMoveSpeed: 5
+  BaseMoveSpeed: 4
   BaseDamage: 720
   ProgressionBonuses: []
   MainAttack: {fileID: 11400000, guid: b5bb16b972ee94a6886cb54e2c3ccc75, type: 2}

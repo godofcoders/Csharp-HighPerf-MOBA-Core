@@ -15,7 +15,7 @@ MonoBehaviour:
   BrawlerName: Barley
   ModelPrefab: {fileID: 8926854043389324680, guid: 1cd504dd4f3da45a58af5317f36e0967, type: 3}
   BaseHealth: 3600
-  BaseMoveSpeed: 7
+  BaseMoveSpeed: 5.6
   BaseDamage: 840
   ProgressionBonuses: []
   MainAttack: {fileID: 11400000, guid: 0ff2602fafb2b4279b84db42c61f252d, type: 2}

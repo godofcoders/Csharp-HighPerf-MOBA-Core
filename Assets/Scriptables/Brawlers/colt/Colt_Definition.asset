@@ -16,7 +16,7 @@ MonoBehaviour:
   ModelPrefab: {fileID: 3855221367005763782, guid: a76577bae713344a784c8935ec7cc346, type: 3}
   Portrait: {fileID: 0}
   BaseHealth: 3000
-  BaseMoveSpeed: 5
+  BaseMoveSpeed: 4
   BaseDamage: 720
   ProgressionBonuses: []
   MainAttack: {fileID: 11400000, guid: 1cbd4ca6ad2d946478f8ab943b63b364, type: 2}
