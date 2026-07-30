@@ -45,6 +45,12 @@ namespace MOBA.Core.Infrastructure
                 return instance != null;
             }
 
+            if (IsBrawler(definition, "Byron"))
+            {
+                instance = BuildByron(parent, owner);
+                return instance != null;
+            }
+
             return false;
         }
 
@@ -301,6 +307,68 @@ namespace MOBA.Core.Infrastructure
             return root;
         }
 
+        private static GameObject BuildByron(Transform parent, BrawlerController owner)
+        {
+            int layer = parent.gameObject.layer;
+            Material skin = CreateMaterial("Procedural Byron Skin", new Color(0.93f, 0.78f, 0.62f, 1f), 0.18f);
+            Material hair = CreateMaterial("Procedural Byron Hair", new Color(0.82f, 0.80f, 0.94f, 1f), 0.30f);
+            Material coat = CreateMaterial("Procedural Byron Coat", new Color(0.02f, 0.42f, 0.34f, 1f), 0.34f);
+            Material vest = CreateMaterial("Procedural Byron Vest", new Color(0.84f, 0.90f, 0.36f, 1f), 0.22f);
+            Material pants = CreateMaterial("Procedural Byron Pants", new Color(0.18f, 0.10f, 0.34f, 1f), 0.24f);
+            Material boot = CreateMaterial("Procedural Byron Boots", new Color(0.05f, 0.04f, 0.05f, 1f), 0.18f);
+            Material glass = CreateMaterial("Procedural Byron Glasses", new Color(0.95f, 0.34f, 0.82f, 1f), 0.42f);
+            Material staff = CreateMaterial("Procedural Byron Staff", new Color(0.58f, 0.05f, 0.09f, 1f), 0.35f);
+            Material staffOrb = CreateMaterial("Procedural Byron Staff Orb", new Color(0.70f, 0.92f, 1.00f, 1f), 0.48f);
+
+            GameObject root = new GameObject("Procedural_Byron_Model");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+            root.layer = layer;
+
+            Transform bodyRoot = new GameObject("BodyRig").transform;
+            bodyRoot.SetParent(root.transform, false);
+            bodyRoot.localPosition = Vector3.zero;
+            bodyRoot.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            bodyRoot.localScale = new Vector3(0.98f, 1.02f, 0.98f);
+            bodyRoot.gameObject.layer = layer;
+
+            CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.56f, 0f), new Vector3(0.50f, 0.18f, 0.34f), Quaternion.identity, pants, layer);
+            Transform torso = CreatePart(bodyRoot, "Torso_Coat", PrimitiveType.Capsule, new Vector3(0f, 0.94f, 0f), new Vector3(0.58f, 0.68f, 0.42f), Quaternion.identity, coat, layer);
+            CreatePart(bodyRoot, "Vest_Front", PrimitiveType.Cube, new Vector3(0f, 0.98f, -0.245f), new Vector3(0.30f, 0.46f, 0.045f), Quaternion.identity, vest, layer);
+            CreatePart(bodyRoot, "Tie", PrimitiveType.Cube, new Vector3(0f, 1.10f, -0.29f), new Vector3(0.10f, 0.20f, 0.035f), Quaternion.identity, glass, layer);
+            CreatePart(bodyRoot, "Neck", PrimitiveType.Cylinder, new Vector3(0f, 1.32f, 0f), new Vector3(0.15f, 0.09f, 0.15f), Quaternion.identity, skin, layer);
+            Transform head = CreatePart(bodyRoot, "Head", PrimitiveType.Sphere, new Vector3(0f, 1.55f, -0.01f), new Vector3(0.40f, 0.45f, 0.36f), Quaternion.identity, skin, layer);
+            CreatePart(bodyRoot, "Hair_Swept_Back", PrimitiveType.Sphere, new Vector3(0f, 1.72f, 0.02f), new Vector3(0.42f, 0.20f, 0.34f), Quaternion.identity, hair, layer);
+            CreatePart(bodyRoot, "Beard", PrimitiveType.Cube, new Vector3(0f, 1.39f, -0.25f), new Vector3(0.32f, 0.18f, 0.045f), Quaternion.identity, hair, layer);
+            CreatePart(bodyRoot, "Left_Glass", PrimitiveType.Cylinder, new Vector3(-0.095f, 1.58f, -0.31f), new Vector3(0.075f, 0.025f, 0.075f), Quaternion.Euler(90f, 0f, 0f), glass, layer);
+            CreatePart(bodyRoot, "Right_Glass", PrimitiveType.Cylinder, new Vector3(0.095f, 1.58f, -0.31f), new Vector3(0.075f, 0.025f, 0.075f), Quaternion.Euler(90f, 0f, 0f), glass, layer);
+            CreatePart(bodyRoot, "Glasses_Bridge", PrimitiveType.Cube, new Vector3(0f, 1.58f, -0.31f), new Vector3(0.07f, 0.025f, 0.025f), Quaternion.identity, glass, layer);
+
+            Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.16f, 0.30f, 0.02f), new Vector3(0.17f, 0.46f, 0.17f), Quaternion.identity, pants, layer);
+            Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.16f, 0.30f, 0.02f), new Vector3(0.17f, 0.46f, 0.17f), Quaternion.identity, pants, layer);
+            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.16f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
+            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.16f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
+
+            Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.45f, 0.94f, -0.08f), new Vector3(0.14f, 0.45f, 0.14f), Quaternion.Euler(42f, 0f, -20f), coat, layer);
+            Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.46f, 0.88f, -0.11f), new Vector3(0.14f, 0.48f, 0.14f), Quaternion.Euler(60f, 0f, 18f), coat, layer);
+            CreatePart(bodyRoot, "Left_Shoulder", PrimitiveType.Sphere, new Vector3(-0.33f, 1.10f, -0.01f), new Vector3(0.20f, 0.20f, 0.18f), Quaternion.identity, coat, layer);
+            CreatePart(bodyRoot, "Right_Shoulder", PrimitiveType.Sphere, new Vector3(0.33f, 1.10f, -0.01f), new Vector3(0.20f, 0.20f, 0.18f), Quaternion.identity, coat, layer);
+
+            Transform staffProp = CreateStaff(bodyRoot, "Staff", new Vector3(0.46f, 0.68f, -0.40f), 10f, staff, staffOrb, layer, out Transform staffTip);
+            AttachKeepingWorld(staffProp, rightArm);
+
+            Transform castPoint = CreateAnchor(bodyRoot, "CastPoint", new Vector3(0f, 1.06f, -0.55f), layer);
+            BrawlerPresentationAnchors anchors = root.AddComponent<BrawlerPresentationAnchors>();
+            anchors.Configure(staffTip, staffTip, castPoint);
+
+            BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, staffProp);
+
+            return root;
+        }
+
         private static Transform CreatePistol(
             Transform parent,
             string name,
@@ -371,6 +439,29 @@ namespace MOBA.Core.Infrastructure
             CreatePart(root, "Bottle_Neck", PrimitiveType.Cylinder, new Vector3(0f, 0.00f, -0.26f), new Vector3(0.045f, 0.10f, 0.045f), Quaternion.Euler(90f, 0f, 0f), glassMaterial, layer);
             CreatePart(root, "Bottle_Cork", PrimitiveType.Cylinder, new Vector3(0f, 0.00f, -0.38f), new Vector3(0.040f, 0.045f, 0.040f), Quaternion.Euler(90f, 0f, 0f), corkMaterial, layer);
             mouth = CreateAnchor(root, "Bottle_Mouth", new Vector3(0f, 0f, -0.47f), layer);
+            return root;
+        }
+
+        private static Transform CreateStaff(
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            float yawDegrees,
+            Material shaftMaterial,
+            Material orbMaterial,
+            int layer,
+            out Transform tip)
+        {
+            Transform root = new GameObject(name).transform;
+            root.SetParent(parent, false);
+            root.localPosition = localPosition;
+            root.localRotation = Quaternion.Euler(-8f, yawDegrees, -8f);
+            root.localScale = Vector3.one;
+            root.gameObject.layer = layer;
+
+            CreatePart(root, "Staff_Shaft", PrimitiveType.Cylinder, new Vector3(0f, 0.22f, 0f), new Vector3(0.035f, 0.55f, 0.035f), Quaternion.identity, shaftMaterial, layer);
+            CreatePart(root, "Staff_Orb", PrimitiveType.Sphere, new Vector3(0f, 0.82f, -0.03f), new Vector3(0.14f, 0.14f, 0.14f), Quaternion.identity, orbMaterial, layer);
+            tip = CreateAnchor(root, "Staff_Tip", new Vector3(0f, 0.88f, -0.08f), layer);
             return root;
         }
 
