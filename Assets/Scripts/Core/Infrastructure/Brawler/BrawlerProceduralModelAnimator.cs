@@ -17,6 +17,8 @@ namespace MOBA.Core.Infrastructure
         private Transform _rightArm;
         private Transform _leftLeg;
         private Transform _rightLeg;
+        private Transform _leftFoot;
+        private Transform _rightFoot;
         private Transform _leftWeapon;
         private Transform _rightWeapon;
 
@@ -25,6 +27,8 @@ namespace MOBA.Core.Infrastructure
         private Vector3 _rightArmBasePosition;
         private Vector3 _leftLegBasePosition;
         private Vector3 _rightLegBasePosition;
+        private Vector3 _leftFootBasePosition;
+        private Vector3 _rightFootBasePosition;
         private Quaternion _bodyBaseRotation;
         private Quaternion _torsoBaseRotation;
         private Quaternion _headBaseRotation;
@@ -32,6 +36,8 @@ namespace MOBA.Core.Infrastructure
         private Quaternion _rightArmBaseRotation;
         private Quaternion _leftLegBaseRotation;
         private Quaternion _rightLegBaseRotation;
+        private Quaternion _leftFootBaseRotation;
+        private Quaternion _rightFootBaseRotation;
         private Quaternion _leftWeaponBaseRotation;
         private Quaternion _rightWeaponBaseRotation;
 
@@ -52,6 +58,8 @@ namespace MOBA.Core.Infrastructure
             Transform rightArm,
             Transform leftLeg,
             Transform rightLeg,
+            Transform leftFoot,
+            Transform rightFoot,
             Transform leftWeapon,
             Transform rightWeapon)
         {
@@ -63,6 +71,8 @@ namespace MOBA.Core.Infrastructure
             _rightArm = rightArm;
             _leftLeg = leftLeg;
             _rightLeg = rightLeg;
+            _leftFoot = leftFoot;
+            _rightFoot = rightFoot;
             _leftWeapon = leftWeapon;
             _rightWeapon = rightWeapon;
             _useUnscaledTime = owner == null;
@@ -127,23 +137,44 @@ namespace MOBA.Core.Infrastructure
             if (_head != null)
                 _head.localRotation = _headBaseRotation * Quaternion.Euler(-_attackRecoil * 2.5f + idle.HeadPitch, idle.HeadYaw, strideCos * Mathf.Lerp(0.6f, 1.5f, run01) + idle.HeadRoll);
 
-            float armSwing = Mathf.Lerp(8f, 28f, run01) * move01 * _gaitAmplitudeScale;
-            float legSwing = Mathf.Lerp(10f, 30f, run01) * move01 * _gaitAmplitudeScale;
-            float recoil = (_attackRecoil * 22f) + (_superRecoil * 36f);
+            bool hasLeftWeapon = _leftWeapon != null;
+            bool hasRightWeapon = _rightWeapon != null;
+            bool hasAnyWeapon = hasLeftWeapon || hasRightWeapon;
+            float leftFireWeight = hasLeftWeapon || !hasAnyWeapon ? 1f : 0.45f;
+            float rightFireWeight = hasRightWeapon || !hasAnyWeapon ? 1f : 0.45f;
+            float leftFirePose = fireKick * leftFireWeight;
+            float rightFirePose = fireKick * rightFireWeight;
+            float armSwing = Mathf.Lerp(2.2f, 6.5f, run01) * move01 * _gaitAmplitudeScale;
+            float legSwing = Mathf.Lerp(14f, 40f, run01) * move01 * _gaitAmplitudeScale;
+            float recoil = (_attackRecoil * 26f) + (_superRecoil * 42f);
             float supportRecoil = recoil * 0.55f;
-            float legStrideOffset = Mathf.Lerp(0.00f, 0.065f, run01) * move01 * _gaitAmplitudeScale;
-            float legLift = Mathf.Lerp(0.00f, 0.055f, run01) * move01 * _gaitAmplitudeScale;
+            float armRestDrop = (1f - Mathf.Clamp01(fireKick)) * Mathf.Lerp(0.055f, 0.035f, run01);
+            float legStrideOffset = Mathf.Lerp(0.018f, 0.105f, run01) * move01 * _gaitAmplitudeScale;
+            float legLift = Mathf.Lerp(0.010f, 0.080f, run01) * move01 * _gaitAmplitudeScale;
+            float footPitch = Mathf.Lerp(5f, 17f, run01) * move01 * _gaitAmplitudeScale;
 
             if (_leftArm != null)
             {
-                _leftArm.localPosition = _leftArmBasePosition + Vector3.back * (fireKick * 0.018f);
-                _leftArm.localRotation = _leftArmBaseRotation * Quaternion.Euler(-strideSin * armSwing - supportRecoil + idle.LeftArmPitch, idle.LeftArmYaw + fireKick * 2.0f, idle.LeftArmRoll - fireKick * 4.0f);
+                _leftArm.localPosition = _leftArmBasePosition +
+                    Vector3.down * armRestDrop +
+                    Vector3.back * (leftFirePose * 0.030f) +
+                    Vector3.up * (leftFirePose * 0.018f);
+                _leftArm.localRotation = _leftArmBaseRotation * Quaternion.Euler(
+                    -strideSin * armSwing - supportRecoil - leftFirePose * 18f + idle.LeftArmPitch,
+                    idle.LeftArmYaw + leftFirePose * 2.5f,
+                    idle.LeftArmRoll - leftFirePose * 5.5f);
             }
 
             if (_rightArm != null)
             {
-                _rightArm.localPosition = _rightArmBasePosition + Vector3.back * (fireKick * 0.028f);
-                _rightArm.localRotation = _rightArmBaseRotation * Quaternion.Euler(strideSin * armSwing - recoil + idle.RightArmPitch, idle.RightArmYaw - fireKick * 3.0f, idle.RightArmRoll + fireKick * 5.0f);
+                _rightArm.localPosition = _rightArmBasePosition +
+                    Vector3.down * armRestDrop +
+                    Vector3.back * (rightFirePose * 0.040f) +
+                    Vector3.up * (rightFirePose * 0.022f);
+                _rightArm.localRotation = _rightArmBaseRotation * Quaternion.Euler(
+                    strideSin * armSwing - recoil - rightFirePose * 22f + idle.RightArmPitch,
+                    idle.RightArmYaw - rightFirePose * 3.5f,
+                    idle.RightArmRoll + rightFirePose * 6.0f);
             }
 
             if (_leftLeg != null)
@@ -158,11 +189,29 @@ namespace MOBA.Core.Infrastructure
                 _rightLeg.localRotation = _rightLegBaseRotation * Quaternion.Euler(-strideSin * legSwing, 0f, 0f);
             }
 
+            if (_leftFoot != null)
+            {
+                _leftFoot.localPosition = _leftFootBasePosition + new Vector3(0f, Mathf.Max(0f, -strideSin) * legLift * 0.85f, strideSin * legStrideOffset * 0.90f);
+                _leftFoot.localRotation = _leftFootBaseRotation * Quaternion.Euler(strideSin * footPitch, 0f, -strideCos * move01 * 2.0f);
+            }
+
+            if (_rightFoot != null)
+            {
+                _rightFoot.localPosition = _rightFootBasePosition + new Vector3(0f, Mathf.Max(0f, strideSin) * legLift * 0.85f, -strideSin * legStrideOffset * 0.90f);
+                _rightFoot.localRotation = _rightFootBaseRotation * Quaternion.Euler(-strideSin * footPitch, 0f, strideCos * move01 * 2.0f);
+            }
+
             if (_leftWeapon != null)
-                _leftWeapon.localRotation = _leftWeaponBaseRotation * Quaternion.Euler(-_attackRecoil * 12f - _superRecoil * 15f + idle.LeftWeaponPitch, idle.LeftWeaponYaw + fireKick * 2.0f, idle.LeftWeaponRoll - fireKick * 2.5f);
+                _leftWeapon.localRotation = _leftWeaponBaseRotation * Quaternion.Euler(
+                    -leftFirePose * 18f - _superRecoil * 10f + idle.LeftWeaponPitch,
+                    idle.LeftWeaponYaw + leftFirePose * 2.5f,
+                    idle.LeftWeaponRoll - leftFirePose * 3.5f);
 
             if (_rightWeapon != null)
-                _rightWeapon.localRotation = _rightWeaponBaseRotation * Quaternion.Euler(-_attackRecoil * 12f - _superRecoil * 15f + idle.RightWeaponPitch, idle.RightWeaponYaw - fireKick * 2.0f, idle.RightWeaponRoll + fireKick * 2.5f);
+                _rightWeapon.localRotation = _rightWeaponBaseRotation * Quaternion.Euler(
+                    -rightFirePose * 18f - _superRecoil * 10f + idle.RightWeaponPitch,
+                    idle.RightWeaponYaw - rightFirePose * 2.5f,
+                    idle.RightWeaponRoll + rightFirePose * 3.5f);
         }
 
         private IdlePose BuildIdlePose(float move01)
@@ -294,6 +343,16 @@ namespace MOBA.Core.Infrastructure
             {
                 _rightLegBasePosition = _rightLeg.localPosition;
                 _rightLegBaseRotation = _rightLeg.localRotation;
+            }
+            if (_leftFoot != null)
+            {
+                _leftFootBasePosition = _leftFoot.localPosition;
+                _leftFootBaseRotation = _leftFoot.localRotation;
+            }
+            if (_rightFoot != null)
+            {
+                _rightFootBasePosition = _rightFoot.localPosition;
+                _rightFootBaseRotation = _rightFoot.localRotation;
             }
             if (_leftWeapon != null)
                 _leftWeaponBaseRotation = _leftWeapon.localRotation;

@@ -112,8 +112,8 @@ namespace MOBA.Core.Infrastructure
 
             Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.17f, 0.30f, 0.02f), new Vector3(0.18f, 0.46f, 0.18f), Quaternion.identity, pants, layer);
             Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.17f, 0.30f, 0.02f), new Vector3(0.18f, 0.46f, 0.18f), Quaternion.identity, pants, layer);
-            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.34f), Quaternion.identity, boots, layer);
-            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.34f), Quaternion.identity, boots, layer);
+            Transform leftFoot = CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.34f), Quaternion.identity, boots, layer);
+            Transform rightFoot = CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.34f), Quaternion.identity, boots, layer);
 
             Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.48f, 0.93f, -0.12f), new Vector3(0.16f, 0.48f, 0.16f), Quaternion.Euler(68f, 0f, -20f), skin, layer);
             Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.48f, 0.93f, -0.12f), new Vector3(0.16f, 0.48f, 0.16f), Quaternion.Euler(68f, 0f, 20f), skin, layer);
@@ -130,7 +130,7 @@ namespace MOBA.Core.Infrastructure
             anchors.Configure(rightMuzzle, leftMuzzle, castPoint);
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
-            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, leftWeapon, rightWeapon);
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, leftWeapon, rightWeapon);
 
             return root;
         }
@@ -182,8 +182,8 @@ namespace MOBA.Core.Infrastructure
 
             Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.15f, 0.29f, 0.02f), new Vector3(0.17f, 0.44f, 0.17f), Quaternion.identity, overalls, layer);
             Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.15f, 0.29f, 0.02f), new Vector3(0.17f, 0.44f, 0.17f), Quaternion.identity, overalls, layer);
-            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.15f, 0.06f, -0.06f), new Vector3(0.21f, 0.11f, 0.32f), Quaternion.identity, boots, layer);
-            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.15f, 0.06f, -0.06f), new Vector3(0.21f, 0.11f, 0.32f), Quaternion.identity, boots, layer);
+            Transform leftFoot = CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.15f, 0.06f, -0.06f), new Vector3(0.21f, 0.11f, 0.32f), Quaternion.identity, boots, layer);
+            Transform rightFoot = CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.15f, 0.06f, -0.06f), new Vector3(0.21f, 0.11f, 0.32f), Quaternion.identity, boots, layer);
 
             Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.43f, 0.94f, -0.08f), new Vector3(0.15f, 0.42f, 0.15f), Quaternion.Euler(44f, 0f, -18f), skin, layer);
             Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.46f, 0.92f, -0.14f), new Vector3(0.15f, 0.45f, 0.15f), Quaternion.Euler(66f, 0f, 18f), skin, layer);
@@ -198,7 +198,7 @@ namespace MOBA.Core.Infrastructure
             anchors.Configure(muzzle, muzzle, castPoint);
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
-            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, blaster);
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, null, blaster);
 
             return root;
         }
@@ -240,8 +240,8 @@ namespace MOBA.Core.Infrastructure
 
             Transform leftLeg = CreatePart(bodyRoot, "Left_Robot_Leg", PrimitiveType.Cylinder, new Vector3(-0.15f, 0.24f, 0.02f), new Vector3(0.10f, 0.30f, 0.10f), Quaternion.identity, darkMetal, layer);
             Transform rightLeg = CreatePart(bodyRoot, "Right_Robot_Leg", PrimitiveType.Cylinder, new Vector3(0.15f, 0.24f, 0.02f), new Vector3(0.10f, 0.30f, 0.10f), Quaternion.identity, darkMetal, layer);
-            CreatePart(bodyRoot, "Left_Foot", PrimitiveType.Cube, new Vector3(-0.15f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.27f), Quaternion.identity, darkMetal, layer);
-            CreatePart(bodyRoot, "Right_Foot", PrimitiveType.Cube, new Vector3(0.15f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.27f), Quaternion.identity, darkMetal, layer);
+            Transform leftFoot = CreatePart(bodyRoot, "Left_Foot", PrimitiveType.Cube, new Vector3(-0.15f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.27f), Quaternion.identity, darkMetal, layer);
+            Transform rightFoot = CreatePart(bodyRoot, "Right_Foot", PrimitiveType.Cube, new Vector3(0.15f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.27f), Quaternion.identity, darkMetal, layer);
 
             Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Robot_Arm", PrimitiveType.Cylinder, new Vector3(-0.42f, 0.92f, -0.08f), new Vector3(0.09f, 0.42f, 0.09f), Quaternion.Euler(44f, 0f, -20f), darkMetal, layer);
             Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Robot_Arm", PrimitiveType.Cylinder, new Vector3(0.44f, 0.88f, -0.13f), new Vector3(0.09f, 0.44f, 0.09f), Quaternion.Euler(66f, 0f, 18f), darkMetal, layer);
@@ -256,7 +256,7 @@ namespace MOBA.Core.Infrastructure
             anchors.Configure(bottleMouth, bottleMouth, castPoint);
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
-            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, bottle);
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, null, bottle);
 
             return root;
         }
@@ -299,8 +299,8 @@ namespace MOBA.Core.Infrastructure
 
             Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.17f, 0.30f, 0.02f), new Vector3(0.18f, 0.46f, 0.18f), Quaternion.identity, pants, layer);
             Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.17f, 0.30f, 0.02f), new Vector3(0.18f, 0.46f, 0.18f), Quaternion.identity, pants, layer);
-            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
-            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
+            Transform leftFoot = CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
+            Transform rightFoot = CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.17f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
 
             Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.45f, 0.92f, -0.12f), new Vector3(0.15f, 0.47f, 0.15f), Quaternion.Euler(62f, 0f, -20f), skin, layer);
             Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.47f, 0.92f, -0.12f), new Vector3(0.15f, 0.47f, 0.15f), Quaternion.Euler(62f, 0f, 20f), skin, layer);
@@ -315,7 +315,7 @@ namespace MOBA.Core.Infrastructure
             anchors.Configure(bowMuzzle, bowMuzzle, castPoint);
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
-            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, bow);
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, null, bow);
 
             return root;
         }
@@ -362,8 +362,8 @@ namespace MOBA.Core.Infrastructure
 
             Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.20f, 0.30f, 0.02f), new Vector3(0.23f, 0.48f, 0.22f), Quaternion.identity, pants, layer);
             Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.20f, 0.30f, 0.02f), new Vector3(0.23f, 0.48f, 0.22f), Quaternion.identity, pants, layer);
-            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.20f, 0.07f, -0.07f), new Vector3(0.27f, 0.12f, 0.35f), Quaternion.identity, pants, layer);
-            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.20f, 0.07f, -0.07f), new Vector3(0.27f, 0.12f, 0.35f), Quaternion.identity, pants, layer);
+            Transform leftFoot = CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.20f, 0.07f, -0.07f), new Vector3(0.27f, 0.12f, 0.35f), Quaternion.identity, pants, layer);
+            Transform rightFoot = CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.20f, 0.07f, -0.07f), new Vector3(0.27f, 0.12f, 0.35f), Quaternion.identity, pants, layer);
 
             Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Muscle_Arm", PrimitiveType.Capsule, new Vector3(-0.55f, 0.98f, -0.10f), new Vector3(0.24f, 0.58f, 0.24f), Quaternion.Euler(44f, 0f, -30f), skin, layer);
             Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Muscle_Arm", PrimitiveType.Capsule, new Vector3(0.55f, 0.98f, -0.10f), new Vector3(0.24f, 0.58f, 0.24f), Quaternion.Euler(44f, 0f, 30f), skin, layer);
@@ -379,7 +379,7 @@ namespace MOBA.Core.Infrastructure
             anchors.Configure(rightFist, leftFist, castPoint);
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
-            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, null);
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, null, null);
 
             return root;
         }
@@ -425,8 +425,8 @@ namespace MOBA.Core.Infrastructure
 
             Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.16f, 0.30f, 0.02f), new Vector3(0.17f, 0.46f, 0.17f), Quaternion.identity, pants, layer);
             Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.16f, 0.30f, 0.02f), new Vector3(0.17f, 0.46f, 0.17f), Quaternion.identity, pants, layer);
-            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.16f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
-            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.16f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
+            Transform leftFoot = CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.16f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
+            Transform rightFoot = CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.16f, 0.06f, -0.06f), new Vector3(0.22f, 0.11f, 0.32f), Quaternion.identity, boot, layer);
 
             Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.45f, 0.94f, -0.08f), new Vector3(0.14f, 0.45f, 0.14f), Quaternion.Euler(42f, 0f, -20f), coat, layer);
             Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.46f, 0.88f, -0.11f), new Vector3(0.14f, 0.48f, 0.14f), Quaternion.Euler(60f, 0f, 18f), coat, layer);
@@ -441,7 +441,7 @@ namespace MOBA.Core.Infrastructure
             anchors.Configure(staffTip, staffTip, castPoint);
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
-            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, staffProp);
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, null, staffProp);
 
             return root;
         }
@@ -484,8 +484,8 @@ namespace MOBA.Core.Infrastructure
 
             Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.13f, 0.28f, 0.02f), new Vector3(0.14f, 0.42f, 0.14f), Quaternion.identity, skin, layer);
             Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.13f, 0.28f, 0.02f), new Vector3(0.14f, 0.42f, 0.14f), Quaternion.identity, skin, layer);
-            CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.13f, 0.06f, -0.06f), new Vector3(0.19f, 0.10f, 0.29f), Quaternion.identity, boot, layer);
-            CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.13f, 0.06f, -0.06f), new Vector3(0.19f, 0.10f, 0.29f), Quaternion.identity, boot, layer);
+            Transform leftFoot = CreatePart(bodyRoot, "Left_Boot", PrimitiveType.Cube, new Vector3(-0.13f, 0.06f, -0.06f), new Vector3(0.19f, 0.10f, 0.29f), Quaternion.identity, boot, layer);
+            Transform rightFoot = CreatePart(bodyRoot, "Right_Boot", PrimitiveType.Cube, new Vector3(0.13f, 0.06f, -0.06f), new Vector3(0.19f, 0.10f, 0.29f), Quaternion.identity, boot, layer);
 
             Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Arm", PrimitiveType.Capsule, new Vector3(-0.40f, 0.94f, -0.08f), new Vector3(0.13f, 0.42f, 0.13f), Quaternion.Euler(36f, 0f, -16f), skin, layer);
             Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Arm", PrimitiveType.Capsule, new Vector3(0.42f, 0.89f, -0.12f), new Vector3(0.13f, 0.45f, 0.13f), Quaternion.Euler(60f, 0f, 18f), skin, layer);
@@ -500,7 +500,7 @@ namespace MOBA.Core.Infrastructure
             anchors.Configure(umbrellaMuzzle, umbrellaMuzzle, castPoint);
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
-            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, umbrella);
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, null, umbrella);
 
             return root;
         }
@@ -544,8 +544,8 @@ namespace MOBA.Core.Infrastructure
 
             Transform leftLeg = CreatePart(bodyRoot, "Left_Leg", PrimitiveType.Capsule, new Vector3(-0.14f, 0.28f, 0.02f), new Vector3(0.14f, 0.40f, 0.14f), Quaternion.identity, skin, layer);
             Transform rightLeg = CreatePart(bodyRoot, "Right_Leg", PrimitiveType.Capsule, new Vector3(0.14f, 0.28f, 0.02f), new Vector3(0.14f, 0.40f, 0.14f), Quaternion.identity, skin, layer);
-            CreatePart(bodyRoot, "Left_Shoe", PrimitiveType.Cube, new Vector3(-0.14f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.29f), Quaternion.identity, shoe, layer);
-            CreatePart(bodyRoot, "Right_Shoe", PrimitiveType.Cube, new Vector3(0.14f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.29f), Quaternion.identity, shoe, layer);
+            Transform leftFoot = CreatePart(bodyRoot, "Left_Shoe", PrimitiveType.Cube, new Vector3(-0.14f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.29f), Quaternion.identity, shoe, layer);
+            Transform rightFoot = CreatePart(bodyRoot, "Right_Shoe", PrimitiveType.Cube, new Vector3(0.14f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.29f), Quaternion.identity, shoe, layer);
 
             Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Sleeve", PrimitiveType.Capsule, new Vector3(-0.41f, 0.91f, -0.10f), new Vector3(0.14f, 0.42f, 0.14f), Quaternion.Euler(48f, 0f, -18f), hoodie, layer);
             Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Sleeve", PrimitiveType.Capsule, new Vector3(0.41f, 0.91f, -0.10f), new Vector3(0.14f, 0.42f, 0.14f), Quaternion.Euler(48f, 0f, 18f), hoodie, layer);
@@ -561,7 +561,7 @@ namespace MOBA.Core.Infrastructure
             anchors.Configure(rightThrow, leftThrow, castPoint);
 
             BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
-            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, null);
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, leftFoot, rightFoot, null, null);
 
             return root;
         }
