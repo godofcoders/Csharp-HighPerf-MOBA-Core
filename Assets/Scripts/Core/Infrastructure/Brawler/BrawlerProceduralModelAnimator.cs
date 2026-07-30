@@ -34,6 +34,9 @@ namespace MOBA.Core.Infrastructure
         private float _poseTime;
         private float _attackRecoil;
         private float _superRecoil;
+        private float _gaitPhaseOffset;
+        private float _gaitTempoScale;
+        private float _gaitAmplitudeScale = 1f;
         private bool _useUnscaledTime;
 
         public void Initialize(
@@ -59,6 +62,7 @@ namespace MOBA.Core.Infrastructure
             _leftWeapon = leftWeapon;
             _rightWeapon = rightWeapon;
             _useUnscaledTime = owner == null;
+            ConfigureGait(gameObject.name);
 
             CaptureBasePose();
         }
@@ -78,6 +82,9 @@ namespace MOBA.Core.Infrastructure
             if (_owner == null)
                 _owner = GetComponentInParent<BrawlerController>();
 
+            if (_gaitTempoScale <= 0f)
+                ConfigureGait(gameObject.name);
+
             CaptureBasePose();
         }
 
@@ -91,11 +98,13 @@ namespace MOBA.Core.Infrastructure
 
             float speed = _owner != null ? _owner.PlanarVelocity.magnitude : 0f;
             float move01 = Mathf.Clamp01(speed / 5.5f);
-            float stride = _poseTime * Mathf.Lerp(2.0f, 9.5f, move01);
+            float run01 = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.28f, 1f, move01));
+            float strideRate = Mathf.Lerp(2.0f, 13.2f, Mathf.Sqrt(move01)) * _gaitTempoScale;
+            float stride = (_poseTime * strideRate) + _gaitPhaseOffset;
             float strideSin = Mathf.Sin(stride);
             float strideCos = Mathf.Cos(stride);
-            float bob = Mathf.Lerp(0.018f, 0.075f, move01) * Mathf.Abs(strideSin);
-            float lean = move01 * 5.5f;
+            float bob = Mathf.Lerp(0.012f, 0.095f, run01) * Mathf.Abs(strideSin) * move01 * _gaitAmplitudeScale;
+            float lean = Mathf.Lerp(2.0f, 9.2f, run01) * move01;
 
             _attackRecoil = Mathf.MoveTowards(_attackRecoil, 0f, deltaTime * 7.0f);
             _superRecoil = Mathf.MoveTowards(_superRecoil, 0f, deltaTime * 4.5f);
@@ -103,16 +112,16 @@ namespace MOBA.Core.Infrastructure
             IdlePose idle = BuildIdlePose(move01);
 
             _bodyRoot.localPosition = _bodyBasePosition + Vector3.up * (bob + idle.BodyLift);
-            _bodyRoot.localRotation = _bodyBaseRotation * Quaternion.Euler(lean + idle.BodyPitch, idle.BodyYaw, strideCos * move01 * 1.8f + idle.BodyRoll);
+            _bodyRoot.localRotation = _bodyBaseRotation * Quaternion.Euler(lean + idle.BodyPitch, idle.BodyYaw, strideCos * move01 * Mathf.Lerp(1.2f, 3.2f, run01) + idle.BodyRoll);
 
             if (_torso != null)
-                _torso.localRotation = _torsoBaseRotation * Quaternion.Euler(-lean * 0.35f + idle.TorsoPitch, idle.TorsoYaw, -strideCos * move01 * 2.0f + idle.TorsoRoll);
+                _torso.localRotation = _torsoBaseRotation * Quaternion.Euler(-lean * 0.45f + idle.TorsoPitch, idle.TorsoYaw, -strideCos * move01 * Mathf.Lerp(1.4f, 3.5f, run01) + idle.TorsoRoll);
 
             if (_head != null)
-                _head.localRotation = _headBaseRotation * Quaternion.Euler(-_attackRecoil * 2.5f + idle.HeadPitch, idle.HeadYaw, strideCos * 1.2f + idle.HeadRoll);
+                _head.localRotation = _headBaseRotation * Quaternion.Euler(-_attackRecoil * 2.5f + idle.HeadPitch, idle.HeadYaw, strideCos * Mathf.Lerp(0.6f, 1.5f, run01) + idle.HeadRoll);
 
-            float armSwing = move01 * 16f;
-            float legSwing = move01 * 12f;
+            float armSwing = Mathf.Lerp(8f, 28f, run01) * move01 * _gaitAmplitudeScale;
+            float legSwing = Mathf.Lerp(10f, 30f, run01) * move01 * _gaitAmplitudeScale;
             float recoil = (_attackRecoil * 22f) + (_superRecoil * 36f);
 
             if (_leftArm != null)
@@ -189,6 +198,28 @@ namespace MOBA.Core.Infrastructure
                 return Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(start, mid, value));
 
             return Mathf.SmoothStep(1f, 0f, Mathf.InverseLerp(mid, end, value));
+        }
+
+        private void ConfigureGait(string seedText)
+        {
+            float phase = Stable01(seedText);
+            _gaitPhaseOffset = phase * Mathf.PI * 2f;
+            _gaitTempoScale = Mathf.Lerp(0.92f, 1.12f, Stable01(seedText + "_tempo"));
+            _gaitAmplitudeScale = Mathf.Lerp(0.92f, 1.10f, Stable01(seedText + "_amplitude"));
+        }
+
+        private static float Stable01(string seedText)
+        {
+            unchecked
+            {
+                string value = seedText ?? string.Empty;
+                int hash = 23;
+
+                for (int i = 0; i < value.Length; i++)
+                    hash = (hash * 31) + value[i];
+
+                return (hash & 0x7fffffff) / 2147483647f;
+            }
         }
 
         private void HandlePresentationEvent(BrawlerPresentationEvent evt)
