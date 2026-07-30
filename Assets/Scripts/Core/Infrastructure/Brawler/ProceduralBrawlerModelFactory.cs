@@ -33,6 +33,12 @@ namespace MOBA.Core.Infrastructure
                 return instance != null;
             }
 
+            if (IsBrawler(definition, "Barley"))
+            {
+                instance = BuildBarley(parent, owner);
+                return instance != null;
+            }
+
             return false;
         }
 
@@ -167,6 +173,64 @@ namespace MOBA.Core.Infrastructure
             return root;
         }
 
+        private static GameObject BuildBarley(Transform parent, BrawlerController owner)
+        {
+            int layer = parent.gameObject.layer;
+            Material metal = CreateMaterial("Procedural Barley Metal", new Color(0.68f, 0.72f, 0.78f, 1f), 0.55f);
+            Material darkMetal = CreateMaterial("Procedural Barley Dark Metal", new Color(0.18f, 0.20f, 0.24f, 1f), 0.45f);
+            Material vest = CreateMaterial("Procedural Barley Vest", new Color(0.48f, 0.18f, 0.76f, 1f), 0.34f);
+            Material trim = CreateMaterial("Procedural Barley Gold Trim", new Color(0.95f, 0.72f, 0.18f, 1f), 0.35f);
+            Material eye = CreateMaterial("Procedural Barley Eye", new Color(0.25f, 0.95f, 1.00f, 1f), 0.50f);
+            Material bottleGlass = CreateMaterial("Procedural Barley Bottle Glass", new Color(0.10f, 0.70f, 0.36f, 1f), 0.42f);
+            Material cork = CreateMaterial("Procedural Barley Cork", new Color(0.66f, 0.38f, 0.16f, 1f), 0.18f);
+
+            GameObject root = new GameObject("Procedural_Barley_Model");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+            root.layer = layer;
+
+            Transform bodyRoot = new GameObject("BodyRig").transform;
+            bodyRoot.SetParent(root.transform, false);
+            bodyRoot.localPosition = Vector3.zero;
+            bodyRoot.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            bodyRoot.localScale = new Vector3(0.86f, 0.88f, 0.86f);
+            bodyRoot.gameObject.layer = layer;
+
+            CreatePart(bodyRoot, "Base", PrimitiveType.Cylinder, new Vector3(0f, 0.50f, 0f), new Vector3(0.34f, 0.12f, 0.34f), Quaternion.identity, darkMetal, layer);
+            Transform torso = CreatePart(bodyRoot, "Torso_Canister", PrimitiveType.Capsule, new Vector3(0f, 0.90f, 0f), new Vector3(0.52f, 0.58f, 0.42f), Quaternion.identity, metal, layer);
+            CreatePart(bodyRoot, "Vest_Front", PrimitiveType.Cube, new Vector3(0f, 0.92f, -0.25f), new Vector3(0.36f, 0.45f, 0.045f), Quaternion.identity, vest, layer);
+            CreatePart(bodyRoot, "Bow_Tie", PrimitiveType.Cube, new Vector3(0f, 1.20f, -0.28f), new Vector3(0.22f, 0.08f, 0.05f), Quaternion.Euler(0f, 0f, 45f), trim, layer);
+            CreatePart(bodyRoot, "Neck_Post", PrimitiveType.Cylinder, new Vector3(0f, 1.26f, 0f), new Vector3(0.13f, 0.10f, 0.13f), Quaternion.identity, darkMetal, layer);
+            Transform head = CreatePart(bodyRoot, "Robot_Head", PrimitiveType.Cylinder, new Vector3(0f, 1.50f, -0.01f), new Vector3(0.36f, 0.25f, 0.36f), Quaternion.identity, metal, layer);
+            CreatePart(bodyRoot, "Eye_Lens", PrimitiveType.Sphere, new Vector3(0f, 1.51f, -0.30f), new Vector3(0.14f, 0.14f, 0.045f), Quaternion.identity, eye, layer);
+            CreatePart(bodyRoot, "Hat_Rim", PrimitiveType.Cylinder, new Vector3(0f, 1.72f, -0.01f), new Vector3(0.42f, 0.035f, 0.42f), Quaternion.identity, darkMetal, layer);
+            CreatePart(bodyRoot, "Hat_Top", PrimitiveType.Cylinder, new Vector3(0f, 1.84f, -0.01f), new Vector3(0.28f, 0.12f, 0.28f), Quaternion.identity, darkMetal, layer);
+
+            Transform leftLeg = CreatePart(bodyRoot, "Left_Robot_Leg", PrimitiveType.Cylinder, new Vector3(-0.15f, 0.24f, 0.02f), new Vector3(0.10f, 0.30f, 0.10f), Quaternion.identity, darkMetal, layer);
+            Transform rightLeg = CreatePart(bodyRoot, "Right_Robot_Leg", PrimitiveType.Cylinder, new Vector3(0.15f, 0.24f, 0.02f), new Vector3(0.10f, 0.30f, 0.10f), Quaternion.identity, darkMetal, layer);
+            CreatePart(bodyRoot, "Left_Foot", PrimitiveType.Cube, new Vector3(-0.15f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.27f), Quaternion.identity, darkMetal, layer);
+            CreatePart(bodyRoot, "Right_Foot", PrimitiveType.Cube, new Vector3(0.15f, 0.06f, -0.06f), new Vector3(0.20f, 0.10f, 0.27f), Quaternion.identity, darkMetal, layer);
+
+            Transform leftArm = CreateRiggedPart(bodyRoot, "Left_Robot_Arm", PrimitiveType.Cylinder, new Vector3(-0.42f, 0.92f, -0.08f), new Vector3(0.09f, 0.42f, 0.09f), Quaternion.Euler(44f, 0f, -20f), darkMetal, layer);
+            Transform rightArm = CreateRiggedPart(bodyRoot, "Right_Robot_Arm", PrimitiveType.Cylinder, new Vector3(0.44f, 0.88f, -0.13f), new Vector3(0.09f, 0.44f, 0.09f), Quaternion.Euler(66f, 0f, 18f), darkMetal, layer);
+            CreatePart(bodyRoot, "Left_Shoulder_Bolt", PrimitiveType.Sphere, new Vector3(-0.31f, 1.08f, -0.01f), new Vector3(0.17f, 0.17f, 0.16f), Quaternion.identity, trim, layer);
+            CreatePart(bodyRoot, "Right_Shoulder_Bolt", PrimitiveType.Sphere, new Vector3(0.31f, 1.08f, -0.01f), new Vector3(0.17f, 0.17f, 0.16f), Quaternion.identity, trim, layer);
+
+            Transform bottle = CreateBottle(bodyRoot, "Bottle", new Vector3(0.43f, 0.76f, -0.48f), -10f, bottleGlass, cork, layer, out Transform bottleMouth);
+            AttachKeepingWorld(bottle, rightArm);
+
+            Transform castPoint = CreateAnchor(bodyRoot, "CastPoint", new Vector3(0f, 1.08f, -0.52f), layer);
+            BrawlerPresentationAnchors anchors = root.AddComponent<BrawlerPresentationAnchors>();
+            anchors.Configure(bottleMouth, bottleMouth, castPoint);
+
+            BrawlerProceduralModelAnimator animator = root.AddComponent<BrawlerProceduralModelAnimator>();
+            animator.Initialize(owner, bodyRoot, torso, head, leftArm, rightArm, leftLeg, rightLeg, null, bottle);
+
+            return root;
+        }
+
         private static Transform CreatePistol(
             Transform parent,
             string name,
@@ -213,6 +277,30 @@ namespace MOBA.Core.Infrastructure
             CreatePart(root, "Core", PrimitiveType.Sphere, new Vector3(0f, 0.04f, -0.22f), new Vector3(0.15f, 0.15f, 0.10f), Quaternion.identity, energyMaterial, layer);
             CreatePart(root, "Nozzle", PrimitiveType.Cylinder, new Vector3(0f, 0.04f, -0.39f), new Vector3(0.075f, 0.20f, 0.075f), Quaternion.Euler(90f, 0f, 0f), energyMaterial, layer);
             muzzle = CreateAnchor(root, "Muzzle", new Vector3(0f, 0.04f, -0.62f), layer);
+            return root;
+        }
+
+        private static Transform CreateBottle(
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            float yawDegrees,
+            Material glassMaterial,
+            Material corkMaterial,
+            int layer,
+            out Transform mouth)
+        {
+            Transform root = new GameObject(name).transform;
+            root.SetParent(parent, false);
+            root.localPosition = localPosition;
+            root.localRotation = Quaternion.Euler(-18f, yawDegrees, 0f);
+            root.localScale = Vector3.one;
+            root.gameObject.layer = layer;
+
+            CreatePart(root, "Bottle_Body", PrimitiveType.Cylinder, new Vector3(0f, 0f, -0.06f), new Vector3(0.09f, 0.18f, 0.09f), Quaternion.Euler(90f, 0f, 0f), glassMaterial, layer);
+            CreatePart(root, "Bottle_Neck", PrimitiveType.Cylinder, new Vector3(0f, 0.00f, -0.26f), new Vector3(0.045f, 0.10f, 0.045f), Quaternion.Euler(90f, 0f, 0f), glassMaterial, layer);
+            CreatePart(root, "Bottle_Cork", PrimitiveType.Cylinder, new Vector3(0f, 0.00f, -0.38f), new Vector3(0.040f, 0.045f, 0.040f), Quaternion.Euler(90f, 0f, 0f), corkMaterial, layer);
+            mouth = CreateAnchor(root, "Bottle_Mouth", new Vector3(0f, 0f, -0.47f), layer);
             return root;
         }
 
