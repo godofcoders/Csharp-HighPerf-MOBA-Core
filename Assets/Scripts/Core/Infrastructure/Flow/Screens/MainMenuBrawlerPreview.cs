@@ -26,7 +26,7 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Preview Placement")]
         [Tooltip("Local Y level where the bottom of the preview model should sit. The home stage was authored around the old cube center, so procedural characters need a small downward grounding offset.")]
-        [SerializeField] private float _previewGroundLocalY = -0.45f;
+        [SerializeField] private float _previewGroundLocalY = -1.10f;
 
         [Tooltip("Drag distance threshold (in screen pixels) above which a pointer-up is treated as a drag instead of a click.")]
         [Min(0f)]
