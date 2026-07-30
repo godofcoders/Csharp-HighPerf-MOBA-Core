@@ -38,8 +38,11 @@ namespace MOBA.Core.Infrastructure
 
         private static Font _runtimeFont;
         private readonly List<ResultModelView> _resultModels = new List<ResultModelView>(8);
+        private readonly List<RenderTexture> _miniModelRenderTextures = new List<RenderTexture>(8);
         private RenderTexture _modelRenderTexture;
         private GameObject _modelStageRoot;
+        private GameObject _miniModelStageRoot;
+        private int _miniModelSlotIndex;
 
         private void Start()
         {
@@ -243,7 +246,7 @@ namespace MOBA.Core.Infrastructure
             return localEntries;
         }
 
-        private static void CreateTeamPanel(
+        private void CreateTeamPanel(
             Transform parent,
             TeamType team,
             List<MatchResultEntry> entries,
@@ -363,15 +366,16 @@ namespace MOBA.Core.Infrastructure
             rowGroup.childForceExpandHeight = true;
 
             Color headerColor = new Color(0.78f, 0.86f, 1f, 1f);
-            CreateCell(header.transform, "PLAYER", 178f, 13, TextAnchor.MiddleLeft, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "K/D/A", 76f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "DAMAGE", 92f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "TAKEN", 86f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "GEMS", 52f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
-            CreateCell(header.transform, "RATING", 74f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, string.Empty, 58f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "PLAYER", 132f, 13, TextAnchor.MiddleLeft, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "K/D/A", 68f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "DAMAGE", 78f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "TAKEN", 72f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "GEMS", 46f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "RATING", 64f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
         }
 
-        private static void CreateTeamStatsRow(Transform parent, MatchResultEntry entry)
+        private void CreateTeamStatsRow(Transform parent, MatchResultEntry entry)
         {
             GameObject row = CreatePanel(parent, "StatsRow_" + SanitizeName(entry.DisplayName), ResolveRowColor(entry));
             LayoutElement rowLayout = row.AddComponent<LayoutElement>();
@@ -387,12 +391,131 @@ namespace MOBA.Core.Infrastructure
             string displayName = entry.IsStarPlayer
                 ? "* " + entry.DisplayName.ToUpperInvariant()
                 : entry.DisplayName.ToUpperInvariant();
-            CreateCell(row.transform, displayName, 178f, 16, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
-            CreateCell(row.transform, $"{entry.Stats.Kills} / {entry.Stats.Deaths} / {entry.Stats.Assists}", 76f, 15, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
-            CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageDealt).ToString(), 92f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
-            CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageTaken).ToString(), 86f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
-            CreateCell(row.transform, entry.Stats.GemsCollected.ToString(), 52f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
-            CreateCell(row.transform, Mathf.RoundToInt(entry.StarScore).ToString(), 74f, 15, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.22f, 1f), FontStyle.Bold);
+            CreateMiniatureModelCell(row.transform, entry);
+            CreateCell(row.transform, displayName, 132f, 16, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
+            CreateCell(row.transform, $"{entry.Stats.Kills} / {entry.Stats.Deaths} / {entry.Stats.Assists}", 68f, 15, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
+            CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageDealt).ToString(), 78f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
+            CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageTaken).ToString(), 72f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
+            CreateCell(row.transform, entry.Stats.GemsCollected.ToString(), 46f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
+            CreateCell(row.transform, Mathf.RoundToInt(entry.StarScore).ToString(), 64f, 15, TextAnchor.MiddleCenter, new Color(1f, 0.82f, 0.22f, 1f), FontStyle.Bold);
+        }
+
+        private void CreateMiniatureModelCell(Transform parent, MatchResultEntry entry)
+        {
+            RawImage modelImage = CreateRawImage(parent, "MiniModel_" + SanitizeName(entry.DisplayName));
+            modelImage.texture = BuildMiniatureModelTexture(entry);
+            modelImage.color = Color.white;
+
+            LayoutElement layout = modelImage.gameObject.AddComponent<LayoutElement>();
+            layout.preferredWidth = 58f;
+            layout.flexibleWidth = 0f;
+        }
+
+        private Texture BuildMiniatureModelTexture(MatchResultEntry entry)
+        {
+            EnsureMiniatureModelStageRoot();
+
+            GameObject slotRoot = new GameObject("MiniModelSlot_" + SanitizeName(entry.DisplayName));
+            slotRoot.transform.SetParent(_miniModelStageRoot.transform, false);
+            slotRoot.transform.localPosition = new Vector3(_miniModelSlotIndex * 4.0f, 0f, 0f);
+            _miniModelSlotIndex++;
+
+            RenderTexture texture = new RenderTexture(128, 128, 16, RenderTextureFormat.ARGB32)
+            {
+                name = "ResultsMiniModelTexture_" + SanitizeName(entry.DisplayName),
+                antiAliasing = 4
+            };
+            texture.Create();
+            _miniModelRenderTextures.Add(texture);
+
+            Camera camera = CreateMiniatureModelCamera(slotRoot.transform);
+            camera.targetTexture = texture;
+            CreateMiniatureModelLights(slotRoot.transform);
+            CreateMiniatureModelFloor(slotRoot.transform);
+
+            GameObject model = CreateResultModelObject(entry, entry.Team);
+            if (model != null)
+            {
+                model.transform.SetParent(slotRoot.transform, false);
+                model.transform.localPosition = Vector3.zero;
+                model.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                NormalizeResultModel(model, 0.92f);
+
+                bool celebrating = entry.IsStarPlayer ||
+                                   (MatchResultBoard.WinnerKnown && MatchResultBoard.Winner == entry.Team);
+                _resultModels.Add(new ResultModelView
+                {
+                    Root = model.transform,
+                    BasePosition = model.transform.localPosition,
+                    Celebrating = celebrating,
+                    Phase = _miniModelSlotIndex * 0.43f
+                });
+            }
+
+            return texture;
+        }
+
+        private void EnsureMiniatureModelStageRoot()
+        {
+            if (_miniModelStageRoot != null)
+                return;
+
+            _miniModelStageRoot = new GameObject("ResultsMiniModelStage");
+            _miniModelStageRoot.transform.position = new Vector3(0f, -220f, 0f);
+        }
+
+        private Camera CreateMiniatureModelCamera(Transform parent)
+        {
+            GameObject cameraObject = new GameObject("MiniModelCamera");
+            cameraObject.transform.SetParent(parent, false);
+            cameraObject.transform.localPosition = new Vector3(0f, 1.05f, -3.2f);
+            cameraObject.transform.localRotation = Quaternion.Euler(8f, 0f, 0f);
+
+            Camera camera = cameraObject.AddComponent<Camera>();
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0.010f, 0.018f, 0.040f, 1f);
+            camera.orthographic = true;
+            camera.orthographicSize = 0.96f;
+            camera.nearClipPlane = 0.1f;
+            camera.farClipPlane = 14f;
+            return camera;
+        }
+
+        private static void CreateMiniatureModelLights(Transform parent)
+        {
+            GameObject keyObject = new GameObject("MiniModelKeyLight");
+            keyObject.transform.SetParent(parent, false);
+            keyObject.transform.localRotation = Quaternion.Euler(42f, -22f, 0f);
+            Light key = keyObject.AddComponent<Light>();
+            key.type = LightType.Directional;
+            key.intensity = 1.15f;
+            key.color = new Color(1f, 0.94f, 0.84f, 1f);
+
+            GameObject rimObject = new GameObject("MiniModelRimLight");
+            rimObject.transform.SetParent(parent, false);
+            rimObject.transform.localPosition = new Vector3(0.35f, 1.2f, -1.2f);
+            Light rim = rimObject.AddComponent<Light>();
+            rim.type = LightType.Point;
+            rim.range = 4f;
+            rim.intensity = 0.85f;
+            rim.color = new Color(0.55f, 0.72f, 1f, 1f);
+        }
+
+        private static void CreateMiniatureModelFloor(Transform parent)
+        {
+            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.name = "MiniModelFloor";
+            floor.transform.SetParent(parent, false);
+            floor.transform.localPosition = new Vector3(0f, -0.08f, 0.52f);
+            floor.transform.localScale = new Vector3(1.25f, 0.045f, 0.72f);
+
+            Renderer renderer = floor.GetComponent<Renderer>();
+            if (renderer != null)
+                renderer.material.color = new Color(0.08f, 0.11f, 0.18f, 1f);
+
+            Collider collider = floor.GetComponent<Collider>();
+            if (collider != null)
+                collider.enabled = false;
         }
 
         private static void CreateCell(
@@ -568,18 +691,26 @@ namespace MOBA.Core.Infrastructure
 
         private static GameObject CreateResultModelObject(MatchResultEntry entry, TeamType team)
         {
+            GameObject modelRoot = new GameObject("ResultModel_" + SanitizeName(entry.DisplayName));
+            if (entry.Definition != null &&
+                ProceduralBrawlerModelFactory.TryCreate(entry.Definition, modelRoot.transform, null, out GameObject proceduralModel) &&
+                proceduralModel != null)
+            {
+                StripResultModelBehaviours(modelRoot);
+                return modelRoot;
+            }
+
             GameObject prefab = entry.Definition != null ? entry.Definition.ModelPrefab : null;
-            GameObject model = prefab != null
-                ? Instantiate(prefab)
-                : GameObject.CreatePrimitive(PrimitiveType.Cube);
+            GameObject model = prefab != null ? Instantiate(prefab) : GameObject.CreatePrimitive(PrimitiveType.Cube);
+            model.transform.SetParent(modelRoot.transform, false);
 
             model.name = "ResultModel_" + SanitizeName(entry.DisplayName);
-            StripResultModelBehaviours(model);
+            StripResultModelBehaviours(modelRoot);
 
             if (prefab == null)
                 TintFallbackModel(model, team);
 
-            return model;
+            return modelRoot;
         }
 
         private static void StripResultModelBehaviours(GameObject model)
@@ -849,6 +980,24 @@ namespace MOBA.Core.Infrastructure
             {
                 Destroy(_modelStageRoot);
                 _modelStageRoot = null;
+            }
+
+            for (int i = 0; i < _miniModelRenderTextures.Count; i++)
+            {
+                RenderTexture texture = _miniModelRenderTextures[i];
+                if (texture == null)
+                    continue;
+
+                texture.Release();
+                Destroy(texture);
+            }
+
+            _miniModelRenderTextures.Clear();
+
+            if (_miniModelStageRoot != null)
+            {
+                Destroy(_miniModelStageRoot);
+                _miniModelStageRoot = null;
             }
         }
 
