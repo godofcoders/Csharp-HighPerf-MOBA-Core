@@ -1,4 +1,4 @@
-{"kind":"deck","id":"pr/ay3487","name":"Deck"}
+{"kind":"deck","id":"pr/i66gw4","name":"Deck"}
 {"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"","type":"master","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
 {"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"Title Slide","type":"title","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"subtitle","type":"subtitle","textPreview":"Click to edit Master subtitle style"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
 {"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout2.xml","name":"Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
@@ -25,7 +25,7 @@
 {"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":"[Sources]\n- Major project final report front matter.\n- Proposal and interim report student metadata."}
 {"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"Introduction","textShapes":2}
 {"kind":"textbox","id":"sh/cza94vmx","slide":3,"name":"Title 1","placeholder":"title","text":"Introduction","textPreview":"Introduction","textChars":12,"textLines":1,"bbox":[0,0,0,0]}
-{"kind":"textbox","id":"sh/d0jax03i","slide":3,"name":"Content Placeholder 2","text":"Unity MOBA / brawler prototype focused on AI architecture.\nBots value objectives, team state, map safety, and brawler roles.\nCore approach: utility scoring, blackboard sharing, tactical movement, and tuning data.","textPreview":"Unity MOBA / brawler prototype focused on AI architecture. | Bots value objectives, team state, map safety, and brawler roles. | Core app...","textChars":212,"textLines":3,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/d0jax03i","slide":3,"name":"Content Placeholder 2","text":"Unity MOBA prototype focused on AI architecture.\nBots evaluate objectives, team state, map safety, and role policies.\nCore approach: utility scoring, blackboard sharing, tactical movement, and tuning data.","textPreview":"Unity MOBA prototype focused on AI architecture. | Bots evaluate objectives, team state, map safety, and role policies. | Core approach: ...","textChars":205,"textLines":3,"bbox":[0,0,0,0]}
 {"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":"[Sources]\n- Major project final report abstract and introduction."}
 {"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"Problem Statement","textShapes":12}
 {"kind":"textbox","id":"sh/1cj2d8b6","slide":4,"name":"Title 1","placeholder":"title","text":"Problem Statement","textPreview":"Problem Statement","textChars":17,"textLines":1,"bbox":[0,0,0,0]}
@@ -57,11 +57,11 @@
 {"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":"[Sources]\n- Major project final report problem definition.\n- Playtest issues recorded during development: objective neglect, clumping, stalls, target lock, and weak mode awareness."}
 {"kind":"slide","id":"sl/i107q5of","slide":5,"title":"Objectives","textShapes":2}
 {"kind":"textbox","id":"sh/dgbulwnm","slide":5,"name":"Title 1","placeholder":"title","text":"Objectives","textPreview":"Objectives","textChars":10,"textLines":1,"bbox":[0,0,0,0]}
-{"kind":"textbox","id":"sh/z2tcnm5s","slide":5,"name":"Rectangle 1","text":"1. Build utility-based decisions.\n2. Coordinate teams through blackboard data.\n3. Prioritize active game-mode objectives.\n4. Navigate safely around map obstacles.\n5. Add brawler-specific tactical roles.\n6. Expose debug and validation tooling.","textPreview":"1. Build utility-based decisions. | 2. Coordinate teams through blackboard data. | 3. Prioritize active game-mode objectives. | 4. Naviga...","textChars":242,"textLines":6,"bbox":[102.23,203.58,753.9,318.19]}
+{"kind":"textbox","id":"sh/z2tcnm5s","slide":5,"name":"Rectangle 1","text":"1. Build utility-based decisions.\n2. Coordinate teams through blackboard data.\n3. Prioritize active game-mode objectives.\n4. Navigate safely around map obstacles.\n5. Add role-specific tactical behavior.\n6. Expose debug and validation tooling.","textPreview":"1. Build utility-based decisions. | 2. Coordinate teams through blackboard data. | 3. Prioritize active game-mode objectives. | 4. Naviga...","textChars":242,"textLines":6,"bbox":[102.23,203.58,753.9,318.19]}
 {"kind":"notes","id":"nt/i107q5of","slide":5,"text":"[Sources]\n- Major project final report objectives section."}
 {"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"Scope of the Project","textShapes":8}
 {"kind":"textbox","id":"sh/yhg7epsj","slide":6,"name":"Title 1","placeholder":"title","text":"Scope of the Project","textPreview":"Scope of the Project","textChars":20,"textLines":1,"bbox":[0,0,0,0]}
-{"kind":"textbox","id":"sh/87ipkzal","slide":6,"name":"Rectangle 1","text":"Included:\n- AI decisions, team coordination, mode strategy.\n- Tactical movement, navigation, and recovery.\n- Brawler role intelligence and debug visibility.\nNot included:\n- Online multiplayer, monetization, commercial art,\n  and full ML training.","textPreview":"Included: | - AI decisions, team coordination, mode strategy. | - Tactical movement, navigation, and recovery. | - Brawler role intellige...","textChars":246,"textLines":7,"bbox":[102.45,177.47,518.92,371.84]}
+{"kind":"textbox","id":"sh/87ipkzal","slide":6,"name":"Rectangle 1","text":"Included:\n- AI decisions, team coordination, mode strategy.\n- Tactical movement, navigation, and recovery.\n- Role intelligence and debug visibility.\nNot included:\n- Online multiplayer, monetization, commercial art,\n  and full ML training.","textPreview":"Included: | - AI decisions, team coordination, mode strategy. | - Tactical movement, navigation, and recovery. | - Role intelligence and ...","textChars":238,"textLines":7,"bbox":[102.45,177.47,518.92,371.84]}
 {"kind":"shape","id":"sh/98rqt4r6","slide":6,"bbox":[725,585,120,30]}
 {"kind":"textbox","id":"sh/ml07i9sv","slide":6,"text":"Utility AI","textPreview":"Utility AI","textChars":10,"textLines":1,"bbox":[733,591,104,18]}
 {"kind":"shape","id":"sh/7m98ru9g","slide":6,"bbox":[870,585,130,30]}
@@ -71,101 +71,177 @@
 {"kind":"shape","id":"sh/w32twb6l","slide":6,"bbox":[725,630,120,30]}
 {"kind":"textbox","id":"sh/v2tcn650","slide":6,"text":"Mode AI","textPreview":"Mode AI","textChars":7,"textLines":1,"bbox":[733,636,104,18]}
 {"kind":"shape","id":"sh/u1kbu1ov","slide":6,"bbox":[870,630,130,30]}
-{"kind":"textbox","id":"sh/5svutgni","slide":6,"text":"Brawler roles","textPreview":"Brawler roles","textChars":13,"textLines":1,"bbox":[878,636,114,18]}
+{"kind":"textbox","id":"sh/5svutgni","slide":6,"text":"Role AI","textPreview":"Role AI","textChars":7,"textLines":1,"bbox":[878,636,114,18]}
 {"kind":"shape","id":"sh/47mt0b6x","slide":6,"bbox":[1025,630,110,30]}
 {"kind":"textbox","id":"sh/j6dcr65c","slide":6,"text":"Telemetry","textPreview":"Telemetry","textChars":9,"textLines":1,"bbox":[1033,636,94,18]}
 {"kind":"notes","id":"nt/x8f69ofe","slide":6,"text":"[Sources]\n- Major project final report scope section."}
-{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"Literature Review / Existing System","textShapes":4}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"Literature Review / Existing System","textShapes":10}
 {"kind":"textbox","id":"sh/cb2tkvap","slide":7,"name":"Title 1","placeholder":"title","text":"Literature Review / Existing System","textPreview":"Literature Review / Existing System","textChars":35,"textLines":1,"bbox":[0,0,0,0]}
-{"kind":"textbox","id":"sh/ydkbm5sv","slide":7,"name":"Rectangle 1","text":"Related ideas: FSMs, behavior trees,\nutility AI, blackboards, and A* pathfinding.\nSelected approach: utility AI + blackboard\nfor flexible, inspectable decisions.\nGap: scripted bots fail when objectives,\nroles, hazards, and team strategy interact.","textPreview":"Related ideas: FSMs, behavior trees, | utility AI, blackboards, and A* pathfinding. | Selected approach: utility AI + blackboard | for fl...","textChars":246,"textLines":6,"bbox":[138.58,174.63,620.93,318.19]}
-{"kind":"shape","id":"sh/zedcfa9g","slide":7,"bbox":[760,455,280,105]}
-{"kind":"shape","id":"sh/kzmdova1","slide":7,"bbox":[760,455,7,105]}
-{"kind":"textbox","id":"sh/l0vuh0rm","slide":7,"text":"Selected direction","textPreview":"Selected direction","textChars":18,"textLines":1,"bbox":[786,476,220,24]}
-{"kind":"textbox","id":"sh/eh0ba1sr","slide":7,"text":"Authored, inspectable game AI now; optional ML experiments later.","textPreview":"Authored, inspectable game AI now; optional ML experiments later.","textChars":65,"textLines":1,"bbox":[786,514,220,36]}
+{"kind":"textbox","id":"sh/dcbud0ra","slide":7,"text":"The project compares common bot-authoring patterns and chooses an explainable hybrid architecture suitable for real-time games.","textPreview":"The project compares common bot-authoring patterns and chooses an explainable hybrid architecture suitable for real-time games.","textChars":127,"textLines":1,"bbox":[96,156,1000,34]}
+{"kind":"shape","id":"sh/ydkbm5sv","slide":7,"bbox":[86,218,310,126]}
+{"kind":"shape","id":"sh/zedcfa9g","slide":7,"bbox":[86,218,7,126]}
+{"kind":"textbox","id":"sh/kzmdova1","slide":7,"text":"Finite State Machines","textPreview":"Finite State Machines","textChars":21,"textLines":1,"bbox":[104,230,278,22]}
+{"kind":"textbox","id":"sh/l0vuh0rm","slide":7,"text":"Clear and easy to debug, but transitions become hard to scale when objectives, hazards, roles, and teamplay interact.","textPreview":"Clear and easy to debug, but transitions become hard to scale when objectives, hazards, roles, and teamplay interact.","textChars":117,"textLines":1,"bbox":[104,258,278,80]}
+{"kind":"shape","id":"sh/eh0ba1sr","slide":7,"bbox":[446,218,310,126]}
+{"kind":"shape","id":"sh/fi9c369c","slide":7,"bbox":[446,218,7,126]}
+{"kind":"textbox","id":"sh/baxkjqlk","slide":7,"text":"Behavior Trees","textPreview":"Behavior Trees","textChars":14,"textLines":1,"bbox":[464,230,278,22]}
+{"kind":"textbox","id":"sh/a9ojq5kz","slide":7,"text":"Useful for structured behavior, but large trees often repeat checks and can hide why one action won over another.","textPreview":"Useful for structured behavior, but large trees often repeat checks and can hide why one action won over another.","textChars":113,"textLines":1,"bbox":[464,258,278,80]}
+{"kind":"shape","id":"sh/xcz2l03q","slide":7,"bbox":[806,218,310,126]}
+{"kind":"shape","id":"sh/cbq1sv25","slide":7,"bbox":[806,218,7,126]}
+{"kind":"textbox","id":"sh/n6x0fqlo","slide":7,"text":"Utility AI","textPreview":"Utility AI","textChars":10,"textLines":1,"bbox":[824,230,278,22]}
+{"kind":"textbox","id":"sh/25ojml43","slide":7,"text":"Actions are scored from context. This fits dynamic combat because targeting, safety, and objectives can compete numerically.","textPreview":"Actions are scored from context. This fits dynamic combat because targeting, safety, and objectives can compete numerically.","textChars":124,"textLines":1,"bbox":[824,258,278,80]}
+{"kind":"shape","id":"sh/p8fih03e","slide":7,"bbox":[190,394,820,118]}
+{"kind":"shape","id":"sh/o761ov2t","slide":7,"bbox":[190,394,7,118]}
+{"kind":"textbox","id":"sh/f2d0b6lc","slide":7,"text":"Selected direction","textPreview":"Selected direction","textChars":18,"textLines":1,"bbox":[208,406,788,22]}
+{"kind":"textbox","id":"sh/eh4jil4r","slide":7,"text":"Utility scoring + team blackboard + A* navigation + validation telemetry. The system remains authored, inspectable, and tunable; ML can be explored later without replacing the core.","textPreview":"Utility scoring + team blackboard + A* navigation + validation telemetry. The system remains authored, inspectable, and tunable; ML can b...","textChars":181,"textLines":1,"bbox":[208,434,788,72]}
 {"kind":"notes","id":"nt/gnmp4jqx","slide":7,"text":"[Sources]\n- Major project final report literature review.\n- Project report references to game AI, A* pathfinding, utility AI, blackboard systems, and Unity ScriptableObjects."}
-{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"Proposed System","textShapes":7}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"Proposed System","textShapes":13}
 {"kind":"textbox","id":"sh/18byd4zy","slide":8,"name":"Title 1","placeholder":"title","text":"Proposed System","textPreview":"Proposed System","textChars":15,"textLines":1,"bbox":[0,0,0,0]}
-{"kind":"textbox","id":"sh/ri9g7uhw","slide":8,"name":"Rectangle 1","text":"Layered AI stack with one clear responsibility per layer.\nNew brawlers, maps, modes, and difficulty profiles\nplug into the same decision pipeline.","textPreview":"Layered AI stack with one clear responsibility per layer. | New brawlers, maps, modes, and difficulty profiles | plug into the same decis...","textChars":146,"textLines":3,"bbox":[100.39,185.22,898.87,144]}
-{"kind":"shape","id":"sh/6h0fypgb","slide":8,"bbox":[112,420,150,55]}
-{"kind":"textbox","id":"sh/tkby9kzm","slide":8,"text":"Scoring","textPreview":"Scoring","textChars":7,"textLines":1,"bbox":[120,430,134,37]}
-{"kind":"shape","id":"sh/sjix0zy1","slide":8,"bbox":[312,420,150,55]}
-{"kind":"textbox","id":"sh/je9g3ahk","slide":8,"text":"Commitment","textPreview":"Commitment","textChars":10,"textLines":1,"bbox":[320,430,134,37]}
-{"kind":"shape","id":"sh/id0fu50z","slide":8,"bbox":[512,420,150,55]}
-{"kind":"textbox","id":"sh/o7ydoret","slide":8,"text":"Blackboard","textPreview":"Blackboard","textChars":10,"textLines":1,"bbox":[520,430,134,37]}
-{"kind":"shape","id":"sh/98rehwve","slide":8,"bbox":[712,420,150,55]}
-{"kind":"textbox","id":"sh/m5gvmhwn","slide":8,"text":"Navigation","textPreview":"Navigation","textChars":10,"textLines":1,"bbox":[720,430,134,37]}
-{"kind":"shape","id":"sh/n6pwfmd8","slide":8,"bbox":[912,420,150,55]}
-{"kind":"textbox","id":"sh/0jydkreh","slide":8,"text":"Validation","textPreview":"Validation","textChars":10,"textLines":1,"bbox":[920,430,134,37]}
-{"kind":"shape","id":"sh/1k7edwv2","slide":8,"bbox":[266,438,34,18]}
-{"kind":"shape","id":"sh/ehgvihwr","slide":8,"bbox":[466,438,34,18]}
-{"kind":"shape","id":"sh/zipwbmdc","slide":8,"bbox":[666,438,34,18]}
-{"kind":"shape","id":"sh/kfixwbe1","slide":8,"bbox":[866,438,34,18]}
+{"kind":"textbox","id":"sh/g72x4zyd","slide":8,"text":"The proposed system treats every bot as a modular decision agent. Game rules, map data, tuning assets, and team state feed the same runtime pipeline.","textPreview":"The proposed system treats every bot as a modular decision agent. Game rules, map data, tuning assets, and team state feed the same runti...","textChars":149,"textLines":1,"bbox":[96,166,1010,42]}
+{"kind":"shape","id":"sh/ri9g7uhw","slide":8,"bbox":[88,300,154,58]}
+{"kind":"textbox","id":"sh/6h0fypgb","slide":8,"text":"Perception","textPreview":"Perception","textChars":10,"textLines":1,"bbox":[96,310,138,40]}
+{"kind":"shape","id":"sh/tkby9kzm","slide":8,"bbox":[288,300,154,58]}
+{"kind":"textbox","id":"sh/sjix0zy1","slide":8,"text":"Utility\nScoring","textPreview":"Utility | Scoring","textChars":15,"textLines":2,"bbox":[296,310,138,40]}
+{"kind":"shape","id":"sh/je9g3ahk","slide":8,"bbox":[488,300,154,58]}
+{"kind":"textbox","id":"sh/id0fu50z","slide":8,"text":"Team\nBlackboard","textPreview":"Team | Blackboard","textChars":15,"textLines":2,"bbox":[496,310,138,40]}
+{"kind":"shape","id":"sh/o7ydoret","slide":8,"bbox":[688,300,154,58]}
+{"kind":"textbox","id":"sh/98rehwve","slide":8,"text":"Mode\nStrategy","textPreview":"Mode | Strategy","textChars":13,"textLines":2,"bbox":[696,310,138,40]}
+{"kind":"shape","id":"sh/m5gvmhwn","slide":8,"bbox":[888,300,154,58]}
+{"kind":"textbox","id":"sh/n6pwfmd8","slide":8,"text":"Planner +\nExecutor","textPreview":"Planner + | Executor","textChars":18,"textLines":2,"bbox":[896,310,138,40]}
+{"kind":"shape","id":"sh/0jydkreh","slide":8,"bbox":[248,320,34,18]}
+{"kind":"shape","id":"sh/1k7edwv2","slide":8,"bbox":[448,320,34,18]}
+{"kind":"shape","id":"sh/ehgvihwr","slide":8,"bbox":[648,320,34,18]}
+{"kind":"shape","id":"sh/zipwbmdc","slide":8,"bbox":[848,320,34,18]}
+{"kind":"shape","id":"sh/kfixwbe1","slide":8,"bbox":[92,420,305,112]}
+{"kind":"shape","id":"sh/lgbepgvm","slide":8,"bbox":[92,420,7,112]}
+{"kind":"textbox","id":"sh/tw7e9gnq","slide":8,"text":"Scalable by data","textPreview":"Scalable by data","textChars":16,"textLines":1,"bbox":[110,432,273,22]}
+{"kind":"textbox","id":"sh/svydgb65","slide":8,"text":"Difficulty, personality, ability tuning, map semantics, and mode priorities are configured outside the main controller logic.","textPreview":"Difficulty, personality, ability tuning, map semantics, and mode priorities are configured outside the main controller logic.","textChars":125,"textLines":1,"bbox":[110,460,273,66]}
+{"kind":"shape","id":"sh/7u5w765k","slide":8,"bbox":[452,420,305,112]}
+{"kind":"shape","id":"sh/6twve1oz","slide":8,"bbox":[452,420,7,112]}
+{"kind":"textbox","id":"sh/5sne5wne","slide":8,"text":"Explainable decisions","textPreview":"Explainable decisions","textChars":21,"textLines":1,"bbox":[470,432,273,22]}
+{"kind":"textbox","id":"sh/kredcr6t","slide":8,"text":"Debug labels show current intent, target, score gap, route state, confidence rank, and recovery reason.","textPreview":"Debug labels show current intent, target, score gap, route state, confidence rank, and recovery reason.","textChars":103,"textLines":1,"bbox":[470,460,273,66]}
+{"kind":"shape","id":"sh/jq5w365o","slide":8,"bbox":[812,420,305,112]}
+{"kind":"shape","id":"sh/i5wva1o3","slide":8,"bbox":[812,420,7,112]}
+{"kind":"textbox","id":"sh/x4ne1wni","slide":8,"text":"Production hardening","textPreview":"Production hardening","textChars":20,"textLines":1,"bbox":[830,432,273,22]}
+{"kind":"textbox","id":"sh/w3ed8r6x","slide":8,"text":"Lifecycle cleanup, objective fallback, budget fairness, and incident logging reduce stalls and frame spikes.","textPreview":"Lifecycle cleanup, objective fallback, budget fairness, and incident logging reduce stalls and frame spikes.","textChars":108,"textLines":1,"bbox":[830,460,273,66]}
 {"kind":"notes","id":"nt/fu1gfa1s","slide":8,"text":"[Sources]\n- Major project final report proposed system section."}
-{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"Architecture","textShapes":14}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"Architecture","textShapes":17}
 {"kind":"textbox","id":"sh/1cfmhgne","slide":9,"name":"Title 1","placeholder":"title","text":"Architecture","textPreview":"Architecture","textChars":12,"textLines":1,"bbox":[0,0,0,0]}
-{"kind":"textbox","id":"sh/nex4jq5k","slide":9,"name":"Rectangle 1","text":"High-level AI data flow and support layers:","textPreview":"High-level AI data flow and support layers:","textChars":43,"textLines":1,"bbox":[107.61,180.06,709.58,100.17]}
-{"kind":"shape","id":"sh/mdonql4z","slide":9,"bbox":[95,245,118,62]}
-{"kind":"textbox","id":"sh/9gzml0nq","slide":9,"text":"Perception\nMemory","textPreview":"Perception | Memory","textChars":17,"textLines":2,"bbox":[103,255,102,44]}
-{"kind":"shape","id":"sh/ofq5svm5","slide":9,"bbox":[255,245,118,62]}
-{"kind":"textbox","id":"sh/bih4na5w","slide":9,"text":"Target\nScoring","textPreview":"Target | Scoring","textChars":14,"textLines":2,"bbox":[263,255,102,44]}
-{"kind":"shape","id":"sh/ah8nu54b","slide":9,"bbox":[415,245,118,62]}
-{"kind":"textbox","id":"sh/oza1gfyh","slide":9,"text":"Utility\nDecision","textPreview":"Utility | Decision","textChars":16,"textLines":2,"bbox":[423,255,102,44]}
-{"kind":"shape","id":"sh/p0ji9kf2","slide":9,"bbox":[575,245,118,62]}
-{"kind":"textbox","id":"sh/2xsjepgb","slide":9,"text":"Commitment\nHysteresis","textPreview":"Commitment | Hysteresis","textChars":21,"textLines":2,"bbox":[583,255,102,44]}
-{"kind":"shape","id":"sh/3y107axw","slide":9,"bbox":[735,245,118,62]}
-{"kind":"textbox","id":"sh/cnu1kzyd","slide":9,"text":"Tactical\nMovement","textPreview":"Tactical | Movement","textChars":17,"textLines":2,"bbox":[743,255,102,44]}
-{"kind":"shape","id":"sh/do3id4fy","slide":9,"bbox":[895,245,118,62]}
-{"kind":"textbox","id":"sh/qlcjipgn","slide":9,"text":"Action\nExecutor","textPreview":"Action | Executor","textChars":15,"textLines":2,"bbox":[903,255,102,44]}
-{"kind":"shape","id":"sh/bml0buxs","slide":9,"bbox":[218,267,28,18]}
-{"kind":"shape","id":"sh/0ru1ozyp","slide":9,"bbox":[378,267,28,18]}
-{"kind":"shape","id":"sh/lsn2h4fa","slide":9,"bbox":[538,267,28,18]}
-{"kind":"shape","id":"sh/98ji147e","slide":9,"bbox":[698,267,28,18]}
-{"kind":"shape","id":"sh/87a18zqt","slide":9,"bbox":[858,267,28,18]}
-{"kind":"shape","id":"sh/76h0zup8","slide":9,"bbox":[152,392,268,86]}
-{"kind":"shape","id":"sh/ml8j6p8n","slide":9,"bbox":[152,392,7,86]}
-{"kind":"textbox","id":"sh/hcji5o7a","slide":9,"text":"Team blackboard","textPreview":"Team blackboard","textChars":15,"textLines":1,"bbox":[178,414,218,20]}
-{"kind":"textbox","id":"sh/wba1cjqp","slide":9,"text":"Focus counts, ally pressure, carrier protection, lanes, threats.","textPreview":"Focus counts, ally pressure, carrier protection, lanes, threats.","textChars":64,"textLines":1,"bbox":[178,444,220,28]}
-{"kind":"shape","id":"sh/va103ep4","slide":9,"bbox":[510,392,268,86]}
-{"kind":"shape","id":"sh/u9sja98z","slide":9,"bbox":[510,392,7,86]}
-{"kind":"textbox","id":"sh/xgzitk76","slide":9,"text":"Mode macro strategy","textPreview":"Mode macro strategy","textChars":19,"textLines":1,"bbox":[536,414,218,20]}
-{"kind":"textbox","id":"sh/cf6h0fql","slide":9,"text":"Gem Grab, Knockout, Brawl Ball, Solo Showdown priorities.","textPreview":"Gem Grab, Knockout, Brawl Ball, Solo Showdown priorities.","textChars":57,"textLines":1,"bbox":[536,444,220,28]}
-{"kind":"shape","id":"sh/2l4faloj","slide":9,"bbox":[868,392,268,86]}
-{"kind":"shape","id":"sh/nmdg3q54","slide":9,"bbox":[868,392,7,86]}
-{"kind":"textbox","id":"sh/onmxcv69","slide":9,"text":"Validation telemetry","textPreview":"Validation telemetry","textChars":20,"textLines":1,"bbox":[894,414,218,20]}
-{"kind":"textbox","id":"sh/pofy50nu","slide":9,"text":"Scores, intent, path state, stuck data, and incident logging.","textPreview":"Scores, intent, path state, stuck data, and incident logging.","textChars":61,"textLines":1,"bbox":[894,444,220,28]}
+{"kind":"textbox","id":"sh/0b65obm9","slide":9,"text":"Runtime AI is organized as a data pipeline: each layer owns one decision responsibility, writes explainable state, and feeds the next layer.","textPreview":"Runtime AI is organized as a data pipeline: each layer owns one decision responsibility, writes explainable state, and feeds the next layer.","textChars":140,"textLines":1,"bbox":[94,162,1060,36]}
+{"kind":"shape","id":"sh/nex4jq5k","slide":9,"bbox":[78,226,138,58]}
+{"kind":"textbox","id":"sh/mdonql4z","slide":9,"text":"World\nPerception","textPreview":"World | Perception","textChars":16,"textLines":2,"bbox":[86,236,122,40]}
+{"kind":"shape","id":"sh/9gzml0nq","slide":9,"bbox":[255,226,138,58]}
+{"kind":"textbox","id":"sh/ofq5svm5","slide":9,"text":"Shared\nMemory","textPreview":"Shared | Memory","textChars":13,"textLines":2,"bbox":[263,236,122,40]}
+{"kind":"shape","id":"sh/bih4na5w","slide":9,"bbox":[432,226,138,58]}
+{"kind":"textbox","id":"sh/ah8nu54b","slide":9,"text":"Utility\nScoring","textPreview":"Utility | Scoring","textChars":15,"textLines":2,"bbox":[440,236,122,40]}
+{"kind":"shape","id":"sh/oza1gfyh","slide":9,"bbox":[609,226,138,58]}
+{"kind":"textbox","id":"sh/p0ji9kf2","slide":9,"text":"Action\nCommitment","textPreview":"Action | Commitment","textChars":17,"textLines":2,"bbox":[617,236,122,40]}
+{"kind":"shape","id":"sh/2xsjepgb","slide":9,"bbox":[786,226,138,58]}
+{"kind":"textbox","id":"sh/3y107axw","slide":9,"text":"Planner\nNavigation","textPreview":"Planner | Navigation","textChars":18,"textLines":2,"bbox":[794,236,122,40]}
+{"kind":"shape","id":"sh/cnu1kzyd","slide":9,"bbox":[963,226,138,58]}
+{"kind":"textbox","id":"sh/do3id4fy","slide":9,"text":"Command\nOutput","textPreview":"Command | Output","textChars":14,"textLines":2,"bbox":[971,236,122,40]}
+{"kind":"shape","id":"sh/qlcjipgn","slide":9,"bbox":[222,246,22,18]}
+{"kind":"shape","id":"sh/bml0buxs","slide":9,"bbox":[399,246,22,18]}
+{"kind":"shape","id":"sh/0ru1ozyp","slide":9,"bbox":[576,246,22,18]}
+{"kind":"shape","id":"sh/lsn2h4fa","slide":9,"bbox":[753,246,22,18]}
+{"kind":"shape","id":"sh/98ji147e","slide":9,"bbox":[930,246,22,18]}
+{"kind":"shape","id":"sh/87a18zqt","slide":9,"bbox":[92,392,250,104]}
+{"kind":"shape","id":"sh/76h0zup8","slide":9,"bbox":[92,392,7,104]}
+{"kind":"textbox","id":"sh/ml8j6p8n","slide":9,"text":"Blackboard coordination","textPreview":"Blackboard coordination","textChars":23,"textLines":1,"bbox":[110,404,218,22]}
+{"kind":"textbox","id":"sh/hcji5o7a","slide":9,"text":"Shared focus counts, ally pressure, lane claims, threat center, and objective ownership.","textPreview":"Shared focus counts, ally pressure, lane claims, threat center, and objective ownership.","textChars":88,"textLines":1,"bbox":[110,432,218,58]}
+{"kind":"shape","id":"sh/wba1cjqp","slide":9,"bbox":[374,392,250,104]}
+{"kind":"shape","id":"sh/va103ep4","slide":9,"bbox":[374,392,7,104]}
+{"kind":"textbox","id":"sh/u9sja98z","slide":9,"text":"Game-mode strategy","textPreview":"Game-mode strategy","textChars":18,"textLines":1,"bbox":[392,404,218,22]}
+{"kind":"textbox","id":"sh/xgzitk76","slide":9,"text":"Objective floors keep the current win condition above generic combat preference.","textPreview":"Objective floors keep the current win condition above generic combat preference.","textChars":80,"textLines":1,"bbox":[392,432,218,58]}
+{"kind":"shape","id":"sh/cf6h0fql","slide":9,"bbox":[656,392,250,104]}
+{"kind":"shape","id":"sh/2l4faloj","slide":9,"bbox":[656,392,7,104]}
+{"kind":"textbox","id":"sh/nmdg3q54","slide":9,"text":"Navigation safety","textPreview":"Navigation safety","textChars":17,"textLines":1,"bbox":[674,404,218,22]}
+{"kind":"textbox","id":"sh/onmxcv69","slide":9,"text":"A* pathing, walkable-cell validation, route budgets, and stuck recovery prevent stalls.","textPreview":"A* pathing, walkable-cell validation, route budgets, and stuck recovery prevent stalls.","textChars":87,"textLines":1,"bbox":[674,432,218,58]}
+{"kind":"shape","id":"sh/pofy50nu","slide":9,"bbox":[938,392,250,104]}
+{"kind":"shape","id":"sh/apofe5of","slide":9,"bbox":[938,392,7,104]}
+{"kind":"textbox","id":"sh/bqxg7q50","slide":9,"text":"Telemetry & tuning","textPreview":"Telemetry & tuning","textChars":18,"textLines":1,"bbox":[956,404,218,22]}
+{"kind":"textbox","id":"sh/cr6xgv6l","slide":9,"text":"Debug gizmos, incident logs, performance tiers, and ScriptableObject presets support tuning.","textPreview":"Debug gizmos, incident logs, performance tiers, and ScriptableObject presets support tuning.","textChars":92,"textLines":1,"bbox":[956,432,218,58]}
+{"kind":"shape","id":"sh/xcfy90n6","slide":9,"bbox":[174,548,930,50]}
+{"kind":"shape","id":"sh/qtkf21ob","slide":9,"bbox":[174,548,7,50]}
+{"kind":"textbox","id":"sh/rutwv65w","slide":9,"text":"Industry-style design goal: explainable decisions, modular expansion, data-driven tuning, and predictable runtime cost.","textPreview":"Industry-style design goal: explainable decisions, modular expansion, data-driven tuning, and predictable runtime cost.","textChars":119,"textLines":1,"bbox":[198,563,880,20]}
 {"kind":"notes","id":"nt/udsvah03","slide":9,"text":"[Sources]\n- Major project final report system design.\n- Local AI modules: perception, target scoring, utility scoring, commitment, team blackboard, tactical movement, and validation telemetry."}
-{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"Methodology / Algorithms","textShapes":7}
+{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"Methodology / Algorithms","textShapes":24}
 {"kind":"textbox","id":"sh/xc3mho32","slide":10,"name":"Title 1","placeholder":"title","text":"Methodology / Algorithms","textPreview":"Methodology / Algorithms","textChars":24,"textLines":1,"bbox":[0,0,0,0]}
-{"kind":"textbox","id":"sh/cbu58j2h","slide":10,"name":"Content Placeholder 2","text":"Development followed an iterative systems methodology:\n1. Normalize action scores.\n2. Add commitment to prevent flicker.\n3. Coordinate teams with a blackboard.\n4. Route safely and recover from stalls.\n5. Validate decisions in Unity playtests.","textPreview":"Development followed an iterative systems methodology: | 1. Normalize action scores. | 2. Add commitment to prevent flicker. | 3. Coordin...","textChars":242,"textLines":6,"bbox":[0,0,0,0]}
-{"kind":"shape","id":"sh/zelojyl8","slide":10,"bbox":[610,552,86,42]}
-{"kind":"textbox","id":"sh/ydcnatkn","slide":10,"text":"Sense","textPreview":"Sense","textChars":5,"textLines":1,"bbox":[618,562,70,24]}
-{"kind":"shape","id":"sh/l036l83y","slide":10,"bbox":[699,564,20,18]}
-{"kind":"shape","id":"sh/kzu5c32t","slide":10,"bbox":[722,552,86,42]}
-{"kind":"textbox","id":"sh/725onyl4","slide":10,"text":"Score","textPreview":"Score","textChars":5,"textLines":1,"bbox":[730,562,70,24]}
-{"kind":"shape","id":"sh/m1cnetkj","slide":10,"bbox":[811,564,20,18]}
-{"kind":"shape","id":"sh/s7yt4b21","slide":10,"bbox":[834,552,86,42]}
-{"kind":"textbox","id":"sh/d87uxg3m","slide":10,"text":"Commit","textPreview":"Commit","textChars":6,"textLines":1,"bbox":[842,562,70,24]}
-{"kind":"shape","id":"sh/q5gb21kb","slide":10,"bbox":[923,564,20,18]}
-{"kind":"shape","id":"sh/r6pcv6lw","slide":10,"bbox":[946,552,86,42]}
-{"kind":"textbox","id":"sh/0bit8b2d","slide":10,"text":"Move","textPreview":"Move","textChars":4,"textLines":1,"bbox":[954,562,70,24]}
-{"kind":"shape","id":"sh/1cru1g3y","slide":10,"bbox":[1035,564,20,18]}
-{"kind":"shape","id":"sh/e9gb61k7","slide":10,"bbox":[1058,552,86,42]}
-{"kind":"textbox","id":"sh/fapcz6ls","slide":10,"text":"Validate","textPreview":"Validate","textChars":8,"textLines":1,"bbox":[1066,562,70,24]}
+{"kind":"textbox","id":"sh/cbu58j2h","slide":10,"text":"Methodology focused on small, verifiable AI systems: implement one behavior layer, expose debug evidence, playtest it, then tune the scoring data.","textPreview":"Methodology focused on small, verifiable AI systems: implement one behavior layer, expose debug evidence, playtest it, then tune the scor...","textChars":146,"textLines":1,"bbox":[92,154,1040,36]}
+{"kind":"shape","id":"sh/zelojyl8","slide":10,"bbox":[68,214,260,106]}
+{"kind":"shape","id":"sh/ydcnatkn","slide":10,"bbox":[68,214,7,106]}
+{"kind":"textbox","id":"sh/l036l83y","slide":10,"text":"Utility scoring","textPreview":"Utility scoring","textChars":15,"textLines":1,"bbox":[86,226,228,22]}
+{"kind":"textbox","id":"sh/kzu5c32t","slide":10,"text":"Scores actions from objective value, target value, range, safety, team pressure, and risk.","textPreview":"Scores actions from objective value, target value, range, safety, team pressure, and risk.","textChars":90,"textLines":1,"bbox":[86,254,228,60]}
+{"kind":"shape","id":"sh/725onyl4","slide":10,"bbox":[363,214,260,106]}
+{"kind":"shape","id":"sh/m1cnetkj","slide":10,"bbox":[363,214,7,106]}
+{"kind":"textbox","id":"sh/s7yt4b21","slide":10,"text":"A* grid routing","textPreview":"A* grid routing","textChars":15,"textLines":1,"bbox":[381,226,228,22]}
+{"kind":"textbox","id":"sh/d87uxg3m","slide":10,"text":"Builds walkable-cell paths around obstacles with fallback goals and route budgets.","textPreview":"Builds walkable-cell paths around obstacles with fallback goals and route budgets.","textChars":82,"textLines":1,"bbox":[381,254,228,60]}
+{"kind":"shape","id":"sh/q5gb21kb","slide":10,"bbox":[658,214,260,106]}
+{"kind":"shape","id":"sh/r6pcv6lw","slide":10,"bbox":[658,214,7,106]}
+{"kind":"textbox","id":"sh/0bit8b2d","slide":10,"text":"Spatial queries","textPreview":"Spatial queries","textChars":15,"textLines":1,"bbox":[676,226,228,22]}
+{"kind":"textbox","id":"sh/1cru1g3y","slide":10,"text":"Detects nearby targets, gems, hazards, line-of-fire, bush proximity, and area effects.","textPreview":"Detects nearby targets, gems, hazards, line-of-fire, bush proximity, and area effects.","textChars":86,"textLines":1,"bbox":[676,254,228,60]}
+{"kind":"shape","id":"sh/e9gb61k7","slide":10,"bbox":[953,214,260,106]}
+{"kind":"shape","id":"sh/fapcz6ls","slide":10,"bbox":[953,214,7,106]}
+{"kind":"textbox","id":"sh/ozitcv29","slide":10,"text":"Blackboard","textPreview":"Blackboard","textChars":10,"textLines":1,"bbox":[971,226,228,22]}
+{"kind":"textbox","id":"sh/p0ru503u","slide":10,"text":"Stores shared team knowledge such as focus counts, lanes, carriers, and threat centers.","textPreview":"Stores shared team knowledge such as focus counts, lanes, carriers, and threat centers.","textChars":87,"textLines":1,"bbox":[971,254,228,60]}
+{"kind":"shape","id":"sh/xwnupgvy","slide":10,"bbox":[68,346,260,106]}
+{"kind":"shape","id":"sh/wvetgbud","slide":10,"bbox":[68,346,7,106]}
+{"kind":"textbox","id":"sh/bu5cnqd8","slide":10,"text":"Hysteresis","textPreview":"Hysteresis","textChars":10,"textLines":1,"bbox":[86,358,228,22]}
+{"kind":"textbox","id":"sh/atwbelcn","slide":10,"text":"Keeps actions stable long enough to avoid visible flicker and rapid direction changes.","textPreview":"Keeps actions stable long enough to avoid visible flicker and rapid direction changes.","textChars":86,"textLines":1,"bbox":[86,386,228,60]}
+{"kind":"shape","id":"sh/lk7ut0va","slide":10,"bbox":[363,346,260,106]}
+{"kind":"shape","id":"sh/kjytkvup","slide":10,"bbox":[363,346,7,106]}
+{"kind":"textbox","id":"sh/jypcrqd4","slide":10,"text":"Mode strategy","textPreview":"Mode strategy","textChars":13,"textLines":1,"bbox":[381,358,228,22]}
+{"kind":"textbox","id":"sh/yxgbilcj","slide":10,"text":"Adds objective floors for Gem Grab, Knockout, Brawl Ball, and Solo Showdown.","textPreview":"Adds objective floors for Gem Grab, Knockout, Brawl Ball, and Solo Showdown.","textChars":76,"textLines":1,"bbox":[381,386,228,60]}
+{"kind":"shape","id":"sh/1o3ahwvq","slide":10,"bbox":[658,346,260,106]}
+{"kind":"shape","id":"sh/0nut8rul","slide":10,"bbox":[658,346,7,106]}
+{"kind":"textbox","id":"sh/q9srixs3","slide":10,"text":"Failure recovery","textPreview":"Failure recovery","textChars":16,"textLines":1,"bbox":[676,358,228,22]}
+{"kind":"textbox","id":"sh/ru18r2to","slide":10,"text":"Detects stalls, stale commands, blocked routes, and repeated failed casts.","textPreview":"Detects stalls, stale commands, blocked routes, and repeated failed casts.","textChars":74,"textLines":1,"bbox":[676,386,228,60]}
+{"kind":"shape","id":"sh/cva9k7a9","slide":10,"bbox":[953,346,260,106]}
+{"kind":"shape","id":"sh/dwjqtcbu","slide":10,"bbox":[953,346,7,106]}
+{"kind":"textbox","id":"sh/exsrmhsf","slide":10,"text":"Tuning assets","textPreview":"Tuning assets","textChars":13,"textLines":1,"bbox":[971,358,228,22]}
+{"kind":"textbox","id":"sh/zyl8vmt0","slide":10,"text":"ScriptableObject-style presets adjust difficulty, personality, and role behavior without rewriting code.","textPreview":"ScriptableObject-style presets adjust difficulty, personality, and role behavior without rewriting code.","textChars":104,"textLines":1,"bbox":[971,386,228,60]}
+{"kind":"shape","id":"sh/0zu9ora5","slide":10,"bbox":[252,568,92,38]}
+{"kind":"textbox","id":"sh/103qxcbq","slide":10,"text":"Sense","textPreview":"Sense","textChars":5,"textLines":1,"bbox":[260,578,76,20]}
+{"kind":"shape","id":"sh/u187adsv","slide":10,"bbox":[346,578,24,18]}
+{"kind":"shape","id":"sh/f2h8jitg","slide":10,"bbox":[382,568,92,38]}
+{"kind":"textbox","id":"sh/bmpgrah8","slide":10,"text":"Score","textPreview":"Score","textChars":5,"textLines":1,"bbox":[390,578,76,20]}
+{"kind":"shape","id":"sh/algfy50n","slide":10,"bbox":[476,578,24,18]}
+{"kind":"shape","id":"sh/xo7ytkzy","slide":10,"bbox":[512,568,92,38]}
+{"kind":"textbox","id":"sh/wnyx0fit","slide":10,"text":"Share","textPreview":"Share","textChars":5,"textLines":1,"bbox":[520,578,76,20]}
+{"kind":"shape","id":"sh/jq9gvuh4","slide":10,"bbox":[606,578,24,18]}
+{"kind":"shape","id":"sh/ip0f2p0j","slide":10,"bbox":[642,568,92,38]}
+{"kind":"textbox","id":"sh/5cryx4za","slide":10,"text":"Commit","textPreview":"Commit","textChars":6,"textLines":1,"bbox":[650,578,76,20]}
+{"kind":"shape","id":"sh/kbix4zyp","slide":10,"bbox":[736,578,24,18]}
+{"kind":"shape","id":"sh/7e9gzuhg","slide":10,"bbox":[772,568,92,38]}
+{"kind":"textbox","id":"sh/6d0f6pgv","slide":10,"text":"Act","textPreview":"Act","textChars":3,"textLines":1,"bbox":[780,578,76,20]}
+{"kind":"shape","id":"sh/4j2xwzet","slide":10,"bbox":[866,578,24,18]}
+{"kind":"shape","id":"sh/pkbep4fe","slide":10,"bbox":[902,568,92,38]}
+{"kind":"textbox","id":"sh/2hkfu9w3","slide":10,"text":"Validate","textPreview":"Validate","textChars":8,"textLines":1,"bbox":[910,578,76,20]}
 {"kind":"notes","id":"nt/m90b6t0r","slide":10,"text":"[Sources]\n- Major project final report methodology and algorithms section.\n- Algorithms and concepts: utility scoring, A* pathfinding, spatial queries, blackboard coordination, and ScriptableObject tuning."}
-{"kind":"slide","id":"sl/jetc3ut0","slide":11,"title":"Implementation Details","textShapes":6}
+{"kind":"slide","id":"sl/jetc3ut0","slide":11,"title":"Implementation Details","textShapes":12}
 {"kind":"textbox","id":"sh/xcryxg7y","slide":11,"name":"Title 1","placeholder":"title","text":"Implementation Details","textPreview":"Implementation Details","textChars":22,"textLines":1,"bbox":[0,0,0,0]}
-{"kind":"textbox","id":"sh/wbih4b6d","slide":11,"text":"Implementation is split into focused modules: perception, scoring, commitment, blackboard, navigation, ability intelligence, mode strategy, debug reporting, and tuning profiles.","textPreview":"Implementation is split into focused modules: perception, scoring, commitment, blackboard, navigation, ability intelligence, mode strateg...","textChars":177,"textLines":1,"bbox":[96,178,720,78]}
-{"kind":"shape","id":"sh/n69grmpw","slide":11,"bbox":[90,360,430,150]}
-{"kind":"shape","id":"sh/250zy18b","slide":11,"bbox":[90,360,7,150]}
-{"kind":"textbox","id":"sh/98rytw72","slide":11,"text":"Objective priority example","textPreview":"Objective priority example","textChars":26,"textLines":1,"bbox":[108,372,394,22]}
-{"kind":"textbox","id":"sh/o7ih0r6h","slide":11,"text":"if (mode == BrawlBall && ballIsLoose)\n{\n    macro = Push;\n    reason = \"loose_ball_claim\";\n}\n\nscore = Max(score, objectiveFloor);","textPreview":"if (mode == BrawlBall && ballIsLoose) | { |     macro = Push; |     reason = \"loose_ball_claim\"; | } |  | score = Max(score, objectiveFlo...","textChars":129,"textLines":7,"bbox":[108,402,394,102]}
-{"kind":"shape","id":"sh/72t03qp0","slide":11,"bbox":[590,360,430,150]}
-{"kind":"shape","id":"sh/61kzalof","slide":11,"bbox":[590,360,7,150]}
-{"kind":"textbox","id":"sh/ofqtgnyt","slide":11,"text":"Lifecycle recovery example","textPreview":"Lifecycle recovery example","textChars":26,"textLines":1,"bbox":[608,372,394,22]}
-{"kind":"textbox","id":"sh/9gza9sze","slide":11,"text":"OnBrawlerRespawned += HandleRespawn;\n\nif (isLocalPlayer)\n{\n    camera.SetTarget(followTarget);\n    controls.Rebind(owner);\n}","textPreview":"OnBrawlerRespawned += HandleRespawn; |  | if (isLocalPlayer) | { |     camera.SetTarget(followTarget); |     controls.Rebind(owner); | }","textChars":124,"textLines":7,"bbox":[608,402,394,102]}
-{"kind":"shape","id":"sh/nehs7iho","slide":11,"bbox":[870,165,250,150]}
-{"kind":"image","id":"im/dsn6xw32","slide":11,"name":"","geometry":"rect","alt":"Brawler select implementation screenshot","bbox":[870,165,250,150]}
-{"kind":"notes","id":"nt/jetc3ut0","slide":11,"text":"[Sources]\n- Local Unity C# implementation files.\n- User-provided brawler select screenshot from playtesting."}
+{"kind":"textbox","id":"sh/wbih4b6d","slide":11,"text":"Representative code patterns from the implementation show the AI architecture in practical software terms: score, share state, route safely, and enforce mode objectives.","textPreview":"Representative code patterns from the implementation show the AI architecture in practical software terms: score, share state, route safe...","textChars":169,"textLines":1,"bbox":[92,156,1050,40]}
+{"kind":"shape","id":"sh/n69grmpw","slide":11,"bbox":[76,224,520,126]}
+{"kind":"shape","id":"sh/250zy18b","slide":11,"bbox":[76,224,7,126]}
+{"kind":"textbox","id":"sh/98rytw72","slide":11,"text":"Utility score contract","textPreview":"Utility score contract","textChars":22,"textLines":1,"bbox":[94,236,484,22]}
+{"kind":"textbox","id":"sh/o7ih0r6h","slide":11,"text":"float score = baseScore + objective + safety - risk;\nscore -= teamFocus * focusPenalty;\nreturn Mathf.Clamp(score, 0f, 100f);","textPreview":"float score = baseScore + objective + safety - risk; | score -= teamFocus * focusPenalty; | return Mathf.Clamp(score, 0f, 100f);","textChars":124,"textLines":3,"bbox":[94,266,484,78]}
+{"kind":"shape","id":"sh/72t03qp0","slide":11,"bbox":[654,224,520,126]}
+{"kind":"shape","id":"sh/61kzalof","slide":11,"bbox":[654,224,7,126]}
+{"kind":"textbox","id":"sh/ofqtgnyt","slide":11,"text":"Team blackboard signal","textPreview":"Team blackboard signal","textChars":22,"textLines":1,"bbox":[672,236,484,22]}
+{"kind":"textbox","id":"sh/9gza9sze","slide":11,"text":"blackboard.ReportIntent(selfId, targetId, objectiveId);\nfocusCount = blackboard.GetFocusCount(targetId);\nallyPressure = blackboard.GetObjectivePressure(slotId);","textPreview":"blackboard.ReportIntent(selfId, targetId, objectiveId); | focusCount = blackboard.GetFocusCount(targetId); | allyPressure = blackboard.Ge...","textChars":160,"textLines":3,"bbox":[672,266,484,78]}
+{"kind":"shape","id":"sh/mdobedg3","slide":11,"bbox":[76,392,520,142]}
+{"kind":"shape","id":"sh/nehs7iho","slide":11,"bbox":[76,392,7,142]}
+{"kind":"textbox","id":"sh/0b6tc3yx","slide":11,"text":"Navigation liveness","textPreview":"Navigation liveness","textChars":19,"textLines":1,"bbox":[94,404,484,22]}
+{"kind":"textbox","id":"sh/1cfa58zi","slide":11,"text":"if (!nav.TryBuildPath(start, goal, out path))\n    goal = nav.FindNearbyWalkable(goal);\n\nif (watchdog.IsStalled(self))\n    planner.AbandonDestination();","textPreview":"if (!nav.TryBuildPath(start, goal, out path)) |     goal = nav.FindNearbyWalkable(goal); |  | if (watchdog.IsStalled(self)) |     planner...","textChars":151,"textLines":5,"bbox":[94,434,484,94]}
+{"kind":"shape","id":"sh/epobatgr","slide":11,"bbox":[654,392,520,142]}
+{"kind":"shape","id":"sh/zaxs3yhc","slide":11,"bbox":[654,392,7,142]}
+{"kind":"textbox","id":"sh/cn6t83y1","slide":11,"text":"Game-mode objective floor","textPreview":"Game-mode objective floor","textChars":25,"textLines":1,"bbox":[672,404,484,22]}
+{"kind":"textbox","id":"sh/dofa18z6","slide":11,"text":"objectiveFloor = mode switch {\n    GemGrab => ScoreGemIntent(state),\n    BrawlBall => ScoreBallIntent(state),\n    Knockout => ScoreSurvivalPressure(state),\n};\nscore = Mathf.Max(score, objectiveFloor);","textPreview":"objectiveFloor = mode switch { |     GemGrab => ScoreGemIntent(state), |     BrawlBall => ScoreBallIntent(state), |     Knockout => Score...","textChars":200,"textLines":6,"bbox":[672,434,484,94]}
+{"kind":"shape","id":"sh/tsnip0ny","slide":11,"bbox":[196,568,850,72]}
+{"kind":"shape","id":"sh/87ehgv6d","slide":11,"bbox":[196,568,7,72]}
+{"kind":"textbox","id":"sh/7650nq5s","slide":11,"text":"Software architecture takeaway","textPreview":"Software architecture takeaway","textChars":30,"textLines":1,"bbox":[214,580,818,22]}
+{"kind":"textbox","id":"sh/65wzelo7","slide":11,"text":"The code avoids one large bot script. Each module has a narrow responsibility, which makes the system testable, explainable, and easier to extend for new modes.","textPreview":"The code avoids one large bot script. Each module has a narrow responsibility, which makes the system testable, explainable, and easier t...","textChars":160,"textLines":1,"bbox":[214,608,818,26]}
+{"kind":"notes","id":"nt/jetc3ut0","slide":11,"text":"[Sources]\n- Local Unity C# implementation files.\n- Code snippets are concise presentation extracts from the implemented AI pipeline."}
 {"kind":"slide","id":"sl/8f2psfyx","slide":12,"title":"Results & Output","textShapes":4}
 {"kind":"textbox","id":"sh/1gbm9s3a","slide":12,"name":"Title 1","placeholder":"title","text":"Results & Output","textPreview":"Results & Output","textChars":16,"textLines":1,"bbox":[0,0,0,0]}
 {"kind":"textbox","id":"sh/0f2lgnmp","slide":12,"name":"Content Placeholder 2","text":"Sample playable outputs:","textPreview":"Sample playable outputs:","textChars":24,"textLines":1,"bbox":[0,0,0,0]}
@@ -196,19 +272,19 @@
 {"kind":"shape","id":"sh/wbydknq1","slide":14,"bbox":[96,205,310,230]}
 {"kind":"shape","id":"sh/jepwf2pc","slide":14,"bbox":[96,205,7,230]}
 {"kind":"textbox","id":"sh/idgvmx8r","slide":14,"text":"Conclusion","textPreview":"Conclusion","textChars":10,"textLines":1,"bbox":[124,232,250,28]}
-{"kind":"textbox","id":"sh/5grehs7i","slide":14,"text":"Layered, objective-aware AI for a Unity brawler prototype.","textPreview":"Layered, objective-aware AI for a Unity brawler prototype.","textChars":58,"textLines":1,"bbox":[124,286,240,78]}
+{"kind":"textbox","id":"sh/5grehs7i","slide":14,"text":"Layered, objective-aware AI for a Unity real-time game prototype.","textPreview":"Layered, objective-aware AI for a Unity real-time game prototype.","textChars":65,"textLines":1,"bbox":[124,286,240,78]}
 {"kind":"shape","id":"sh/kfidonqx","slide":14,"bbox":[486,205,310,230]}
 {"kind":"shape","id":"sh/zi5c3y98","slide":14,"bbox":[486,205,7,230]}
 {"kind":"textbox","id":"sh/ehwvat8n","slide":14,"text":"Achievements","textPreview":"Achievements","textChars":12,"textLines":1,"bbox":[514,232,250,28]}
-{"kind":"textbox","id":"sh/c3e1gjyd","slide":14,"text":"Utility scoring, team blackboard, brawler roles, navigation recovery, and debug telemetry.","textPreview":"Utility scoring, team blackboard, brawler roles, navigation recovery, and debug telemetry.","textChars":90,"textLines":1,"bbox":[514,286,240,94]}
+{"kind":"textbox","id":"sh/c3e1gjyd","slide":14,"text":"Utility scoring, team blackboard, role policies, navigation recovery, and debug telemetry.","textPreview":"Utility scoring, team blackboard, role policies, navigation recovery, and debug telemetry.","textChars":90,"textLines":1,"bbox":[514,286,240,94]}
 {"kind":"shape","id":"sh/x4ni9ofy","slide":14,"bbox":[876,205,310,230]}
 {"kind":"shape","id":"sh/a1wze9g7","slide":14,"bbox":[876,205,7,230]}
 {"kind":"textbox","id":"sh/b2507exs","slide":14,"text":"Future Work","textPreview":"Future Work","textChars":11,"textLines":1,"bbox":[904,232,250,28]}
-{"kind":"textbox","id":"sh/kre1k3y9","slide":14,"text":"Automated gauntlets, richer semantic maps, more brawler packs, and optional ML experiments.","textPreview":"Automated gauntlets, richer semantic maps, more brawler packs, and optional ML experiments.","textChars":91,"textLines":1,"bbox":[904,286,240,94]}
+{"kind":"textbox","id":"sh/kre1k3y9","slide":14,"text":"Automated gauntlets, richer semantic maps, broader role packs, and optional ML experiments.","textPreview":"Automated gauntlets, richer semantic maps, broader role packs, and optional ML experiments.","textChars":91,"textLines":1,"bbox":[904,286,240,94]}
 {"kind":"notes","id":"nt/6lsnupw7","slide":14,"text":"[Sources]\n- Major project final report conclusion and future work sections."}
 {"kind":"slide","id":"sl/vaxsvy10","slide":15,"title":"References","textShapes":2}
 {"kind":"textbox","id":"sh/547mhg3m","slide":15,"name":"Title 1","placeholder":"title","text":"References","textPreview":"References","textChars":10,"textLines":1,"bbox":[0,0,0,0]}
-{"kind":"textbox","id":"sh/k3y5ov21","slide":15,"text":"1. Akash Dhyani, Advanced Game AI System using Blackboard Architecture in Unity Engine, proposal, interim report, and final report, 2026.\n2. Ian Millington and John Funge, Artificial Intelligence for Games.\n3. Georgios N. Yannakakis and Julian Togelius, Artificial Intelligence and Games.\n4. Hart, Nilsson, and Raphael, A Formal Basis for the Heuristic Determination of Minimum Cost Paths, 1968.\n5. Unity documentation: ScriptableObject workflow, gameplay architecture, and Unity AI / ML-Agents concepts.\n6. Project source code: AI scoring, blackboard, navigation, mode strategy, brawler intelligence, and debug telemetry.","textPreview":"1. Akash Dhyani, Advanced Game AI System using Blackboard Architecture in Unity Engine, proposal, interim report, and final report, 2026....","textChars":622,"textLines":6,"bbox":[98,176,1020,386]}
+{"kind":"textbox","id":"sh/k3y5ov21","slide":15,"text":"1. Akash Dhyani, Advanced Game AI System using Blackboard Architecture in Unity Engine, proposal, interim report, and final report, 2026.\n2. Ian Millington and John Funge, Artificial Intelligence for Games.\n3. Georgios N. Yannakakis and Julian Togelius, Artificial Intelligence and Games.\n4. Hart, Nilsson, and Raphael, A Formal Basis for the Heuristic Determination of Minimum Cost Paths, 1968.\n5. Unity documentation: ScriptableObject workflow, gameplay architecture, and Unity AI / ML-Agents concepts.\n6. Project source code: AI scoring, blackboard, navigation, mode strategy, role intelligence, and debug telemetry.","textPreview":"1. Akash Dhyani, Advanced Game AI System using Blackboard Architecture in Unity Engine, proposal, interim report, and final report, 2026....","textChars":619,"textLines":6,"bbox":[98,176,1020,386]}
 {"kind":"notes","id":"nt/vaxsvy10","slide":15,"text":"[Sources]\n- Major project final report references.\n- Local project source code and submitted report artifacts."}
 {"kind":"slide","id":"sl/gny5sjyp","slide":16,"title":"THANK YOU","textShapes":2}
 {"kind":"shape","id":"sh/ytkf2h8j","slide":16,"name":"Google Shape;273;p45","bbox":[0,0,1280,720]}

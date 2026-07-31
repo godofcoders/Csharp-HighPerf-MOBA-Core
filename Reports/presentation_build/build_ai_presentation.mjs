@@ -198,69 +198,103 @@ function codeBox(slide, title, code, position) {
     height: position.height - 48,
   }, {
     typeface: "Courier New",
-    fontSize: 9.5,
+    fontSize: 10.6,
     color: C.white,
-    lineSpacing: 0.92,
+    lineSpacing: 0.98,
+  });
+}
+
+function infoCard(slide, title, body, position, accent, titleSize = 13, bodySize = 10.8) {
+  card(slide, position, "#f8fafc", accent);
+  text(slide, title, {
+    left: position.left + 18,
+    top: position.top + 12,
+    width: position.width - 32,
+    height: 22,
+  }, {
+    fontSize: titleSize,
+    bold: true,
+    color: accent,
+  });
+  text(slide, body, {
+    left: position.left + 18,
+    top: position.top + 40,
+    width: position.width - 32,
+    height: position.height - 46,
+  }, {
+    fontSize: bodySize,
+    color: C.gray,
+    lineSpacing: 1.02,
   });
 }
 
 function addArchitectureDiagram(slide) {
-  const y = 245;
+  text(slide, "Runtime AI is organized as a data pipeline: each layer owns one decision responsibility, writes explainable state, and feeds the next layer.", {
+    left: 94,
+    top: 162,
+    width: 1060,
+    height: 36,
+  }, {
+    fontSize: 15,
+    color: C.gray,
+    lineSpacing: 1.05,
+  });
+
+  const y = 226;
   const items = [
-    ["Perception\nMemory", 95, C.cyan],
-    ["Target\nScoring", 255, C.amber],
-    ["Utility\nDecision", 415, C.green],
-    ["Commitment\nHysteresis", 575, C.purple],
-    ["Tactical\nMovement", 735, C.blue],
-    ["Action\nExecutor", 895, C.magenta],
+    ["World\nPerception", 78, C.cyan],
+    ["Shared\nMemory", 255, C.navy],
+    ["Utility\nScoring", 432, C.green],
+    ["Action\nCommitment", 609, C.purple],
+    ["Planner\nNavigation", 786, C.blue],
+    ["Command\nOutput", 963, C.magenta],
   ];
 
   for (const [label, x, color] of items) {
-    node(slide, label, x, y, 118, 62, color);
+    node(slide, label, x, y, 138, 58, color);
   }
 
   for (let i = 0; i < items.length - 1; i += 1) {
-    arrow(slide, 218 + i * 160, y + 22, 28);
+    arrow(slide, 222 + i * 177, y + 20, 22);
   }
 
-  card(slide, { left: 152, top: 392, width: 268, height: 86 }, "#f6f8fb", C.magenta);
-  text(slide, "Team blackboard", { left: 178, top: 414, width: 218, height: 20 }, {
-    fontSize: 16,
-    bold: true,
-    color: C.magenta,
-  });
-  text(slide, "Focus counts, ally pressure, carrier protection, lanes, threats.", {
-    left: 178,
-    top: 444,
-    width: 220,
-    height: 28,
-  }, { fontSize: 11.5, color: C.gray });
+  infoCard(slide, "Blackboard coordination", "Shared focus counts, ally pressure, lane claims, threat center, and objective ownership.", {
+    left: 92,
+    top: 392,
+    width: 250,
+    height: 104,
+  }, C.magenta);
+  infoCard(slide, "Game-mode strategy", "Objective floors keep the current win condition above generic combat preference.", {
+    left: 374,
+    top: 392,
+    width: 250,
+    height: 104,
+  }, C.green);
+  infoCard(slide, "Navigation safety", "A* pathing, walkable-cell validation, route budgets, and stuck recovery prevent stalls.", {
+    left: 656,
+    top: 392,
+    width: 250,
+    height: 104,
+  }, C.blue);
+  infoCard(slide, "Telemetry & tuning", "Debug gizmos, incident logs, performance tiers, and ScriptableObject presets support tuning.", {
+    left: 938,
+    top: 392,
+    width: 250,
+    height: 104,
+  }, C.purple);
 
-  card(slide, { left: 510, top: 392, width: 268, height: 86 }, "#f6f8fb", C.green);
-  text(slide, "Mode macro strategy", { left: 536, top: 414, width: 218, height: 20 }, {
-    fontSize: 16,
+  card(slide, { left: 174, top: 548, width: 930, height: 50 }, "#eef6ff", C.cyan);
+  text(slide, "Industry-style design goal: explainable decisions, modular expansion, data-driven tuning, and predictable runtime cost.", {
+    left: 198,
+    top: 563,
+    width: 880,
+    height: 20,
+  }, {
+    fontSize: 13.5,
     bold: true,
-    color: C.green,
+    color: C.navy,
+    alignment: "center",
   });
-  text(slide, "Gem Grab, Knockout, Brawl Ball, Solo Showdown priorities.", {
-    left: 536,
-    top: 444,
-    width: 220,
-    height: 28,
-  }, { fontSize: 11.5, color: C.gray });
-
-  card(slide, { left: 868, top: 392, width: 268, height: 86 }, "#f6f8fb", C.blue);
-  text(slide, "Validation telemetry", { left: 894, top: 414, width: 218, height: 20 }, {
-    fontSize: 16,
-    bold: true,
-    color: C.blue,
-  });
-  text(slide, "Scores, intent, path state, stuck data, and incident logging.", {
-    left: 894,
-    top: 444,
-    width: 220,
-    height: 28,
-  }, { fontSize: 11.5, color: C.gray });
 }
 
 function addComparisonFlow(slide) {
@@ -342,7 +376,7 @@ async function build() {
 
   const s3 = slideAt(presentation, 3);
   setText(s3, "Title 1", "Introduction");
-  setText(s3, "Content Placeholder 2", "Unity MOBA / brawler prototype focused on AI architecture.\nBots value objectives, team state, map safety, and brawler roles.\nCore approach: utility scoring, blackboard sharing, tactical movement, and tuning data.");
+  setText(s3, "Content Placeholder 2", "Unity MOBA prototype focused on AI architecture.\nBots evaluate objectives, team state, map safety, and role policies.\nCore approach: utility scoring, blackboard sharing, tactical movement, and tuning data.");
   notes(s3, [
     "[Sources]",
     "- Major project final report abstract and introduction.",
@@ -360,7 +394,7 @@ async function build() {
 
   const s5 = slideAt(presentation, 5);
   setText(s5, "Title 1", "Objectives");
-  setText(s5, "Rectangle 1", "1. Build utility-based decisions.\n2. Coordinate teams through blackboard data.\n3. Prioritize active game-mode objectives.\n4. Navigate safely around map obstacles.\n5. Add brawler-specific tactical roles.\n6. Expose debug and validation tooling.");
+  setText(s5, "Rectangle 1", "1. Build utility-based decisions.\n2. Coordinate teams through blackboard data.\n3. Prioritize active game-mode objectives.\n4. Navigate safely around map obstacles.\n5. Add role-specific tactical behavior.\n6. Expose debug and validation tooling.");
   notes(s5, [
     "[Sources]",
     "- Major project final report objectives section.",
@@ -368,12 +402,12 @@ async function build() {
 
   const s6 = slideAt(presentation, 6);
   setText(s6, "Title 1", "Scope of the Project");
-  setText(s6, "Rectangle 1", "Included:\n- AI decisions, team coordination, mode strategy.\n- Tactical movement, navigation, and recovery.\n- Brawler role intelligence and debug visibility.\nNot included:\n- Online multiplayer, monetization, commercial art,\n  and full ML training.");
+  setText(s6, "Rectangle 1", "Included:\n- AI decisions, team coordination, mode strategy.\n- Tactical movement, navigation, and recovery.\n- Role intelligence and debug visibility.\nNot included:\n- Online multiplayer, monetization, commercial art,\n  and full ML training.");
   pill(s6, "Utility AI", 725, 585, 120, C.magenta);
   pill(s6, "Blackboard", 870, 585, 130, C.navy);
   pill(s6, "A* routes", 1025, 585, 110, C.green);
   pill(s6, "Mode AI", 725, 630, 120, C.blue);
-  pill(s6, "Brawler roles", 870, 630, 130, C.amber);
+  pill(s6, "Role AI", 870, 630, 130, C.amber);
   pill(s6, "Telemetry", 1025, 630, 110, C.purple);
   notes(s6, [
     "[Sources]",
@@ -382,19 +416,40 @@ async function build() {
 
   const s7 = slideAt(presentation, 7);
   setText(s7, "Title 1", "Literature Review / Existing System");
-  setText(s7, "Rectangle 1", "Related ideas: FSMs, behavior trees,\nutility AI, blackboards, and A* pathfinding.\nSelected approach: utility AI + blackboard\nfor flexible, inspectable decisions.\nGap: scripted bots fail when objectives,\nroles, hazards, and team strategy interact.");
-  card(s7, { left: 760, top: 455, width: 280, height: 105 }, "#f8fafc", C.magenta);
-  text(s7, "Selected direction", { left: 786, top: 476, width: 220, height: 24 }, {
-    fontSize: 17,
-    bold: true,
-    color: C.magenta,
+  removeElement(s7, "Rectangle 1");
+  text(s7, "The project compares common bot-authoring patterns and chooses an explainable hybrid architecture suitable for real-time games.", {
+    left: 96,
+    top: 156,
+    width: 1000,
+    height: 34,
+  }, {
+    fontSize: 15,
+    color: C.gray,
   });
-  text(s7, "Authored, inspectable game AI now; optional ML experiments later.", {
-    left: 786,
-    top: 514,
-    width: 220,
-    height: 36,
-  }, { fontSize: 12.5, color: C.gray });
+  infoCard(s7, "Finite State Machines", "Clear and easy to debug, but transitions become hard to scale when objectives, hazards, roles, and teamplay interact.", {
+    left: 86,
+    top: 218,
+    width: 310,
+    height: 126,
+  }, C.navy);
+  infoCard(s7, "Behavior Trees", "Useful for structured behavior, but large trees often repeat checks and can hide why one action won over another.", {
+    left: 446,
+    top: 218,
+    width: 310,
+    height: 126,
+  }, C.amber);
+  infoCard(s7, "Utility AI", "Actions are scored from context. This fits dynamic combat because targeting, safety, and objectives can compete numerically.", {
+    left: 806,
+    top: 218,
+    width: 310,
+    height: 126,
+  }, C.green);
+  infoCard(s7, "Selected direction", "Utility scoring + team blackboard + A* navigation + validation telemetry. The system remains authored, inspectable, and tunable; ML can be explored later without replacing the core.", {
+    left: 190,
+    top: 394,
+    width: 820,
+    height: 118,
+  }, C.magenta, 14, 11.2);
   notes(s7, [
     "[Sources]",
     "- Major project final report literature review.",
@@ -403,18 +458,46 @@ async function build() {
 
   const s8 = slideAt(presentation, 8);
   setText(s8, "Title 1", "Proposed System");
-  setText(s8, "Rectangle 1", "Layered AI stack with one clear responsibility per layer.\nNew brawlers, maps, modes, and difficulty profiles\nplug into the same decision pipeline.");
+  removeElement(s8, "Rectangle 1");
+  text(s8, "The proposed system treats every bot as a modular decision agent. Game rules, map data, tuning assets, and team state feed the same runtime pipeline.", {
+    left: 96,
+    top: 166,
+    width: 1010,
+    height: 42,
+  }, {
+    fontSize: 15.5,
+    color: C.gray,
+    lineSpacing: 1.05,
+  });
   const proposed = [
-    ["Scoring", 112, 420, C.magenta],
-    ["Commitment", 312, 420, C.purple],
-    ["Blackboard", 512, 420, C.navy],
-    ["Navigation", 712, 420, C.green],
-    ["Validation", 912, 420, C.blue],
+    ["Perception", 88, 300, C.cyan],
+    ["Utility\nScoring", 288, 300, C.green],
+    ["Team\nBlackboard", 488, 300, C.navy],
+    ["Mode\nStrategy", 688, 300, C.magenta],
+    ["Planner +\nExecutor", 888, 300, C.blue],
   ];
-  proposed.forEach(([label, x, y, color]) => node(s8, label, x, y, 150, 55, color));
+  proposed.forEach(([label, x, y, color]) => node(s8, label, x, y, 154, 58, color));
   for (let i = 0; i < proposed.length - 1; i += 1) {
-    arrow(s8, 266 + i * 200, 438, 34);
+    arrow(s8, 248 + i * 200, 320, 34);
   }
+  infoCard(s8, "Scalable by data", "Difficulty, personality, ability tuning, map semantics, and mode priorities are configured outside the main controller logic.", {
+    left: 92,
+    top: 420,
+    width: 305,
+    height: 112,
+  }, C.purple);
+  infoCard(s8, "Explainable decisions", "Debug labels show current intent, target, score gap, route state, confidence rank, and recovery reason.", {
+    left: 452,
+    top: 420,
+    width: 305,
+    height: 112,
+  }, C.blue);
+  infoCard(s8, "Production hardening", "Lifecycle cleanup, objective fallback, budget fairness, and incident logging reduce stalls and frame spikes.", {
+    left: 812,
+    top: 420,
+    width: 305,
+    height: 112,
+  }, C.green);
   notes(s8, [
     "[Sources]",
     "- Major project final report proposed system section.",
@@ -422,7 +505,7 @@ async function build() {
 
   const s9 = slideAt(presentation, 9);
   setText(s9, "Title 1", "Architecture");
-  setText(s9, "Rectangle 1", "High-level AI data flow and support layers:");
+  removeElement(s9, "Rectangle 1");
   addArchitectureDiagram(s9);
   notes(s9, [
     "[Sources]",
@@ -432,13 +515,42 @@ async function build() {
 
   const s10 = slideAt(presentation, 10);
   setText(s10, "Title 1", "Methodology / Algorithms");
-  setText(s10, "Content Placeholder 2", "Development followed an iterative systems methodology:\n1. Normalize action scores.\n2. Add commitment to prevent flicker.\n3. Coordinate teams with a blackboard.\n4. Route safely and recover from stalls.\n5. Validate decisions in Unity playtests.");
-  const steps = ["Sense", "Score", "Commit", "Move", "Validate"];
+  removeElement(s10, "Content Placeholder 2");
+  text(s10, "Methodology focused on small, verifiable AI systems: implement one behavior layer, expose debug evidence, playtest it, then tune the scoring data.", {
+    left: 92,
+    top: 154,
+    width: 1040,
+    height: 36,
+  }, {
+    fontSize: 15,
+    color: C.gray,
+  });
+  const algorithmCards = [
+    ["Utility scoring", "Scores actions from objective value, target value, range, safety, team pressure, and risk.", C.green],
+    ["A* grid routing", "Builds walkable-cell paths around obstacles with fallback goals and route budgets.", C.blue],
+    ["Spatial queries", "Detects nearby targets, gems, hazards, line-of-fire, bush proximity, and area effects.", C.cyan],
+    ["Blackboard", "Stores shared team knowledge such as focus counts, lanes, carriers, and threat centers.", C.navy],
+    ["Hysteresis", "Keeps actions stable long enough to avoid visible flicker and rapid direction changes.", C.purple],
+    ["Mode strategy", "Adds objective floors for Gem Grab, Knockout, Brawl Ball, and Solo Showdown.", C.magenta],
+    ["Failure recovery", "Detects stalls, stale commands, blocked routes, and repeated failed casts.", C.red],
+    ["Tuning assets", "ScriptableObject-style presets adjust difficulty, personality, and role behavior without rewriting code.", C.amber],
+  ];
+  algorithmCards.forEach(([title, body, color], index) => {
+    const col = index % 4;
+    const row = Math.floor(index / 4);
+    infoCard(s10, title, body, {
+      left: 68 + col * 295,
+      top: 214 + row * 132,
+      width: 260,
+      height: 106,
+    }, color, 12.2, 9.9);
+  });
+  const steps = ["Sense", "Score", "Share", "Commit", "Act", "Validate"];
   steps.forEach((item, index) => {
-    const x = 610 + index * 112;
-    node(s10, item, x, 552, 86, 42, index % 2 ? C.navy : C.magenta);
+    const x = 252 + index * 130;
+    node(s10, item, x, 568, 92, 38, index % 2 ? C.navy : C.magenta);
     if (index < steps.length - 1) {
-      arrow(s10, x + 89, 564, 20);
+      arrow(s10, x + 94, 578, 24);
     }
   });
   notes(s10, [
@@ -450,38 +562,50 @@ async function build() {
   const s11 = slideAt(presentation, 11);
   setText(s11, "Title 1", "Implementation Details");
   removeElement(s11, "Content Placeholder 2");
-  text(s11, "Implementation is split into focused modules: perception, scoring, commitment, blackboard, navigation, ability intelligence, mode strategy, debug reporting, and tuning profiles.", {
-    left: 96,
-    top: 178,
-    width: 720,
-    height: 78,
+  text(s11, "Representative code patterns from the implementation show the AI architecture in practical software terms: score, share state, route safely, and enforce mode objectives.", {
+    left: 92,
+    top: 156,
+    width: 1050,
+    height: 40,
   }, {
-    fontSize: 22,
+    fontSize: 15,
     color: C.black,
     lineSpacing: 1.08,
   });
-  codeBox(s11, "Objective priority example", `if (mode == BrawlBall && ballIsLoose)\n{\n    macro = Push;\n    reason = \"loose_ball_claim\";\n}\n\nscore = Max(score, objectiveFloor);`, {
-    left: 90,
-    top: 360,
-    width: 430,
-    height: 150,
+  codeBox(s11, "Utility score contract", `float score = baseScore + objective + safety - risk;\nscore -= teamFocus * focusPenalty;\nreturn Mathf.Clamp(score, 0f, 100f);`, {
+    left: 76,
+    top: 224,
+    width: 520,
+    height: 126,
   });
-  codeBox(s11, "Lifecycle recovery example", `OnBrawlerRespawned += HandleRespawn;\n\nif (isLocalPlayer)\n{\n    camera.SetTarget(followTarget);\n    controls.Rebind(owner);\n}`, {
-    left: 590,
-    top: 360,
-    width: 430,
-    height: 150,
+  codeBox(s11, "Team blackboard signal", `blackboard.ReportIntent(selfId, targetId, objectiveId);\nfocusCount = blackboard.GetFocusCount(targetId);\nallyPressure = blackboard.GetObjectivePressure(slotId);`, {
+    left: 654,
+    top: 224,
+    width: 520,
+    height: 126,
   });
-  await addImage(s11, SCREENSHOTS.brawlerSelect, {
-    left: 870,
-    top: 165,
-    width: 250,
-    height: 150,
-  }, "Brawler select implementation screenshot", "cover", { left: 0.04, top: 0.03, right: 0.04, bottom: 0.03 });
+  codeBox(s11, "Navigation liveness", `if (!nav.TryBuildPath(start, goal, out path))\n    goal = nav.FindNearbyWalkable(goal);\n\nif (watchdog.IsStalled(self))\n    planner.AbandonDestination();`, {
+    left: 76,
+    top: 392,
+    width: 520,
+    height: 142,
+  });
+  codeBox(s11, "Game-mode objective floor", `objectiveFloor = mode switch {\n    GemGrab => ScoreGemIntent(state),\n    BrawlBall => ScoreBallIntent(state),\n    Knockout => ScoreSurvivalPressure(state),\n};\nscore = Mathf.Max(score, objectiveFloor);`, {
+    left: 654,
+    top: 392,
+    width: 520,
+    height: 142,
+  });
+  infoCard(s11, "Software architecture takeaway", "The code avoids one large bot script. Each module has a narrow responsibility, which makes the system testable, explainable, and easier to extend for new modes.", {
+    left: 196,
+    top: 568,
+    width: 850,
+    height: 72,
+  }, C.amber, 12.5, 10.3);
   notes(s11, [
     "[Sources]",
     "- Local Unity C# implementation files.",
-    "- User-provided brawler select screenshot from playtesting.",
+    "- Code snippets are concise presentation extracts from the implemented AI pipeline.",
   ]);
 
   const s12 = slideAt(presentation, 12);
@@ -562,36 +686,36 @@ async function build() {
     bold: true,
     color: C.magenta,
   });
-  text(s14, "Layered, objective-aware AI for a Unity brawler prototype.", {
+  text(s14, "Layered, objective-aware AI for a Unity real-time game prototype.", {
     left: 124,
     top: 286,
     width: 240,
     height: 78,
-  }, { fontSize: 18, color: C.black });
+  }, { fontSize: 15.5, color: C.black, lineSpacing: 1.05 });
   card(s14, { left: 486, top: 205, width: 310, height: 230 }, "#f8fafc", C.green);
   text(s14, "Achievements", { left: 514, top: 232, width: 250, height: 28 }, {
     fontSize: 22,
     bold: true,
     color: C.green,
   });
-  text(s14, "Utility scoring, team blackboard, brawler roles, navigation recovery, and debug telemetry.", {
+  text(s14, "Utility scoring, team blackboard, role policies, navigation recovery, and debug telemetry.", {
     left: 514,
     top: 286,
     width: 240,
     height: 94,
-  }, { fontSize: 18, color: C.black });
+  }, { fontSize: 15.5, color: C.black, lineSpacing: 1.05 });
   card(s14, { left: 876, top: 205, width: 310, height: 230 }, "#f8fafc", C.blue);
   text(s14, "Future Work", { left: 904, top: 232, width: 250, height: 28 }, {
     fontSize: 22,
     bold: true,
     color: C.blue,
   });
-  text(s14, "Automated gauntlets, richer semantic maps, more brawler packs, and optional ML experiments.", {
+  text(s14, "Automated gauntlets, richer semantic maps, broader role packs, and optional ML experiments.", {
     left: 904,
     top: 286,
     width: 240,
     height: 94,
-  }, { fontSize: 18, color: C.black });
+  }, { fontSize: 15.5, color: C.black, lineSpacing: 1.05 });
   notes(s14, [
     "[Sources]",
     "- Major project final report conclusion and future work sections.",
@@ -600,7 +724,7 @@ async function build() {
   const s15 = slideAt(presentation, 15);
   setText(s15, "Title 1", "References");
   removeElement(s15, "Content Placeholder 2");
-  text(s15, "1. Akash Dhyani, Advanced Game AI System using Blackboard Architecture in Unity Engine, proposal, interim report, and final report, 2026.\n2. Ian Millington and John Funge, Artificial Intelligence for Games.\n3. Georgios N. Yannakakis and Julian Togelius, Artificial Intelligence and Games.\n4. Hart, Nilsson, and Raphael, A Formal Basis for the Heuristic Determination of Minimum Cost Paths, 1968.\n5. Unity documentation: ScriptableObject workflow, gameplay architecture, and Unity AI / ML-Agents concepts.\n6. Project source code: AI scoring, blackboard, navigation, mode strategy, brawler intelligence, and debug telemetry.", {
+  text(s15, "1. Akash Dhyani, Advanced Game AI System using Blackboard Architecture in Unity Engine, proposal, interim report, and final report, 2026.\n2. Ian Millington and John Funge, Artificial Intelligence for Games.\n3. Georgios N. Yannakakis and Julian Togelius, Artificial Intelligence and Games.\n4. Hart, Nilsson, and Raphael, A Formal Basis for the Heuristic Determination of Minimum Cost Paths, 1968.\n5. Unity documentation: ScriptableObject workflow, gameplay architecture, and Unity AI / ML-Agents concepts.\n6. Project source code: AI scoring, blackboard, navigation, mode strategy, role intelligence, and debug telemetry.", {
     left: 98,
     top: 176,
     width: 1020,
