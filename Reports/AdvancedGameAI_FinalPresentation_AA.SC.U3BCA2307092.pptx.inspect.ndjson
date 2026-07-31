@@ -1,399 +1,217 @@
-{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"AMRITA | Online","textShapes":5}
-{"kind":"shape","id":"sh/i1w3yp8f","slide":1,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/547294r6","slide":1,"bbox":[820,0,460,720]}
-{"kind":"shape","id":"sh/k3yl0zql","slide":1,"bbox":[744,-82,54,880]}
-{"kind":"shape","id":"sh/7qp4be9c","slide":1,"bbox":[948,96,170,170]}
-{"kind":"shape","id":"sh/65g3298r","slide":1,"bbox":[979,475,152,152]}
-{"kind":"textbox","id":"sh/ts7md4r2","slide":1,"textChars":15,"textLines":1}
-{"kind":"textbox","id":"sh/sryl4zqx","slide":1,"textChars":25,"textLines":1}
-{"kind":"textbox","id":"sh/fu94fe98","slide":1,"textChars":53,"textLines":2}
-{"kind":"textbox","id":"sh/utg3698n","slide":1,"textChars":45,"textLines":1}
-{"kind":"textbox","id":"sh/wn6dc7eh","slide":1,"textChars":98,"textLines":5}
-{"kind":"notes","id":"nt/y90nupkv","slide":1,"text":"Source: Final major project report title page and project details. | Opening ..."}
-{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"CONTEXT","textShapes":16}
-{"kind":"shape","id":"sh/mxgjm5s7","slide":2,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/9072xkry","slide":2,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/ozy1ofad","slide":2,"textChars":7,"textLines":1}
-{"kind":"textbox","id":"sh/b29kza94","slide":2,"textChars":37,"textLines":1}
-{"kind":"textbox","id":"sh/a10jqpsj","slide":2,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/x4r21kru","slide":2,"textChars":2,"textLines":1}
-{"kind":"shape","id":"sh/w3i1sfa9","slide":2,"bbox":[64,144,530,402]}
-{"kind":"shape","id":"sh/r65knqtk","slide":2,"bbox":[64,144,8,402]}
-{"kind":"textbox","id":"sh/q5wjelsz","slide":2,"textChars":30,"textLines":1}
-{"kind":"shape","id":"sh/ove9o7yd","slide":2,"bbox":[96,243,9,9]}
-{"kind":"textbox","id":"sh/9wnqhczy","slide":2,"textChars":18,"textLines":1}
-{"kind":"shape","id":"sh/mtwrmxg7","slide":2,"bbox":[96,285,9,9]}
-{"kind":"textbox","id":"sh/nu58f2hs","slide":2,"textChars":31,"textLines":1}
-{"kind":"shape","id":"sh/wjy9sry9","slide":2,"bbox":[96,327,9,9]}
-{"kind":"textbox","id":"sh/xk7qlczu","slide":2,"textChars":42,"textLines":1}
-{"kind":"shape","id":"sh/ahwrqhgj","slide":2,"bbox":[96,369,9,9]}
-{"kind":"textbox","id":"sh/bip8jmho","slide":2,"textChars":29,"textLines":1}
-{"kind":"shape","id":"sh/cnupgny5","slide":2,"bbox":[96,411,9,9]}
-{"kind":"textbox","id":"sh/do3q9szq","slide":2,"textChars":34,"textLines":1}
-{"kind":"shape","id":"sh/t8byxkn2","slide":2,"bbox":[96,453,9,9]}
-{"kind":"textbox","id":"sh/s72xofmh","slide":2,"textChars":44,"textLines":1}
-{"kind":"shape","id":"sh/76twva5c","slide":2,"bbox":[646,144,568,402]}
-{"kind":"shape","id":"sh/65kfmpor","slide":2,"bbox":[646,144,8,402]}
-{"kind":"textbox","id":"sh/hcvy14ne","slide":2,"textChars":8,"textLines":1}
-{"kind":"textbox","id":"sh/gbmxszmt","slide":2,"textChars":240,"textLines":1}
-{"kind":"shape","id":"sh/fadgzu58","slide":2,"bbox":[674,394,138,28]}
-{"kind":"textbox","id":"sh/u94fqp4n","slide":2,"textChars":11,"textLines":1}
-{"kind":"shape","id":"sh/p0vy54na","slide":2,"bbox":[832,394,156,28]}
-{"kind":"textbox","id":"sh/4zmxwzmp","slide":2,"textChars":16,"textLines":1}
-{"kind":"shape","id":"sh/mlgvq147","slide":2,"bbox":[1008,394,140,28]}
-{"kind":"textbox","id":"sh/nmpcj6ls","slide":2,"textChars":13,"textLines":1}
-{"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":"Source: final report front matter, proposal, and interim report. This slide e..."}
-{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"PROBLEM","textShapes":17}
-{"kind":"shape","id":"sh/by1svqlc","slide":3,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/cza94vmx","slide":3,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/d0jax03i","slide":3,"textChars":7,"textLines":1}
-{"kind":"textbox","id":"sh/298ryl4v","slide":3,"textChars":36,"textLines":1}
-{"kind":"textbox","id":"sh/3ah8rqlg","slide":3,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/obq90bml","slide":3,"textChars":2,"textLines":1}
-{"kind":"textbox","id":"sh/pcjqtg36","slide":3,"textChars":132,"textLines":1}
-{"kind":"shape","id":"sh/m5cra54z","slide":3,"bbox":[86,236,328,112]}
-{"kind":"shape","id":"sh/n6ls3alk","slide":3,"bbox":[86,236,8,112]}
-{"kind":"textbox","id":"sh/n2l4fq98","slide":3,"textChars":7,"textLines":1}
-{"kind":"textbox","id":"sh/m1c3mlsn","slide":3,"textChars":45,"textLines":1}
-{"kind":"shape","id":"sh/943mhgre","slide":3,"bbox":[468,236,328,112]}
-{"kind":"shape","id":"sh/83ulovat","slide":3,"bbox":[468,236,8,112]}
-{"kind":"textbox","id":"sh/v6l4jq94","slide":3,"textChars":8,"textLines":1}
-{"kind":"textbox","id":"sh/a5c3ql8z","slide":3,"textChars":48,"textLines":1}
-{"kind":"shape","id":"sh/x8nml0ra","slide":3,"bbox":[850,236,328,112]}
-{"kind":"shape","id":"sh/w7ulsvqp","slide":3,"bbox":[850,236,8,112]}
-{"kind":"textbox","id":"sh/ja54na9g","slide":3,"textChars":17,"textLines":1}
-{"kind":"textbox","id":"sh/i9w3u58v","slide":3,"textChars":48,"textLines":1}
-{"kind":"shape","id":"sh/e10f2twf","slide":3,"bbox":[86,386,328,112]}
-{"kind":"shape","id":"sh/f29gbyx0","slide":3,"bbox":[86,386,8,112]}
-{"kind":"textbox","id":"sh/03ix43e5","slide":3,"textChars":11,"textLines":1}
-{"kind":"textbox","id":"sh/14ryd8fq","slide":3,"textChars":40,"textLines":1}
-{"kind":"shape","id":"sh/6d0fytg3","slide":3,"bbox":[468,386,328,112]}
-{"kind":"shape","id":"sh/re9g7yxo","slide":3,"bbox":[468,386,8,112]}
-{"kind":"textbox","id":"sh/sfix03y9","slide":3,"textChars":16,"textLines":1}
-{"kind":"textbox","id":"sh/tgry9ofu","slide":3,"textChars":42,"textLines":1}
-{"kind":"shape","id":"sh/a9kfadwn","slide":3,"bbox":[850,386,328,112]}
-{"kind":"shape","id":"sh/batgjixs","slide":3,"bbox":[850,386,8,112]}
-{"kind":"textbox","id":"sh/l4fi9cza","slide":3,"textChars":17,"textLines":1}
-{"kind":"textbox","id":"sh/k3m1g7yp","slide":3,"textChars":40,"textLines":1}
-{"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":"Source: proposal and final report problem statement. This slide frames why th..."}
-{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"COMPARISON","textShapes":18}
-{"kind":"shape","id":"sh/e9sj2tsv","slide":4,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/1cj2d8b6","slide":4,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/0ba143al","slide":4,"textChars":10,"textLines":1}
-{"kind":"textbox","id":"sh/rm1k7yt4","slide":4,"textChars":36,"textLines":1}
-{"kind":"textbox","id":"sh/ql8jytsj","slide":4,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/doj29oba","slide":4,"textChars":2,"textLines":1}
-{"kind":"textbox","id":"sh/sna103ap","slide":4,"textChars":21,"textLines":1}
-{"kind":"textbox","id":"sh/3ihk3et8","slide":4,"textChars":26,"textLines":1}
-{"kind":"shape","id":"sh/ih8ju9sn","slide":4,"bbox":[82,208,300,42]}
-{"kind":"shape","id":"sh/kbm987y5","slide":4,"bbox":[82,208,8,42]}
-{"kind":"textbox","id":"sh/5cva1cfq","slide":4,"textChars":18,"textLines":1}
-{"kind":"shape","id":"sh/i94r6xgz","slide":4,"bbox":[395,220,52,18]}
-{"kind":"shape","id":"sh/jadsz2xk","slide":4,"bbox":[82,280,300,42]}
-{"kind":"shape","id":"sh/w72947yt","slide":4,"bbox":[82,280,8,42]}
-{"kind":"textbox","id":"sh/x8vaxsfe","slide":4,"textChars":19,"textLines":1}
-{"kind":"shape","id":"sh/a5kr2xg3","slide":4,"bbox":[395,292,52,18]}
-{"kind":"shape","id":"sh/v6tsv2xo","slide":4,"bbox":[82,352,300,42]}
-{"kind":"shape","id":"sh/g36tgryd","slide":4,"bbox":[82,352,8,42]}
-{"kind":"textbox","id":"sh/h4fa9wfy","slide":4,"textChars":17,"textLines":1}
-{"kind":"shape","id":"sh/p0batw72","slide":4,"bbox":[395,364,52,18]}
-{"kind":"shape","id":"sh/oz29krqh","slide":4,"bbox":[82,424,300,42]}
-{"kind":"shape","id":"sh/3ytsrmpw","slide":4,"bbox":[82,424,8,42]}
-{"kind":"textbox","id":"sh/2xkrih8b","slide":4,"textChars":24,"textLines":1}
-{"kind":"shape","id":"sh/1wbapc7q","slide":4,"bbox":[395,436,52,18]}
-{"kind":"shape","id":"sh/gv29g7q5","slide":4,"bbox":[82,496,300,42]}
-{"kind":"shape","id":"sh/fu9sn2p0","slide":4,"bbox":[82,496,8,42]}
-{"kind":"textbox","id":"sh/et0reh8f","slide":4,"textChars":24,"textLines":1}
-{"kind":"shape","id":"sh/tsrqlc7u","slide":4,"bbox":[704,208,320,42]}
-{"kind":"shape","id":"sh/sri9s7q9","slide":4,"bbox":[704,208,8,42]}
-{"kind":"textbox","id":"sh/ilwf69kv","slide":4,"textChars":24,"textLines":1}
-{"kind":"shape","id":"sh/jm5gze1g","slide":4,"bbox":[1038,220,52,18]}
-{"kind":"shape","id":"sh/knex8j21","slide":4,"bbox":[704,280,320,42]}
-{"kind":"shape","id":"sh/5ony1oj6","slide":4,"bbox":[704,280,8,42]}
-{"kind":"textbox","id":"sh/axcf29kj","slide":4,"textChars":27,"textLines":1}
-{"kind":"shape","id":"sh/vy5gbe14","slide":4,"bbox":[1038,292,52,18]}
-{"kind":"shape","id":"sh/wzex4z2p","slide":4,"bbox":[704,352,320,42]}
-{"kind":"shape","id":"sh/xknyx4ja","slide":4,"bbox":[704,352,8,42]}
-{"kind":"textbox","id":"sh/mtcfypkn","slide":4,"textChars":22,"textLines":1}
-{"kind":"shape","id":"sh/nulw7u18","slide":4,"bbox":[1038,364,52,18]}
-{"kind":"shape","id":"sh/fm5c3q54","slide":4,"bbox":[704,424,320,42]}
-{"kind":"shape","id":"sh/elwba54j","slide":4,"bbox":[704,424,8,42]}
-{"kind":"textbox","id":"sh/18nu50nu","slide":4,"textChars":21,"textLines":1}
-{"kind":"shape","id":"sh/0netcvm9","slide":4,"bbox":[1038,436,52,18]}
-{"kind":"shape","id":"sh/rilczq5s","slide":4,"bbox":[704,496,320,42]}
-{"kind":"shape","id":"sh/qhcb6l47","slide":4,"bbox":[704,496,8,42]}
-{"kind":"textbox","id":"sh/dknu10ny","slide":4,"textChars":22,"textLines":1}
-{"kind":"shape","id":"sh/sjut8vmd","slide":4,"bbox":[462,238,188,236]}
-{"kind":"shape","id":"sh/3elcv65w","slide":4,"bbox":[462,238,8,236]}
-{"kind":"textbox","id":"sh/idcb2lob","slide":4,"textChars":15,"textLines":1}
-{"kind":"textbox","id":"sh/8jq9c72t","slide":4,"textChars":145,"textLines":1}
-{"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":"Source: final report architecture and observed playtest problems. The compari..."}
-{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"ARCHITECTURE","textShapes":16}
-{"kind":"shape","id":"sh/qd0bahob","slide":5,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/dgbulwnm","slide":5,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/cf2tcr61","slide":5,"textChars":12,"textLines":1}
-{"kind":"textbox","id":"sh/z2tcnm5s","slide":5,"textChars":30,"textLines":1}
-{"kind":"textbox","id":"sh/yhkbe1o7","slide":5,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/l4bupwny","slide":5,"textChars":2,"textLines":1}
-{"kind":"shape","id":"sh/032tgr6d","slide":5,"bbox":[74,176,146,72]}
-{"kind":"shape","id":"sh/n6dcr65o","slide":5,"bbox":[74,176,8,72]}
-{"kind":"textbox","id":"sh/m5kbi1oj","slide":5,"textChars":19,"textLines":2}
-{"kind":"shape","id":"sh/w32dkbuh","slide":5,"bbox":[254,176,146,72]}
-{"kind":"shape","id":"sh/x4vedgvm","slide":5,"bbox":[254,176,8,72]}
-{"kind":"textbox","id":"sh/ahkvi1cb","slide":5,"textChars":14,"textLines":2}
-{"kind":"shape","id":"sh/v2twb6dw","slide":5,"bbox":[434,176,146,72]}
-{"kind":"shape","id":"sh/k7mxovud","slide":5,"bbox":[434,176,8,72]}
-{"kind":"textbox","id":"sh/58vehgvy","slide":5,"textChars":15,"textLines":2}
-{"kind":"shape","id":"sh/i54fmlc7","slide":5,"bbox":[614,176,146,72]}
-{"kind":"shape","id":"sh/j6dwfqds","slide":5,"bbox":[614,176,8,72]}
-{"kind":"textbox","id":"sh/sb6xsvu9","slide":5,"textChars":21,"textLines":2}
-{"kind":"shape","id":"sh/tcfel0vu","slide":5,"bbox":[794,176,146,72]}
-{"kind":"shape","id":"sh/hgrmpwj2","slide":5,"bbox":[794,176,8,72]}
-{"kind":"textbox","id":"sh/gfi5grih","slide":5,"textChars":15,"textLines":2}
-{"kind":"shape","id":"sh/fe94nm1w","slide":5,"bbox":[974,176,146,72]}
-{"kind":"shape","id":"sh/ud0ne10b","slide":5,"bbox":[974,176,8,72]}
-{"kind":"textbox","id":"sh/pkr6tgjy","slide":5,"textChars":18,"textLines":2}
-{"kind":"shape","id":"sh/4ji5kbid","slide":5,"bbox":[222,200,42,24]}
-{"kind":"shape","id":"sh/3i94r61s","slide":5,"bbox":[402,200,42,24]}
-{"kind":"shape","id":"sh/2h0ni107","slide":5,"bbox":[582,200,42,24]}
-{"kind":"shape","id":"sh/5o7mhcju","slide":5,"bbox":[762,200,42,24]}
-{"kind":"shape","id":"sh/kny587i9","slide":5,"bbox":[942,200,42,24]}
-{"kind":"shape","id":"sh/atcjidg7","slide":5,"bbox":[94,338,316,152]}
-{"kind":"shape","id":"sh/vu5kbihc","slide":5,"bbox":[94,338,8,152]}
-{"kind":"textbox","id":"sh/wve1knyx","slide":5,"textChars":15,"textLines":1}
-{"kind":"textbox","id":"sh/xwn2dszi","slide":5,"textChars":106,"textLines":1}
-{"kind":"shape","id":"sh/ihw3mxg3","slide":5,"bbox":[482,338,316,152]}
-{"kind":"shape","id":"sh/ji5kf2ho","slide":5,"bbox":[482,338,8,152]}
-{"kind":"textbox","id":"sh/kjelony9","slide":5,"textChars":19,"textLines":1}
-{"kind":"textbox","id":"sh/5kn2hszu","slide":5,"textChars":92,"textLines":1}
-{"kind":"shape","id":"sh/e1sjatgz","slide":5,"bbox":[870,338,316,152]}
-{"kind":"shape","id":"sh/zmlk3yhk","slide":5,"bbox":[870,338,8,152]}
-{"kind":"textbox","id":"sh/fid07u98","slide":5,"textChars":22,"textLines":1}
-{"kind":"textbox","id":"sh/ehkzepsn","slide":5,"textChars":102,"textLines":1}
-{"kind":"notes","id":"nt/i107q5of","slide":5,"text":"Source: final report system design and implementation modules. Diagram shows ..."}
-{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"RUNTIME","textShapes":21}
-{"kind":"shape","id":"sh/lkrqp4ra","slide":6,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/yhg7epsj","slide":6,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/zi98nu94","slide":6,"textChars":7,"textLines":1}
-{"kind":"textbox","id":"sh/87ipkzal","slide":6,"textChars":40,"textLines":1}
-{"kind":"textbox","id":"sh/98rqt4r6","slide":6,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/ml07i9sv","slide":6,"textChars":2,"textLines":1}
-{"kind":"shape","id":"sh/7m98ru9g","slide":6,"bbox":[80,185,76,76]}
-{"kind":"textbox","id":"sh/oryp8fah","slide":6,"textChars":1,"textLines":1}
-{"kind":"textbox","id":"sh/pc76hkr2","slide":6,"textChars":5,"textLines":1}
-{"kind":"textbox","id":"sh/h4bupgn6","slide":6,"textChars":61,"textLines":1}
-{"kind":"shape","id":"sh/w32twb6l","slide":6,"bbox":[171,212,70,26]}
-{"kind":"shape","id":"sh/v2tcn650","slide":6,"bbox":[312,185,76,76]}
-{"kind":"textbox","id":"sh/u1kbu1ov","slide":6,"textChars":1,"textLines":1}
-{"kind":"textbox","id":"sh/5svutgni","slide":6,"textChars":8,"textLines":1}
-{"kind":"textbox","id":"sh/47mt0b6x","slide":6,"textChars":60,"textLines":1}
-{"kind":"shape","id":"sh/j6dcr65c","slide":6,"bbox":[403,212,70,26]}
-{"kind":"shape","id":"sh/i54bylor","slide":6,"bbox":[544,185,76,76]}
-{"kind":"textbox","id":"sh/twfux0ne","slide":6,"textChars":1,"textLines":1}
-{"kind":"textbox","id":"sh/svmt4v6t","slide":6,"textChars":5,"textLines":1}
-{"kind":"textbox","id":"sh/cbe5g3ih","slide":6,"textChars":55,"textLines":1}
-{"kind":"shape","id":"sh/dcnm98zm","slide":6,"bbox":[635,212,70,26]}
-{"kind":"shape","id":"sh/qpwnet0b","slide":6,"bbox":[776,185,76,76]}
-{"kind":"textbox","id":"sh/bq547yhw","slide":6,"textChars":1,"textLines":1}
-{"kind":"textbox","id":"sh/0fy5k3id","slide":6,"textChars":6,"textLines":1}
-{"kind":"textbox","id":"sh/lg76d8zy","slide":6,"textChars":61,"textLines":1}
-{"kind":"shape","id":"sh/ydgnit07","slide":6,"bbox":[867,212,70,26]}
-{"kind":"shape","id":"sh/zep4byhs","slide":6,"bbox":[1008,185,76,76]}
-{"kind":"textbox","id":"sh/gju58ji9","slide":6,"textChars":1,"textLines":1}
-{"kind":"textbox","id":"sh/1k3mhozu","slide":6,"textChars":10,"textLines":1}
-{"kind":"textbox","id":"sh/jet8nm1c","slide":6,"textChars":56,"textLines":1}
-{"kind":"shape","id":"sh/idk7ehkr","slide":6,"bbox":[196,502,888,82]}
-{"kind":"shape","id":"sh/50bqpcj2","slide":6,"bbox":[196,502,8,82]}
-{"kind":"textbox","id":"sh/4f2pgr2h","slide":6,"textChars":16,"textLines":1}
-{"kind":"textbox","id":"sh/va98j210","slide":6,"textChars":153,"textLines":1}
-{"kind":"notes","id":"nt/x8f69ofe","slide":6,"text":"Source: final report methodology and implementation notes. This explains how ..."}
-{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"MODE AI","textShapes":13}
-{"kind":"shape","id":"sh/batcbq94","slide":7,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/cb2tkvap","slide":7,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/dcbud0ra","slide":7,"textChars":7,"textLines":1}
-{"kind":"textbox","id":"sh/ydkbm5sv","slide":7,"textChars":42,"textLines":1}
-{"kind":"textbox","id":"sh/zedcfa9g","slide":7,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/kzmdova1","slide":7,"textChars":2,"textLines":1}
-{"kind":"shape","id":"sh/l0vuh0rm","slide":7,"bbox":[82,164,510,144]}
-{"kind":"shape","id":"sh/eh0ba1sr","slide":7,"bbox":[82,164,8,144]}
-{"kind":"textbox","id":"sh/fi9c369c","slide":7,"textChars":8,"textLines":1}
-{"kind":"textbox","id":"sh/baxkjqlk","slide":7,"textChars":67,"textLines":1}
-{"kind":"shape","id":"sh/a9ojq5kz","slide":7,"bbox":[676,164,510,144]}
-{"kind":"shape","id":"sh/xcz2l03q","slide":7,"bbox":[676,164,8,144]}
-{"kind":"textbox","id":"sh/cbq1sv25","slide":7,"textChars":8,"textLines":1}
-{"kind":"textbox","id":"sh/n6x0fqlo","slide":7,"textChars":70,"textLines":1}
-{"kind":"shape","id":"sh/25ojml43","slide":7,"bbox":[82,380,510,144]}
-{"kind":"shape","id":"sh/p8fih03e","slide":7,"bbox":[82,380,8,144]}
-{"kind":"textbox","id":"sh/o761ov2t","slide":7,"textChars":10,"textLines":1}
-{"kind":"textbox","id":"sh/f2d0b6lc","slide":7,"textChars":64,"textLines":1}
-{"kind":"shape","id":"sh/eh4jil4r","slide":7,"bbox":[676,380,510,144]}
-{"kind":"shape","id":"sh/id4ju1oz","slide":7,"bbox":[676,380,8,144]}
-{"kind":"textbox","id":"sh/jedkn654","slide":7,"textChars":13,"textLines":1}
-{"kind":"textbox","id":"sh/4fm1wb6p","slide":7,"textChars":74,"textLines":1}
-{"kind":"textbox","id":"sh/50v2pgna","slide":7,"textChars":120,"textLines":1}
-{"kind":"notes","id":"nt/gnmp4jqx","slide":7,"text":"Source: implementation of AIGameModeMacroStrategy and recent playtest fixes. ..."}
-{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"BRAWLER AI","textShapes":21}
-{"kind":"shape","id":"sh/elkf2pg7","slide":8,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/18byd4zy","slide":8,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/g72x4zyd","slide":8,"textChars":10,"textLines":1}
-{"kind":"textbox","id":"sh/ri9g7uhw","slide":8,"textChars":35,"textLines":1}
-{"kind":"textbox","id":"sh/6h0fypgb","slide":8,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/tkby9kzm","slide":8,"textChars":2,"textLines":1}
-{"kind":"shape","id":"sh/sjix0zy1","slide":8,"bbox":[66,160,262,154]}
-{"kind":"shape","id":"sh/je9g3ahk","slide":8,"bbox":[66,160,8,154]}
-{"kind":"textbox","id":"sh/id0fu50z","slide":8,"textChars":4,"textLines":1}
-{"kind":"textbox","id":"sh/o7ydoret","slide":8,"textChars":63,"textLines":1}
-{"kind":"shape","id":"sh/98rehwve","slide":8,"bbox":[368,160,262,154]}
-{"kind":"shape","id":"sh/m5gvmhwn","slide":8,"bbox":[368,160,8,154]}
-{"kind":"textbox","id":"sh/n6pwfmd8","slide":8,"textChars":6,"textLines":1}
-{"kind":"textbox","id":"sh/0jydkreh","slide":8,"textChars":68,"textLines":1}
-{"kind":"shape","id":"sh/1k7edwv2","slide":8,"bbox":[670,160,262,154]}
-{"kind":"shape","id":"sh/ehgvihwr","slide":8,"bbox":[670,160,8,154]}
-{"kind":"textbox","id":"sh/zipwbmdc","slide":8,"textChars":5,"textLines":1}
-{"kind":"textbox","id":"sh/kfixwbe1","slide":8,"textChars":70,"textLines":1}
-{"kind":"shape","id":"sh/lgbepgvm","slide":8,"bbox":[972,160,262,154]}
-{"kind":"shape","id":"sh/tw7e9gnq","slide":8,"bbox":[972,160,8,154]}
-{"kind":"textbox","id":"sh/svydgb65","slide":8,"textChars":6,"textLines":1}
-{"kind":"textbox","id":"sh/7u5w765k","slide":8,"textChars":51,"textLines":1}
-{"kind":"shape","id":"sh/6twve1oz","slide":8,"bbox":[66,365,262,154]}
-{"kind":"shape","id":"sh/5sne5wne","slide":8,"bbox":[66,365,8,154]}
-{"kind":"textbox","id":"sh/kredcr6t","slide":8,"textChars":8,"textLines":1}
-{"kind":"textbox","id":"sh/jq5w365o","slide":8,"textChars":69,"textLines":1}
-{"kind":"shape","id":"sh/i5wva1o3","slide":8,"bbox":[368,365,262,154]}
-{"kind":"shape","id":"sh/x4ne1wni","slide":8,"bbox":[368,365,8,154]}
-{"kind":"textbox","id":"sh/w3ed8r6x","slide":8,"textChars":2,"textLines":1}
-{"kind":"textbox","id":"sh/m9sb2x4v","slide":8,"textChars":75,"textLines":1}
-{"kind":"shape","id":"sh/na1sb2lg","slide":8,"bbox":[670,365,262,154]}
-{"kind":"shape","id":"sh/8bat47ml","slide":8,"bbox":[670,365,8,154]}
-{"kind":"textbox","id":"sh/9w3uds36","slide":8,"textChars":5,"textLines":1}
-{"kind":"textbox","id":"sh/y5sbed4j","slide":8,"textChars":58,"textLines":1}
-{"kind":"shape","id":"sh/z61s7il4","slide":8,"bbox":[972,365,262,154]}
-{"kind":"shape","id":"sh/07atgnmp","slide":8,"bbox":[972,365,8,154]}
-{"kind":"textbox","id":"sh/l8ja9s3a","slide":8,"textChars":4,"textLines":1}
-{"kind":"textbox","id":"sh/q18bad4n","slide":8,"textChars":72,"textLines":1}
-{"kind":"textbox","id":"sh/b2hs3il8","slide":8,"textChars":120,"textLines":1}
-{"kind":"notes","id":"nt/fu1gfa1s","slide":8,"text":"Source: final report brawler-specific intelligence section and implemented br..."}
-{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"MOVEMENT","textShapes":16}
-{"kind":"shape","id":"sh/eponml43","slide":9,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/1cfmhgne","slide":9,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/0b65obm9","slide":9,"textChars":8,"textLines":1}
-{"kind":"textbox","id":"sh/nex4jq5k","slide":9,"textChars":41,"textLines":1}
-{"kind":"textbox","id":"sh/mdonql4z","slide":9,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/9gzml0nq","slide":9,"textChars":2,"textLines":1}
-{"kind":"shape","id":"sh/ofq5svm5","slide":9,"bbox":[72,150,472,398]}
-{"kind":"shape","id":"sh/bih4na5w","slide":9,"bbox":[72,150,8,398]}
-{"kind":"textbox","id":"sh/ah8nu54b","slide":9,"textChars":18,"textLines":1}
-{"kind":"shape","id":"sh/oza1gfyh","slide":9,"bbox":[108,251,9,9]}
-{"kind":"textbox","id":"sh/p0ji9kf2","slide":9,"textChars":47,"textLines":1}
-{"kind":"shape","id":"sh/2xsjepgb","slide":9,"bbox":[108,296,9,9]}
-{"kind":"textbox","id":"sh/3y107axw","slide":9,"textChars":49,"textLines":1}
-{"kind":"shape","id":"sh/cnu1kzyd","slide":9,"bbox":[108,341,9,9]}
-{"kind":"textbox","id":"sh/do3id4fy","slide":9,"textChars":44,"textLines":1}
-{"kind":"shape","id":"sh/qlcjipgn","slide":9,"bbox":[108,386,9,9]}
-{"kind":"textbox","id":"sh/bml0buxs","slide":9,"textChars":62,"textLines":1}
-{"kind":"shape","id":"sh/0ru1ozyp","slide":9,"bbox":[108,431,9,9]}
-{"kind":"textbox","id":"sh/lsn2h4fa","slide":9,"textChars":53,"textLines":1}
-{"kind":"shape","id":"sh/98ji147e","slide":9,"bbox":[612,150,596,398]}
-{"kind":"shape","id":"sh/87a18zqt","slide":9,"bbox":[612,150,8,398]}
-{"kind":"textbox","id":"sh/76h0zup8","slide":9,"textChars":13,"textLines":1}
-{"kind":"shape","id":"sh/ml8j6p8n","slide":9,"bbox":[654,212,112,44]}
-{"kind":"shape","id":"sh/hcji5o7a","slide":9,"bbox":[654,212,8,44]}
-{"kind":"textbox","id":"sh/wba1cjqp","slide":9,"textChars":12,"textLines":1}
-{"kind":"shape","id":"sh/va103ep4","slide":9,"bbox":[770,225,36,18]}
-{"kind":"shape","id":"sh/u9sja98z","slide":9,"bbox":[780,286,112,44]}
-{"kind":"shape","id":"sh/xgzitk76","slide":9,"bbox":[780,286,8,44]}
-{"kind":"textbox","id":"sh/cf6h0fql","slide":9,"textChars":20,"textLines":1}
-{"kind":"shape","id":"sh/2l4faloj","slide":9,"bbox":[896,299,36,18]}
-{"kind":"shape","id":"sh/nmdg3q54","slide":9,"bbox":[906,360,112,44]}
-{"kind":"shape","id":"sh/onmxcv69","slide":9,"bbox":[906,360,8,44]}
-{"kind":"textbox","id":"sh/pofy50nu","slide":9,"textChars":20,"textLines":1}
-{"kind":"shape","id":"sh/apofe5of","slide":9,"bbox":[1022,373,36,18]}
-{"kind":"shape","id":"sh/bqxg7q50","slide":9,"bbox":[1032,434,112,44]}
-{"kind":"shape","id":"sh/cr6xgv6l","slide":9,"bbox":[1032,434,8,44]}
-{"kind":"textbox","id":"sh/xcfy90n6","slide":9,"textChars":22,"textLines":1}
-{"kind":"textbox","id":"sh/qtkf21ob","slide":9,"textChars":161,"textLines":1}
-{"kind":"notes","id":"nt/udsvah03","slide":9,"text":"Source: AIMapNavigationUtility, NavigationAgent, movement liveness watchdog, ..."}
-{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"COMBAT","textShapes":22}
-{"kind":"shape","id":"sh/q9sn69kb","slide":10,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/xc3mho32","slide":10,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/cbu58j2h","slide":10,"textChars":6,"textLines":1}
-{"kind":"textbox","id":"sh/zelojyl8","slide":10,"textChars":42,"textLines":1}
-{"kind":"textbox","id":"sh/ydcnatkn","slide":10,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/l036l83y","slide":10,"textChars":2,"textLines":1}
-{"kind":"shape","id":"sh/kzu5c32t","slide":10,"bbox":[90,172,184,96]}
-{"kind":"shape","id":"sh/725onyl4","slide":10,"bbox":[90,172,8,96]}
-{"kind":"textbox","id":"sh/m1cnetkj","slide":10,"textChars":3,"textLines":1}
-{"kind":"textbox","id":"sh/s7yt4b21","slide":10,"textChars":34,"textLines":1}
-{"kind":"shape","id":"sh/d87uxg3m","slide":10,"bbox":[318,172,184,96]}
-{"kind":"shape","id":"sh/q5gb21kb","slide":10,"bbox":[318,172,8,96]}
-{"kind":"textbox","id":"sh/r6pcv6lw","slide":10,"textChars":4,"textLines":1}
-{"kind":"textbox","id":"sh/0bit8b2d","slide":10,"textChars":26,"textLines":1}
-{"kind":"shape","id":"sh/1cru1g3y","slide":10,"bbox":[546,172,184,96]}
-{"kind":"shape","id":"sh/e9gb61k7","slide":10,"bbox":[546,172,8,96]}
-{"kind":"textbox","id":"sh/fapcz6ls","slide":10,"textChars":5,"textLines":1}
-{"kind":"textbox","id":"sh/ozitcv29","slide":10,"textChars":33,"textLines":1}
-{"kind":"shape","id":"sh/p0ru503u","slide":10,"bbox":[774,172,184,96]}
-{"kind":"shape","id":"sh/xwnupgvy","slide":10,"bbox":[774,172,8,96]}
-{"kind":"textbox","id":"sh/wvetgbud","slide":10,"textChars":4,"textLines":1}
-{"kind":"textbox","id":"sh/bu5cnqd8","slide":10,"textChars":34,"textLines":1}
-{"kind":"shape","id":"sh/atwbelcn","slide":10,"bbox":[1002,172,184,96]}
-{"kind":"shape","id":"sh/lk7ut0va","slide":10,"bbox":[1002,172,8,96]}
-{"kind":"textbox","id":"sh/kjytkvup","slide":10,"textChars":4,"textLines":1}
-{"kind":"textbox","id":"sh/jypcrqd4","slide":10,"textChars":35,"textLines":1}
-{"kind":"shape","id":"sh/yxgbilcj","slide":10,"bbox":[88,336,504,172]}
-{"kind":"shape","id":"sh/1o3ahwvq","slide":10,"bbox":[88,336,8,172]}
-{"kind":"textbox","id":"sh/0nut8rul","slide":10,"textChars":8,"textLines":1}
-{"kind":"shape","id":"sh/q9srixs3","slide":10,"bbox":[126,421,9,9]}
-{"kind":"textbox","id":"sh/ru18r2to","slide":10,"textChars":68,"textLines":1}
-{"kind":"shape","id":"sh/cva9k7a9","slide":10,"bbox":[126,457,9,9]}
-{"kind":"textbox","id":"sh/dwjqtcbu","slide":10,"textChars":71,"textLines":1}
-{"kind":"shape","id":"sh/exsrmhsf","slide":10,"bbox":[126,493,9,9]}
-{"kind":"textbox","id":"sh/zyl8vmt0","slide":10,"textChars":43,"textLines":1}
-{"kind":"shape","id":"sh/0zu9ora5","slide":10,"bbox":[670,336,504,172]}
-{"kind":"shape","id":"sh/103qxcbq","slide":10,"bbox":[670,336,8,172]}
-{"kind":"textbox","id":"sh/u187adsv","slide":10,"textChars":8,"textLines":1}
-{"kind":"shape","id":"sh/f2h8jitg","slide":10,"bbox":[708,421,9,9]}
-{"kind":"textbox","id":"sh/bmpgrah8","slide":10,"textChars":84,"textLines":1}
-{"kind":"shape","id":"sh/algfy50n","slide":10,"bbox":[708,457,9,9]}
-{"kind":"textbox","id":"sh/xo7ytkzy","slide":10,"textChars":63,"textLines":1}
-{"kind":"shape","id":"sh/wnyx0fit","slide":10,"bbox":[708,493,9,9]}
-{"kind":"textbox","id":"sh/jq9gvuh4","slide":10,"textChars":52,"textLines":1}
-{"kind":"notes","id":"nt/m90b6t0r","slide":10,"text":"Source: ability intelligence packs, predictive combat utilities, shot obstacl..."}
-{"kind":"slide","id":"sl/jetc3ut0","slide":11,"title":"EVIDENCE","textShapes":11}
-{"kind":"shape","id":"sh/a90z21on","slide":11,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/xcryxg7y","slide":11,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/wbih4b6d","slide":11,"textChars":8,"textLines":1}
-{"kind":"textbox","id":"sh/n69grmpw","slide":11,"textChars":27,"textLines":1}
-{"kind":"textbox","id":"sh/250zy18b","slide":11,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/98rytw72","slide":11,"textChars":2,"textLines":1}
-{"kind":"shape","id":"sh/72t03qp0","slide":11,"bbox":[64,136,774,456]}
-{"kind":"shape","id":"sh/61kzalof","slide":11,"bbox":[870,146,320,118]}
-{"kind":"shape","id":"sh/ofqtgnyt","slide":11,"bbox":[870,146,8,118]}
-{"kind":"textbox","id":"sh/9gza9sze","slide":11,"textChars":110,"textLines":1}
-{"kind":"shape","id":"sh/mdobedg3","slide":11,"bbox":[870,298,320,248]}
-{"kind":"shape","id":"sh/nehs7iho","slide":11,"bbox":[870,298,8,248]}
-{"kind":"textbox","id":"sh/0b6tc3yx","slide":11,"textChars":15,"textLines":1}
-{"kind":"shape","id":"sh/1cfa58zi","slide":11,"bbox":[904,379,9,9]}
-{"kind":"textbox","id":"sh/epobatgr","slide":11,"textChars":26,"textLines":1}
-{"kind":"shape","id":"sh/zaxs3yhc","slide":11,"bbox":[904,411,9,9]}
-{"kind":"textbox","id":"sh/cn6t83y1","slide":11,"textChars":19,"textLines":1}
-{"kind":"shape","id":"sh/dofa18z6","slide":11,"bbox":[904,443,9,9]}
-{"kind":"textbox","id":"sh/tsnip0ny","slide":11,"textChars":22,"textLines":1}
-{"kind":"shape","id":"sh/87ehgv6d","slide":11,"bbox":[904,475,9,9]}
-{"kind":"textbox","id":"sh/7650nq5s","slide":11,"textChars":24,"textLines":1}
-{"kind":"shape","id":"sh/65wzelo7","slide":11,"bbox":[904,507,9,9]}
-{"kind":"textbox","id":"sh/l43ilgn2","slide":11,"textChars":24,"textLines":1}
-{"kind":"image","id":"im/1k3i9gz2","slide":11,"name":"","geometry":"roundRect","alt":"Gem Grab gameplay screenshot","bbox":[64,136,774,456]}
-{"kind":"notes","id":"nt/jetc3ut0","slide":11,"text":"Source: user-provided gameplay screenshot. Shows the gem mine area, countdown..."}
-{"kind":"slide","id":"sl/8f2psfyx","slide":12,"title":"EVIDENCE","textShapes":6}
-{"kind":"shape","id":"sh/edk3ed4j","slide":12,"bbox":[0,0,1280,720]}
-{"kind":"shape","id":"sh/1gbm9s3a","slide":12,"bbox":[0,0,1280,12]}
-{"kind":"textbox","id":"sh/0f2lgnmp","slide":12,"textChars":8,"textLines":1}
-{"kind":"textbox","id":"sh/ra943il8","slide":12,"textChars":41,"textLines":1}
-{"kind":"textbox","id":"sh/q903ad4n","slide":12,"textChars":59,"textLines":1}
-{"kind":"textbox","id":"sh/dcbm583y","slide":12,"textChars":2,"textLines":1}
-{"kind":"shape","id":"sh/b6d4f2lc","slide":12,"bbox":[62,142,548,324]}
-{"kind":"shape","id":"sh/wvupgz6t","slide":12,"bbox":[670,142,548,324]}
-{"kind":"shape","id":"sh/xw3q94ne","slide":12,"bbox":[82,492,500,82]}
-{"kind":"shape","id":"sh/atc7epon","slide":12,"bbox":[82,492,8,82]}
-{"kind":"notice","message":"Truncated: omitted 101 lines. Increase maxChars or narrow target."}
+{"kind":"deck","id":"pr/ay3487","name":"Deck"}
+{"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"","type":"master","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"Title Slide","type":"title","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"subtitle","type":"subtitle","textPreview":"Click to edit Master subtitle style"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout2.xml","name":"Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout3.xml","name":"Section Header","type":"secHead","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout4.xml","name":"Two Content","type":"twoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout5.xml","name":"Comparison","type":"twoTxTwoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 5","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout6.xml","name":"Title Only","type":"titleOnly","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout7.xml","name":"Blank","type":"blank","placeholders":[{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout8.xml","name":"Content with Caption","type":"objTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout9.xml","name":"Picture with Caption","type":"picTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"picture","type":"picture"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout10.xml","name":"Title and Vertical Text","type":"vertTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout11.xml","name":"Vertical Title and Text","type":"vertTitleAndTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02-07-2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"21CSA699A - Major Project","textShapes":3}
+{"kind":"shape","id":"sh/7qp4be9c","slide":1,"name":"TextBox 3","bbox":[315.02,500.51,649.97,190.64]}
+{"kind":"textbox","id":"sh/65g3298r","slide":1,"name":"TextBox 4","text":"21CSA699A - Major Project\n\nDATE : July 2026","textPreview":"21CSA699A - Major Project |  | DATE : July 2026","textChars":43,"textLines":3,"bbox":[51.63,232.96,995.08,343.59]}
+{"kind":"textbox","id":"sh/fu94fe98","slide":1,"text":"Advanced Game AI System\nusing Blackboard Architecture","textPreview":"Advanced Game AI System | using Blackboard Architecture","textChars":53,"textLines":2,"bbox":[62,420,600,88]}
+{"kind":"textbox","id":"sh/utg3698n","slide":1,"text":"Akash Dhyani | AA.SC.U3BCA2307092\nProject Guide: Deepa Sreedhar\nProject Coordinator: Amrita Sindhu","textPreview":"Akash Dhyani | AA.SC.U3BCA2307092 | Project Guide: Deepa Sreedhar | Project Coordinator: Amrita Sindhu","textChars":98,"textLines":3,"bbox":[64,552,560,64]}
+{"kind":"image","id":"im/cj21o7ed","slide":1,"name":"Picture 2","bbox":[0,0,1280,720]}
+{"kind":"image","id":"im/dkb2xcfy","slide":1,"name":"Picture 7","bbox":[99.12,79.2,378.24,64.16]}
+{"kind":"notes","id":"nt/y90nupkv","slide":1,"text":"[Sources]\n- Major project final report title page and project details.\n- Uploaded BCA presentation template, reused without changing the required cover structure."}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"Project Title: Advanced Game AI System Using Blackboard Architecture in Unity...","textShapes":1}
+{"kind":"textbox","id":"sh/ozy1ofad","slide":2,"name":"Content Placeholder 2","text":"Project Title: Advanced Game AI System Using Blackboard Architecture in Unity Engine\nStudent Name: Akash Dhyani\nRegister Number: AA.SC.U3BCA2307092\nProgram: Bachelors of Computer Applications\nSemester: Final Year\nDepartment & Institution: Amrita Online CS\nProject Guide: Deepa Sreedhar\nProject Coordinator: Amrita Sindhu","textPreview":"Project Title: Advanced Game AI System Using Blackboard Architecture in Unity Engine | Student Name: Akash Dhyani | Register Number: AA.S...","textChars":320,"textLines":8,"bbox":[0,0,0,0]}
+{"kind":"image","id":"im/6d8jed0r","slide":2,"name":"Picture 3","bbox":[99.12,79.2,378.24,64.16]}
+{"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":"[Sources]\n- Major project final report front matter.\n- Proposal and interim report student metadata."}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"Introduction","textShapes":2}
+{"kind":"textbox","id":"sh/cza94vmx","slide":3,"name":"Title 1","placeholder":"title","text":"Introduction","textPreview":"Introduction","textChars":12,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/d0jax03i","slide":3,"name":"Content Placeholder 2","text":"Unity MOBA / brawler prototype focused on AI architecture.\nBots value objectives, team state, map safety, and brawler roles.\nCore approach: utility scoring, blackboard sharing, tactical movement, and tuning data.","textPreview":"Unity MOBA / brawler prototype focused on AI architecture. | Bots value objectives, team state, map safety, and brawler roles. | Core app...","textChars":212,"textLines":3,"bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":"[Sources]\n- Major project final report abstract and introduction."}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"Problem Statement","textShapes":12}
+{"kind":"textbox","id":"sh/1cj2d8b6","slide":4,"name":"Title 1","placeholder":"title","text":"Problem Statement","textPreview":"Problem Statement","textChars":17,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/rm1k7yt4","slide":4,"name":"Rectangle 1","text":"Problem: basic combat bots could fight,\nbut ignored objectives, team pressure,\nmap safety, and brawler identity.\nRequired: a scalable AI system that\nis objective-aware and explainable.","textPreview":"Problem: basic combat bots could fight, | but ignored objectives, team pressure, | map safety, and brawler identity. | Required: a scalab...","textChars":184,"textLines":5,"bbox":[88,169.22,547.34,264.53]}
+{"kind":"textbox","id":"sh/ql8jytsj","slide":4,"text":"Typical quick bot","textPreview":"Typical quick bot","textChars":17,"textLines":1,"bbox":[96,445,310,28]}
+{"kind":"textbox","id":"sh/doj29oba","slide":4,"text":"MOBA Core approach","textPreview":"MOBA Core approach","textChars":18,"textLines":1,"bbox":[620,445,330,28]}
+{"kind":"shape","id":"sh/sna103ap","slide":4,"bbox":[90,494,96,44]}
+{"kind":"textbox","id":"sh/3ihk3et8","slide":4,"text":"Nearest target","textPreview":"Nearest target","textChars":14,"textLines":1,"bbox":[98,504,80,26]}
+{"kind":"shape","id":"sh/ih8ju9sn","slide":4,"bbox":[189,507,22,18]}
+{"kind":"shape","id":"sh/kbm987y5","slide":4,"bbox":[208,494,96,44]}
+{"kind":"textbox","id":"sh/5cva1cfq","slide":4,"text":"Direct chase","textPreview":"Direct chase","textChars":12,"textLines":1,"bbox":[216,504,80,26]}
+{"kind":"shape","id":"sh/i94r6xgz","slide":4,"bbox":[307,507,22,18]}
+{"kind":"shape","id":"sh/jadsz2xk","slide":4,"bbox":[326,494,96,44]}
+{"kind":"textbox","id":"sh/w72947yt","slide":4,"text":"Shoot cooldown","textPreview":"Shoot cooldown","textChars":14,"textLines":1,"bbox":[334,504,80,26]}
+{"kind":"shape","id":"sh/x8vaxsfe","slide":4,"bbox":[425,507,22,18]}
+{"kind":"shape","id":"sh/a5kr2xg3","slide":4,"bbox":[444,494,96,44]}
+{"kind":"textbox","id":"sh/v6tsv2xo","slide":4,"text":"Patch issue","textPreview":"Patch issue","textChars":11,"textLines":1,"bbox":[452,504,80,26]}
+{"kind":"shape","id":"sh/g36tgryd","slide":4,"bbox":[608,494,104,44]}
+{"kind":"textbox","id":"sh/h4fa9wfy","slide":4,"text":"Sense context","textPreview":"Sense context","textChars":13,"textLines":1,"bbox":[616,504,88,26]}
+{"kind":"shape","id":"sh/p0batw72","slide":4,"bbox":[715,507,22,18]}
+{"kind":"shape","id":"sh/oz29krqh","slide":4,"bbox":[732,494,104,44]}
+{"kind":"textbox","id":"sh/3ytsrmpw","slide":4,"text":"Score options","textPreview":"Score options","textChars":13,"textLines":1,"bbox":[740,504,88,26]}
+{"kind":"shape","id":"sh/2xkrih8b","slide":4,"bbox":[839,507,22,18]}
+{"kind":"shape","id":"sh/1wbapc7q","slide":4,"bbox":[856,494,104,44]}
+{"kind":"textbox","id":"sh/gv29g7q5","slide":4,"text":"Commit safely","textPreview":"Commit safely","textChars":13,"textLines":1,"bbox":[864,504,88,26]}
+{"kind":"shape","id":"sh/fu9sn2p0","slide":4,"bbox":[963,507,22,18]}
+{"kind":"shape","id":"sh/et0reh8f","slide":4,"bbox":[980,494,104,44]}
+{"kind":"textbox","id":"sh/tsrqlc7u","slide":4,"text":"Log evidence","textPreview":"Log evidence","textChars":12,"textLines":1,"bbox":[988,504,88,26]}
+{"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":"[Sources]\n- Major project final report problem definition.\n- Playtest issues recorded during development: objective neglect, clumping, stalls, target lock, and weak mode awareness."}
+{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"Objectives","textShapes":2}
+{"kind":"textbox","id":"sh/dgbulwnm","slide":5,"name":"Title 1","placeholder":"title","text":"Objectives","textPreview":"Objectives","textChars":10,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/z2tcnm5s","slide":5,"name":"Rectangle 1","text":"1. Build utility-based decisions.\n2. Coordinate teams through blackboard data.\n3. Prioritize active game-mode objectives.\n4. Navigate safely around map obstacles.\n5. Add brawler-specific tactical roles.\n6. Expose debug and validation tooling.","textPreview":"1. Build utility-based decisions. | 2. Coordinate teams through blackboard data. | 3. Prioritize active game-mode objectives. | 4. Naviga...","textChars":242,"textLines":6,"bbox":[102.23,203.58,753.9,318.19]}
+{"kind":"notes","id":"nt/i107q5of","slide":5,"text":"[Sources]\n- Major project final report objectives section."}
+{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"Scope of the Project","textShapes":8}
+{"kind":"textbox","id":"sh/yhg7epsj","slide":6,"name":"Title 1","placeholder":"title","text":"Scope of the Project","textPreview":"Scope of the Project","textChars":20,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/87ipkzal","slide":6,"name":"Rectangle 1","text":"Included:\n- AI decisions, team coordination, mode strategy.\n- Tactical movement, navigation, and recovery.\n- Brawler role intelligence and debug visibility.\nNot included:\n- Online multiplayer, monetization, commercial art,\n  and full ML training.","textPreview":"Included: | - AI decisions, team coordination, mode strategy. | - Tactical movement, navigation, and recovery. | - Brawler role intellige...","textChars":246,"textLines":7,"bbox":[102.45,177.47,518.92,371.84]}
+{"kind":"shape","id":"sh/98rqt4r6","slide":6,"bbox":[725,585,120,30]}
+{"kind":"textbox","id":"sh/ml07i9sv","slide":6,"text":"Utility AI","textPreview":"Utility AI","textChars":10,"textLines":1,"bbox":[733,591,104,18]}
+{"kind":"shape","id":"sh/7m98ru9g","slide":6,"bbox":[870,585,130,30]}
+{"kind":"textbox","id":"sh/oryp8fah","slide":6,"text":"Blackboard","textPreview":"Blackboard","textChars":10,"textLines":1,"bbox":[878,591,114,18]}
+{"kind":"shape","id":"sh/pc76hkr2","slide":6,"bbox":[1025,585,110,30]}
+{"kind":"textbox","id":"sh/h4bupgn6","slide":6,"text":"A* routes","textPreview":"A* routes","textChars":9,"textLines":1,"bbox":[1033,591,94,18]}
+{"kind":"shape","id":"sh/w32twb6l","slide":6,"bbox":[725,630,120,30]}
+{"kind":"textbox","id":"sh/v2tcn650","slide":6,"text":"Mode AI","textPreview":"Mode AI","textChars":7,"textLines":1,"bbox":[733,636,104,18]}
+{"kind":"shape","id":"sh/u1kbu1ov","slide":6,"bbox":[870,630,130,30]}
+{"kind":"textbox","id":"sh/5svutgni","slide":6,"text":"Brawler roles","textPreview":"Brawler roles","textChars":13,"textLines":1,"bbox":[878,636,114,18]}
+{"kind":"shape","id":"sh/47mt0b6x","slide":6,"bbox":[1025,630,110,30]}
+{"kind":"textbox","id":"sh/j6dcr65c","slide":6,"text":"Telemetry","textPreview":"Telemetry","textChars":9,"textLines":1,"bbox":[1033,636,94,18]}
+{"kind":"notes","id":"nt/x8f69ofe","slide":6,"text":"[Sources]\n- Major project final report scope section."}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"Literature Review / Existing System","textShapes":4}
+{"kind":"textbox","id":"sh/cb2tkvap","slide":7,"name":"Title 1","placeholder":"title","text":"Literature Review / Existing System","textPreview":"Literature Review / Existing System","textChars":35,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/ydkbm5sv","slide":7,"name":"Rectangle 1","text":"Related ideas: FSMs, behavior trees,\nutility AI, blackboards, and A* pathfinding.\nSelected approach: utility AI + blackboard\nfor flexible, inspectable decisions.\nGap: scripted bots fail when objectives,\nroles, hazards, and team strategy interact.","textPreview":"Related ideas: FSMs, behavior trees, | utility AI, blackboards, and A* pathfinding. | Selected approach: utility AI + blackboard | for fl...","textChars":246,"textLines":6,"bbox":[138.58,174.63,620.93,318.19]}
+{"kind":"shape","id":"sh/zedcfa9g","slide":7,"bbox":[760,455,280,105]}
+{"kind":"shape","id":"sh/kzmdova1","slide":7,"bbox":[760,455,7,105]}
+{"kind":"textbox","id":"sh/l0vuh0rm","slide":7,"text":"Selected direction","textPreview":"Selected direction","textChars":18,"textLines":1,"bbox":[786,476,220,24]}
+{"kind":"textbox","id":"sh/eh0ba1sr","slide":7,"text":"Authored, inspectable game AI now; optional ML experiments later.","textPreview":"Authored, inspectable game AI now; optional ML experiments later.","textChars":65,"textLines":1,"bbox":[786,514,220,36]}
+{"kind":"notes","id":"nt/gnmp4jqx","slide":7,"text":"[Sources]\n- Major project final report literature review.\n- Project report references to game AI, A* pathfinding, utility AI, blackboard systems, and Unity ScriptableObjects."}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"Proposed System","textShapes":7}
+{"kind":"textbox","id":"sh/18byd4zy","slide":8,"name":"Title 1","placeholder":"title","text":"Proposed System","textPreview":"Proposed System","textChars":15,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/ri9g7uhw","slide":8,"name":"Rectangle 1","text":"Layered AI stack with one clear responsibility per layer.\nNew brawlers, maps, modes, and difficulty profiles\nplug into the same decision pipeline.","textPreview":"Layered AI stack with one clear responsibility per layer. | New brawlers, maps, modes, and difficulty profiles | plug into the same decis...","textChars":146,"textLines":3,"bbox":[100.39,185.22,898.87,144]}
+{"kind":"shape","id":"sh/6h0fypgb","slide":8,"bbox":[112,420,150,55]}
+{"kind":"textbox","id":"sh/tkby9kzm","slide":8,"text":"Scoring","textPreview":"Scoring","textChars":7,"textLines":1,"bbox":[120,430,134,37]}
+{"kind":"shape","id":"sh/sjix0zy1","slide":8,"bbox":[312,420,150,55]}
+{"kind":"textbox","id":"sh/je9g3ahk","slide":8,"text":"Commitment","textPreview":"Commitment","textChars":10,"textLines":1,"bbox":[320,430,134,37]}
+{"kind":"shape","id":"sh/id0fu50z","slide":8,"bbox":[512,420,150,55]}
+{"kind":"textbox","id":"sh/o7ydoret","slide":8,"text":"Blackboard","textPreview":"Blackboard","textChars":10,"textLines":1,"bbox":[520,430,134,37]}
+{"kind":"shape","id":"sh/98rehwve","slide":8,"bbox":[712,420,150,55]}
+{"kind":"textbox","id":"sh/m5gvmhwn","slide":8,"text":"Navigation","textPreview":"Navigation","textChars":10,"textLines":1,"bbox":[720,430,134,37]}
+{"kind":"shape","id":"sh/n6pwfmd8","slide":8,"bbox":[912,420,150,55]}
+{"kind":"textbox","id":"sh/0jydkreh","slide":8,"text":"Validation","textPreview":"Validation","textChars":10,"textLines":1,"bbox":[920,430,134,37]}
+{"kind":"shape","id":"sh/1k7edwv2","slide":8,"bbox":[266,438,34,18]}
+{"kind":"shape","id":"sh/ehgvihwr","slide":8,"bbox":[466,438,34,18]}
+{"kind":"shape","id":"sh/zipwbmdc","slide":8,"bbox":[666,438,34,18]}
+{"kind":"shape","id":"sh/kfixwbe1","slide":8,"bbox":[866,438,34,18]}
+{"kind":"notes","id":"nt/fu1gfa1s","slide":8,"text":"[Sources]\n- Major project final report proposed system section."}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"Architecture","textShapes":14}
+{"kind":"textbox","id":"sh/1cfmhgne","slide":9,"name":"Title 1","placeholder":"title","text":"Architecture","textPreview":"Architecture","textChars":12,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/nex4jq5k","slide":9,"name":"Rectangle 1","text":"High-level AI data flow and support layers:","textPreview":"High-level AI data flow and support layers:","textChars":43,"textLines":1,"bbox":[107.61,180.06,709.58,100.17]}
+{"kind":"shape","id":"sh/mdonql4z","slide":9,"bbox":[95,245,118,62]}
+{"kind":"textbox","id":"sh/9gzml0nq","slide":9,"text":"Perception\nMemory","textPreview":"Perception | Memory","textChars":17,"textLines":2,"bbox":[103,255,102,44]}
+{"kind":"shape","id":"sh/ofq5svm5","slide":9,"bbox":[255,245,118,62]}
+{"kind":"textbox","id":"sh/bih4na5w","slide":9,"text":"Target\nScoring","textPreview":"Target | Scoring","textChars":14,"textLines":2,"bbox":[263,255,102,44]}
+{"kind":"shape","id":"sh/ah8nu54b","slide":9,"bbox":[415,245,118,62]}
+{"kind":"textbox","id":"sh/oza1gfyh","slide":9,"text":"Utility\nDecision","textPreview":"Utility | Decision","textChars":16,"textLines":2,"bbox":[423,255,102,44]}
+{"kind":"shape","id":"sh/p0ji9kf2","slide":9,"bbox":[575,245,118,62]}
+{"kind":"textbox","id":"sh/2xsjepgb","slide":9,"text":"Commitment\nHysteresis","textPreview":"Commitment | Hysteresis","textChars":21,"textLines":2,"bbox":[583,255,102,44]}
+{"kind":"shape","id":"sh/3y107axw","slide":9,"bbox":[735,245,118,62]}
+{"kind":"textbox","id":"sh/cnu1kzyd","slide":9,"text":"Tactical\nMovement","textPreview":"Tactical | Movement","textChars":17,"textLines":2,"bbox":[743,255,102,44]}
+{"kind":"shape","id":"sh/do3id4fy","slide":9,"bbox":[895,245,118,62]}
+{"kind":"textbox","id":"sh/qlcjipgn","slide":9,"text":"Action\nExecutor","textPreview":"Action | Executor","textChars":15,"textLines":2,"bbox":[903,255,102,44]}
+{"kind":"shape","id":"sh/bml0buxs","slide":9,"bbox":[218,267,28,18]}
+{"kind":"shape","id":"sh/0ru1ozyp","slide":9,"bbox":[378,267,28,18]}
+{"kind":"shape","id":"sh/lsn2h4fa","slide":9,"bbox":[538,267,28,18]}
+{"kind":"shape","id":"sh/98ji147e","slide":9,"bbox":[698,267,28,18]}
+{"kind":"shape","id":"sh/87a18zqt","slide":9,"bbox":[858,267,28,18]}
+{"kind":"shape","id":"sh/76h0zup8","slide":9,"bbox":[152,392,268,86]}
+{"kind":"shape","id":"sh/ml8j6p8n","slide":9,"bbox":[152,392,7,86]}
+{"kind":"textbox","id":"sh/hcji5o7a","slide":9,"text":"Team blackboard","textPreview":"Team blackboard","textChars":15,"textLines":1,"bbox":[178,414,218,20]}
+{"kind":"textbox","id":"sh/wba1cjqp","slide":9,"text":"Focus counts, ally pressure, carrier protection, lanes, threats.","textPreview":"Focus counts, ally pressure, carrier protection, lanes, threats.","textChars":64,"textLines":1,"bbox":[178,444,220,28]}
+{"kind":"shape","id":"sh/va103ep4","slide":9,"bbox":[510,392,268,86]}
+{"kind":"shape","id":"sh/u9sja98z","slide":9,"bbox":[510,392,7,86]}
+{"kind":"textbox","id":"sh/xgzitk76","slide":9,"text":"Mode macro strategy","textPreview":"Mode macro strategy","textChars":19,"textLines":1,"bbox":[536,414,218,20]}
+{"kind":"textbox","id":"sh/cf6h0fql","slide":9,"text":"Gem Grab, Knockout, Brawl Ball, Solo Showdown priorities.","textPreview":"Gem Grab, Knockout, Brawl Ball, Solo Showdown priorities.","textChars":57,"textLines":1,"bbox":[536,444,220,28]}
+{"kind":"shape","id":"sh/2l4faloj","slide":9,"bbox":[868,392,268,86]}
+{"kind":"shape","id":"sh/nmdg3q54","slide":9,"bbox":[868,392,7,86]}
+{"kind":"textbox","id":"sh/onmxcv69","slide":9,"text":"Validation telemetry","textPreview":"Validation telemetry","textChars":20,"textLines":1,"bbox":[894,414,218,20]}
+{"kind":"textbox","id":"sh/pofy50nu","slide":9,"text":"Scores, intent, path state, stuck data, and incident logging.","textPreview":"Scores, intent, path state, stuck data, and incident logging.","textChars":61,"textLines":1,"bbox":[894,444,220,28]}
+{"kind":"notes","id":"nt/udsvah03","slide":9,"text":"[Sources]\n- Major project final report system design.\n- Local AI modules: perception, target scoring, utility scoring, commitment, team blackboard, tactical movement, and validation telemetry."}
+{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"Methodology / Algorithms","textShapes":7}
+{"kind":"textbox","id":"sh/xc3mho32","slide":10,"name":"Title 1","placeholder":"title","text":"Methodology / Algorithms","textPreview":"Methodology / Algorithms","textChars":24,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/cbu58j2h","slide":10,"name":"Content Placeholder 2","text":"Development followed an iterative systems methodology:\n1. Normalize action scores.\n2. Add commitment to prevent flicker.\n3. Coordinate teams with a blackboard.\n4. Route safely and recover from stalls.\n5. Validate decisions in Unity playtests.","textPreview":"Development followed an iterative systems methodology: | 1. Normalize action scores. | 2. Add commitment to prevent flicker. | 3. Coordin...","textChars":242,"textLines":6,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/zelojyl8","slide":10,"bbox":[610,552,86,42]}
+{"kind":"textbox","id":"sh/ydcnatkn","slide":10,"text":"Sense","textPreview":"Sense","textChars":5,"textLines":1,"bbox":[618,562,70,24]}
+{"kind":"shape","id":"sh/l036l83y","slide":10,"bbox":[699,564,20,18]}
+{"kind":"shape","id":"sh/kzu5c32t","slide":10,"bbox":[722,552,86,42]}
+{"kind":"textbox","id":"sh/725onyl4","slide":10,"text":"Score","textPreview":"Score","textChars":5,"textLines":1,"bbox":[730,562,70,24]}
+{"kind":"shape","id":"sh/m1cnetkj","slide":10,"bbox":[811,564,20,18]}
+{"kind":"shape","id":"sh/s7yt4b21","slide":10,"bbox":[834,552,86,42]}
+{"kind":"textbox","id":"sh/d87uxg3m","slide":10,"text":"Commit","textPreview":"Commit","textChars":6,"textLines":1,"bbox":[842,562,70,24]}
+{"kind":"shape","id":"sh/q5gb21kb","slide":10,"bbox":[923,564,20,18]}
+{"kind":"shape","id":"sh/r6pcv6lw","slide":10,"bbox":[946,552,86,42]}
+{"kind":"textbox","id":"sh/0bit8b2d","slide":10,"text":"Move","textPreview":"Move","textChars":4,"textLines":1,"bbox":[954,562,70,24]}
+{"kind":"shape","id":"sh/1cru1g3y","slide":10,"bbox":[1035,564,20,18]}
+{"kind":"shape","id":"sh/e9gb61k7","slide":10,"bbox":[1058,552,86,42]}
+{"kind":"textbox","id":"sh/fapcz6ls","slide":10,"text":"Validate","textPreview":"Validate","textChars":8,"textLines":1,"bbox":[1066,562,70,24]}
+{"kind":"notes","id":"nt/m90b6t0r","slide":10,"text":"[Sources]\n- Major project final report methodology and algorithms section.\n- Algorithms and concepts: utility scoring, A* pathfinding, spatial queries, blackboard coordination, and ScriptableObject tuning."}
+{"kind":"slide","id":"sl/jetc3ut0","slide":11,"title":"Implementation Details","textShapes":6}
+{"kind":"textbox","id":"sh/xcryxg7y","slide":11,"name":"Title 1","placeholder":"title","text":"Implementation Details","textPreview":"Implementation Details","textChars":22,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/wbih4b6d","slide":11,"text":"Implementation is split into focused modules: perception, scoring, commitment, blackboard, navigation, ability intelligence, mode strategy, debug reporting, and tuning profiles.","textPreview":"Implementation is split into focused modules: perception, scoring, commitment, blackboard, navigation, ability intelligence, mode strateg...","textChars":177,"textLines":1,"bbox":[96,178,720,78]}
+{"kind":"shape","id":"sh/n69grmpw","slide":11,"bbox":[90,360,430,150]}
+{"kind":"shape","id":"sh/250zy18b","slide":11,"bbox":[90,360,7,150]}
+{"kind":"textbox","id":"sh/98rytw72","slide":11,"text":"Objective priority example","textPreview":"Objective priority example","textChars":26,"textLines":1,"bbox":[108,372,394,22]}
+{"kind":"textbox","id":"sh/o7ih0r6h","slide":11,"text":"if (mode == BrawlBall && ballIsLoose)\n{\n    macro = Push;\n    reason = \"loose_ball_claim\";\n}\n\nscore = Max(score, objectiveFloor);","textPreview":"if (mode == BrawlBall && ballIsLoose) | { |     macro = Push; |     reason = \"loose_ball_claim\"; | } |  | score = Max(score, objectiveFlo...","textChars":129,"textLines":7,"bbox":[108,402,394,102]}
+{"kind":"shape","id":"sh/72t03qp0","slide":11,"bbox":[590,360,430,150]}
+{"kind":"shape","id":"sh/61kzalof","slide":11,"bbox":[590,360,7,150]}
+{"kind":"textbox","id":"sh/ofqtgnyt","slide":11,"text":"Lifecycle recovery example","textPreview":"Lifecycle recovery example","textChars":26,"textLines":1,"bbox":[608,372,394,22]}
+{"kind":"textbox","id":"sh/9gza9sze","slide":11,"text":"OnBrawlerRespawned += HandleRespawn;\n\nif (isLocalPlayer)\n{\n    camera.SetTarget(followTarget);\n    controls.Rebind(owner);\n}","textPreview":"OnBrawlerRespawned += HandleRespawn; |  | if (isLocalPlayer) | { |     camera.SetTarget(followTarget); |     controls.Rebind(owner); | }","textChars":124,"textLines":7,"bbox":[608,402,394,102]}
+{"kind":"shape","id":"sh/nehs7iho","slide":11,"bbox":[870,165,250,150]}
+{"kind":"image","id":"im/dsn6xw32","slide":11,"name":"","geometry":"rect","alt":"Brawler select implementation screenshot","bbox":[870,165,250,150]}
+{"kind":"notes","id":"nt/jetc3ut0","slide":11,"text":"[Sources]\n- Local Unity C# implementation files.\n- User-provided brawler select screenshot from playtesting."}
+{"kind":"slide","id":"sl/8f2psfyx","slide":12,"title":"Results & Output","textShapes":4}
+{"kind":"textbox","id":"sh/1gbm9s3a","slide":12,"name":"Title 1","placeholder":"title","text":"Results & Output","textPreview":"Results & Output","textChars":16,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/0f2lgnmp","slide":12,"name":"Content Placeholder 2","text":"Sample playable outputs:","textPreview":"Sample playable outputs:","textChars":24,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/q903ad4n","slide":12,"bbox":[76,168,540,310]}
+{"kind":"shape","id":"sh/sb2lcnmd","slide":12,"bbox":[664,168,540,310]}
+{"kind":"shape","id":"sh/b6d4f2lc","slide":12,"bbox":[76,500,540,58]}
+{"kind":"shape","id":"sh/a543mx4r","slide":12,"bbox":[76,500,7,58]}
+{"kind":"textbox","id":"sh/wvupgz6t","slide":12,"text":"Gem Grab now exposes countdown pressure, gem counts, objective area control, and tactical combat context.","textPreview":"Gem Grab now exposes countdown pressure, gem counts, objective area control, and tactical combat context.","textChars":105,"textLines":1,"bbox":[94,510,512,44]}
+{"kind":"shape","id":"sh/xw3q94ne","slide":12,"bbox":[664,500,540,58]}
+{"kind":"shape","id":"sh/atc7epon","slide":12,"bbox":[664,500,7,58]}
+{"kind":"textbox","id":"sh/bulo7u58","slide":12,"text":"Match result UI records kills, damage, assists, gems, rating, winner, and star player for validation.","textPreview":"Match result UI records kills, damage, assists, gems, rating, winner, and star player for validation.","textChars":101,"textLines":1,"bbox":[682,510,512,44]}
+{"kind":"image","id":"im/m1sb6pgf","slide":12,"name":"","geometry":"rect","alt":"Gem Grab gameplay screenshot","bbox":[76,168,540,310]}
+{"kind":"image","id":"im/83at8zyl","slide":12,"name":"","geometry":"rect","alt":"Match result screenshot","bbox":[664,168,540,310]}
+{"kind":"notes","id":"nt/8f2psfyx","slide":12,"text":"[Sources]\n- User-provided Gem Grab gameplay screenshot.\n- User-provided match results screenshot."}
+{"kind":"slide","id":"sl/hgzapcr6","slide":13,"title":"Testing & Validation","textShapes":3}
+{"kind":"textbox","id":"sh/q50nydsj","slide":13,"name":"Title 1","placeholder":"title","text":"Testing & Validation","textPreview":"Testing & Validation","textChars":20,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/bq9orito","slide":13,"text":"Validation combines Unity playtests with live AI telemetry so each movement, target, route, and objective choice can be inspected.","textPreview":"Validation combines Unity playtests with live AI telemetry so each movement, target, route, and objective choice can be inspected.","textChars":130,"textLines":1,"bbox":[96,180,1010,44]}
+{"kind":"shape","id":"sh/p4r6p8by","slide":13,"bbox":[76,220,540,310]}
+{"kind":"shape","id":"sh/32ponyts","slide":13,"bbox":[664,220,540,310]}
+{"kind":"shape","id":"sh/gzy5s3a1","slide":13,"bbox":[285,550,710,48]}
+{"kind":"shape","id":"sh/1076lobm","slide":13,"bbox":[285,550,7,48]}
+{"kind":"textbox","id":"sh/hcfy9k3u","slide":13,"text":"Debug overlay: action, intent, role, tier, target, confidence, path length, stuck count, and map rays.","textPreview":"Debug overlay: action, intent, role, tier, target, confidence, path length, stuck count, and map rays.","textChars":102,"textLines":1,"bbox":[303,560,682,34]}
+{"kind":"image","id":"im/dcvmdk7y","slide":13,"name":"","geometry":"rect","alt":"Scene view AI debug screenshot","bbox":[76,220,540,310]}
+{"kind":"image","id":"im/rat4bap8","slide":13,"name":"","geometry":"rect","alt":"Combat debug screenshot","bbox":[664,220,540,310]}
+{"kind":"notes","id":"nt/hgzapcr6","slide":13,"text":"[Sources]\n- User-provided scene/debug screenshots from playtesting.\n- Major project final report testing and validation section."}
+{"kind":"slide","id":"sl/6lsnupw7","slide":14,"title":"Conclusion and Future enhancements","textShapes":7}
+{"kind":"textbox","id":"sh/xc7eds76","slide":14,"name":"Title 1","placeholder":"title","text":"Conclusion and Future enhancements","textPreview":"Conclusion and Future enhancements","textChars":34,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/wbydknq1","slide":14,"bbox":[96,205,310,230]}
+{"kind":"shape","id":"sh/jepwf2pc","slide":14,"bbox":[96,205,7,230]}
+{"kind":"textbox","id":"sh/idgvmx8r","slide":14,"text":"Conclusion","textPreview":"Conclusion","textChars":10,"textLines":1,"bbox":[124,232,250,28]}
+{"kind":"textbox","id":"sh/5grehs7i","slide":14,"text":"Layered, objective-aware AI for a Unity brawler prototype.","textPreview":"Layered, objective-aware AI for a Unity brawler prototype.","textChars":58,"textLines":1,"bbox":[124,286,240,78]}
+{"kind":"shape","id":"sh/kfidonqx","slide":14,"bbox":[486,205,310,230]}
+{"kind":"shape","id":"sh/zi5c3y98","slide":14,"bbox":[486,205,7,230]}
+{"kind":"textbox","id":"sh/ehwvat8n","slide":14,"text":"Achievements","textPreview":"Achievements","textChars":12,"textLines":1,"bbox":[514,232,250,28]}
+{"kind":"textbox","id":"sh/c3e1gjyd","slide":14,"text":"Utility scoring, team blackboard, brawler roles, navigation recovery, and debug telemetry.","textPreview":"Utility scoring, team blackboard, brawler roles, navigation recovery, and debug telemetry.","textChars":90,"textLines":1,"bbox":[514,286,240,94]}
+{"kind":"shape","id":"sh/x4ni9ofy","slide":14,"bbox":[876,205,310,230]}
+{"kind":"shape","id":"sh/a1wze9g7","slide":14,"bbox":[876,205,7,230]}
+{"kind":"textbox","id":"sh/b2507exs","slide":14,"text":"Future Work","textPreview":"Future Work","textChars":11,"textLines":1,"bbox":[904,232,250,28]}
+{"kind":"textbox","id":"sh/kre1k3y9","slide":14,"text":"Automated gauntlets, richer semantic maps, more brawler packs, and optional ML experiments.","textPreview":"Automated gauntlets, richer semantic maps, more brawler packs, and optional ML experiments.","textChars":91,"textLines":1,"bbox":[904,286,240,94]}
+{"kind":"notes","id":"nt/6lsnupw7","slide":14,"text":"[Sources]\n- Major project final report conclusion and future work sections."}
+{"kind":"slide","id":"sl/vaxsvy10","slide":15,"title":"References","textShapes":2}
+{"kind":"textbox","id":"sh/547mhg3m","slide":15,"name":"Title 1","placeholder":"title","text":"References","textPreview":"References","textChars":10,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"textbox","id":"sh/k3y5ov21","slide":15,"text":"1. Akash Dhyani, Advanced Game AI System using Blackboard Architecture in Unity Engine, proposal, interim report, and final report, 2026.\n2. Ian Millington and John Funge, Artificial Intelligence for Games.\n3. Georgios N. Yannakakis and Julian Togelius, Artificial Intelligence and Games.\n4. Hart, Nilsson, and Raphael, A Formal Basis for the Heuristic Determination of Minimum Cost Paths, 1968.\n5. Unity documentation: ScriptableObject workflow, gameplay architecture, and Unity AI / ML-Agents concepts.\n6. Project source code: AI scoring, blackboard, navigation, mode strategy, brawler intelligence, and debug telemetry.","textPreview":"1. Akash Dhyani, Advanced Game AI System using Blackboard Architecture in Unity Engine, proposal, interim report, and final report, 2026....","textChars":622,"textLines":6,"bbox":[98,176,1020,386]}
+{"kind":"notes","id":"nt/vaxsvy10","slide":15,"text":"[Sources]\n- Major project final report references.\n- Local project source code and submitted report artifacts."}
+{"kind":"slide","id":"sl/gny5sjyp","slide":16,"title":"THANK YOU","textShapes":2}
+{"kind":"shape","id":"sh/ytkf2h8j","slide":16,"name":"Google Shape;273;p45","bbox":[0,0,1280,720]}
+{"kind":"textbox","id":"sh/zutgvm94","slide":16,"name":"Google Shape;275;p45","text":"THANK YOU","textPreview":"THANK YOU","textChars":9,"textLines":1,"bbox":[228.27,255.95,823.47,205.57]}
+{"kind":"textbox","id":"sh/kv2h4rqp","slide":16,"name":"Google Shape;256;p43","text":"Questions?","textPreview":"Questions?","textChars":10,"textLines":1,"bbox":[486.39,445.36,307.21,42]}
+{"kind":"notes","id":"nt/gny5sjyp","slide":16,"text":"[Sources]\n- Uploaded BCA presentation template closing slide reused with project closing text."}
