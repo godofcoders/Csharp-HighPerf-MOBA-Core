@@ -74,6 +74,16 @@ namespace MOBA.Core.Infrastructure
             Show(false);
         }
 
+        private void OnEnable()
+        {
+            SpawnManager.OnBrawlerRespawned += HandleBrawlerRespawned;
+        }
+
+        private void OnDisable()
+        {
+            SpawnManager.OnBrawlerRespawned -= HandleBrawlerRespawned;
+        }
+
         private void AutoDiscoverBrawler()
         {
             PlayerCommandSource[] sources = FindObjectsOfType<PlayerCommandSource>();
@@ -246,9 +256,28 @@ namespace MOBA.Core.Infrastructure
             return brawler != null && brawler.State != null && !brawler.State.IsDead;
         }
 
-        private void RestorePlayerCameraTarget()
+        private void HandleBrawlerRespawned(BrawlerController brawler)
         {
-            if (!_spectatingAfterDeath || _localBrawler == null)
+            if (brawler == null)
+                return;
+
+            if (_localBrawler == null && brawler.GetComponent<PlayerCommandSource>() != null)
+                _localBrawler = brawler;
+
+            if (brawler != _localBrawler)
+                return;
+
+            _deathTime = -1f;
+            _knockoutNoticeUntilTime = -1f;
+            _wasDead = false;
+            RestorePlayerCameraTarget(force: true);
+            SetKiller(string.Empty);
+            Show(false);
+        }
+
+        private void RestorePlayerCameraTarget(bool force = false)
+        {
+            if ((!force && !_spectatingAfterDeath) || _localBrawler == null)
                 return;
 
             CameraController.Instance?.SetTarget(_localBrawler.PresentationFollowTarget);

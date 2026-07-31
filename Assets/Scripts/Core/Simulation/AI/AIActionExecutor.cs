@@ -758,9 +758,6 @@ namespace MOBA.Core.Simulation.AI
                 return true;
             }
 
-            if (actionType == AIActionType.UseSuper)
-                return false;
-
             RunBrawlBallLooseBallIntent(
                 mode,
                 targetInfo,

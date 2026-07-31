@@ -149,6 +149,23 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void ResolveBrawlBall_PushesToClaimLooseBall()
+        {
+            AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveBrawlBall(
+                ownGoals: 0,
+                enemyGoals: 0,
+                goalsToWin: 2,
+                ownHasBall: false,
+                enemyHasBall: false,
+                matchTimeRemainingSeconds: 90f);
+
+            Assert.AreEqual(GameModeId.BrawlBall, state.Mode);
+            Assert.AreEqual(AIGameModeMacroCall.Push, state.Call);
+            Assert.AreEqual(AIGameModeObjectivePhase.Opening, state.Phase);
+            Assert.AreEqual("loose_ball_claim", state.Reason);
+        }
+
+        [Test]
         public void ResolveHotZone_DeniesNearEnemyFinish()
         {
             AIGameModeMacroState state = AIGameModeMacroStrategy.ResolveHotZone(

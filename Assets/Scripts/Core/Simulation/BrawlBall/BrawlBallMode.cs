@@ -497,7 +497,7 @@ namespace MOBA.Core.Simulation
                 _goalsToWin,
                 ownHasBall,
                 enemyHasBall,
-                matchTimeRemainingSeconds: 0f);
+                PhaseRemainingSeconds);
             return true;
         }
 

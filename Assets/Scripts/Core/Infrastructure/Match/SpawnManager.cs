@@ -8,6 +8,7 @@ namespace MOBA.Core.Infrastructure
     public class SpawnManager : MonoBehaviour
     {
         public static SpawnManager Instance { get; private set; }
+        public static event System.Action<BrawlerController> OnBrawlerRespawned;
 
         [Header("Spawn Points")]
         [SerializeField] private GameObject _brawlerBasePrefab;
@@ -102,8 +103,7 @@ namespace MOBA.Core.Infrastructure
 
             Transform pt = ResolveRotatingRespawnPoint(team);
             if (pt == null) return;
-            brawler.gameObject.SetActive(true);
-            brawler.Respawn(pt.position);
+            CompleteRespawn(brawler, pt.position);
         }
 
         public void ForceRespawn(BrawlerController brawler, TeamType team, int teamOrdinal)
@@ -119,8 +119,7 @@ namespace MOBA.Core.Infrastructure
             Transform pt = list[index];
             if (pt == null) return;
 
-            brawler.gameObject.SetActive(true);
-            brawler.Respawn(pt.position);
+            CompleteRespawn(brawler, pt.position);
         }
 
         private IEnumerator RespawnRoutine(BrawlerController brawler, TeamType team)
@@ -133,7 +132,21 @@ namespace MOBA.Core.Infrastructure
 
             Transform spawnPoint = ResolveRotatingRespawnPoint(team);
             if (spawnPoint != null)
-                brawler.Respawn(spawnPoint.position);
+                CompleteRespawn(brawler, spawnPoint.position);
+        }
+
+        private void CompleteRespawn(BrawlerController brawler, Vector3 position)
+        {
+            if (brawler == null)
+                return;
+
+            brawler.gameObject.SetActive(true);
+            brawler.Respawn(position);
+
+            if (brawler.GetComponent<PlayerCommandSource>() != null)
+                SetPlayerTarget(brawler.PresentationFollowTarget);
+
+            OnBrawlerRespawned?.Invoke(brawler);
         }
 
         private void CancelPendingRespawn(BrawlerController brawler)

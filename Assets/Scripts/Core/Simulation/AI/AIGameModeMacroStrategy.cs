@@ -513,8 +513,8 @@ namespace MOBA.Core.Simulation.AI
             }
             else
             {
-                call = AIGameModeMacroCall.Neutral;
-                reason = "loose_ball";
+                call = AIGameModeMacroCall.Push;
+                reason = "loose_ball_claim";
             }
 
             return new AIGameModeMacroState(
