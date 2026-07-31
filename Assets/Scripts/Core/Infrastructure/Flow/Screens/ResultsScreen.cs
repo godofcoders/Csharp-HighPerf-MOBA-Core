@@ -36,7 +36,6 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Button _continueButton;
         [SerializeField] private Button _rematchButton;
 
-        private static Font _runtimeFont;
         private readonly List<ResultModelView> _resultModels = new List<ResultModelView>(8);
         private readonly List<RenderTexture> _miniModelRenderTextures = new List<RenderTexture>(8);
         private RenderTexture _modelRenderTexture;
@@ -954,14 +953,7 @@ namespace MOBA.Core.Infrastructure
 
         private static Font ResolveFont()
         {
-            if (_runtimeFont != null)
-                return _runtimeFont;
-
-            _runtimeFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (_runtimeFont == null)
-                _runtimeFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-            return _runtimeFont;
+            return RuntimeUIFontUtility.GetDefaultFont();
         }
 
         private void OnDestroy()

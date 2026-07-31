@@ -18,7 +18,6 @@ namespace MOBA.Core.Infrastructure
         private const int CanvasSortingOrder = 30;
         private const int RuntimeAmmoSlotCount = 5;
 
-        private static Font _runtimeFont;
         private float _nextScanTime;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -406,14 +405,7 @@ namespace MOBA.Core.Infrastructure
 
         private static Font ResolveFont()
         {
-            if (_runtimeFont != null)
-                return _runtimeFont;
-
-            _runtimeFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (_runtimeFont == null)
-                _runtimeFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-            return _runtimeFont;
+            return RuntimeUIFontUtility.GetDefaultFont();
         }
 
         private static Sprite ResolveUISprite()

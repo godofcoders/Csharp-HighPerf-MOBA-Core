@@ -19,19 +19,12 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _fadeSeconds = 0.28f;
         [SerializeField] private int _maxRosterWaitFrames = 45;
 
-        private static Font _runtimeFont;
-
         private CanvasGroup _group;
         private GameObject _root;
 
         private static Font RuntimeFont
         {
-            get
-            {
-                if (_runtimeFont == null)
-                    _runtimeFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                return _runtimeFont;
-            }
+            get { return RuntimeUIFontUtility.GetDefaultFont(); }
         }
 
         private void Start()

@@ -20,8 +20,6 @@ namespace MOBA.Core.Infrastructure
         private const float SelectionDurationSeconds = 5f;
         private const float PlayerSpawnWaitSeconds = 1.25f;
 
-        private static Font _runtimeFont;
-
         private readonly List<NanopowerDefinition> _optionsBuffer = new List<NanopowerDefinition>(4);
         private readonly List<NanopowerDefinition> _botOptionsBuffer = new List<NanopowerDefinition>(4);
         private readonly NanopowerDefinition[] _offers = new NanopowerDefinition[2];
@@ -713,14 +711,7 @@ namespace MOBA.Core.Infrastructure
 
         private static Font ResolveFont()
         {
-            if (_runtimeFont != null)
-                return _runtimeFont;
-
-            _runtimeFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (_runtimeFont == null)
-                _runtimeFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-            return _runtimeFont;
+            return RuntimeUIFontUtility.GetDefaultFont();
         }
 
         private static void EnsureEventSystem()

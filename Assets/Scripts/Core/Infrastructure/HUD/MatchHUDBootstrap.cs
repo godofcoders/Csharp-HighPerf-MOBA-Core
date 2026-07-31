@@ -26,8 +26,6 @@ namespace MOBA.Core.Infrastructure
         private static readonly Color RedTeamAccent = new Color(1.000f, 0.220f, 0.280f, 0.98f);
         private static readonly Color GemMagenta = new Color(1.000f, 0.225f, 0.920f, 0.98f);
 
-        private static Font _runtimeFont;
-
         private bool _installed;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -1183,14 +1181,7 @@ namespace MOBA.Core.Infrastructure
 
         private static Font ResolveFont()
         {
-            if (_runtimeFont != null)
-                return _runtimeFont;
-
-            _runtimeFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            if (_runtimeFont == null)
-                _runtimeFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-            return _runtimeFont;
+            return RuntimeUIFontUtility.GetDefaultFont();
         }
 
         private static Sprite ResolveUISprite()
