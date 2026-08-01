@@ -50,6 +50,7 @@ namespace MOBA.Core.Simulation
         private bool _matchResolved;
         private TeamType _resolvedWinner = TeamType.Neutral;
         private Coroutine _roundResetRoutine;
+        private bool _ballSpawnNavigationResolved;
 
         private const float GoalPlacementClearance = 0.12f;
         private const float GoalPlacementProbeHeight = 1.4f;
@@ -169,6 +170,7 @@ namespace MOBA.Core.Simulation
 
         private void Update()
         {
+            EnsureInitialBallSpawnIsNavigable();
             RefreshGoalBlockerNavigationIfNeeded();
 
             MatchManager matchManager = MatchManager.Instance;
@@ -734,10 +736,12 @@ namespace MOBA.Core.Simulation
 
             if (_autoPlaceBallAtMapCenter && _ball != null)
             {
-                Vector3 ballSpawn = new Vector3(
-                    arenaCenter.x,
+                Vector3 ballSpawn = ResolveNavigableBallSpawn(
+                    arenaCenter,
                     _ball.CurrentPosition.y,
-                    arenaCenter.z);
+                    out bool navigationResolved);
+
+                _ballSpawnNavigationResolved = navigationResolved;
                 _ball.OverrideSpawnPosition(ballSpawn, BallCarrier == null);
                 BrawlBallEventBus.RaiseBallReset(_ball.CurrentPosition);
             }
@@ -747,6 +751,80 @@ namespace MOBA.Core.Simulation
                 PlaceGoalsOnMapEdges(bounds);
                 EnsureGoalBlockers(bounds);
             }
+        }
+
+        private void EnsureInitialBallSpawnIsNavigable()
+        {
+            if (_ballSpawnNavigationResolved ||
+                !_autoPlaceBallAtMapCenter ||
+                _ball == null ||
+                BallCarrier != null ||
+                _ball.IsMovingLoose)
+            {
+                return;
+            }
+
+            if (SimulationClock.Pathfinder == null)
+                return;
+
+            if (!TryResolvePlayableMapBounds(out Bounds bounds))
+                return;
+
+            Vector3 ballSpawn = ResolveNavigableBallSpawn(
+                bounds.center,
+                _ball.CurrentPosition.y,
+                out bool navigationResolved);
+
+            if (!navigationResolved)
+                return;
+
+            _ballSpawnNavigationResolved = true;
+            _ball.OverrideSpawnPosition(ballSpawn, resetIfLoose: true);
+            BrawlBallEventBus.RaiseBallReset(_ball.CurrentPosition);
+        }
+
+        private static Vector3 ResolveNavigableBallSpawn(
+            Vector3 arenaCenter,
+            float y,
+            out bool navigationResolved)
+        {
+            Vector3 spawn = new Vector3(arenaCenter.x, y, arenaCenter.z);
+            navigationResolved = false;
+
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return spawn;
+
+            Vector2Int center = pathfinder.GetGridCoords(spawn);
+            int searchRadius = Mathf.CeilToInt(6f / Mathf.Max(0.1f, pathfinder.CellSize));
+            if (pathfinder.IsWalkableWithNavigationClearance(center))
+            {
+                Vector3 resolved = pathfinder.GetWorldPos(center);
+                resolved.y = y;
+                navigationResolved = true;
+                return resolved;
+            }
+
+            if (pathfinder.TryGetNearestWalkableCoordsWithNavigationClearance(
+                    center,
+                    searchRadius,
+                    out Vector2Int resolvedCoords) ||
+                pathfinder.TryGetNearestWalkableCoordsWithBoundaryClearance(
+                    center,
+                    searchRadius,
+                    out resolvedCoords) ||
+                pathfinder.TryGetNearestWalkableCoords(
+                    center,
+                    searchRadius,
+                    out resolvedCoords))
+            {
+                Vector3 resolved = pathfinder.GetWorldPos(resolvedCoords);
+                resolved.y = y;
+                navigationResolved = true;
+                return resolved;
+            }
+
+            return spawn;
         }
 
         private void PlaceGoalsOnMapEdges(Bounds bounds)
