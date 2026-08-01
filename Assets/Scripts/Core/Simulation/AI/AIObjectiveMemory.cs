@@ -83,11 +83,24 @@ namespace MOBA.Core.Simulation.AI
         {
             objective = default;
 
-            if (team == TeamType.Neutral ||
-                !ServiceProvider.TryGet<IAIRuntimeObjectiveProvider>(out var provider))
+            if (team == TeamType.Neutral)
             {
                 return false;
             }
+
+            if (SceneSelection.SelectedMode == GameModeId.BrawlBall &&
+                BrawlBallMode.Instance != null &&
+                BrawlBallMode.Instance.TryGetRuntimeObjective(
+                    team,
+                    preferredType,
+                    selfPosition,
+                    out objective))
+            {
+                return true;
+            }
+
+            if (!ServiceProvider.TryGet<IAIRuntimeObjectiveProvider>(out var provider))
+                return false;
 
             if (provider is UnityEngine.Object unityProvider && unityProvider == null)
             {

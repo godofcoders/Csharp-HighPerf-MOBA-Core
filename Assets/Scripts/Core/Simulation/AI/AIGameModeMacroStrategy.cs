@@ -145,6 +145,13 @@ namespace MOBA.Core.Simulation.AI
             if (team == TeamType.Neutral)
                 return AIGameModeMacroState.Neutral;
 
+            if (SceneSelection.SelectedMode == GameModeId.BrawlBall &&
+                BrawlBallMode.Instance != null &&
+                BrawlBallMode.Instance.TryResolveMacroState(team, out AIGameModeMacroState brawlBallState))
+            {
+                return brawlBallState;
+            }
+
             if (ServiceProvider.TryGet<IAIGameModeMacroStateProvider>(out var provider))
             {
                 if (provider is UnityEngine.Object unityProvider && unityProvider == null)

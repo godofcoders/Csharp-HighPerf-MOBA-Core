@@ -49,6 +49,39 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void ObjectiveMemory_UsesBrawlBallInstance_WhenRuntimeProviderIsReplaced()
+        {
+            GameModeId previousMode = SceneSelection.SelectedMode;
+
+            try
+            {
+                SceneSelection.SelectedMode = GameModeId.BrawlBall;
+                BrawlBallMode mode = CreateMode();
+                BrawlBallController ball = CreateBall(new Vector3(2f, 0.42f, 1.5f));
+                mode.RegisterBall(ball);
+                ServiceProvider.Register<IAIRuntimeObjectiveProvider>(
+                    new EmptyRuntimeObjectiveProvider());
+
+                var memory = new AIObjectiveMemory();
+
+                bool found = memory.TryGetBestObjective(
+                    Vector3.zero,
+                    AIObjectiveType.Ball,
+                    TeamType.Blue,
+                    out AIObjectiveCandidate objective);
+
+                Assert.IsTrue(found);
+                Assert.AreEqual(AIObjectiveType.Ball, objective.ObjectiveType);
+                Assert.AreEqual(ball.CurrentPosition, objective.Position);
+                Assert.AreEqual("LooseBall", objective.Name);
+            }
+            finally
+            {
+                SceneSelection.SelectedMode = previousMode;
+            }
+        }
+
+        [Test]
         public void RecordGoal_IncrementsScoreAndClearsCarrier()
         {
             BrawlBallMode mode = CreateMode();
@@ -165,6 +198,21 @@ namespace MOBA.Tests.EditMode
             BrawlBallGoalController goal = _goalObject.AddComponent<BrawlBallGoalController>();
             goal.ConfigureForDebug(scoringTeam, zoneSize);
             return goal;
+        }
+
+        private sealed class EmptyRuntimeObjectiveProvider : IAIRuntimeObjectiveProvider
+        {
+            public GameModeId ModeId => GameModeId.HotZone;
+
+            public bool TryGetRuntimeObjective(
+                TeamType team,
+                AIObjectiveType preferredType,
+                Vector3 selfPosition,
+                out AIObjectiveCandidate objective)
+            {
+                objective = default;
+                return false;
+            }
         }
     }
 }

@@ -739,6 +739,7 @@ namespace MOBA.Core.Simulation
                     _ball.CurrentPosition.y,
                     arenaCenter.z);
                 _ball.OverrideSpawnPosition(ballSpawn, BallCarrier == null);
+                BrawlBallEventBus.RaiseBallReset(_ball.CurrentPosition);
             }
 
             if (_autoPlaceGoalsFromMap)
