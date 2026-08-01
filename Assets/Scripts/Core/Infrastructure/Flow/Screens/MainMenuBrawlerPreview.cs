@@ -10,6 +10,8 @@ namespace MOBA.Core.Infrastructure
     {
         [SerializeField] private Transform _modelAnchor;
         [SerializeField] private BrawlerDefinition _fallbackBrawler;
+        [Tooltip("Roster used to resolve the saved brawler when the menu opens before SceneSelection has been populated.")]
+        [SerializeField] private BrawlerDefinition[] _availableBrawlers;
 
         [Header("Rotation")]
         [Min(0.01f)]
@@ -64,6 +66,23 @@ namespace MOBA.Core.Infrastructure
                 Refresh();
         }
 
+        public void ConfigureSelection(
+            BrawlerDefinition selected,
+            BrawlerDefinition[] availableBrawlers,
+            BrawlerDefinition fallbackBrawler)
+        {
+            if (availableBrawlers != null && availableBrawlers.Length > 0)
+                _availableBrawlers = availableBrawlers;
+
+            if (fallbackBrawler != null)
+                _fallbackBrawler = fallbackBrawler;
+
+            if (selected != null)
+                SceneSelection.SelectedBrawler = selected;
+
+            Refresh();
+        }
+
         private void Update()
         {
             if (_spawned == null)
@@ -92,8 +111,7 @@ namespace MOBA.Core.Infrastructure
 
         public void Refresh()
         {
-            BrawlerDefinition def =
-                SceneSelection.SelectedBrawler ?? _fallbackBrawler;
+            BrawlerDefinition def = ResolvePreviewBrawler();
 
             if (def == _currentDef && _spawned != null)
                 return;
@@ -134,6 +152,23 @@ namespace MOBA.Core.Infrastructure
             UpdateInfoText(def);
 
             _rotationVelocity = 0f;
+        }
+
+        private BrawlerDefinition ResolvePreviewBrawler()
+        {
+            if (SceneSelection.SelectedBrawler != null)
+                return SceneSelection.SelectedBrawler;
+
+            if (PlayerBrawlerProgress.TryGetSelectedBrawler(
+                    _availableBrawlers,
+                    out BrawlerDefinition saved))
+            {
+                SceneSelection.SelectedBrawler = saved;
+                SceneSelection.SelectedBuildPowerLevel = PlayerBrawlerProgress.GetLevel(saved);
+                return saved;
+            }
+
+            return _fallbackBrawler;
         }
 
         private void StripGameplayComponents(GameObject root)

@@ -46,6 +46,7 @@ namespace MOBA.Core.Infrastructure
             EnsureQuestSection();
             EnsureSelectedBrawlerLoaded(false);
             EnsureHomePresentation();
+            SyncHomeBrawlerPreview();
 
             if (_playButton != null) _playButton.onClick.AddListener(OnPlay);
             if (_mapSelectButton != null) _mapSelectButton.onClick.AddListener(OnMapSelect);
@@ -83,12 +84,15 @@ namespace MOBA.Core.Infrastructure
 
         private void EnsureSelectedBrawlerLoaded(bool allowDefaultFallback)
         {
-            if (SceneSelection.SelectedBrawler != null)
-                return;
-
             if (PlayerBrawlerProgress.TryGetSelectedBrawler(_availableBrawlers, out BrawlerDefinition saved))
             {
                 AssignSelectedBrawler(saved);
+                return;
+            }
+
+            if (SceneSelection.SelectedBrawler != null)
+            {
+                AssignSelectedBrawler(SceneSelection.SelectedBrawler);
                 return;
             }
 
@@ -130,6 +134,25 @@ namespace MOBA.Core.Infrastructure
 
             if (brawler != null)
                 SceneSelection.SelectedBuildPowerLevel = PlayerBrawlerProgress.GetLevel(brawler);
+        }
+
+        private void SyncHomeBrawlerPreview()
+        {
+            MainMenuBrawlerPreview[] previews = GetComponentsInChildren<MainMenuBrawlerPreview>(true);
+            if (previews == null || previews.Length == 0)
+                return;
+
+            BrawlerDefinition selected = SceneSelection.SelectedBrawler != null
+                ? SceneSelection.SelectedBrawler
+                : PlayerBrawlerProgress.ResolveSelectedBrawler(_availableBrawlers, _defaultBrawler);
+
+            for (int i = 0; i < previews.Length; i++)
+            {
+                if (previews[i] == null)
+                    continue;
+
+                previews[i].ConfigureSelection(selected, _availableBrawlers, _defaultBrawler);
+            }
         }
 
         private void EnsureQuestSection()

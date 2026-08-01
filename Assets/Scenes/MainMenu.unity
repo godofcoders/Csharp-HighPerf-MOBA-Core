@@ -608,7 +608,17 @@ MonoBehaviour:
   _playButton: {fileID: 1182603573}
   _quitButton: {fileID: 0}
   _mapSelectButton: {fileID: 91314529}
+  _questsButton: {fileID: 0}
   _defaultBrawler: {fileID: 11400000, guid: c6cbcf818157b45e0b07a58637e4cc5d, type: 2}
+  _availableBrawlers:
+  - {fileID: 11400000, guid: 7a0022896a7fe4d5eb8f3925bfd9c3e1, type: 2}
+  - {fileID: 11400000, guid: 4af276c14755a4edfb269cdac13b8f80, type: 2}
+  - {fileID: 11400000, guid: c6cbcf818157b45e0b07a58637e4cc5d, type: 2}
+  - {fileID: 11400000, guid: b1f5e71c3af374589a4e5dee979f4c60, type: 2}
+  - {fileID: 11400000, guid: b5f09f640d494f2a89f6a68eb092e30d, type: 2}
+  - {fileID: 11400000, guid: e6117ae7effd443ab6a52e3d4e828556, type: 2}
+  - {fileID: 11400000, guid: c93e4459c3174767acf09bc6d3a3e572, type: 2}
+  - {fileID: 11400000, guid: 10bb04ab86ca40e9ba653d490f7cf7b5, type: 2}
   _defaultMap: {fileID: 11400000, guid: 660280807461f4c428e30b3647f820bb, type: 2}
   _defaultMode: 0
 --- !u!114 &798400149
