@@ -13,8 +13,8 @@ namespace MOBA.Core.Infrastructure
     {
         private const string MatchSceneName = "Match";
         private const float ScanIntervalSeconds = 0.35f;
-        private const float CanvasScale = 0.01f;
-        private const float BarHeightWorld = 1.42f;
+        private const float CanvasScale = 0.008f;
+        private const float BarHeightWorld = 1.95f;
         private const int CanvasSortingOrder = 30;
         private const int RuntimeAmmoSlotCount = 5;
 
@@ -103,7 +103,7 @@ namespace MOBA.Core.Infrastructure
             root.transform.localScale = Vector3.one * CanvasScale;
 
             RectTransform rootRect = root.GetComponent<RectTransform>();
-            rootRect.sizeDelta = new Vector2(176f, 82f);
+            rootRect.sizeDelta = new Vector2(142f, 68f);
 
             Canvas canvas = root.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -116,22 +116,22 @@ namespace MOBA.Core.Infrastructure
             Image frameImage = CreateImage(
                 root.transform,
                 "Frame",
-                new Vector2(0f, -7f),
-                new Vector2(168f, 22f),
+                new Vector2(0f, -6f),
+                new Vector2(132f, 17f),
                 new Color(0f, 0f, 0f, 0.78f));
 
             Image backgroundImage = CreateImage(
                 root.transform,
                 "Background",
-                new Vector2(0f, -7f),
-                new Vector2(156f, 12f),
+                new Vector2(0f, -6f),
+                new Vector2(122f, 9f),
                 new Color(0.05f, 0.05f, 0.06f, 0.88f));
 
             Image fillImage = CreateImage(
                 backgroundImage.transform,
                 "Fill",
                 Vector2.zero,
-                new Vector2(156f, 12f),
+                new Vector2(122f, 9f),
                 Color.white);
 
             RectTransform fillRect = fillImage.GetComponent<RectTransform>();
@@ -146,8 +146,8 @@ namespace MOBA.Core.Infrastructure
             Image ammoFrame = CreateImage(
                 root.transform,
                 "AmmoFrame",
-                new Vector2(0f, -25f),
-                new Vector2(156f, 14f),
+                new Vector2(0f, -20f),
+                new Vector2(122f, 10f),
                 new Color(0f, 0f, 0f, 0.62f));
 
             Image[] ammoSlots = new Image[RuntimeAmmoSlotCount];
@@ -157,7 +157,7 @@ namespace MOBA.Core.Infrastructure
                     ammoFrame.transform,
                     $"AmmoSlot{i + 1}",
                     Vector2.zero,
-                    new Vector2(18f, 7f),
+                    new Vector2(14f, 5f),
                     new Color(1f, 0.84f, 0.18f, 0.96f));
 
                 ammoSlot.type = Image.Type.Filled;
@@ -171,9 +171,9 @@ namespace MOBA.Core.Infrastructure
                 root.transform,
                 "AmmoCount",
                 "0/0",
-                new Vector2(0f, -39f),
-                new Vector2(70f, 12f),
-                9,
+                new Vector2(0f, -31f),
+                new Vector2(56f, 10f),
+                7,
                 TextAnchor.MiddleCenter,
                 new Color(1f, 0.88f, 0.34f, 0.98f),
                 FontStyle.Bold);
@@ -214,8 +214,8 @@ namespace MOBA.Core.Infrastructure
             badgeRect.anchorMin = new Vector2(0.5f, 0.5f);
             badgeRect.anchorMax = new Vector2(0.5f, 0.5f);
             badgeRect.pivot = new Vector2(0.5f, 0.5f);
-            badgeRect.anchoredPosition = new Vector2(0f, 15f);
-            badgeRect.sizeDelta = new Vector2(62f, 22f);
+            badgeRect.anchoredPosition = new Vector2(0f, 12f);
+            badgeRect.sizeDelta = new Vector2(46f, 17f);
 
             Image badgeBackground = badgeRoot.GetComponent<Image>();
             badgeBackground.color = new Color(0f, 0f, 0f, 0.64f);
@@ -225,8 +225,8 @@ namespace MOBA.Core.Infrastructure
             Image gemIcon = CreateImage(
                 badgeRoot.transform,
                 "GemIcon",
-                new Vector2(-16f, 0f),
-                new Vector2(15f, 15f),
+                new Vector2(-12f, 0f),
+                new Vector2(11f, 11f),
                 Color.white);
             gemIcon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
@@ -234,9 +234,9 @@ namespace MOBA.Core.Infrastructure
                 badgeRoot.transform,
                 "GemCount",
                 "0",
-                new Vector2(8f, 0f),
-                new Vector2(34f, 20f),
-                16,
+                new Vector2(6f, 0f),
+                new Vector2(24f, 16f),
+                12,
                 TextAnchor.MiddleLeft,
                 Color.white,
                 FontStyle.Bold);
@@ -284,8 +284,8 @@ namespace MOBA.Core.Infrastructure
             badgeRect.anchorMin = new Vector2(0.5f, 0.5f);
             badgeRect.anchorMax = new Vector2(0.5f, 0.5f);
             badgeRect.pivot = new Vector2(0.5f, 0.5f);
-            badgeRect.anchoredPosition = new Vector2(0f, 39f);
-            badgeRect.sizeDelta = new Vector2(58f, 22f);
+            badgeRect.anchoredPosition = new Vector2(0f, 31f);
+            badgeRect.sizeDelta = new Vector2(44f, 17f);
 
             Image badgeBackground = badgeRoot.GetComponent<Image>();
             badgeBackground.color = new Color(0f, 0f, 0f, 0.66f);
@@ -295,8 +295,8 @@ namespace MOBA.Core.Infrastructure
             Image cubeIcon = CreateImage(
                 badgeRoot.transform,
                 "PowerCubeIcon",
-                new Vector2(-15f, 0f),
-                new Vector2(15f, 15f),
+                new Vector2(-11f, 0f),
+                new Vector2(11f, 11f),
                 new Color(0.58f, 1f, 0.16f));
             cubeIcon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 45f);
 
@@ -304,9 +304,9 @@ namespace MOBA.Core.Infrastructure
                 badgeRoot.transform,
                 "PowerCubeCount",
                 "0",
-                new Vector2(8f, 0f),
-                new Vector2(30f, 20f),
-                16,
+                new Vector2(6f, 0f),
+                new Vector2(22f, 16f),
+                12,
                 TextAnchor.MiddleLeft,
                 Color.white,
                 FontStyle.Bold);

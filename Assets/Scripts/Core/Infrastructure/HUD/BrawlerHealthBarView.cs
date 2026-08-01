@@ -439,7 +439,7 @@ namespace MOBA.Core.Infrastructure
                 rect.anchorMax = new Vector2(0.5f, 0.5f);
                 rect.pivot = new Vector2(0.5f, 0.5f);
                 rect.anchoredPosition = new Vector2(startX + i * (slotWidth + gap), 0f);
-                rect.sizeDelta = new Vector2(slotWidth, 7f);
+                rect.sizeDelta = new Vector2(slotWidth, 5.5f);
             }
         }
 

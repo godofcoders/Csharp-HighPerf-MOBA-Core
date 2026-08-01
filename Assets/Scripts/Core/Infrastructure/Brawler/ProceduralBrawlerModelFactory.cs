@@ -342,7 +342,7 @@ namespace MOBA.Core.Infrastructure
             bodyRoot.SetParent(root.transform, false);
             bodyRoot.localPosition = Vector3.zero;
             bodyRoot.localRotation = Quaternion.Euler(0f, 180f, 0f);
-            bodyRoot.localScale = new Vector3(1.16f, 1.13f, 1.16f);
+            bodyRoot.localScale = new Vector3(1.06f, 1.05f, 1.06f);
             bodyRoot.gameObject.layer = layer;
 
             CreatePart(bodyRoot, "Hips", PrimitiveType.Cube, new Vector3(0f, 0.57f, 0f), new Vector3(0.62f, 0.20f, 0.38f), Quaternion.identity, pants, layer);
