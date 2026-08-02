@@ -10,7 +10,7 @@ namespace MOBA.EditorTools
         private const string ModelsFolder = "Assets/_Game/Art/Brawlers/Models";
         private const string ExtractedRoot = "Assets/_Game/Art/Brawlers/Extracted";
 
-        [MenuItem("MOBA/Brawler Models/Extract Materials, Textures, Prefabs")]
+        [MenuItem("MOBA/Brawler Models/Prepare Imported Model Prefabs")]
         public static void ExtractAllBrawlerModelAssets()
         {
             EnsureAssetFolder(ExtractedRoot);
@@ -42,18 +42,12 @@ namespace MOBA.EditorTools
 
             string modelName = Path.GetFileNameWithoutExtension(modelPath);
             string modelRoot = $"{ExtractedRoot}/{SanitizeAssetName(modelName)}";
-            string materialFolder = $"{modelRoot}/Materials";
-            string textureFolder = $"{modelRoot}/Textures";
             string prefabFolder = $"{modelRoot}/Prefabs";
 
             EnsureAssetFolder(modelRoot);
-            EnsureAssetFolder(materialFolder);
-            EnsureAssetFolder(textureFolder);
             EnsureAssetFolder(prefabFolder);
 
             NormalizeImporter(importer);
-            ExtractEmbeddedTextures(importer, modelPath, textureFolder);
-            ExtractEmbeddedMaterials(modelPath, materialFolder);
 
             importer = AssetImporter.GetAtPath(modelPath) as ModelImporter;
             if (importer != null)
@@ -116,46 +110,6 @@ namespace MOBA.EditorTools
 
             if (dirty)
                 importer.SaveAndReimport();
-        }
-
-        private static void ExtractEmbeddedTextures(
-            ModelImporter importer,
-            string modelPath,
-            string textureFolder)
-        {
-            try
-            {
-                importer.ExtractTextures(textureFolder);
-            }
-            catch (Exception exception)
-            {
-                Debug.LogWarning(
-                    $"[BrawlerModelAssetExtractor] Texture extraction skipped for {modelPath}: {exception.Message}");
-            }
-        }
-
-        private static void ExtractEmbeddedMaterials(string modelPath, string materialFolder)
-        {
-            UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath(modelPath);
-            for (int i = 0; i < assets.Length; i++)
-            {
-                if (assets[i] is not Material material)
-                    continue;
-
-                if (AssetDatabase.GetAssetPath(material) != modelPath)
-                    continue;
-
-                string materialPath = $"{materialFolder}/{SanitizeAssetName(material.name)}.mat";
-                if (AssetDatabase.LoadAssetAtPath<Material>(materialPath) != null)
-                    continue;
-
-                string error = AssetDatabase.ExtractAsset(material, materialPath);
-                if (!string.IsNullOrEmpty(error))
-                {
-                    Debug.LogWarning(
-                        $"[BrawlerModelAssetExtractor] Could not extract material {material.name} from {modelPath}: {error}");
-                }
-            }
         }
 
         private static void CreateModelPrefab(
