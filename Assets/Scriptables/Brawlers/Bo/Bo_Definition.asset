@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Bo_Definition
   m_EditorClassIdentifier:
   BrawlerName: Bo
-  ModelPrefab: {fileID: 884401910100000001, guid: fbedd24bf26142f3890afbf47c851ca2, type: 3}
+  ModelPrefab: {fileID: 6573662240351320087, guid: 3f5b3eadb08f9418d9dc5219e9b2d786, type: 3}
   Portrait: {fileID: 0}
   BaseHealth: 3900
   BaseMoveSpeed: 4

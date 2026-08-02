@@ -692,8 +692,8 @@ namespace MOBA.Core.Infrastructure
         {
             GameObject modelRoot = new GameObject("ResultModel_" + SanitizeName(entry.DisplayName));
             if (entry.Definition != null &&
-                ProceduralBrawlerModelFactory.TryCreate(entry.Definition, modelRoot.transform, null, out GameObject proceduralModel) &&
-                proceduralModel != null)
+                BrawlerVisualModelFactory.TryCreate(entry.Definition, modelRoot.transform, null, out GameObject visualModel) &&
+                visualModel != null)
             {
                 StripResultModelBehaviours(modelRoot);
                 return modelRoot;

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Byron_definition
   m_EditorClassIdentifier: 
   BrawlerName: Byron
-  ModelPrefab: {fileID: 3855221367005763782, guid: 125e4aafd29024f1a94ecc08ff37749f, type: 3}
+  ModelPrefab: {fileID: 9137333644420192619, guid: efb2f07909433486cb63cf57c556d187, type: 3}
   BaseHealth: 3000
   BaseMoveSpeed: 4
   BaseDamage: 660

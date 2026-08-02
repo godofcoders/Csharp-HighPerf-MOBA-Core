@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Leon_Definition
   m_EditorClassIdentifier:
   BrawlerName: Leon
-  ModelPrefab: {fileID: 884401910100000001, guid: fbedd24bf26142f3890afbf47c851ca2, type: 3}
+  ModelPrefab: {fileID: 7861630528162315098, guid: e8e6f67114b184237bb77f0e6511459b, type: 3}
   Portrait: {fileID: 0}
   BaseHealth: 3600
   BaseMoveSpeed: 4.12

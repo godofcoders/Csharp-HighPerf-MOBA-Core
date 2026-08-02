@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Jesse_Definition
   m_EditorClassIdentifier: 
   BrawlerName: Jessie
-  ModelPrefab: {fileID: 4919742288424262853, guid: 8f96b613f2df8408a83802b375c892f1, type: 3}
+  ModelPrefab: {fileID: 8259467605840509926, guid: 9d6018aa6b9bb4c73bfbb19e9a8dfe76, type: 3}
   BaseHealth: 3200
   BaseMoveSpeed: 4
   BaseDamage: 720

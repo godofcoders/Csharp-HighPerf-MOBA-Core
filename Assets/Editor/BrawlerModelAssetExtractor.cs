@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using MOBA.Core.Infrastructure;
 using UnityEditor;
 using UnityEngine;
 
@@ -287,21 +288,25 @@ namespace MOBA.EditorTools
 
             GameObject sockets = new GameObject("Sockets");
             sockets.transform.SetParent(root.transform, false);
-            CreateSocket(sockets.transform, "Muzzle_Main", new Vector3(0f, 1.05f, 0.65f));
-            CreateSocket(sockets.transform, "Muzzle_Offhand", new Vector3(0.35f, 1.05f, 0.55f));
+            Transform primary = CreateSocket(sockets.transform, "Muzzle_Main", new Vector3(0f, 1.05f, 0.65f));
+            Transform secondary = CreateSocket(sockets.transform, "Muzzle_Offhand", new Vector3(0.35f, 1.05f, 0.55f));
             CreateSocket(sockets.transform, "Weapon_Main", new Vector3(0f, 1.00f, 0.35f));
             CreateSocket(sockets.transform, "HealthBarAnchor", new Vector3(0f, 2.15f, 0f));
-            CreateSocket(sockets.transform, "AimTarget", new Vector3(0f, 1.25f, 2.50f));
+            Transform cast = CreateSocket(sockets.transform, "AimTarget", new Vector3(0f, 1.25f, 2.50f));
+
+            BrawlerPresentationAnchors anchors = root.AddComponent<BrawlerPresentationAnchors>();
+            anchors.Configure(primary, secondary, cast);
 
             PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             UnityEngine.Object.DestroyImmediate(root);
         }
 
-        private static void CreateSocket(Transform parent, string name, Vector3 localPosition)
+        private static Transform CreateSocket(Transform parent, string name, Vector3 localPosition)
         {
             GameObject socket = new GameObject(name);
             socket.transform.SetParent(parent, false);
             socket.transform.localPosition = localPosition;
+            return socket.transform;
         }
 
         private static void EnsureAssetFolder(string assetPath)

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ElPrimo_Definition
   m_EditorClassIdentifier:
   BrawlerName: El Primo
-  ModelPrefab: {fileID: 781903664100030001, guid: 6fe158e0c593491294a4306f6dc8f784, type: 3}
+  ModelPrefab: {fileID: 4857317620063836554, guid: 9c930284f56dd40898ea9f8d271a1292, type: 3}
   Portrait: {fileID: 0}
   BaseHealth: 6200
   BaseMoveSpeed: 4.2

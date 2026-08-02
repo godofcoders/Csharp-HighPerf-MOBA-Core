@@ -2243,7 +2243,7 @@ namespace MOBA.Core.Infrastructure
             _presentationAnchors = null;
             _visualModel = null;
 
-            if (ProceduralBrawlerModelFactory.TryCreate(
+            if (BrawlerVisualModelFactory.TryCreate(
                     _definition,
                     _visualRoot,
                     this,

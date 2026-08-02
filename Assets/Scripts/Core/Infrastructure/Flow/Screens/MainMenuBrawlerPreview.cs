@@ -130,15 +130,10 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            if (!ProceduralBrawlerModelFactory.TryCreate(def, _modelAnchor, null, out _spawned))
+            if (!BrawlerVisualModelFactory.TryCreate(def, _modelAnchor, null, out _spawned))
             {
-                if (def.ModelPrefab == null)
-                {
-                    Debug.LogWarning("[MMBP] def.ModelPrefab null on " + def.name);
-                    return;
-                }
-
-                _spawned = Instantiate(def.ModelPrefab, _modelAnchor);
+                Debug.LogWarning("[MMBP] no visual model available on " + def.name);
+                return;
             }
 
             _baseLocalPosition = Vector3.zero;
