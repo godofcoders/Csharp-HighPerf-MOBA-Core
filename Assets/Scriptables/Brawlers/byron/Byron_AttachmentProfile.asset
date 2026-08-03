@@ -15,7 +15,7 @@ MonoBehaviour:
   Attachments:
   - Id: Staff
     Socket: 4
-    Prefab: {fileID: 100100000, guid: 2d0868b4af1442c5a897f4acfc3c3efa, type: 3}
+    Prefab: {fileID: 100000, guid: 2d0868b4af1442c5a897f4acfc3c3efa, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.02, y: -0.08, z: 0.02}
     LocalEulerOffset: {x: 8, y: 0, z: -12}

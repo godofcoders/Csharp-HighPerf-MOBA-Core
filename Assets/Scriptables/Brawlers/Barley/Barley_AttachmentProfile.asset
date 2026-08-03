@@ -15,7 +15,7 @@ MonoBehaviour:
   Attachments:
   - Id: Bottle
     Socket: 4
-    Prefab: {fileID: 100100000, guid: 131504e2f6ea4b87a53813b03784c556, type: 3}
+    Prefab: {fileID: 100000, guid: 131504e2f6ea4b87a53813b03784c556, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.02, y: -0.02, z: 0.03}
     LocalEulerOffset: {x: -18, y: 0, z: -12}
