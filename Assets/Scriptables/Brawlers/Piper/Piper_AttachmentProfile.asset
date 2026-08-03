@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   Attachments:
   - Id: Umbrella
-    Socket: 4
+    Socket: 6
     Prefab: {fileID: 100000, guid: 854df8b6a6e74a778ff52870202b2ebd, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.02, y: -0.06, z: 0.04}
@@ -22,3 +22,7 @@ MonoBehaviour:
     LocalScale: {x: 0.9, y: 0.9, z: 0.9}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
+    UseAsPrimaryFirePoint: 1
+    UseAsSecondaryFirePoint: 0
+    UseAsCastPoint: 1
+    PresentationAnchorLocalOffset: {x: 0, y: 0.86, z: 0}

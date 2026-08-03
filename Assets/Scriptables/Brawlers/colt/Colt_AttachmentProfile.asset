@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   Attachments:
   - Id: RightPistol
-    Socket: 4
+    Socket: 6
     Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.02, y: -0.02, z: 0.05}
@@ -22,8 +22,12 @@ MonoBehaviour:
     LocalScale: {x: 0.86, y: 0.86, z: 0.86}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
+    UseAsPrimaryFirePoint: 1
+    UseAsSecondaryFirePoint: 0
+    UseAsCastPoint: 1
+    PresentationAnchorLocalOffset: {x: 0, y: 0.1, z: 0.62}
   - Id: LeftPistol
-    Socket: 5
+    Socket: 7
     Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: -0.02, y: -0.02, z: 0.05}
@@ -31,3 +35,7 @@ MonoBehaviour:
     LocalScale: {x: 0.86, y: 0.86, z: 0.86}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
+    UseAsPrimaryFirePoint: 0
+    UseAsSecondaryFirePoint: 1
+    UseAsCastPoint: 0
+    PresentationAnchorLocalOffset: {x: 0, y: 0.1, z: 0.62}

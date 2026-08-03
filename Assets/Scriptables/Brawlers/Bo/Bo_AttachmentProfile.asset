@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   Attachments:
   - Id: Bow
-    Socket: 5
+    Socket: 6
     Prefab: {fileID: 100000, guid: de391466dc464785af8d94ca33eff3a2, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: -0.02, y: 0.01, z: 0.03}
@@ -22,3 +22,7 @@ MonoBehaviour:
     LocalScale: {x: 1, y: 1, z: 1}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
+    UseAsPrimaryFirePoint: 1
+    UseAsSecondaryFirePoint: 0
+    UseAsCastPoint: 1
+    PresentationAnchorLocalOffset: {x: 0.16, y: 0, z: 0.01}

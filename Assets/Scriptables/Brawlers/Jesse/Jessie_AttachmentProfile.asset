@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   Attachments:
   - Id: ShockGun
-    Socket: 4
+    Socket: 6
     Prefab: {fileID: 100000, guid: e9bb064a152f42f2ab79f10513c629cc, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.02, y: -0.01, z: 0.06}
@@ -22,3 +22,7 @@ MonoBehaviour:
     LocalScale: {x: 0.82, y: 0.82, z: 0.82}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
+    UseAsPrimaryFirePoint: 1
+    UseAsSecondaryFirePoint: 0
+    UseAsCastPoint: 1
+    PresentationAnchorLocalOffset: {x: 0, y: 0.02, z: 0.78}

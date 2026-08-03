@@ -23,5 +23,9 @@ namespace MOBA.Core.Definitions
         public Vector3 LocalScale = Vector3.one;
         public bool FollowSocketRotation = true;
         public bool ReplaceExistingWithSameId = true;
+        public bool UseAsPrimaryFirePoint;
+        public bool UseAsSecondaryFirePoint;
+        public bool UseAsCastPoint;
+        public Vector3 PresentationAnchorLocalOffset;
     }
 }

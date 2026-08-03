@@ -48,6 +48,9 @@ namespace MOBA.Core.Infrastructure
 
             EnsureRuntimeAttachmentRoot();
 
+            Transform primaryFireOverride = null;
+            Transform secondaryFireOverride = null;
+            Transform castOverride = null;
             BrawlerAttachmentBinding[] attachments = _definition.AttachmentProfile.Attachments;
             for (int i = 0; i < attachments.Length; i++)
             {
@@ -81,8 +84,22 @@ namespace MOBA.Core.Infrastructure
 
                 ConfigureLayer(attachment, gameObject.layer);
                 StripGameplayComponents(attachment);
+
+                Transform presentationAnchor = CreatePresentationAnchor(binding, attachment.transform);
+                if (presentationAnchor != null)
+                {
+                    if (binding.UseAsPrimaryFirePoint)
+                        primaryFireOverride = presentationAnchor;
+                    if (binding.UseAsSecondaryFirePoint)
+                        secondaryFireOverride = presentationAnchor;
+                    if (binding.UseAsCastPoint)
+                        castOverride = presentationAnchor;
+                }
+
                 _spawnedAttachments.Add(attachment);
             }
+
+            ApplyPresentationAnchorOverrides(primaryFireOverride, secondaryFireOverride, castOverride);
         }
 
         private static GameObject CreateAttachment(
@@ -180,6 +197,51 @@ namespace MOBA.Core.Infrastructure
         private static Vector3 ResolveScale(Vector3 requested)
         {
             return requested == Vector3.zero ? Vector3.one : requested;
+        }
+
+        private static Transform CreatePresentationAnchor(
+            BrawlerAttachmentBinding binding,
+            Transform attachmentRoot)
+        {
+            if (binding == null ||
+                attachmentRoot == null ||
+                (!binding.UseAsPrimaryFirePoint &&
+                 !binding.UseAsSecondaryFirePoint &&
+                 !binding.UseAsCastPoint))
+            {
+                return null;
+            }
+
+            GameObject anchor = new GameObject("PresentationAnchor");
+            Transform anchorTransform = anchor.transform;
+            anchorTransform.SetParent(attachmentRoot, false);
+            anchorTransform.localPosition = binding.PresentationAnchorLocalOffset;
+            anchorTransform.localRotation = Quaternion.identity;
+            anchorTransform.localScale = Vector3.one;
+            return anchorTransform;
+        }
+
+        private void ApplyPresentationAnchorOverrides(
+            Transform primaryFireOverride,
+            Transform secondaryFireOverride,
+            Transform castOverride)
+        {
+            if (primaryFireOverride == null &&
+                secondaryFireOverride == null &&
+                castOverride == null)
+            {
+                return;
+            }
+
+            BrawlerPresentationAnchors anchors =
+                GetComponentInChildren<BrawlerPresentationAnchors>(true);
+            if (anchors == null)
+                return;
+
+            anchors.Configure(
+                primaryFireOverride != null ? primaryFireOverride : anchors.PrimaryFirePoint,
+                secondaryFireOverride != null ? secondaryFireOverride : anchors.SecondaryFirePoint,
+                castOverride != null ? castOverride : anchors.CastPoint);
         }
 
         private static void ConfigureLayer(GameObject root, int layer)
