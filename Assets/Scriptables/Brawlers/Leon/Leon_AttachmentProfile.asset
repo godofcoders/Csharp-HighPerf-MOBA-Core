@@ -12,4 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df05759948e4dc880dc87c78444be0f, type: 3}
   m_Name: Leon_AttachmentProfile
   m_EditorClassIdentifier:
-  Attachments: []
+  Attachments:
+  - Id: NinjaStars
+    Socket: 4
+    Prefab: {fileID: 0}
+    GeneratedAttachment: 6
+    LocalPositionOffset: {x: 0.01, y: 0.01, z: 0.03}
+    LocalEulerOffset: {x: 12, y: 0, z: 18}
+    LocalScale: {x: 0.95, y: 0.95, z: 0.95}
+    FollowSocketRotation: 1
+    ReplaceExistingWithSameId: 1

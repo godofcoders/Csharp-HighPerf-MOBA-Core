@@ -17,6 +17,7 @@ namespace MOBA.Core.Definitions
         public string Id;
         public BrawlerAttachmentSocket Socket = BrawlerAttachmentSocket.PrimaryWeapon;
         public GameObject Prefab;
+        public BrawlerGeneratedAttachmentType GeneratedAttachment = BrawlerGeneratedAttachmentType.None;
         public Vector3 LocalPositionOffset;
         public Vector3 LocalEulerOffset;
         public Vector3 LocalScale = Vector3.one;

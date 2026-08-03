@@ -12,4 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df05759948e4dc880dc87c78444be0f, type: 3}
   m_Name: Bo_AttachmentProfile
   m_EditorClassIdentifier:
-  Attachments: []
+  Attachments:
+  - Id: Bow
+    Socket: 5
+    Prefab: {fileID: 0}
+    GeneratedAttachment: 5
+    LocalPositionOffset: {x: -0.02, y: 0.01, z: 0.03}
+    LocalEulerOffset: {x: 0, y: 0, z: -8}
+    LocalScale: {x: 1, y: 1, z: 1}
+    FollowSocketRotation: 1
+    ReplaceExistingWithSameId: 1

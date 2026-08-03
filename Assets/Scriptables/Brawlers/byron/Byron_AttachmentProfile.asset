@@ -12,4 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df05759948e4dc880dc87c78444be0f, type: 3}
   m_Name: Byron_AttachmentProfile
   m_EditorClassIdentifier:
-  Attachments: []
+  Attachments:
+  - Id: Staff
+    Socket: 4
+    Prefab: {fileID: 0}
+    GeneratedAttachment: 3
+    LocalPositionOffset: {x: 0.02, y: -0.08, z: 0.02}
+    LocalEulerOffset: {x: 8, y: 0, z: -12}
+    LocalScale: {x: 1, y: 1, z: 1}
+    FollowSocketRotation: 1
+    ReplaceExistingWithSameId: 1

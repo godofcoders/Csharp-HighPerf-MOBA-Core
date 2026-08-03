@@ -31,7 +31,7 @@ namespace MOBA.Core.Infrastructure
                 return false;
 
             ConfigureLayer(instance, parent.gameObject.layer);
-            PrepareAttachmentPresentation(instance, definition);
+            PrepareAttachmentPresentation(instance, definition, installAttachmentProfile: false);
             return true;
         }
 
@@ -50,7 +50,7 @@ namespace MOBA.Core.Infrastructure
             RemovePhysicsComponents(instance);
             AlignModelForward(instance);
             NormalizeScaleAndGrounding(instance, parent, definition);
-            PrepareAttachmentPresentation(instance, definition);
+            PrepareAttachmentPresentation(instance, definition, installAttachmentProfile: true);
         }
 
         private static void AlignModelForward(GameObject instance)
@@ -106,13 +106,17 @@ namespace MOBA.Core.Infrastructure
 
         private static void PrepareAttachmentPresentation(
             GameObject instance,
-            BrawlerDefinition definition)
+            BrawlerDefinition definition,
+            bool installAttachmentProfile)
         {
             BrawlerAttachmentRig rig = BrawlerAttachmentRig.Ensure(instance);
             if (rig != null)
                 rig.AutoBindFromModel(instance);
 
             EnsurePresentationAnchors(instance, rig);
+
+            if (!installAttachmentProfile)
+                return;
 
             BrawlerAttachmentInstaller installer = BrawlerAttachmentInstaller.Ensure(instance);
             if (installer != null)

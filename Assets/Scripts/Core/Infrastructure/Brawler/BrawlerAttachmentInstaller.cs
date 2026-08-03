@@ -52,7 +52,7 @@ namespace MOBA.Core.Infrastructure
             for (int i = 0; i < attachments.Length; i++)
             {
                 BrawlerAttachmentBinding binding = attachments[i];
-                if (binding == null || binding.Prefab == null)
+                if (binding == null)
                     continue;
 
                 if (binding.ReplaceExistingWithSameId)
@@ -60,7 +60,10 @@ namespace MOBA.Core.Infrastructure
 
                 Transform socket = _rig.ResolveSocket(binding.Socket, transform);
                 Transform parent = binding.FollowSocketRotation ? socket : _runtimeAttachmentRoot;
-                GameObject attachment = Instantiate(binding.Prefab, parent);
+                GameObject attachment = CreateAttachment(binding, parent);
+                if (attachment == null)
+                    continue;
+
                 attachment.name = BuildAttachmentName(binding, attachment);
 
                 if (binding.FollowSocketRotation)
@@ -76,9 +79,29 @@ namespace MOBA.Core.Infrastructure
 
                 attachment.transform.localScale = ResolveScale(binding.LocalScale);
 
+                ConfigureLayer(attachment, gameObject.layer);
                 StripGameplayComponents(attachment);
                 _spawnedAttachments.Add(attachment);
             }
+        }
+
+        private static GameObject CreateAttachment(
+            BrawlerAttachmentBinding binding,
+            Transform parent)
+        {
+            if (binding.Prefab != null)
+                return Instantiate(binding.Prefab, parent);
+
+            if (!BrawlerGeneratedAttachmentFactory.TryCreate(
+                    binding.GeneratedAttachment,
+                    binding.Id,
+                    out GameObject generated))
+            {
+                return null;
+            }
+
+            generated.transform.SetParent(parent, false);
+            return generated;
         }
 
         private void EnsureRuntimeAttachmentRoot()
@@ -157,6 +180,13 @@ namespace MOBA.Core.Infrastructure
         private static Vector3 ResolveScale(Vector3 requested)
         {
             return requested == Vector3.zero ? Vector3.one : requested;
+        }
+
+        private static void ConfigureLayer(GameObject root, int layer)
+        {
+            Transform[] transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+                transforms[i].gameObject.layer = layer;
         }
 
         private static void StripGameplayComponents(GameObject attachment)

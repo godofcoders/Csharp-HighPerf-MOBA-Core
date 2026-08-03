@@ -12,4 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df05759948e4dc880dc87c78444be0f, type: 3}
   m_Name: Piper_AttachmentProfile
   m_EditorClassIdentifier:
-  Attachments: []
+  Attachments:
+  - Id: Umbrella
+    Socket: 4
+    Prefab: {fileID: 0}
+    GeneratedAttachment: 7
+    LocalPositionOffset: {x: 0.02, y: -0.06, z: 0.04}
+    LocalEulerOffset: {x: 8, y: 0, z: -12}
+    LocalScale: {x: 0.9, y: 0.9, z: 0.9}
+    FollowSocketRotation: 1
+    ReplaceExistingWithSameId: 1
