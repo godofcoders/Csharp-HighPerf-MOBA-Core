@@ -1,0 +1,48 @@
+newmtl wood
+Ka 0.203 0.108 0.045
+Kd 0.450 0.240 0.100
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl bark_dark
+Ka 0.090 0.050 0.027
+Kd 0.200 0.110 0.060
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl wrap_green
+Ka 0.018 0.248 0.117
+Kd 0.040 0.550 0.260
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl string
+Ka 0.387 0.351 0.243
+Kd 0.860 0.780 0.540
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl arrow_wood
+Ka 0.189 0.095 0.036
+Kd 0.420 0.210 0.080
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl arrow_tip
+Ka 0.351 0.351 0.324
+Kd 0.780 0.780 0.720
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl feather
+Ka 0.054 0.135 0.306
+Kd 0.120 0.300 0.680
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2

@@ -1,0 +1,41 @@
+newmtl brushed_silver
+Ka 0.333 0.342 0.342
+Kd 0.740 0.760 0.760
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl dark_grip
+Ka 0.018 0.018 0.023
+Kd 0.040 0.040 0.050
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl charcoal
+Ka 0.045 0.045 0.054
+Kd 0.100 0.100 0.120
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl deep_blue
+Ka 0.036 0.054 0.090
+Kd 0.080 0.120 0.200
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl red_trim
+Ka 0.338 0.027 0.018
+Kd 0.750 0.060 0.040
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl barrel_black
+Ka 0.005 0.005 0.007
+Kd 0.010 0.010 0.015
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2

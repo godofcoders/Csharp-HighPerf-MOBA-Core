@@ -1,0 +1,62 @@
+newmtl bottle_green
+Ka 0.036 0.104 0.063
+Kd 0.080 0.230 0.140
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl glass_highlight
+Ka 0.063 0.203 0.126
+Kd 0.140 0.450 0.280
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl label_aged
+Ka 0.351 0.293 0.140
+Kd 0.780 0.650 0.310
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl label_red
+Ka 0.261 0.054 0.032
+Kd 0.580 0.120 0.070
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl cap_black
+Ka 0.018 0.018 0.023
+Kd 0.040 0.040 0.050
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl wire
+Ka 0.203 0.176 0.135
+Kd 0.450 0.390 0.300
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl rag
+Ka 0.162 0.153 0.140
+Kd 0.360 0.340 0.310
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl wood
+Ka 0.248 0.140 0.072
+Kd 0.550 0.310 0.160
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2
+
+newmtl wax
+Ka 0.383 0.261 0.027
+Kd 0.850 0.580 0.060
+Ks 0.120 0.120 0.120
+Ns 24
+illum 2

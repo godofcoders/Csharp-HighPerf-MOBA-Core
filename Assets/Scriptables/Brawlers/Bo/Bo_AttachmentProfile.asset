@@ -15,8 +15,8 @@ MonoBehaviour:
   Attachments:
   - Id: Bow
     Socket: 5
-    Prefab: {fileID: 0}
-    GeneratedAttachment: 5
+    Prefab: {fileID: 100100000, guid: de391466dc464785af8d94ca33eff3a2, type: 3}
+    GeneratedAttachment: 0
     LocalPositionOffset: {x: -0.02, y: 0.01, z: 0.03}
     LocalEulerOffset: {x: 0, y: 0, z: -8}
     LocalScale: {x: 1, y: 1, z: 1}
