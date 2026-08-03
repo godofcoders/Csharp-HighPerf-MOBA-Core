@@ -15,6 +15,7 @@ MonoBehaviour:
   BrawlerName: Leon
   ModelPrefab: {fileID: 7861630528162315098, guid: e8e6f67114b184237bb77f0e6511459b, type: 3}
   Portrait: {fileID: 0}
+  AttachmentProfile: {fileID: 11400000, guid: ea34a60b9f8640a8950a734343578494, type: 2}
   BaseHealth: 3600
   BaseMoveSpeed: 4.12
   BaseDamage: 310

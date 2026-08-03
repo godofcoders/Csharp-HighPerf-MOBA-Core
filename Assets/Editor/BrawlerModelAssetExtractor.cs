@@ -288,9 +288,16 @@ namespace MOBA.EditorTools
 
             GameObject sockets = new GameObject("Sockets");
             sockets.transform.SetParent(root.transform, false);
+            CreateSocket(sockets.transform, "Head", new Vector3(0f, 1.55f, 0f));
+            CreateSocket(sockets.transform, "Chest", new Vector3(0f, 1.05f, 0f));
+            CreateSocket(sockets.transform, "Back", new Vector3(0f, 1.08f, 0.32f));
+            CreateSocket(sockets.transform, "RightHand", new Vector3(0.36f, 0.95f, 0.25f));
+            CreateSocket(sockets.transform, "LeftHand", new Vector3(-0.36f, 0.95f, 0.25f));
             Transform primary = CreateSocket(sockets.transform, "Muzzle_Main", new Vector3(0f, 1.05f, 0.65f));
             Transform secondary = CreateSocket(sockets.transform, "Muzzle_Offhand", new Vector3(0.35f, 1.05f, 0.55f));
             CreateSocket(sockets.transform, "Weapon_Main", new Vector3(0f, 1.00f, 0.35f));
+            CreateSocket(sockets.transform, "Weapon_Offhand", new Vector3(-0.35f, 1.00f, 0.35f));
+            CreateSocket(sockets.transform, "Throwable", new Vector3(0.18f, 1.02f, 0.46f));
             CreateSocket(sockets.transform, "HealthBarAnchor", new Vector3(0f, 2.15f, 0f));
             Transform cast = CreateSocket(sockets.transform, "AimTarget", new Vector3(0f, 1.25f, 2.50f));
 

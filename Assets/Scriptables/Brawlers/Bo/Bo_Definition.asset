@@ -15,6 +15,7 @@ MonoBehaviour:
   BrawlerName: Bo
   ModelPrefab: {fileID: 6573662240351320087, guid: 3f5b3eadb08f9418d9dc5219e9b2d786, type: 3}
   Portrait: {fileID: 0}
+  AttachmentProfile: {fileID: 11400000, guid: 308851c0f55b4646a8d5a3b6c45ec99f, type: 2}
   BaseHealth: 3900
   BaseMoveSpeed: 4
   BaseDamage: 432

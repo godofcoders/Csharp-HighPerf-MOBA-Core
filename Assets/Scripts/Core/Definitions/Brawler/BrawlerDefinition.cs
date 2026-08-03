@@ -14,6 +14,10 @@ namespace MOBA.Core.Definitions
         [Tooltip("Portrait sprite shown on brawler-select cards and in-match HUD slots. Optional; if null, the card's portrait Image is hidden.")]
         public Sprite Portrait;
 
+        [Header("Presentation")]
+        [Tooltip("Visual-only attachments such as weapons, backpacks, throwable props, and future cosmetic gear. Gameplay stays on BrawlerController.")]
+        public BrawlerAttachmentProfile AttachmentProfile;
+
         [Header("Base Stats")]
         public float BaseHealth = 3000f;
         public float BaseMoveSpeed = 5.0f;

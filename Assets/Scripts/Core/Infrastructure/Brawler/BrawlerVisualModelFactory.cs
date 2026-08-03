@@ -31,6 +31,7 @@ namespace MOBA.Core.Infrastructure
                 return false;
 
             ConfigureLayer(instance, parent.gameObject.layer);
+            PrepareAttachmentPresentation(instance, definition);
             return true;
         }
 
@@ -49,7 +50,7 @@ namespace MOBA.Core.Infrastructure
             RemovePhysicsComponents(instance);
             AlignModelForward(instance);
             NormalizeScaleAndGrounding(instance, parent, definition);
-            EnsurePresentationAnchors(instance);
+            PrepareAttachmentPresentation(instance, definition);
         }
 
         private static void AlignModelForward(GameObject instance)
@@ -103,31 +104,54 @@ namespace MOBA.Core.Infrastructure
             return DefaultTargetHeight;
         }
 
-        private static void EnsurePresentationAnchors(GameObject instance)
+        private static void PrepareAttachmentPresentation(
+            GameObject instance,
+            BrawlerDefinition definition)
+        {
+            BrawlerAttachmentRig rig = BrawlerAttachmentRig.Ensure(instance);
+            if (rig != null)
+                rig.AutoBindFromModel(instance);
+
+            EnsurePresentationAnchors(instance, rig);
+
+            BrawlerAttachmentInstaller installer = BrawlerAttachmentInstaller.Ensure(instance);
+            if (installer != null)
+                installer.Bind(definition, rig);
+        }
+
+        private static void EnsurePresentationAnchors(
+            GameObject instance,
+            BrawlerAttachmentRig rig)
         {
             BrawlerPresentationAnchors anchors =
                 instance.GetComponentInChildren<BrawlerPresentationAnchors>(true);
             if (anchors == null)
                 anchors = instance.AddComponent<BrawlerPresentationAnchors>();
 
-            Transform primary = FindFirst(
-                instance.transform,
-                "Muzzle_Main",
-                "PrimaryFirePoint",
-                "RightHand",
-                "Weapon_Main");
-            Transform secondary = FindFirst(
-                instance.transform,
-                "Muzzle_Offhand",
-                "SecondaryFirePoint",
-                "LeftHand",
-                "Weapon_Offhand");
-            Transform cast = FindFirst(
-                instance.transform,
-                "AimTarget",
-                "CastPoint",
-                "Weapon_Main",
-                "Muzzle_Main");
+            Transform primary = rig != null
+                ? rig.ResolveSocket(BrawlerAttachmentSocket.PrimaryMuzzle, instance.transform)
+                : FindFirst(
+                    instance.transform,
+                    "Muzzle_Main",
+                    "PrimaryFirePoint",
+                    "RightHand",
+                    "Weapon_Main");
+            Transform secondary = rig != null
+                ? rig.ResolveSocket(BrawlerAttachmentSocket.SecondaryMuzzle, primary)
+                : FindFirst(
+                    instance.transform,
+                    "Muzzle_Offhand",
+                    "SecondaryFirePoint",
+                    "LeftHand",
+                    "Weapon_Offhand");
+            Transform cast = rig != null
+                ? rig.ResolveSocket(BrawlerAttachmentSocket.CastPoint, primary)
+                : FindFirst(
+                    instance.transform,
+                    "AimTarget",
+                    "CastPoint",
+                    "Weapon_Main",
+                    "Muzzle_Main");
 
             anchors.Configure(
                 primary != null ? primary : instance.transform,

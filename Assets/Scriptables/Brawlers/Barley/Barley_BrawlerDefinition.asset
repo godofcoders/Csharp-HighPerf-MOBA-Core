@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BrawlerName: Barley
   ModelPrefab: {fileID: 4897731998950382482, guid: 66889e8429c6f45d3aeffb9c10135f8c, type: 3}
+  AttachmentProfile: {fileID: 11400000, guid: d2ef0d2c36814cb2811421861e4229d6, type: 2}
   BaseHealth: 3600
   BaseMoveSpeed: 5.6
   BaseDamage: 840
