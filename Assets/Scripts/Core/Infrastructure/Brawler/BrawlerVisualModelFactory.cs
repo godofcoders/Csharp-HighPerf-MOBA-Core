@@ -23,7 +23,7 @@ namespace MOBA.Core.Infrastructure
             {
                 instance = Object.Instantiate(definition.ModelPrefab, parent);
                 instance.name = ResolveInstanceName(definition, "Authored");
-                PrepareAuthoredModel(instance, parent, definition);
+                PrepareAuthoredModel(instance, parent, definition, owner);
                 return true;
             }
 
@@ -31,14 +31,15 @@ namespace MOBA.Core.Infrastructure
                 return false;
 
             ConfigureLayer(instance, parent.gameObject.layer);
-            PrepareAttachmentPresentation(instance, definition, installAttachmentProfile: false);
+            PrepareAttachmentPresentation(instance, definition, owner, installAttachmentProfile: false);
             return true;
         }
 
         private static void PrepareAuthoredModel(
             GameObject instance,
             Transform parent,
-            BrawlerDefinition definition)
+            BrawlerDefinition definition,
+            BrawlerController owner)
         {
             Transform instanceTransform = instance.transform;
             instanceTransform.SetParent(parent, false);
@@ -50,7 +51,7 @@ namespace MOBA.Core.Infrastructure
             RemovePhysicsComponents(instance);
             AlignModelForward(instance);
             NormalizeScaleAndGrounding(instance, parent, definition);
-            PrepareAttachmentPresentation(instance, definition, installAttachmentProfile: true);
+            PrepareAttachmentPresentation(instance, definition, owner, installAttachmentProfile: true);
         }
 
         private static void AlignModelForward(GameObject instance)
@@ -107,8 +108,11 @@ namespace MOBA.Core.Infrastructure
         private static void PrepareAttachmentPresentation(
             GameObject instance,
             BrawlerDefinition definition,
+            BrawlerController owner,
             bool installAttachmentProfile)
         {
+            BrawlerAnimationRuntime.Ensure(instance, owner);
+
             BrawlerAttachmentRig rig = BrawlerAttachmentRig.Ensure(instance);
             if (rig != null)
                 rig.AutoBindFromModel(instance);

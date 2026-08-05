@@ -21,6 +21,7 @@ namespace MOBA.Core.Infrastructure
         private Transform _rightFoot;
         private Transform _leftWeapon;
         private Transform _rightWeapon;
+        private BrawlerAnimationRuntime _runtime;
 
         private Vector3 _bodyBasePosition;
         private Vector3 _leftArmBasePosition;
@@ -42,8 +43,6 @@ namespace MOBA.Core.Infrastructure
         private Quaternion _rightWeaponBaseRotation;
 
         private float _poseTime;
-        private float _attackRecoil;
-        private float _superRecoil;
         private float _gaitPhaseOffset;
         private float _gaitTempoScale;
         private float _gaitAmplitudeScale = 1f;
@@ -76,25 +75,19 @@ namespace MOBA.Core.Infrastructure
             _leftWeapon = leftWeapon;
             _rightWeapon = rightWeapon;
             _useUnscaledTime = owner == null;
+            _runtime = BrawlerAnimationRuntime.Ensure(gameObject, owner);
             ConfigureGait(gameObject.name);
 
             CaptureBasePose();
-        }
-
-        private void OnEnable()
-        {
-            BrawlerPresentationEventBus.OnEvent += HandlePresentationEvent;
-        }
-
-        private void OnDisable()
-        {
-            BrawlerPresentationEventBus.OnEvent -= HandlePresentationEvent;
         }
 
         private void Awake()
         {
             if (_owner == null)
                 _owner = GetComponentInParent<BrawlerController>();
+
+            if (_runtime == null)
+                _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
 
             if (_gaitTempoScale <= 0f)
                 ConfigureGait(gameObject.name);
@@ -108,34 +101,46 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             float deltaTime = _useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+            if (_runtime != null)
+                _runtime.Tick(deltaTime);
+
             _poseTime += deltaTime;
 
-            float speed = _owner != null ? _owner.PlanarVelocity.magnitude : 0f;
-            float move01 = Mathf.Clamp01(speed / 5.5f);
-            float run01 = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.28f, 1f, move01));
+            float move01 = _runtime != null ? _runtime.Move01 : 0f;
+            float run01 = _runtime != null ? _runtime.Run01 : 0f;
             float strideRate = Mathf.Lerp(2.0f, 13.2f, Mathf.Sqrt(move01)) * _gaitTempoScale;
             float stride = (_poseTime * strideRate) + _gaitPhaseOffset;
             float strideSin = Mathf.Sin(stride);
             float strideCos = Mathf.Cos(stride);
             float bob = Mathf.Lerp(0.012f, 0.095f, run01) * Mathf.Abs(strideSin) * move01 * _gaitAmplitudeScale;
             float lean = Mathf.Lerp(2.0f, 9.2f, run01) * move01;
-            float attackKick = _attackRecoil * _attackRecoil;
-            float superKick = _superRecoil * _superRecoil;
+            float attackWeight = _runtime != null ? _runtime.MainAttackWeight : 0f;
+            float superWeight = _runtime != null ? _runtime.SuperWeight : 0f;
+            float hitWeight = _runtime != null ? _runtime.HitReactWeight : 0f;
+            float deathWeight = _runtime != null ? _runtime.DeathWeight : 0f;
+            float attackKick = attackWeight * attackWeight;
+            float superKick = superWeight * superWeight;
             float fireKick = attackKick + (superKick * 1.25f);
 
-            _attackRecoil = Mathf.MoveTowards(_attackRecoil, 0f, deltaTime * 7.0f);
-            _superRecoil = Mathf.MoveTowards(_superRecoil, 0f, deltaTime * 4.5f);
+            IdlePose idle = BuildIdlePose(move01, fireKick);
 
-            IdlePose idle = BuildIdlePose(move01);
-
-            _bodyRoot.localPosition = _bodyBasePosition + Vector3.up * (bob + idle.BodyLift);
-            _bodyRoot.localRotation = _bodyBaseRotation * Quaternion.Euler(lean + idle.BodyPitch, idle.BodyYaw, strideCos * move01 * Mathf.Lerp(1.2f, 3.2f, run01) + idle.BodyRoll);
+            _bodyRoot.localPosition = _bodyBasePosition + Vector3.up * (bob + idle.BodyLift - deathWeight * 0.035f);
+            _bodyRoot.localRotation = _bodyBaseRotation * Quaternion.Euler(
+                lean + idle.BodyPitch + deathWeight * 5.0f,
+                idle.BodyYaw - hitWeight * 3.0f,
+                strideCos * move01 * Mathf.Lerp(1.2f, 3.2f, run01) + idle.BodyRoll - hitWeight * 6.0f);
 
             if (_torso != null)
-                _torso.localRotation = _torsoBaseRotation * Quaternion.Euler(-lean * 0.45f + idle.TorsoPitch, idle.TorsoYaw, -strideCos * move01 * Mathf.Lerp(1.4f, 3.5f, run01) + idle.TorsoRoll);
+                _torso.localRotation = _torsoBaseRotation * Quaternion.Euler(
+                    -lean * 0.45f + idle.TorsoPitch + hitWeight * 4.0f + deathWeight * 8.0f,
+                    idle.TorsoYaw,
+                    -strideCos * move01 * Mathf.Lerp(1.4f, 3.5f, run01) + idle.TorsoRoll);
 
             if (_head != null)
-                _head.localRotation = _headBaseRotation * Quaternion.Euler(-_attackRecoil * 2.5f + idle.HeadPitch, idle.HeadYaw, strideCos * Mathf.Lerp(0.6f, 1.5f, run01) + idle.HeadRoll);
+                _head.localRotation = _headBaseRotation * Quaternion.Euler(
+                    -attackWeight * 2.5f + idle.HeadPitch + hitWeight * 3.0f,
+                    idle.HeadYaw,
+                    strideCos * Mathf.Lerp(0.6f, 1.5f, run01) + idle.HeadRoll);
 
             bool hasLeftWeapon = _leftWeapon != null;
             bool hasRightWeapon = _rightWeapon != null;
@@ -146,7 +151,7 @@ namespace MOBA.Core.Infrastructure
             float rightFirePose = fireKick * rightFireWeight;
             float armSwing = Mathf.Lerp(2.2f, 6.5f, run01) * move01 * _gaitAmplitudeScale;
             float legSwing = Mathf.Lerp(14f, 40f, run01) * move01 * _gaitAmplitudeScale;
-            float recoil = (_attackRecoil * 26f) + (_superRecoil * 42f);
+            float recoil = (attackWeight * 26f) + (superWeight * 42f);
             float supportRecoil = recoil * 0.55f;
             float armRestDrop = (1f - Mathf.Clamp01(fireKick)) * Mathf.Lerp(0.055f, 0.035f, run01);
             float legStrideOffset = Mathf.Lerp(0.018f, 0.105f, run01) * move01 * _gaitAmplitudeScale;
@@ -203,20 +208,20 @@ namespace MOBA.Core.Infrastructure
 
             if (_leftWeapon != null)
                 _leftWeapon.localRotation = _leftWeaponBaseRotation * Quaternion.Euler(
-                    -leftFirePose * 18f - _superRecoil * 10f + idle.LeftWeaponPitch,
+                    -leftFirePose * 18f - superWeight * 10f + idle.LeftWeaponPitch,
                     idle.LeftWeaponYaw + leftFirePose * 2.5f,
                     idle.LeftWeaponRoll - leftFirePose * 3.5f);
 
             if (_rightWeapon != null)
                 _rightWeapon.localRotation = _rightWeaponBaseRotation * Quaternion.Euler(
-                    -rightFirePose * 18f - _superRecoil * 10f + idle.RightWeaponPitch,
+                    -rightFirePose * 18f - superWeight * 10f + idle.RightWeaponPitch,
                     idle.RightWeaponYaw - rightFirePose * 2.5f,
                     idle.RightWeaponRoll + rightFirePose * 3.5f);
         }
 
-        private IdlePose BuildIdlePose(float move01)
+        private IdlePose BuildIdlePose(float move01, float actionWeight)
         {
-            float actionLockout = Mathf.Clamp01((_attackRecoil + _superRecoil) * 2f);
+            float actionLockout = Mathf.Clamp01(actionWeight * 2f);
             float idleWeight = (1f - move01) * (1f - actionLockout);
             if (idleWeight <= 0.001f)
                 return default(IdlePose);
@@ -290,25 +295,6 @@ namespace MOBA.Core.Infrastructure
                     hash = (hash * 31) + value[i];
 
                 return (hash & 0x7fffffff) / 2147483647f;
-            }
-        }
-
-        private void HandlePresentationEvent(BrawlerPresentationEvent evt)
-        {
-            if (_owner == null || evt.Source != _owner)
-                return;
-
-            switch (evt.EventType)
-            {
-                case BrawlerPresentationEventType.MainAttackStarted:
-                case BrawlerPresentationEventType.MainAttackSucceeded:
-                    _attackRecoil = 1f;
-                    break;
-
-                case BrawlerPresentationEventType.SuperStarted:
-                case BrawlerPresentationEventType.SuperSucceeded:
-                    _superRecoil = 1f;
-                    break;
             }
         }
 
