@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using MOBA.Core.Definitions;
 using UnityEngine;
@@ -106,8 +107,8 @@ namespace MOBA.Core.Infrastructure
             BrawlerAttachmentBinding binding,
             Transform parent)
         {
-            if (binding.Prefab != null)
-                return Instantiate(binding.Prefab, parent);
+            if (TryCreatePrefabAttachment(binding, parent, out GameObject prefabAttachment))
+                return prefabAttachment;
 
             if (!BrawlerGeneratedAttachmentFactory.TryCreate(
                     binding.GeneratedAttachment,
@@ -119,6 +120,36 @@ namespace MOBA.Core.Infrastructure
 
             generated.transform.SetParent(parent, false);
             return generated;
+        }
+
+        private static bool TryCreatePrefabAttachment(
+            BrawlerAttachmentBinding binding,
+            Transform parent,
+            out GameObject attachment)
+        {
+            attachment = null;
+
+            if (binding.Prefab == null)
+                return false;
+
+            UnityEngine.Object clone = null;
+            try
+            {
+                clone = Instantiate((UnityEngine.Object)binding.Prefab, parent);
+            }
+            catch (InvalidCastException)
+            {
+                return false;
+            }
+
+            attachment = clone as GameObject;
+            if (attachment != null)
+                return true;
+
+            if (clone != null)
+                Destroy(clone);
+
+            return false;
         }
 
         private void EnsureRuntimeAttachmentRoot()

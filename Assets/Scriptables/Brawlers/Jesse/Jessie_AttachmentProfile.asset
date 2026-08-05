@@ -16,7 +16,7 @@ MonoBehaviour:
   - Id: ShockGun
     Socket: 6
     Prefab: {fileID: 100000, guid: e9bb064a152f42f2ab79f10513c629cc, type: 3}
-    GeneratedAttachment: 0
+    GeneratedAttachment: 4
     LocalPositionOffset: {x: 0.02, y: -0.01, z: 0.06}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.82, y: 0.82, z: 0.82}

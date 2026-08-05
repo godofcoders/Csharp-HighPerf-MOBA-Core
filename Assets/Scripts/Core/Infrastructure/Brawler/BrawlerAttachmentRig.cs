@@ -38,7 +38,24 @@ namespace MOBA.Core.Infrastructure
             _socketLookup.Clear();
 
             Animator animator = visualRoot.GetComponentInChildren<Animator>(true);
+            bool hasHumanoidRig = animator != null && animator.isHuman;
             Transform socketRoot = GetOrCreateSocketRoot(visualRoot.transform);
+            Transform rightHand =
+                ResolveBone(animator, HumanBodyBones.RightHand) ??
+                FindFirst(visualRoot.transform, "RightHand", "Right_Hand", "Right_Arm");
+            Transform leftHand =
+                ResolveBone(animator, HumanBodyBones.LeftHand) ??
+                FindFirst(visualRoot.transform, "LeftHand", "Left_Hand", "Left_Arm");
+            Transform primaryWeapon =
+                hasHumanoidRig && rightHand != null
+                    ? GetOrCreateSocket(rightHand, "Weapon_Main", Vector3.zero)
+                    : FindFirst(visualRoot.transform, "Weapon_Main", "PrimaryWeapon") ??
+                      rightHand;
+            Transform secondaryWeapon =
+                hasHumanoidRig && leftHand != null
+                    ? GetOrCreateSocket(leftHand, "Weapon_Offhand", Vector3.zero)
+                    : FindFirst(visualRoot.transform, "Weapon_Offhand", "SecondaryWeapon") ??
+                      leftHand;
 
             SetSocket(BrawlerAttachmentSocket.Root, visualRoot.transform);
             SetSocket(
@@ -54,13 +71,11 @@ namespace MOBA.Core.Infrastructure
                 GetOrCreateSocket(socketRoot, "Chest", new Vector3(0f, 1.05f, 0f)));
             SetSocket(
                 BrawlerAttachmentSocket.RightHand,
-                ResolveBone(animator, HumanBodyBones.RightHand) ??
-                FindFirst(visualRoot.transform, "RightHand", "Right_Hand", "Right_Arm") ??
+                rightHand ??
                 GetOrCreateSocket(socketRoot, "RightHand", new Vector3(0.36f, 0.95f, 0.25f)));
             SetSocket(
                 BrawlerAttachmentSocket.LeftHand,
-                ResolveBone(animator, HumanBodyBones.LeftHand) ??
-                FindFirst(visualRoot.transform, "LeftHand", "Left_Hand", "Left_Arm") ??
+                leftHand ??
                 GetOrCreateSocket(socketRoot, "LeftHand", new Vector3(-0.36f, 0.95f, 0.25f)));
             SetSocket(
                 BrawlerAttachmentSocket.Back,
@@ -68,11 +83,11 @@ namespace MOBA.Core.Infrastructure
                 GetOrCreateSocket(socketRoot, "Back", new Vector3(0f, 1.08f, 0.32f)));
             SetSocket(
                 BrawlerAttachmentSocket.PrimaryWeapon,
-                FindFirst(visualRoot.transform, "Weapon_Main", "PrimaryWeapon") ??
+                primaryWeapon ??
                 ResolveSocket(BrawlerAttachmentSocket.RightHand, visualRoot.transform));
             SetSocket(
                 BrawlerAttachmentSocket.SecondaryWeapon,
-                FindFirst(visualRoot.transform, "Weapon_Offhand", "SecondaryWeapon") ??
+                secondaryWeapon ??
                 ResolveSocket(BrawlerAttachmentSocket.LeftHand, visualRoot.transform));
             SetSocket(
                 BrawlerAttachmentSocket.PrimaryMuzzle,

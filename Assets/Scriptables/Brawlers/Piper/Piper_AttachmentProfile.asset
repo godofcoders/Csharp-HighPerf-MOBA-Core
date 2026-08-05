@@ -16,7 +16,7 @@ MonoBehaviour:
   - Id: Umbrella
     Socket: 6
     Prefab: {fileID: 100000, guid: 854df8b6a6e74a778ff52870202b2ebd, type: 3}
-    GeneratedAttachment: 0
+    GeneratedAttachment: 7
     LocalPositionOffset: {x: 0.02, y: -0.06, z: 0.04}
     LocalEulerOffset: {x: 8, y: 0, z: -12}
     LocalScale: {x: 0.9, y: 0.9, z: 0.9}

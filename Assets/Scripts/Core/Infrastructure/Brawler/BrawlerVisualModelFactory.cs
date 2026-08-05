@@ -122,6 +122,7 @@ namespace MOBA.Core.Infrastructure
             bool installAttachmentProfile)
         {
             BrawlerAnimationRuntime.Ensure(instance, owner);
+            BrawlerAuthoredModelAnimator.Ensure(instance, owner);
 
             BrawlerAttachmentRig rig = BrawlerAttachmentRig.Ensure(instance);
             if (rig != null)

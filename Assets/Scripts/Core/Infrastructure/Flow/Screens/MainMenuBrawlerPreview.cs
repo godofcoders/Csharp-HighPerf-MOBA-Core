@@ -187,6 +187,15 @@ namespace MOBA.Core.Infrastructure
                 if (s is BrawlerProceduralModelAnimator)
                     continue;
 
+                if (s is BrawlerAuthoredModelAnimator)
+                    continue;
+
+                if (s is BrawlerAttachmentRig)
+                    continue;
+
+                if (s is BrawlerAttachmentInstaller)
+                    continue;
+
                 if (s is BrawlerPresentationAnchors)
                     continue;
 
