@@ -158,10 +158,6 @@ namespace MOBA.Core.Infrastructure
             Material darkWood = CreateMaterial("Generated Bow Dark Grain", new Color(0.18f, 0.09f, 0.04f, 1f));
             Material wrap = CreateMaterial("Generated Bow Green Wrap", new Color(0.04f, 0.58f, 0.37f, 1f));
             Material stringMaterial = CreateMaterial("Generated Bow Braided String", new Color(0.92f, 0.82f, 0.52f, 1f));
-            Material arrow = CreateMaterial("Generated Bow Arrow Shaft", new Color(0.66f, 0.44f, 0.24f, 1f));
-            Material metal = CreateMaterial("Generated Bow Arrow Head", new Color(0.78f, 0.80f, 0.82f, 1f));
-            Material feather = CreateMaterial("Generated Bow Feather", new Color(0.92f, 0.86f, 0.58f, 1f));
-
             GameObject root = CreateRoot(id, "Generated_Bow");
             AddPart(root.transform, "Grip", PrimitiveType.Cube, new Vector3(0f, 0f, 0f), new Vector3(0.10f, 0.24f, 0.08f), Quaternion.identity, wrap);
             AddPart(root.transform, "UpperLimbA", PrimitiveType.Cube, new Vector3(0.02f, 0.28f, 0f), new Vector3(0.075f, 0.34f, 0.070f), Quaternion.Euler(0f, 0f, -17f), wood);
@@ -173,10 +169,6 @@ namespace MOBA.Core.Infrastructure
             AddPart(root.transform, "String", PrimitiveType.Cube, new Vector3(-0.18f, 0f, -0.02f), new Vector3(0.020f, 1.47f, 0.016f), Quaternion.identity, stringMaterial);
             AddPart(root.transform, "GrainA", PrimitiveType.Cube, new Vector3(0.04f, 0.42f, -0.038f), new Vector3(0.022f, 0.22f, 0.010f), Quaternion.Euler(0f, 0f, -22f), darkWood);
             AddPart(root.transform, "GrainB", PrimitiveType.Cube, new Vector3(0.04f, -0.42f, -0.038f), new Vector3(0.022f, 0.22f, 0.010f), Quaternion.Euler(0f, 0f, 22f), darkWood);
-            AddPart(root.transform, "ReadyArrow", PrimitiveType.Cylinder, new Vector3(0.02f, 0f, 0.30f), new Vector3(0.025f, 0.64f, 0.025f), Quaternion.Euler(90f, 0f, 0f), arrow);
-            AddPart(root.transform, "ArrowTip", PrimitiveType.Cylinder, new Vector3(0.02f, 0f, 0.67f), new Vector3(0.070f, 0.11f, 0.070f), Quaternion.Euler(90f, 0f, 0f), metal);
-            AddPart(root.transform, "FletchingA", PrimitiveType.Cube, new Vector3(-0.035f, 0.045f, -0.10f), new Vector3(0.022f, 0.10f, 0.050f), Quaternion.Euler(0f, 0f, 28f), feather);
-            AddPart(root.transform, "FletchingB", PrimitiveType.Cube, new Vector3(0.055f, -0.045f, -0.10f), new Vector3(0.022f, 0.10f, 0.050f), Quaternion.Euler(0f, 0f, -28f), feather);
             return root;
         }
 

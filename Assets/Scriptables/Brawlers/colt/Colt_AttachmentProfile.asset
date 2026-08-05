@@ -17,25 +17,25 @@ MonoBehaviour:
     Socket: 6
     Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
     GeneratedAttachment: 1
-    LocalPositionOffset: {x: 0.02, y: -0.02, z: 0.05}
+    LocalPositionOffset: {x: 0.01, y: -0.015, z: 0.025}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
-    LocalScale: {x: 0.86, y: 0.86, z: 0.86}
+    LocalScale: {x: 0.36, y: 0.36, z: 0.36}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1
     UseAsSecondaryFirePoint: 0
     UseAsCastPoint: 1
-    PresentationAnchorLocalOffset: {x: 0, y: 0.1, z: 0.62}
+    PresentationAnchorLocalOffset: {x: 0, y: 0.04, z: 0.23}
   - Id: LeftPistol
     Socket: 7
     Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
     GeneratedAttachment: 1
-    LocalPositionOffset: {x: -0.02, y: -0.02, z: 0.05}
+    LocalPositionOffset: {x: -0.01, y: -0.015, z: 0.025}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
-    LocalScale: {x: 0.86, y: 0.86, z: 0.86}
+    LocalScale: {x: 0.36, y: 0.36, z: 0.36}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 0
     UseAsSecondaryFirePoint: 1
     UseAsCastPoint: 0
-    PresentationAnchorLocalOffset: {x: 0, y: 0.1, z: 0.62}
+    PresentationAnchorLocalOffset: {x: 0, y: 0.04, z: 0.23}

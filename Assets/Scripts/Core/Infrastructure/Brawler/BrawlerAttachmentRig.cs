@@ -46,14 +46,26 @@ namespace MOBA.Core.Infrastructure
             Transform leftHand =
                 ResolveBone(animator, HumanBodyBones.LeftHand) ??
                 FindFirst(visualRoot.transform, "LeftHand", "Left_Hand", "Left_Arm");
+            Quaternion weaponSocketRotation =
+                ResolveForwardFacingSocketRotation(visualRoot.transform, animator);
             Transform primaryWeapon =
                 hasHumanoidRig && rightHand != null
-                    ? GetOrCreateSocket(rightHand, "Weapon_Main", Vector3.zero)
+                    ? GetOrCreateSocket(
+                        rightHand,
+                        "Weapon_Main",
+                        Vector3.zero,
+                        Quaternion.Inverse(rightHand.rotation) * weaponSocketRotation,
+                        forceTransform: true)
                     : FindFirst(visualRoot.transform, "Weapon_Main", "PrimaryWeapon") ??
                       rightHand;
             Transform secondaryWeapon =
                 hasHumanoidRig && leftHand != null
-                    ? GetOrCreateSocket(leftHand, "Weapon_Offhand", Vector3.zero)
+                    ? GetOrCreateSocket(
+                        leftHand,
+                        "Weapon_Offhand",
+                        Vector3.zero,
+                        Quaternion.Inverse(leftHand.rotation) * weaponSocketRotation,
+                        forceTransform: true)
                     : FindFirst(visualRoot.transform, "Weapon_Offhand", "SecondaryWeapon") ??
                       leftHand;
 
@@ -196,16 +208,54 @@ namespace MOBA.Core.Infrastructure
             string name,
             Vector3 localPosition)
         {
+            return GetOrCreateSocket(parent, name, localPosition, Quaternion.identity, forceTransform: false);
+        }
+
+        private static Transform GetOrCreateSocket(
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            Quaternion localRotation,
+            bool forceTransform)
+        {
             Transform existing = parent.Find(name);
             if (existing != null)
+            {
+                if (forceTransform)
+                {
+                    existing.localPosition = localPosition;
+                    existing.localRotation = localRotation;
+                    existing.localScale = Vector3.one;
+                }
+
                 return existing;
+            }
 
             GameObject socket = new GameObject(name);
             socket.transform.SetParent(parent, false);
             socket.transform.localPosition = localPosition;
-            socket.transform.localRotation = Quaternion.identity;
+            socket.transform.localRotation = localRotation;
             socket.transform.localScale = Vector3.one;
             return socket.transform;
+        }
+
+        private static Quaternion ResolveForwardFacingSocketRotation(
+            Transform visualRoot,
+            Animator animator)
+        {
+            Vector3 forward = animator != null
+                ? animator.transform.forward
+                : visualRoot.forward;
+
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = visualRoot.forward;
+
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f)
+                forward = Vector3.forward;
+
+            return Quaternion.LookRotation(forward.normalized, Vector3.up);
         }
 
         private static Transform FindFirst(Transform root, params string[] names)

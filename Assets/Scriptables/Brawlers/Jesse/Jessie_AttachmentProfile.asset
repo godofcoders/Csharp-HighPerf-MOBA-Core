@@ -17,12 +17,12 @@ MonoBehaviour:
     Socket: 6
     Prefab: {fileID: 100000, guid: e9bb064a152f42f2ab79f10513c629cc, type: 3}
     GeneratedAttachment: 4
-    LocalPositionOffset: {x: 0.02, y: -0.01, z: 0.06}
+    LocalPositionOffset: {x: 0.01, y: -0.015, z: 0.035}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
-    LocalScale: {x: 0.82, y: 0.82, z: 0.82}
+    LocalScale: {x: 0.3, y: 0.3, z: 0.3}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1
     UseAsSecondaryFirePoint: 0
     UseAsCastPoint: 1
-    PresentationAnchorLocalOffset: {x: 0, y: 0.02, z: 0.78}
+    PresentationAnchorLocalOffset: {x: 0, y: 0.01, z: 0.28}
