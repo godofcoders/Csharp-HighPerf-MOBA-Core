@@ -46,6 +46,9 @@ namespace MOBA.Core.Infrastructure
         private float _gaitPhaseOffset;
         private float _gaitTempoScale;
         private float _gaitAmplitudeScale = 1f;
+        private float _strideLengthScale = 1f;
+        private float _footLiftScale = 1f;
+        private float _lateralLeanScale = 1f;
         private bool _useUnscaledTime;
 
         public void Initialize(
@@ -114,6 +117,13 @@ namespace MOBA.Core.Infrastructure
             float strideCos = Mathf.Cos(stride);
             float bob = Mathf.Lerp(0.012f, 0.095f, run01) * Mathf.Abs(strideSin) * move01 * _gaitAmplitudeScale;
             float lean = Mathf.Lerp(2.0f, 9.2f, run01) * move01;
+            float forwardMove = _runtime != null ? _runtime.ForwardMove : move01;
+            float lateralMove = _runtime != null ? _runtime.LateralMove : 0f;
+            float forwardBias01 = Mathf.Clamp01((forwardMove + 1f) * 0.5f);
+            float backpedal01 = Mathf.Clamp01(-forwardMove) * move01;
+            float strafe01 = Mathf.Abs(lateralMove) * move01;
+            float directionalLean = lean * Mathf.Lerp(-0.35f, 1f, forwardBias01);
+            float lateralLean = lateralMove * move01 * Mathf.Lerp(2.8f, 6.5f, run01) * _lateralLeanScale;
             float attackWeight = _runtime != null ? _runtime.MainAttackWeight : 0f;
             float superWeight = _runtime != null ? _runtime.SuperWeight : 0f;
             float hitWeight = _runtime != null ? _runtime.HitReactWeight : 0f;
@@ -124,17 +134,18 @@ namespace MOBA.Core.Infrastructure
 
             IdlePose idle = BuildIdlePose(move01, fireKick);
 
+            bob *= Mathf.Lerp(0.82f, 1.05f, forwardBias01);
             _bodyRoot.localPosition = _bodyBasePosition + Vector3.up * (bob + idle.BodyLift - deathWeight * 0.035f);
             _bodyRoot.localRotation = _bodyBaseRotation * Quaternion.Euler(
-                lean + idle.BodyPitch + deathWeight * 5.0f,
-                idle.BodyYaw - hitWeight * 3.0f,
-                strideCos * move01 * Mathf.Lerp(1.2f, 3.2f, run01) + idle.BodyRoll - hitWeight * 6.0f);
+                directionalLean + idle.BodyPitch + deathWeight * 5.0f - backpedal01 * 2.0f,
+                idle.BodyYaw + lateralMove * move01 * 3.0f - hitWeight * 3.0f,
+                strideCos * move01 * Mathf.Lerp(1.2f, 3.2f, run01) + idle.BodyRoll - hitWeight * 6.0f - lateralLean);
 
             if (_torso != null)
                 _torso.localRotation = _torsoBaseRotation * Quaternion.Euler(
-                    -lean * 0.45f + idle.TorsoPitch + hitWeight * 4.0f + deathWeight * 8.0f,
-                    idle.TorsoYaw,
-                    -strideCos * move01 * Mathf.Lerp(1.4f, 3.5f, run01) + idle.TorsoRoll);
+                    -directionalLean * 0.45f + idle.TorsoPitch + hitWeight * 4.0f + deathWeight * 8.0f,
+                    idle.TorsoYaw + lateralMove * move01 * 4.0f,
+                    -strideCos * move01 * Mathf.Lerp(1.4f, 3.5f, run01) + idle.TorsoRoll - lateralLean * 0.45f);
 
             if (_head != null)
                 _head.localRotation = _headBaseRotation * Quaternion.Euler(
@@ -149,14 +160,18 @@ namespace MOBA.Core.Infrastructure
             float rightFireWeight = hasRightWeapon || !hasAnyWeapon ? 1f : 0.45f;
             float leftFirePose = fireKick * leftFireWeight;
             float rightFirePose = fireKick * rightFireWeight;
-            float armSwing = Mathf.Lerp(2.2f, 6.5f, run01) * move01 * _gaitAmplitudeScale;
-            float legSwing = Mathf.Lerp(14f, 40f, run01) * move01 * _gaitAmplitudeScale;
+            float armSwing = Mathf.Lerp(2.2f, 6.5f, run01) * move01 * _gaitAmplitudeScale * Mathf.Lerp(1f, 0.72f, strafe01);
+            float legSwing = Mathf.Lerp(14f, 40f, run01) * move01 * _gaitAmplitudeScale * Mathf.Lerp(0.72f, 1.08f, forwardBias01);
             float recoil = (attackWeight * 26f) + (superWeight * 42f);
             float supportRecoil = recoil * 0.55f;
             float armRestDrop = (1f - Mathf.Clamp01(fireKick)) * Mathf.Lerp(0.055f, 0.035f, run01);
-            float legStrideOffset = Mathf.Lerp(0.018f, 0.105f, run01) * move01 * _gaitAmplitudeScale;
-            float legLift = Mathf.Lerp(0.010f, 0.080f, run01) * move01 * _gaitAmplitudeScale;
+            float legStrideOffset = Mathf.Lerp(0.018f, 0.105f, run01) * move01 * _gaitAmplitudeScale * _strideLengthScale;
+            float legLift = Mathf.Lerp(0.010f, 0.080f, run01) * move01 * _gaitAmplitudeScale * _footLiftScale;
             float footPitch = Mathf.Lerp(5f, 17f, run01) * move01 * _gaitAmplitudeScale;
+            float leftStepLift = Mathf.Pow(Mathf.Max(0f, -strideSin), 0.72f) * legLift;
+            float rightStepLift = Mathf.Pow(Mathf.Max(0f, strideSin), 0.72f) * legLift;
+            float sideStep = lateralMove * legStrideOffset * 0.45f;
+            float forwardStrideScale = Mathf.Lerp(0.45f, 1f, Mathf.Abs(forwardMove));
 
             if (_leftArm != null)
             {
@@ -184,25 +199,37 @@ namespace MOBA.Core.Infrastructure
 
             if (_leftLeg != null)
             {
-                _leftLeg.localPosition = _leftLegBasePosition + new Vector3(0f, Mathf.Max(0f, -strideSin) * legLift, strideSin * legStrideOffset);
+                _leftLeg.localPosition = _leftLegBasePosition + new Vector3(
+                    sideStep,
+                    leftStepLift,
+                    strideSin * legStrideOffset * forwardStrideScale);
                 _leftLeg.localRotation = _leftLegBaseRotation * Quaternion.Euler(strideSin * legSwing, 0f, 0f);
             }
 
             if (_rightLeg != null)
             {
-                _rightLeg.localPosition = _rightLegBasePosition + new Vector3(0f, Mathf.Max(0f, strideSin) * legLift, -strideSin * legStrideOffset);
+                _rightLeg.localPosition = _rightLegBasePosition + new Vector3(
+                    sideStep,
+                    rightStepLift,
+                    -strideSin * legStrideOffset * forwardStrideScale);
                 _rightLeg.localRotation = _rightLegBaseRotation * Quaternion.Euler(-strideSin * legSwing, 0f, 0f);
             }
 
             if (_leftFoot != null)
             {
-                _leftFoot.localPosition = _leftFootBasePosition + new Vector3(0f, Mathf.Max(0f, -strideSin) * legLift * 0.85f, strideSin * legStrideOffset * 0.90f);
+                _leftFoot.localPosition = _leftFootBasePosition + new Vector3(
+                    sideStep,
+                    leftStepLift * 0.85f,
+                    strideSin * legStrideOffset * 0.90f * forwardStrideScale);
                 _leftFoot.localRotation = _leftFootBaseRotation * Quaternion.Euler(strideSin * footPitch, 0f, -strideCos * move01 * 2.0f);
             }
 
             if (_rightFoot != null)
             {
-                _rightFoot.localPosition = _rightFootBasePosition + new Vector3(0f, Mathf.Max(0f, strideSin) * legLift * 0.85f, -strideSin * legStrideOffset * 0.90f);
+                _rightFoot.localPosition = _rightFootBasePosition + new Vector3(
+                    sideStep,
+                    rightStepLift * 0.85f,
+                    -strideSin * legStrideOffset * 0.90f * forwardStrideScale);
                 _rightFoot.localRotation = _rightFootBaseRotation * Quaternion.Euler(-strideSin * footPitch, 0f, strideCos * move01 * 2.0f);
             }
 
@@ -282,6 +309,50 @@ namespace MOBA.Core.Infrastructure
             _gaitPhaseOffset = phase * Mathf.PI * 2f;
             _gaitTempoScale = Mathf.Lerp(0.92f, 1.12f, Stable01(seedText + "_tempo"));
             _gaitAmplitudeScale = Mathf.Lerp(0.92f, 1.10f, Stable01(seedText + "_amplitude"));
+            _strideLengthScale = 1f;
+            _footLiftScale = 1f;
+            _lateralLeanScale = 1f;
+
+            string normalized = seedText ?? string.Empty;
+            if (Contains(normalized, "El Primo") || Contains(normalized, "ElPrimo"))
+            {
+                _gaitTempoScale *= 0.90f;
+                _gaitAmplitudeScale *= 1.13f;
+                _strideLengthScale = 1.05f;
+                _footLiftScale = 0.95f;
+                _lateralLeanScale = 0.82f;
+            }
+            else if (Contains(normalized, "Barley"))
+            {
+                _gaitTempoScale *= 1.10f;
+                _gaitAmplitudeScale *= 0.82f;
+                _strideLengthScale = 0.76f;
+                _footLiftScale = 0.62f;
+                _lateralLeanScale = 0.55f;
+            }
+            else if (Contains(normalized, "Jessie") || Contains(normalized, "Jesse") || Contains(normalized, "Leon"))
+            {
+                _gaitTempoScale *= 1.12f;
+                _gaitAmplitudeScale *= 0.96f;
+                _strideLengthScale = 0.92f;
+                _footLiftScale = 1.10f;
+                _lateralLeanScale = 1.12f;
+            }
+            else if (Contains(normalized, "Byron") || Contains(normalized, "Piper"))
+            {
+                _gaitTempoScale *= 0.96f;
+                _gaitAmplitudeScale *= 0.88f;
+                _strideLengthScale = 0.90f;
+                _footLiftScale = 0.86f;
+                _lateralLeanScale = 0.92f;
+            }
+        }
+
+        private static bool Contains(string value, string expected)
+        {
+            return value != null &&
+                   expected != null &&
+                   value.IndexOf(expected, System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static float Stable01(string seedText)

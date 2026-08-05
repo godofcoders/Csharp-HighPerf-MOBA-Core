@@ -18,6 +18,8 @@ namespace MOBA.Core.Infrastructure
         private static readonly int Move01Hash = Animator.StringToHash("Move01");
         private static readonly int Run01Hash = Animator.StringToHash("Run01");
         private static readonly int Idle01Hash = Animator.StringToHash("Idle01");
+        private static readonly int ForwardMoveHash = Animator.StringToHash("ForwardMove");
+        private static readonly int LateralMoveHash = Animator.StringToHash("LateralMove");
         private static readonly int MainAttackHash = Animator.StringToHash("MainAttack");
         private static readonly int SuperHash = Animator.StringToHash("Super");
         private static readonly int GadgetHash = Animator.StringToHash("Gadget");
@@ -37,6 +39,8 @@ namespace MOBA.Core.Infrastructure
         [Header("Runtime Debug")]
         [SerializeField] private float _debugSpeed;
         [SerializeField] private float _debugMove01;
+        [SerializeField] private float _debugForwardMove;
+        [SerializeField] private float _debugLateralMove;
         [SerializeField] private float _debugMainAttack;
         [SerializeField] private float _debugSuper;
         [SerializeField] private float _debugHitReact;
@@ -55,6 +59,8 @@ namespace MOBA.Core.Infrastructure
         private bool _hasMove01;
         private bool _hasRun01;
         private bool _hasIdle01;
+        private bool _hasForwardMove;
+        private bool _hasLateralMove;
         private bool _hasMainAttack;
         private bool _hasSuper;
         private bool _hasGadget;
@@ -72,6 +78,8 @@ namespace MOBA.Core.Infrastructure
         public float Move01 { get; private set; }
         public float Run01 { get; private set; }
         public float Idle01 { get; private set; }
+        public float ForwardMove { get; private set; }
+        public float LateralMove { get; private set; }
         public float StridePhase { get; private set; }
         public float StrideSin { get; private set; }
         public float StrideCos { get; private set; }
@@ -216,6 +224,21 @@ namespace MOBA.Core.Infrastructure
                 _facingDirection = facing.normalized;
 
             _aimDirection = _facingDirection;
+
+            if (!IsMoving)
+            {
+                ForwardMove = 0f;
+                LateralMove = 0f;
+                return;
+            }
+
+            Vector3 right = Vector3.Cross(Vector3.up, _facingDirection);
+            if (right.sqrMagnitude <= 0.001f)
+                right = Vector3.right;
+
+            right.Normalize();
+            ForwardMove = Mathf.Clamp(Vector3.Dot(_facingDirection, _moveDirection), -1f, 1f);
+            LateralMove = Mathf.Clamp(Vector3.Dot(right, _moveDirection), -1f, 1f);
         }
 
         private void UpdateStride(float deltaTime)
@@ -375,6 +398,10 @@ namespace MOBA.Core.Infrastructure
                 _animator.SetFloat(Run01Hash, Run01);
             if (_hasIdle01)
                 _animator.SetFloat(Idle01Hash, Idle01);
+            if (_hasForwardMove)
+                _animator.SetFloat(ForwardMoveHash, ForwardMove);
+            if (_hasLateralMove)
+                _animator.SetFloat(LateralMoveHash, LateralMove);
             if (_hasMainAttack)
                 _animator.SetFloat(MainAttackHash, MainAttackWeight);
             if (_hasSuper)
@@ -412,6 +439,8 @@ namespace MOBA.Core.Infrastructure
             _hasMove01 = false;
             _hasRun01 = false;
             _hasIdle01 = false;
+            _hasForwardMove = false;
+            _hasLateralMove = false;
             _hasMainAttack = false;
             _hasSuper = false;
             _hasGadget = false;
@@ -447,6 +476,8 @@ namespace MOBA.Core.Infrastructure
             else if (nameHash == Move01Hash) _hasMove01 = true;
             else if (nameHash == Run01Hash) _hasRun01 = true;
             else if (nameHash == Idle01Hash) _hasIdle01 = true;
+            else if (nameHash == ForwardMoveHash) _hasForwardMove = true;
+            else if (nameHash == LateralMoveHash) _hasLateralMove = true;
             else if (nameHash == MainAttackHash) _hasMainAttack = true;
             else if (nameHash == SuperHash) _hasSuper = true;
             else if (nameHash == GadgetHash) _hasGadget = true;
@@ -467,6 +498,8 @@ namespace MOBA.Core.Infrastructure
         {
             _debugSpeed = Speed;
             _debugMove01 = Move01;
+            _debugForwardMove = ForwardMove;
+            _debugLateralMove = LateralMove;
             _debugMainAttack = MainAttackWeight;
             _debugSuper = SuperWeight;
             _debugHitReact = HitReactWeight;
