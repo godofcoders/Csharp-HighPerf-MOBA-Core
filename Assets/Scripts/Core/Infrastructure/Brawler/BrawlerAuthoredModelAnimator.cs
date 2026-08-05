@@ -205,7 +205,7 @@ namespace MOBA.Core.Infrastructure
             Vector3 forward = ResolveForward();
             Vector3 right = ResolveRight(forward);
             Vector3 up = Vector3.up;
-            Vector3 aim = ResolveAimDirection(forward);
+            Vector3 aim = ResolveAimDirection(forward, Mathf.Clamp01(action + attack + super));
 
             AddLocal(_hips, _hipsBase, idleBreath * 1.4f - move01 * 4.0f, 0f, strideCos * move01 * 2.2f, weight);
             AddLocal(_spine, _spineBase, idleBreath * -1.2f + move01 * 3.0f - hit * 6.0f, 0f, -strideCos * move01 * 2.0f, weight);
@@ -324,12 +324,17 @@ namespace MOBA.Core.Infrastructure
 
         private Vector3 ResolveForward()
         {
-            Vector3 forward = transform.forward;
-            forward.y = 0f;
-            if (forward.sqrMagnitude < 0.0001f && _animator != null)
-                forward = _animator.transform.forward;
+            Vector3 forward = _animator != null
+                ? _animator.transform.forward
+                : transform.forward;
 
             forward.y = 0f;
+            if (forward.sqrMagnitude < 0.0001f)
+            {
+                forward = transform.forward;
+                forward.y = 0f;
+            }
+
             return forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
         }
 
@@ -339,8 +344,11 @@ namespace MOBA.Core.Infrastructure
             return right.sqrMagnitude > 0.0001f ? right.normalized : Vector3.right;
         }
 
-        private Vector3 ResolveAimDirection(Vector3 fallbackForward)
+        private Vector3 ResolveAimDirection(Vector3 fallbackForward, float actionSignal)
         {
+            if (_runtime == null || _owner == null || actionSignal < 0.05f)
+                return fallbackForward;
+
             Vector3 aim = _runtime != null ? _runtime.AimDirection : fallbackForward;
             aim.y = 0f;
             return aim.sqrMagnitude > 0.0001f ? aim.normalized : fallbackForward;
