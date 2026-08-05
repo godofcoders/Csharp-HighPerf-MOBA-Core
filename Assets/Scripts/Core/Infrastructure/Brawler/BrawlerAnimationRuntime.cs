@@ -43,6 +43,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _debugLateralMove;
         [SerializeField] private float _debugMainAttack;
         [SerializeField] private float _debugSuper;
+        [SerializeField] private float _debugGadget;
+        [SerializeField] private float _debugHeal;
+        [SerializeField] private float _debugHypercharge;
         [SerializeField] private float _debugHitReact;
         [SerializeField] private float _debugDeath;
         [SerializeField] private string _debugLastEvent;
@@ -527,6 +530,9 @@ namespace MOBA.Core.Infrastructure
             _debugLateralMove = LateralMove;
             _debugMainAttack = MainAttackWeight;
             _debugSuper = SuperWeight;
+            _debugGadget = GadgetWeight;
+            _debugHeal = HealWeight;
+            _debugHypercharge = HyperchargeWeight;
             _debugHitReact = HitReactWeight;
             _debugDeath = DeathWeight;
         }

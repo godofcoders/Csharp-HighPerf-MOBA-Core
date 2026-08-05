@@ -129,32 +129,38 @@ namespace MOBA.Core.Infrastructure
             float aimYaw = ResolveAimYaw();
             float attackWeight = _runtime != null ? _runtime.MainAttackWeight : 0f;
             float superWeight = _runtime != null ? _runtime.SuperWeight : 0f;
+            float gadgetWeight = _runtime != null ? _runtime.GadgetWeight : 0f;
+            float healWeight = _runtime != null ? _runtime.HealWeight : 0f;
+            float hyperWeight = _runtime != null ? _runtime.HyperchargeWeight : 0f;
             float hitWeight = _runtime != null ? _runtime.HitReactWeight : 0f;
             float deathWeight = _runtime != null ? _runtime.DeathWeight : 0f;
             float attackKick = attackWeight * attackWeight;
             float superKick = superWeight * superWeight;
-            float fireKick = attackKick + (superKick * 1.25f);
+            float gadgetKick = gadgetWeight * gadgetWeight;
+            float fireKick = attackKick + (superKick * 1.25f) + (gadgetKick * 0.70f);
+            float hyperPulse = hyperWeight * (0.55f + Mathf.Sin(_poseTime * 9.0f) * 0.45f);
 
             IdlePose idle = BuildIdlePose(move01, fireKick);
 
             bob *= Mathf.Lerp(0.82f, 1.05f, forwardBias01);
-            _bodyRoot.localPosition = _bodyBasePosition + Vector3.up * (bob + idle.BodyLift - deathWeight * 0.035f);
+            _bodyRoot.localPosition = _bodyBasePosition + Vector3.up * (
+                bob + idle.BodyLift + superWeight * 0.018f + healWeight * 0.014f + hyperPulse * 0.020f - deathWeight * 0.035f);
             _bodyRoot.localRotation = _bodyBaseRotation * Quaternion.Euler(
-                directionalLean + idle.BodyPitch + deathWeight * 5.0f - backpedal01 * 2.0f,
+                directionalLean + idle.BodyPitch + deathWeight * 5.0f - backpedal01 * 2.0f - superWeight * 2.5f + healWeight * 1.5f,
                 idle.BodyYaw + lateralMove * move01 * 3.0f + aimYaw * 0.22f - hitWeight * 3.0f,
-                strideCos * move01 * Mathf.Lerp(1.2f, 3.2f, run01) + idle.BodyRoll - hitWeight * 6.0f - lateralLean);
+                strideCos * move01 * Mathf.Lerp(1.2f, 3.2f, run01) + idle.BodyRoll - hitWeight * 6.0f - lateralLean + hyperPulse * 2.2f);
 
             if (_torso != null)
                 _torso.localRotation = _torsoBaseRotation * Quaternion.Euler(
-                    -directionalLean * 0.45f + idle.TorsoPitch + hitWeight * 4.0f + deathWeight * 8.0f,
-                    idle.TorsoYaw + lateralMove * move01 * 4.0f + aimYaw * 0.58f,
-                    -strideCos * move01 * Mathf.Lerp(1.4f, 3.5f, run01) + idle.TorsoRoll - lateralLean * 0.45f);
+                    -directionalLean * 0.45f + idle.TorsoPitch + hitWeight * 4.0f + deathWeight * 8.0f - superWeight * 4.0f + healWeight * 2.0f,
+                    idle.TorsoYaw + lateralMove * move01 * 4.0f + aimYaw * 0.58f + gadgetWeight * 3.0f,
+                    -strideCos * move01 * Mathf.Lerp(1.4f, 3.5f, run01) + idle.TorsoRoll - lateralLean * 0.45f + hyperPulse * 1.6f);
 
             if (_head != null)
                 _head.localRotation = _headBaseRotation * Quaternion.Euler(
-                    -attackWeight * 2.5f + idle.HeadPitch + hitWeight * 3.0f,
+                    -attackWeight * 2.5f + idle.HeadPitch + hitWeight * 3.0f - superWeight * 2.0f + healWeight * 2.0f,
                     idle.HeadYaw + aimYaw * 0.72f,
-                    strideCos * Mathf.Lerp(0.6f, 1.5f, run01) + idle.HeadRoll);
+                    strideCos * Mathf.Lerp(0.6f, 1.5f, run01) + idle.HeadRoll + hyperPulse * 1.2f);
 
             bool hasLeftWeapon = _leftWeapon != null;
             bool hasRightWeapon = _rightWeapon != null;
@@ -163,7 +169,8 @@ namespace MOBA.Core.Infrastructure
             float rightFireWeight = hasRightWeapon || !hasAnyWeapon ? 1f : 0.45f;
             float leftFirePose = fireKick * leftFireWeight;
             float rightFirePose = fireKick * rightFireWeight;
-            float readyRaise = Mathf.Clamp01(fireKick * 1.2f + superWeight * 0.4f);
+            float abilityRaise = Mathf.Clamp01(superWeight * 0.85f + gadgetWeight * 0.45f + healWeight * 0.35f);
+            float readyRaise = Mathf.Clamp01(fireKick * 1.2f + abilityRaise + hyperWeight * 0.15f);
             float bareHandPunch = !hasAnyWeapon ? attackKick : 0f;
             float punchSwap = Mathf.Sin((_poseTime * 23f) + _gaitPhaseOffset) >= 0f ? 1f : -1f;
             float armSwing = Mathf.Lerp(2.2f, 6.5f, run01) * move01 * _gaitAmplitudeScale * Mathf.Lerp(1f, 0.72f, strafe01);
@@ -184,11 +191,11 @@ namespace MOBA.Core.Infrastructure
                 _leftArm.localPosition = _leftArmBasePosition +
                     Vector3.down * armRestDrop +
                     Vector3.back * (leftFirePose * 0.030f + Mathf.Max(0f, -punchSwap) * bareHandPunch * 0.045f) +
-                    Vector3.up * (leftFirePose * 0.018f + readyRaise * 0.016f);
+                    Vector3.up * (leftFirePose * 0.018f + readyRaise * 0.016f + superWeight * 0.020f);
                 _leftArm.localRotation = _leftArmBaseRotation * Quaternion.Euler(
-                    -strideSin * armSwing - supportRecoil - leftFirePose * 18f - readyRaise * 10f - Mathf.Max(0f, -punchSwap) * bareHandPunch * 18f + idle.LeftArmPitch,
-                    idle.LeftArmYaw + leftFirePose * 2.5f + aimYaw * 0.16f,
-                    idle.LeftArmRoll - leftFirePose * 5.5f);
+                    -strideSin * armSwing - supportRecoil - leftFirePose * 18f - readyRaise * 10f - superWeight * 18f - Mathf.Max(0f, -punchSwap) * bareHandPunch * 18f + idle.LeftArmPitch,
+                    idle.LeftArmYaw + leftFirePose * 2.5f + aimYaw * 0.16f + gadgetWeight * 4.0f,
+                    idle.LeftArmRoll - leftFirePose * 5.5f - superWeight * 6.0f + hyperPulse * 2.0f);
             }
 
             if (_rightArm != null)
@@ -196,11 +203,11 @@ namespace MOBA.Core.Infrastructure
                 _rightArm.localPosition = _rightArmBasePosition +
                     Vector3.down * armRestDrop +
                     Vector3.back * (rightFirePose * 0.040f + Mathf.Max(0f, punchSwap) * bareHandPunch * 0.055f) +
-                    Vector3.up * (rightFirePose * 0.022f + readyRaise * 0.018f);
+                    Vector3.up * (rightFirePose * 0.022f + readyRaise * 0.018f + superWeight * 0.024f);
                 _rightArm.localRotation = _rightArmBaseRotation * Quaternion.Euler(
-                    strideSin * armSwing - recoil - rightFirePose * 22f - readyRaise * 12f - Mathf.Max(0f, punchSwap) * bareHandPunch * 22f + idle.RightArmPitch,
-                    idle.RightArmYaw - rightFirePose * 3.5f + aimYaw * 0.18f,
-                    idle.RightArmRoll + rightFirePose * 6.0f);
+                    strideSin * armSwing - recoil - rightFirePose * 22f - readyRaise * 12f - superWeight * 20f - Mathf.Max(0f, punchSwap) * bareHandPunch * 22f + idle.RightArmPitch,
+                    idle.RightArmYaw - rightFirePose * 3.5f + aimYaw * 0.18f - gadgetWeight * 3.0f,
+                    idle.RightArmRoll + rightFirePose * 6.0f + superWeight * 7.0f - hyperPulse * 2.0f);
             }
 
             if (_leftLeg != null)
@@ -243,22 +250,22 @@ namespace MOBA.Core.Infrastructure
             {
                 _leftWeapon.localPosition = _leftWeaponBasePosition +
                     Vector3.back * (leftFirePose * 0.020f) +
-                    Vector3.up * (readyRaise * 0.012f);
+                    Vector3.up * (readyRaise * 0.012f + superWeight * 0.012f);
                 _leftWeapon.localRotation = _leftWeaponBaseRotation * Quaternion.Euler(
-                    -leftFirePose * 18f - superWeight * 10f + idle.LeftWeaponPitch,
+                    -leftFirePose * 18f - superWeight * 18f + idle.LeftWeaponPitch,
                     idle.LeftWeaponYaw + leftFirePose * 2.5f + aimYaw * 0.20f,
-                    idle.LeftWeaponRoll - leftFirePose * 3.5f);
+                    idle.LeftWeaponRoll - leftFirePose * 3.5f - superWeight * 5.0f);
             }
 
             if (_rightWeapon != null)
             {
                 _rightWeapon.localPosition = _rightWeaponBasePosition +
                     Vector3.back * (rightFirePose * 0.026f) +
-                    Vector3.up * (readyRaise * 0.014f);
+                    Vector3.up * (readyRaise * 0.014f + superWeight * 0.014f);
                 _rightWeapon.localRotation = _rightWeaponBaseRotation * Quaternion.Euler(
-                    -rightFirePose * 18f - superWeight * 10f + idle.RightWeaponPitch,
+                    -rightFirePose * 18f - superWeight * 18f + idle.RightWeaponPitch,
                     idle.RightWeaponYaw - rightFirePose * 2.5f + aimYaw * 0.20f,
-                    idle.RightWeaponRoll + rightFirePose * 3.5f);
+                    idle.RightWeaponRoll + rightFirePose * 3.5f + superWeight * 5.0f);
             }
         }
 
