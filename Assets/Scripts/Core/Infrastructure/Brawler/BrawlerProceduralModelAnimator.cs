@@ -30,6 +30,8 @@ namespace MOBA.Core.Infrastructure
         private Vector3 _rightLegBasePosition;
         private Vector3 _leftFootBasePosition;
         private Vector3 _rightFootBasePosition;
+        private Vector3 _leftWeaponBasePosition;
+        private Vector3 _rightWeaponBasePosition;
         private Quaternion _bodyBaseRotation;
         private Quaternion _torsoBaseRotation;
         private Quaternion _headBaseRotation;
@@ -124,6 +126,7 @@ namespace MOBA.Core.Infrastructure
             float strafe01 = Mathf.Abs(lateralMove) * move01;
             float directionalLean = lean * Mathf.Lerp(-0.35f, 1f, forwardBias01);
             float lateralLean = lateralMove * move01 * Mathf.Lerp(2.8f, 6.5f, run01) * _lateralLeanScale;
+            float aimYaw = ResolveAimYaw();
             float attackWeight = _runtime != null ? _runtime.MainAttackWeight : 0f;
             float superWeight = _runtime != null ? _runtime.SuperWeight : 0f;
             float hitWeight = _runtime != null ? _runtime.HitReactWeight : 0f;
@@ -138,19 +141,19 @@ namespace MOBA.Core.Infrastructure
             _bodyRoot.localPosition = _bodyBasePosition + Vector3.up * (bob + idle.BodyLift - deathWeight * 0.035f);
             _bodyRoot.localRotation = _bodyBaseRotation * Quaternion.Euler(
                 directionalLean + idle.BodyPitch + deathWeight * 5.0f - backpedal01 * 2.0f,
-                idle.BodyYaw + lateralMove * move01 * 3.0f - hitWeight * 3.0f,
+                idle.BodyYaw + lateralMove * move01 * 3.0f + aimYaw * 0.22f - hitWeight * 3.0f,
                 strideCos * move01 * Mathf.Lerp(1.2f, 3.2f, run01) + idle.BodyRoll - hitWeight * 6.0f - lateralLean);
 
             if (_torso != null)
                 _torso.localRotation = _torsoBaseRotation * Quaternion.Euler(
                     -directionalLean * 0.45f + idle.TorsoPitch + hitWeight * 4.0f + deathWeight * 8.0f,
-                    idle.TorsoYaw + lateralMove * move01 * 4.0f,
+                    idle.TorsoYaw + lateralMove * move01 * 4.0f + aimYaw * 0.58f,
                     -strideCos * move01 * Mathf.Lerp(1.4f, 3.5f, run01) + idle.TorsoRoll - lateralLean * 0.45f);
 
             if (_head != null)
                 _head.localRotation = _headBaseRotation * Quaternion.Euler(
                     -attackWeight * 2.5f + idle.HeadPitch + hitWeight * 3.0f,
-                    idle.HeadYaw,
+                    idle.HeadYaw + aimYaw * 0.72f,
                     strideCos * Mathf.Lerp(0.6f, 1.5f, run01) + idle.HeadRoll);
 
             bool hasLeftWeapon = _leftWeapon != null;
@@ -160,11 +163,14 @@ namespace MOBA.Core.Infrastructure
             float rightFireWeight = hasRightWeapon || !hasAnyWeapon ? 1f : 0.45f;
             float leftFirePose = fireKick * leftFireWeight;
             float rightFirePose = fireKick * rightFireWeight;
+            float readyRaise = Mathf.Clamp01(fireKick * 1.2f + superWeight * 0.4f);
+            float bareHandPunch = !hasAnyWeapon ? attackKick : 0f;
+            float punchSwap = Mathf.Sin((_poseTime * 23f) + _gaitPhaseOffset) >= 0f ? 1f : -1f;
             float armSwing = Mathf.Lerp(2.2f, 6.5f, run01) * move01 * _gaitAmplitudeScale * Mathf.Lerp(1f, 0.72f, strafe01);
             float legSwing = Mathf.Lerp(14f, 40f, run01) * move01 * _gaitAmplitudeScale * Mathf.Lerp(0.72f, 1.08f, forwardBias01);
             float recoil = (attackWeight * 26f) + (superWeight * 42f);
             float supportRecoil = recoil * 0.55f;
-            float armRestDrop = (1f - Mathf.Clamp01(fireKick)) * Mathf.Lerp(0.055f, 0.035f, run01);
+            float armRestDrop = Mathf.Lerp(0.080f, 0.018f, Mathf.Clamp01(readyRaise + run01 * 0.20f));
             float legStrideOffset = Mathf.Lerp(0.018f, 0.105f, run01) * move01 * _gaitAmplitudeScale * _strideLengthScale;
             float legLift = Mathf.Lerp(0.010f, 0.080f, run01) * move01 * _gaitAmplitudeScale * _footLiftScale;
             float footPitch = Mathf.Lerp(5f, 17f, run01) * move01 * _gaitAmplitudeScale;
@@ -177,11 +183,11 @@ namespace MOBA.Core.Infrastructure
             {
                 _leftArm.localPosition = _leftArmBasePosition +
                     Vector3.down * armRestDrop +
-                    Vector3.back * (leftFirePose * 0.030f) +
-                    Vector3.up * (leftFirePose * 0.018f);
+                    Vector3.back * (leftFirePose * 0.030f + Mathf.Max(0f, -punchSwap) * bareHandPunch * 0.045f) +
+                    Vector3.up * (leftFirePose * 0.018f + readyRaise * 0.016f);
                 _leftArm.localRotation = _leftArmBaseRotation * Quaternion.Euler(
-                    -strideSin * armSwing - supportRecoil - leftFirePose * 18f + idle.LeftArmPitch,
-                    idle.LeftArmYaw + leftFirePose * 2.5f,
+                    -strideSin * armSwing - supportRecoil - leftFirePose * 18f - readyRaise * 10f - Mathf.Max(0f, -punchSwap) * bareHandPunch * 18f + idle.LeftArmPitch,
+                    idle.LeftArmYaw + leftFirePose * 2.5f + aimYaw * 0.16f,
                     idle.LeftArmRoll - leftFirePose * 5.5f);
             }
 
@@ -189,11 +195,11 @@ namespace MOBA.Core.Infrastructure
             {
                 _rightArm.localPosition = _rightArmBasePosition +
                     Vector3.down * armRestDrop +
-                    Vector3.back * (rightFirePose * 0.040f) +
-                    Vector3.up * (rightFirePose * 0.022f);
+                    Vector3.back * (rightFirePose * 0.040f + Mathf.Max(0f, punchSwap) * bareHandPunch * 0.055f) +
+                    Vector3.up * (rightFirePose * 0.022f + readyRaise * 0.018f);
                 _rightArm.localRotation = _rightArmBaseRotation * Quaternion.Euler(
-                    strideSin * armSwing - recoil - rightFirePose * 22f + idle.RightArmPitch,
-                    idle.RightArmYaw - rightFirePose * 3.5f,
+                    strideSin * armSwing - recoil - rightFirePose * 22f - readyRaise * 12f - Mathf.Max(0f, punchSwap) * bareHandPunch * 22f + idle.RightArmPitch,
+                    idle.RightArmYaw - rightFirePose * 3.5f + aimYaw * 0.18f,
                     idle.RightArmRoll + rightFirePose * 6.0f);
             }
 
@@ -234,16 +240,52 @@ namespace MOBA.Core.Infrastructure
             }
 
             if (_leftWeapon != null)
+            {
+                _leftWeapon.localPosition = _leftWeaponBasePosition +
+                    Vector3.back * (leftFirePose * 0.020f) +
+                    Vector3.up * (readyRaise * 0.012f);
                 _leftWeapon.localRotation = _leftWeaponBaseRotation * Quaternion.Euler(
                     -leftFirePose * 18f - superWeight * 10f + idle.LeftWeaponPitch,
-                    idle.LeftWeaponYaw + leftFirePose * 2.5f,
+                    idle.LeftWeaponYaw + leftFirePose * 2.5f + aimYaw * 0.20f,
                     idle.LeftWeaponRoll - leftFirePose * 3.5f);
+            }
 
             if (_rightWeapon != null)
+            {
+                _rightWeapon.localPosition = _rightWeaponBasePosition +
+                    Vector3.back * (rightFirePose * 0.026f) +
+                    Vector3.up * (readyRaise * 0.014f);
                 _rightWeapon.localRotation = _rightWeaponBaseRotation * Quaternion.Euler(
                     -rightFirePose * 18f - superWeight * 10f + idle.RightWeaponPitch,
-                    idle.RightWeaponYaw - rightFirePose * 2.5f,
+                    idle.RightWeaponYaw - rightFirePose * 2.5f + aimYaw * 0.20f,
                     idle.RightWeaponRoll + rightFirePose * 3.5f);
+            }
+        }
+
+        private float ResolveAimYaw()
+        {
+            if (_runtime == null)
+                return 0f;
+
+            Vector3 facing = _runtime.FacingDirection;
+            Vector3 aim = _runtime.AimDirection;
+            facing.y = 0f;
+            aim.y = 0f;
+
+            if (facing.sqrMagnitude <= 0.001f || aim.sqrMagnitude <= 0.001f)
+                return 0f;
+
+            facing.Normalize();
+            aim.Normalize();
+            Vector3 right = Vector3.Cross(Vector3.up, facing);
+            if (right.sqrMagnitude <= 0.001f)
+                return 0f;
+
+            right.Normalize();
+            float side = Mathf.Clamp(Vector3.Dot(right, aim), -1f, 1f);
+            float forward = Mathf.Clamp(Vector3.Dot(facing, aim), -1f, 1f);
+            float yaw = Mathf.Atan2(side, forward) * Mathf.Rad2Deg;
+            return Mathf.Clamp(yaw, -34f, 34f);
         }
 
         private IdlePose BuildIdlePose(float move01, float actionWeight)
@@ -412,9 +454,15 @@ namespace MOBA.Core.Infrastructure
                 _rightFootBaseRotation = _rightFoot.localRotation;
             }
             if (_leftWeapon != null)
+            {
+                _leftWeaponBasePosition = _leftWeapon.localPosition;
                 _leftWeaponBaseRotation = _leftWeapon.localRotation;
+            }
             if (_rightWeapon != null)
+            {
+                _rightWeaponBasePosition = _rightWeapon.localPosition;
                 _rightWeaponBaseRotation = _rightWeapon.localRotation;
+            }
         }
 
         private struct IdlePose

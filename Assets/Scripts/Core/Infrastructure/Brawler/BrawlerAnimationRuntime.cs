@@ -50,6 +50,8 @@ namespace MOBA.Core.Infrastructure
         private Vector3 _moveDirection = Vector3.forward;
         private Vector3 _facingDirection = Vector3.forward;
         private Vector3 _aimDirection = Vector3.forward;
+        private Vector3 _eventAimDirection = Vector3.forward;
+        private float _eventAimHoldSeconds;
         private bool _hyperchargeActive;
         private int _lastTickFrame = -1;
 
@@ -179,6 +181,7 @@ namespace MOBA.Core.Infrastructure
             IsMoving = Speed > MoveDeadZone;
 
             RefreshDirections(velocity);
+            RefreshAimDirection(deltaTime);
             UpdateStride(deltaTime);
             DecayWeights(deltaTime);
             DriveAnimatorParameters();
@@ -223,8 +226,6 @@ namespace MOBA.Core.Infrastructure
             if (facing.sqrMagnitude > 0.001f)
                 _facingDirection = facing.normalized;
 
-            _aimDirection = _facingDirection;
-
             if (!IsMoving)
             {
                 ForwardMove = 0f;
@@ -239,6 +240,18 @@ namespace MOBA.Core.Infrastructure
             right.Normalize();
             ForwardMove = Mathf.Clamp(Vector3.Dot(_facingDirection, _moveDirection), -1f, 1f);
             LateralMove = Mathf.Clamp(Vector3.Dot(right, _moveDirection), -1f, 1f);
+        }
+
+        private void RefreshAimDirection(float deltaTime)
+        {
+            if (_eventAimHoldSeconds > 0f)
+            {
+                _eventAimHoldSeconds = Mathf.Max(0f, _eventAimHoldSeconds - deltaTime);
+                _aimDirection = Vector3.Slerp(_aimDirection, _eventAimDirection, Mathf.Clamp01(deltaTime * 22f));
+                return;
+            }
+
+            _aimDirection = Vector3.Slerp(_aimDirection, _facingDirection, Mathf.Clamp01(deltaTime * 12f));
         }
 
         private void UpdateStride(float deltaTime)
@@ -275,6 +288,7 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             _debugLastEvent = evt.EventType.ToString();
+            CaptureAimDirection(evt.Direction);
 
             switch (evt.EventType)
             {
@@ -338,9 +352,20 @@ namespace MOBA.Core.Infrastructure
                 case CombatPresentationEventType.AbilityCastStarted:
                 case CombatPresentationEventType.AbilityCastSucceeded:
                 case CombatPresentationEventType.ProjectileSpawned:
+                    CaptureAimDirection(evt.Direction);
                     PulseAbilitySlot(evt.SlotType, evt.IsSuper);
                     break;
             }
+        }
+
+        private void CaptureAimDirection(Vector3 direction)
+        {
+            direction.y = 0f;
+            if (direction.sqrMagnitude <= 0.001f)
+                return;
+
+            _eventAimDirection = direction.normalized;
+            _eventAimHoldSeconds = 0.22f;
         }
 
         private void HandleTargetCombatEvent(CombatPresentationEvent evt)
