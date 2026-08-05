@@ -23,8 +23,13 @@ namespace MOBA.Core.Infrastructure
             {
                 instance = Object.Instantiate(definition.ModelPrefab, parent);
                 instance.name = ResolveInstanceName(definition, "Authored");
-                PrepareAuthoredModel(instance, parent, definition, owner);
-                return true;
+                if (PrepareAuthoredModel(instance, parent, definition, owner))
+                    return true;
+
+                Debug.LogWarning(
+                    $"[BrawlerVisualModelFactory] Authored model '{definition.ModelPrefab.name}' for '{ResolveBrawlerName(definition)}' has no usable body renderers. Falling back to the procedural model. Check that Git LFS model files are downloaded.");
+                DestroyRuntimeObject(instance);
+                instance = null;
             }
 
             if (!ProceduralBrawlerModelFactory.TryCreate(definition, parent, owner, out instance))
@@ -35,7 +40,7 @@ namespace MOBA.Core.Infrastructure
             return true;
         }
 
-        private static void PrepareAuthoredModel(
+        private static bool PrepareAuthoredModel(
             GameObject instance,
             Transform parent,
             BrawlerDefinition definition,
@@ -50,8 +55,13 @@ namespace MOBA.Core.Infrastructure
             ConfigureLayer(instance, parent.gameObject.layer);
             RemovePhysicsComponents(instance);
             AlignModelForward(instance);
+
+            if (!HasUsableRendererBounds(instance))
+                return false;
+
             NormalizeScaleAndGrounding(instance, parent, definition);
             PrepareAttachmentPresentation(instance, definition, owner, installAttachmentProfile: true);
+            return true;
         }
 
         private static void AlignModelForward(GameObject instance)
@@ -191,6 +201,25 @@ namespace MOBA.Core.Infrastructure
             }
 
             return hasBounds;
+        }
+
+        private static bool HasUsableRendererBounds(GameObject root)
+        {
+            if (!TryCalculateRendererBounds(root, out Bounds bounds))
+                return false;
+
+            return bounds.size.sqrMagnitude > 0.0001f;
+        }
+
+        private static void DestroyRuntimeObject(GameObject instance)
+        {
+            if (instance == null)
+                return;
+
+            if (Application.isPlaying)
+                Object.Destroy(instance);
+            else
+                Object.DestroyImmediate(instance);
         }
 
         private static void RemovePhysicsComponents(GameObject instance)
