@@ -19,10 +19,10 @@ MonoBehaviour:
     GeneratedAttachment: 7
     LocalPositionOffset: {x: 0.015, y: -0.035, z: 0.03}
     LocalEulerOffset: {x: 90, y: 0, z: -8}
-    LocalScale: {x: 0.32, y: 0.32, z: 0.32}
+    LocalScale: {x: 0.44, y: 0.44, z: 0.44}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1
     UseAsSecondaryFirePoint: 0
     UseAsCastPoint: 1
-    PresentationAnchorLocalOffset: {x: 0, y: 0.31, z: 0}
+    PresentationAnchorLocalOffset: {x: 0, y: 0.42, z: 0}

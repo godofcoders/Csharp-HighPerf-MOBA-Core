@@ -53,7 +53,7 @@ namespace MOBA.Core.Infrastructure
                     ? GetOrCreateSocket(
                         rightHand,
                         "Weapon_Main",
-                        Vector3.zero,
+                        ResolveHandSocketLocalPosition(rightHand, weaponSocketRotation, side: 1f),
                         Quaternion.Inverse(rightHand.rotation) * weaponSocketRotation,
                         forceTransform: true)
                     : FindFirst(visualRoot.transform, "Weapon_Main", "PrimaryWeapon") ??
@@ -63,7 +63,7 @@ namespace MOBA.Core.Infrastructure
                     ? GetOrCreateSocket(
                         leftHand,
                         "Weapon_Offhand",
-                        Vector3.zero,
+                        ResolveHandSocketLocalPosition(leftHand, weaponSocketRotation, side: -1f),
                         Quaternion.Inverse(leftHand.rotation) * weaponSocketRotation,
                         forceTransform: true)
                     : FindFirst(visualRoot.transform, "Weapon_Offhand", "SecondaryWeapon") ??
@@ -256,6 +256,23 @@ namespace MOBA.Core.Infrastructure
                 forward = Vector3.forward;
 
             return Quaternion.LookRotation(forward.normalized, Vector3.up);
+        }
+
+        private static Vector3 ResolveHandSocketLocalPosition(
+            Transform hand,
+            Quaternion weaponSocketRotation,
+            float side)
+        {
+            Vector3 forward = weaponSocketRotation * Vector3.forward;
+            Vector3 right = weaponSocketRotation * Vector3.right;
+            Vector3 up = Vector3.up;
+            Vector3 worldPosition =
+                hand.position +
+                forward * 0.075f +
+                right * side * 0.018f -
+                up * 0.025f;
+
+            return hand.InverseTransformPoint(worldPosition);
         }
 
         private static Transform FindFirst(Transform root, params string[] names)
