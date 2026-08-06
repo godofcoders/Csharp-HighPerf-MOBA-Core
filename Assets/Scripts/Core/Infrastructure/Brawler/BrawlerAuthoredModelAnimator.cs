@@ -12,6 +12,11 @@ namespace MOBA.Core.Infrastructure
     public sealed class BrawlerAuthoredModelAnimator : MonoBehaviour
     {
         private const int FingerBoneCount = 15;
+        private const float GripIdleHold = 0.88f;
+        private const float GripActionBoost = 0.12f;
+
+        private static readonly HumanoidGripMuscleMap GripMuscles =
+            HumanoidGripMuscleMap.Build();
 
         private static readonly HumanBodyBones[] LeftFingerBoneMap =
         {
@@ -59,6 +64,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerAttachmentGripPose _gripPose =
             BrawlerAttachmentGripPose.Auto;
         [SerializeField, Range(0f, 1f)] private float _gripPoseWeight = 1f;
+        [SerializeField] private bool _debugUsingHumanoidGripMuscles;
 
         private Transform _hips;
         private Transform _spine;
@@ -99,6 +105,8 @@ namespace MOBA.Core.Infrastructure
         private Quaternion _rightLowerLegBase;
         private Quaternion _rightFootBase;
         private bool _hasBasePose;
+        private HumanPoseHandler _humanPoseHandler;
+        private HumanPose _humanPose;
 
         public static BrawlerAuthoredModelAnimator Ensure(
             GameObject root,
@@ -134,6 +142,7 @@ namespace MOBA.Core.Infrastructure
             _animator = animator != null ? animator : GetComponentInChildren<Animator>(true);
             _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
             RefreshGripProfile();
+            RefreshHumanPoseHandler();
             CacheBones();
             CaptureBasePose();
         }
@@ -153,6 +162,7 @@ namespace MOBA.Core.Infrastructure
                 _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
 
             RefreshGripProfile();
+            RefreshHumanPoseHandler();
             CacheBones();
             CaptureBasePose();
         }
@@ -321,7 +331,7 @@ namespace MOBA.Core.Infrastructure
 
             PoseLeg(_rightUpperLeg, _rightLowerLeg, _rightFoot, strideSin, move01, run01, forward, up, weight);
             PoseLeg(_leftUpperLeg, _leftLowerLeg, _leftFoot, -strideSin, move01, run01, forward, up, weight);
-            PoseHandsForGrip(gripPose, ready, attack, super, weight);
+            PoseHandsForGrip(gripPose, attack, super, weight);
         }
 
         private void PoseArm(
@@ -374,51 +384,212 @@ namespace MOBA.Core.Infrastructure
 
         private void PoseHandsForGrip(
             BrawlerAttachmentGripPose gripPose,
-            float ready,
             float attack,
             float super,
             float weight)
         {
             float poseWeight = weight * Mathf.Clamp01(_gripPoseWeight);
+            _debugUsingHumanoidGripMuscles = false;
+
             if (poseWeight <= 0f)
                 return;
 
             float action = Mathf.Clamp01(attack + super);
-            float hold = Mathf.Clamp01(0.55f + ready * 0.35f + action * 0.25f);
+            float hold = Mathf.Clamp01(GripIdleHold + action * GripActionBoost);
 
             switch (gripPose)
             {
                 case BrawlerAttachmentGripPose.Sidearm:
-                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.95f, 0.65f, 1f, hold, poseWeight);
+                    PoseGripHands(
+                        rightFingerCurl: 1f,
+                        rightThumbCurl: 0.72f,
+                        leftFingerCurl: 0f,
+                        leftThumbCurl: 0f,
+                        hold,
+                        poseWeight);
                     break;
 
                 case BrawlerAttachmentGripPose.DualSidearm:
-                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.95f, 0.65f, 1f, hold, poseWeight);
-                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.95f, 0.65f, -1f, hold, poseWeight);
+                    PoseGripHands(
+                        rightFingerCurl: 1f,
+                        rightThumbCurl: 0.72f,
+                        leftFingerCurl: 1f,
+                        leftThumbCurl: 0.72f,
+                        hold,
+                        poseWeight);
                     break;
 
                 case BrawlerAttachmentGripPose.LongGun:
-                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.95f, 0.70f, 1f, hold, poseWeight);
-                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.45f, 0.30f, -1f, hold * (0.4f + action * 0.6f), poseWeight);
+                    PoseGripHands(
+                        rightFingerCurl: 1f,
+                        rightThumbCurl: 0.76f,
+                        leftFingerCurl: 0.62f,
+                        leftThumbCurl: 0.48f,
+                        hold,
+                        poseWeight);
                     break;
 
                 case BrawlerAttachmentGripPose.LongTool:
                 case BrawlerAttachmentGripPose.Bottle:
                 case BrawlerAttachmentGripPose.Umbrella:
-                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.9f, 0.55f, 1f, hold, poseWeight);
-                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.22f, 0.15f, -1f, action, poseWeight);
+                    PoseGripHands(
+                        rightFingerCurl: 0.96f,
+                        rightThumbCurl: 0.68f,
+                        leftFingerCurl: 0.12f,
+                        leftThumbCurl: 0.08f,
+                        hold,
+                        poseWeight);
                     break;
 
                 case BrawlerAttachmentGripPose.Bow:
-                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.75f, 0.35f, 1f, hold, poseWeight);
-                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.55f, 0.35f, -1f, Mathf.Clamp01(hold + action * 0.3f), poseWeight);
+                    PoseGripHands(
+                        rightFingerCurl: 0.82f,
+                        rightThumbCurl: 0.50f,
+                        leftFingerCurl: 0.66f,
+                        leftThumbCurl: 0.42f,
+                        hold,
+                        poseWeight);
                     break;
 
                 case BrawlerAttachmentGripPose.ThrowingStars:
-                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.55f, 0.85f, 1f, hold, poseWeight);
-                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.28f, 0.35f, -1f, action, poseWeight);
+                    PoseGripHands(
+                        rightFingerCurl: 0.62f,
+                        rightThumbCurl: 0.90f,
+                        leftFingerCurl: 0.18f,
+                        leftThumbCurl: 0.20f,
+                        hold,
+                        poseWeight);
                     break;
             }
+        }
+
+        private void PoseGripHands(
+            float rightFingerCurl,
+            float rightThumbCurl,
+            float leftFingerCurl,
+            float leftThumbCurl,
+            float hold,
+            float poseWeight)
+        {
+            if (ApplyHumanoidGripMuscles(
+                    rightFingerCurl,
+                    rightThumbCurl,
+                    leftFingerCurl,
+                    leftThumbCurl,
+                    hold,
+                    poseWeight))
+            {
+                _debugUsingHumanoidGripMuscles = true;
+                return;
+            }
+
+            PoseGripHand(
+                _rightHand,
+                _rightFingerBones,
+                _rightFingerBase,
+                rightFingerCurl,
+                rightThumbCurl,
+                1f,
+                hold,
+                poseWeight);
+            PoseGripHand(
+                _leftHand,
+                _leftFingerBones,
+                _leftFingerBase,
+                leftFingerCurl,
+                leftThumbCurl,
+                -1f,
+                hold,
+                poseWeight);
+        }
+
+        private bool ApplyHumanoidGripMuscles(
+            float rightFingerCurl,
+            float rightThumbCurl,
+            float leftFingerCurl,
+            float leftThumbCurl,
+            float hold,
+            float poseWeight)
+        {
+            if (_humanPoseHandler == null || !GripMuscles.IsUsable)
+                return false;
+
+            _humanPoseHandler.GetHumanPose(ref _humanPose);
+            if (_humanPose.muscles == null || _humanPose.muscles.Length == 0)
+                return false;
+
+            float weight = Mathf.Clamp01(hold * poseWeight);
+            if (weight <= 0f)
+                return false;
+
+            ApplyHumanoidGripToHand(
+                _humanPose.muscles,
+                GripMuscles.Right,
+                rightFingerCurl,
+                rightThumbCurl,
+                weight);
+            ApplyHumanoidGripToHand(
+                _humanPose.muscles,
+                GripMuscles.Left,
+                leftFingerCurl,
+                leftThumbCurl,
+                weight);
+
+            _humanPoseHandler.SetHumanPose(ref _humanPose);
+            return true;
+        }
+
+        private static void ApplyHumanoidGripToHand(
+            float[] muscles,
+            HumanoidHandMuscles hand,
+            float fingerCurl,
+            float thumbCurl,
+            float weight)
+        {
+            if (muscles == null || !hand.IsUsable)
+                return;
+
+            BlendMuscle(muscles, hand.Thumb1, -0.72f * thumbCurl, weight);
+            BlendMuscle(muscles, hand.Thumb2, -0.82f * thumbCurl, weight);
+            BlendMuscle(muscles, hand.Thumb3, -0.76f * thumbCurl, weight);
+            BlendMuscle(muscles, hand.ThumbSpread, 0.36f * thumbCurl, weight);
+
+            BlendFinger(muscles, hand.Index1, hand.Index2, hand.Index3, fingerCurl, weight);
+            BlendFinger(muscles, hand.Middle1, hand.Middle2, hand.Middle3, fingerCurl, weight);
+            BlendFinger(muscles, hand.Ring1, hand.Ring2, hand.Ring3, fingerCurl * 0.94f, weight);
+            BlendFinger(muscles, hand.Little1, hand.Little2, hand.Little3, fingerCurl * 0.88f, weight);
+            BlendMuscle(muscles, hand.IndexSpread, -0.18f * fingerCurl, weight);
+            BlendMuscle(muscles, hand.MiddleSpread, -0.08f * fingerCurl, weight);
+            BlendMuscle(muscles, hand.RingSpread, 0.08f * fingerCurl, weight);
+            BlendMuscle(muscles, hand.LittleSpread, 0.18f * fingerCurl, weight);
+        }
+
+        private static void BlendFinger(
+            float[] muscles,
+            int proximal,
+            int intermediate,
+            int distal,
+            float curl,
+            float weight)
+        {
+            BlendMuscle(muscles, proximal, -0.92f * curl, weight);
+            BlendMuscle(muscles, intermediate, -1f * curl, weight);
+            BlendMuscle(muscles, distal, -0.86f * curl, weight);
+        }
+
+        private static void BlendMuscle(
+            float[] muscles,
+            int index,
+            float target,
+            float weight)
+        {
+            if (muscles == null || index < 0 || index >= muscles.Length)
+                return;
+
+            muscles[index] = Mathf.Lerp(
+                muscles[index],
+                Mathf.Clamp(target, -1f, 1f),
+                Mathf.Clamp01(weight));
         }
 
         private static void PoseGripHand(
@@ -536,6 +707,32 @@ namespace MOBA.Core.Infrastructure
 
             _gripPose = profile.GripPose;
             _gripPoseWeight = Mathf.Clamp01(profile.GripPoseWeight);
+        }
+
+        private void RefreshHumanPoseHandler()
+        {
+            _humanPoseHandler = null;
+            _humanPose = default;
+
+            if (_animator == null ||
+                !_animator.isHuman ||
+                _animator.avatar == null ||
+                !_animator.avatar.isValid ||
+                !_animator.avatar.isHuman)
+            {
+                return;
+            }
+
+            try
+            {
+                _humanPoseHandler = new HumanPoseHandler(
+                    _animator.avatar,
+                    _animator.transform);
+            }
+            catch (System.Exception)
+            {
+                _humanPoseHandler = null;
+            }
         }
 
         private BrawlerAttachmentGripPose ResolveGripPose()
@@ -676,6 +873,163 @@ namespace MOBA.Core.Infrastructure
                 baseRotation * Quaternion.Euler(pitch, yaw, roll);
             bone.localRotation =
                 Quaternion.Slerp(baseRotation, target, Mathf.Clamp01(weight));
+        }
+
+        private readonly struct HumanoidGripMuscleMap
+        {
+            public readonly HumanoidHandMuscles Left;
+            public readonly HumanoidHandMuscles Right;
+
+            public bool IsUsable => Left.IsUsable || Right.IsUsable;
+
+            private HumanoidGripMuscleMap(
+                HumanoidHandMuscles left,
+                HumanoidHandMuscles right)
+            {
+                Left = left;
+                Right = right;
+            }
+
+            public static HumanoidGripMuscleMap Build()
+            {
+                return new HumanoidGripMuscleMap(
+                    HumanoidHandMuscles.Build("Left"),
+                    HumanoidHandMuscles.Build("Right"));
+            }
+        }
+
+        private readonly struct HumanoidHandMuscles
+        {
+            public readonly int Thumb1;
+            public readonly int Thumb2;
+            public readonly int Thumb3;
+            public readonly int ThumbSpread;
+            public readonly int Index1;
+            public readonly int Index2;
+            public readonly int Index3;
+            public readonly int IndexSpread;
+            public readonly int Middle1;
+            public readonly int Middle2;
+            public readonly int Middle3;
+            public readonly int MiddleSpread;
+            public readonly int Ring1;
+            public readonly int Ring2;
+            public readonly int Ring3;
+            public readonly int RingSpread;
+            public readonly int Little1;
+            public readonly int Little2;
+            public readonly int Little3;
+            public readonly int LittleSpread;
+
+            public bool IsUsable =>
+                Index1 >= 0 ||
+                Middle1 >= 0 ||
+                Ring1 >= 0 ||
+                Little1 >= 0 ||
+                Thumb1 >= 0;
+
+            private HumanoidHandMuscles(
+                int thumb1,
+                int thumb2,
+                int thumb3,
+                int thumbSpread,
+                int index1,
+                int index2,
+                int index3,
+                int indexSpread,
+                int middle1,
+                int middle2,
+                int middle3,
+                int middleSpread,
+                int ring1,
+                int ring2,
+                int ring3,
+                int ringSpread,
+                int little1,
+                int little2,
+                int little3,
+                int littleSpread)
+            {
+                Thumb1 = thumb1;
+                Thumb2 = thumb2;
+                Thumb3 = thumb3;
+                ThumbSpread = thumbSpread;
+                Index1 = index1;
+                Index2 = index2;
+                Index3 = index3;
+                IndexSpread = indexSpread;
+                Middle1 = middle1;
+                Middle2 = middle2;
+                Middle3 = middle3;
+                MiddleSpread = middleSpread;
+                Ring1 = ring1;
+                Ring2 = ring2;
+                Ring3 = ring3;
+                RingSpread = ringSpread;
+                Little1 = little1;
+                Little2 = little2;
+                Little3 = little3;
+                LittleSpread = littleSpread;
+            }
+
+            public static HumanoidHandMuscles Build(string side)
+            {
+                return new HumanoidHandMuscles(
+                    FindMuscle(side, "thumb", "1", "stretched"),
+                    FindMuscle(side, "thumb", "2", "stretched"),
+                    FindMuscle(side, "thumb", "3", "stretched"),
+                    FindMuscle(side, "thumb", "spread"),
+                    FindMuscle(side, "index", "1", "stretched"),
+                    FindMuscle(side, "index", "2", "stretched"),
+                    FindMuscle(side, "index", "3", "stretched"),
+                    FindMuscle(side, "index", "spread"),
+                    FindMuscle(side, "middle", "1", "stretched"),
+                    FindMuscle(side, "middle", "2", "stretched"),
+                    FindMuscle(side, "middle", "3", "stretched"),
+                    FindMuscle(side, "middle", "spread"),
+                    FindMuscle(side, "ring", "1", "stretched"),
+                    FindMuscle(side, "ring", "2", "stretched"),
+                    FindMuscle(side, "ring", "3", "stretched"),
+                    FindMuscle(side, "ring", "spread"),
+                    FindMuscle(side, "little", "1", "stretched"),
+                    FindMuscle(side, "little", "2", "stretched"),
+                    FindMuscle(side, "little", "3", "stretched"),
+                    FindMuscle(side, "little", "spread"));
+            }
+        }
+
+        private static int FindMuscle(params string[] tokens)
+        {
+            string[] muscleNames = HumanTrait.MuscleName;
+            if (muscleNames == null || tokens == null)
+                return -1;
+
+            for (int i = 0; i < muscleNames.Length; i++)
+            {
+                string muscleName = muscleNames[i];
+                if (string.IsNullOrEmpty(muscleName))
+                    continue;
+
+                string normalizedName = muscleName.ToLowerInvariant();
+                bool matches = true;
+                for (int tokenIndex = 0; tokenIndex < tokens.Length; tokenIndex++)
+                {
+                    string token = tokens[tokenIndex];
+                    if (string.IsNullOrEmpty(token))
+                        continue;
+
+                    if (!normalizedName.Contains(token.ToLowerInvariant()))
+                    {
+                        matches = false;
+                        break;
+                    }
+                }
+
+                if (matches)
+                    return i;
+            }
+
+            return -1;
         }
     }
 }
