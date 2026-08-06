@@ -1,3 +1,4 @@
+using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
 using UnityEngine;
 
@@ -10,10 +11,54 @@ namespace MOBA.Core.Infrastructure
     [DisallowMultipleComponent]
     public sealed class BrawlerAuthoredModelAnimator : MonoBehaviour
     {
+        private const int FingerBoneCount = 15;
+
+        private static readonly HumanBodyBones[] LeftFingerBoneMap =
+        {
+            HumanBodyBones.LeftThumbProximal,
+            HumanBodyBones.LeftThumbIntermediate,
+            HumanBodyBones.LeftThumbDistal,
+            HumanBodyBones.LeftIndexProximal,
+            HumanBodyBones.LeftIndexIntermediate,
+            HumanBodyBones.LeftIndexDistal,
+            HumanBodyBones.LeftMiddleProximal,
+            HumanBodyBones.LeftMiddleIntermediate,
+            HumanBodyBones.LeftMiddleDistal,
+            HumanBodyBones.LeftRingProximal,
+            HumanBodyBones.LeftRingIntermediate,
+            HumanBodyBones.LeftRingDistal,
+            HumanBodyBones.LeftLittleProximal,
+            HumanBodyBones.LeftLittleIntermediate,
+            HumanBodyBones.LeftLittleDistal
+        };
+
+        private static readonly HumanBodyBones[] RightFingerBoneMap =
+        {
+            HumanBodyBones.RightThumbProximal,
+            HumanBodyBones.RightThumbIntermediate,
+            HumanBodyBones.RightThumbDistal,
+            HumanBodyBones.RightIndexProximal,
+            HumanBodyBones.RightIndexIntermediate,
+            HumanBodyBones.RightIndexDistal,
+            HumanBodyBones.RightMiddleProximal,
+            HumanBodyBones.RightMiddleIntermediate,
+            HumanBodyBones.RightMiddleDistal,
+            HumanBodyBones.RightRingProximal,
+            HumanBodyBones.RightRingIntermediate,
+            HumanBodyBones.RightRingDistal,
+            HumanBodyBones.RightLittleProximal,
+            HumanBodyBones.RightLittleIntermediate,
+            HumanBodyBones.RightLittleDistal
+        };
+
         [SerializeField] private BrawlerController _owner;
+        [SerializeField] private BrawlerDefinition _definition;
         [SerializeField] private Animator _animator;
         [SerializeField] private BrawlerAnimationRuntime _runtime;
         [SerializeField] private float _poseWeight = 1f;
+        [SerializeField] private BrawlerAttachmentGripPose _gripPose =
+            BrawlerAttachmentGripPose.Auto;
+        [SerializeField, Range(0f, 1f)] private float _gripPoseWeight = 1f;
 
         private Transform _hips;
         private Transform _spine;
@@ -31,6 +76,11 @@ namespace MOBA.Core.Infrastructure
         private Transform _rightUpperLeg;
         private Transform _rightLowerLeg;
         private Transform _rightFoot;
+
+        private readonly Transform[] _leftFingerBones = new Transform[FingerBoneCount];
+        private readonly Transform[] _rightFingerBones = new Transform[FingerBoneCount];
+        private readonly Quaternion[] _leftFingerBase = new Quaternion[FingerBoneCount];
+        private readonly Quaternion[] _rightFingerBase = new Quaternion[FingerBoneCount];
 
         private Quaternion _hipsBase;
         private Quaternion _spineBase;
@@ -50,7 +100,10 @@ namespace MOBA.Core.Infrastructure
         private Quaternion _rightFootBase;
         private bool _hasBasePose;
 
-        public static BrawlerAuthoredModelAnimator Ensure(GameObject root, BrawlerController owner)
+        public static BrawlerAuthoredModelAnimator Ensure(
+            GameObject root,
+            BrawlerController owner,
+            BrawlerDefinition definition = null)
         {
             if (root == null)
                 return null;
@@ -64,15 +117,23 @@ namespace MOBA.Core.Infrastructure
             if (pose == null)
                 pose = root.AddComponent<BrawlerAuthoredModelAnimator>();
 
-            pose.Bind(owner, animator);
+            pose.Bind(owner, animator, definition);
             return pose;
         }
 
-        public void Bind(BrawlerController owner, Animator animator)
+        public void Bind(
+            BrawlerController owner,
+            Animator animator,
+            BrawlerDefinition definition = null)
         {
             _owner = owner != null ? owner : GetComponentInParent<BrawlerController>();
+            _definition =
+                definition != null
+                    ? definition
+                    : (_owner != null ? _owner.Definition : _definition);
             _animator = animator != null ? animator : GetComponentInChildren<Animator>(true);
             _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
+            RefreshGripProfile();
             CacheBones();
             CaptureBasePose();
         }
@@ -85,9 +146,13 @@ namespace MOBA.Core.Infrastructure
             if (_owner == null)
                 _owner = GetComponentInParent<BrawlerController>();
 
+            if (_definition == null && _owner != null)
+                _definition = _owner.Definition;
+
             if (_runtime == null)
                 _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
 
+            RefreshGripProfile();
             CacheBones();
             CaptureBasePose();
         }
@@ -122,6 +187,9 @@ namespace MOBA.Core.Infrastructure
             _rightUpperLeg = Bone(HumanBodyBones.RightUpperLeg);
             _rightLowerLeg = Bone(HumanBodyBones.RightLowerLeg);
             _rightFoot = Bone(HumanBodyBones.RightFoot);
+
+            CacheFingerBones(_leftFingerBones, LeftFingerBoneMap);
+            CacheFingerBones(_rightFingerBones, RightFingerBoneMap);
         }
 
         private Transform Bone(HumanBodyBones bone)
@@ -152,6 +220,8 @@ namespace MOBA.Core.Infrastructure
             _rightUpperLegBase = LocalRotation(_rightUpperLeg);
             _rightLowerLegBase = LocalRotation(_rightLowerLeg);
             _rightFootBase = LocalRotation(_rightFoot);
+            CaptureFingerBasePose(_leftFingerBones, _leftFingerBase);
+            CaptureFingerBasePose(_rightFingerBones, _rightFingerBase);
             _hasBasePose = true;
         }
 
@@ -178,6 +248,8 @@ namespace MOBA.Core.Infrastructure
             SetLocalRotation(_rightUpperLeg, _rightUpperLegBase);
             SetLocalRotation(_rightLowerLeg, _rightLowerLegBase);
             SetLocalRotation(_rightFoot, _rightFootBase);
+            ResetFingerPose(_leftFingerBones, _leftFingerBase);
+            ResetFingerPose(_rightFingerBones, _rightFingerBase);
         }
 
         private static void SetLocalRotation(Transform bone, Quaternion rotation)
@@ -198,6 +270,10 @@ namespace MOBA.Core.Infrastructure
             float hit = _runtime != null ? _runtime.HitReactWeight : 0f;
             float hyper = _runtime != null ? _runtime.HyperchargeWeight : 0f;
             float ready = Mathf.Clamp01(0.35f + action * 0.9f + move01 * 0.25f);
+            BrawlerAttachmentGripPose gripPose = ResolveGripPose();
+            if (gripPose == BrawlerAttachmentGripPose.None)
+                ready = Mathf.Clamp01(action * 0.9f + move01 * 0.15f);
+
             float stride = time * Mathf.Lerp(5.5f, 10.5f, run01);
             float strideSin = Mathf.Sin(stride);
             float strideCos = Mathf.Cos(stride);
@@ -245,6 +321,7 @@ namespace MOBA.Core.Infrastructure
 
             PoseLeg(_rightUpperLeg, _rightLowerLeg, _rightFoot, strideSin, move01, run01, forward, up, weight);
             PoseLeg(_leftUpperLeg, _leftLowerLeg, _leftFoot, -strideSin, move01, run01, forward, up, weight);
+            PoseHandsForGrip(gripPose, ready, attack, super, weight);
         }
 
         private void PoseArm(
@@ -295,6 +372,115 @@ namespace MOBA.Core.Infrastructure
                 weight * Mathf.Clamp01(ready + attack + super));
         }
 
+        private void PoseHandsForGrip(
+            BrawlerAttachmentGripPose gripPose,
+            float ready,
+            float attack,
+            float super,
+            float weight)
+        {
+            float poseWeight = weight * Mathf.Clamp01(_gripPoseWeight);
+            if (poseWeight <= 0f)
+                return;
+
+            float action = Mathf.Clamp01(attack + super);
+            float hold = Mathf.Clamp01(0.55f + ready * 0.35f + action * 0.25f);
+
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Sidearm:
+                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.95f, 0.65f, 1f, hold, poseWeight);
+                    break;
+
+                case BrawlerAttachmentGripPose.DualSidearm:
+                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.95f, 0.65f, 1f, hold, poseWeight);
+                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.95f, 0.65f, -1f, hold, poseWeight);
+                    break;
+
+                case BrawlerAttachmentGripPose.LongGun:
+                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.95f, 0.70f, 1f, hold, poseWeight);
+                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.45f, 0.30f, -1f, hold * (0.4f + action * 0.6f), poseWeight);
+                    break;
+
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Bottle:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.9f, 0.55f, 1f, hold, poseWeight);
+                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.22f, 0.15f, -1f, action, poseWeight);
+                    break;
+
+                case BrawlerAttachmentGripPose.Bow:
+                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.75f, 0.35f, 1f, hold, poseWeight);
+                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.55f, 0.35f, -1f, Mathf.Clamp01(hold + action * 0.3f), poseWeight);
+                    break;
+
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    PoseGripHand(_rightHand, _rightFingerBones, _rightFingerBase, 0.55f, 0.85f, 1f, hold, poseWeight);
+                    PoseGripHand(_leftHand, _leftFingerBones, _leftFingerBase, 0.28f, 0.35f, -1f, action, poseWeight);
+                    break;
+            }
+        }
+
+        private static void PoseGripHand(
+            Transform hand,
+            Transform[] fingerBones,
+            Quaternion[] fingerBase,
+            float fingerCurl,
+            float thumbCurl,
+            float side,
+            float hold,
+            float poseWeight)
+        {
+            float weight = Mathf.Clamp01(hold * poseWeight);
+            if (weight <= 0f)
+                return;
+
+            AddLocal(
+                hand,
+                hand != null ? hand.localRotation : Quaternion.identity,
+                -7f * fingerCurl,
+                side * 2f,
+                side * -5f,
+                weight);
+
+            ApplyFingerCurl(fingerBones, fingerBase, 0, thumbCurl, side * -10f, weight);
+            ApplyFingerCurl(fingerBones, fingerBase, 3, fingerCurl, side * 2f, weight);
+            ApplyFingerCurl(fingerBones, fingerBase, 6, fingerCurl, 0f, weight);
+            ApplyFingerCurl(fingerBones, fingerBase, 9, fingerCurl * 0.92f, side * -2f, weight);
+            ApplyFingerCurl(fingerBones, fingerBase, 12, fingerCurl * 0.84f, side * -4f, weight);
+        }
+
+        private static void ApplyFingerCurl(
+            Transform[] bones,
+            Quaternion[] bases,
+            int start,
+            float curl,
+            float yaw,
+            float weight)
+        {
+            if (bones == null || bases == null || start < 0 || start + 2 >= bones.Length)
+                return;
+
+            SetFingerRotation(bones[start], bases[start], 26f * curl, yaw, 0f, weight);
+            SetFingerRotation(bones[start + 1], bases[start + 1], 34f * curl, 0f, 0f, weight);
+            SetFingerRotation(bones[start + 2], bases[start + 2], 24f * curl, 0f, 0f, weight);
+        }
+
+        private static void SetFingerRotation(
+            Transform bone,
+            Quaternion baseRotation,
+            float pitch,
+            float yaw,
+            float roll,
+            float weight)
+        {
+            if (bone == null || weight <= 0f)
+                return;
+
+            Quaternion target = baseRotation * Quaternion.Euler(pitch, yaw, roll);
+            bone.localRotation = Quaternion.Slerp(baseRotation, target, Mathf.Clamp01(weight));
+        }
+
         private void PoseLeg(
             Transform upper,
             Transform lower,
@@ -336,6 +522,109 @@ namespace MOBA.Core.Infrastructure
             }
 
             return forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
+        }
+
+        private void RefreshGripProfile()
+        {
+            BrawlerAttachmentProfile profile = ResolveAttachmentProfile();
+            if (profile == null)
+            {
+                _gripPose = BrawlerAttachmentGripPose.None;
+                _gripPoseWeight = 0f;
+                return;
+            }
+
+            _gripPose = profile.GripPose;
+            _gripPoseWeight = Mathf.Clamp01(profile.GripPoseWeight);
+        }
+
+        private BrawlerAttachmentGripPose ResolveGripPose()
+        {
+            if (_gripPose != BrawlerAttachmentGripPose.Auto)
+                return _gripPose;
+
+            BrawlerAttachmentProfile profile = ResolveAttachmentProfile();
+            if (profile == null || profile.Attachments == null)
+                return BrawlerAttachmentGripPose.None;
+
+            int pistolCount = 0;
+            for (int i = 0; i < profile.Attachments.Length; i++)
+            {
+                BrawlerAttachmentBinding binding = profile.Attachments[i];
+                if (binding == null)
+                    continue;
+
+                switch (binding.GeneratedAttachment)
+                {
+                    case BrawlerGeneratedAttachmentType.Pistol:
+                        pistolCount++;
+                        break;
+                    case BrawlerGeneratedAttachmentType.Bottle:
+                        return BrawlerAttachmentGripPose.Bottle;
+                    case BrawlerGeneratedAttachmentType.Staff:
+                        return BrawlerAttachmentGripPose.LongTool;
+                    case BrawlerGeneratedAttachmentType.ShockGun:
+                        return BrawlerAttachmentGripPose.LongGun;
+                    case BrawlerGeneratedAttachmentType.Bow:
+                        return BrawlerAttachmentGripPose.Bow;
+                    case BrawlerGeneratedAttachmentType.NinjaStars:
+                        return BrawlerAttachmentGripPose.ThrowingStars;
+                    case BrawlerGeneratedAttachmentType.Umbrella:
+                        return BrawlerAttachmentGripPose.Umbrella;
+                }
+            }
+
+            if (pistolCount > 1)
+                return BrawlerAttachmentGripPose.DualSidearm;
+
+            return pistolCount == 1
+                ? BrawlerAttachmentGripPose.Sidearm
+                : BrawlerAttachmentGripPose.None;
+        }
+
+        private BrawlerAttachmentProfile ResolveAttachmentProfile()
+        {
+            BrawlerDefinition definition = _definition != null
+                ? _definition
+                : (_owner != null ? _owner.Definition : null);
+
+            return definition != null ? definition.AttachmentProfile : null;
+        }
+
+        private void CacheFingerBones(
+            Transform[] target,
+            HumanBodyBones[] map)
+        {
+            if (target == null || map == null)
+                return;
+
+            int count = Mathf.Min(target.Length, map.Length);
+            for (int i = 0; i < count; i++)
+                target[i] = Bone(map[i]);
+        }
+
+        private static void CaptureFingerBasePose(
+            Transform[] bones,
+            Quaternion[] bases)
+        {
+            if (bones == null || bases == null)
+                return;
+
+            int count = Mathf.Min(bones.Length, bases.Length);
+            for (int i = 0; i < count; i++)
+                bases[i] = LocalRotation(bones[i]);
+        }
+
+        private static void ResetFingerPose(
+            Transform[] bones,
+            Quaternion[] bases)
+        {
+            if (bones == null || bases == null)
+                return;
+
+            int count = Mathf.Min(bones.Length, bases.Length);
+            for (int i = 0; i < count; i++)
+                SetLocalRotation(bones[i], bases[i]);
         }
 
         private static Vector3 ResolveRight(Vector3 forward)

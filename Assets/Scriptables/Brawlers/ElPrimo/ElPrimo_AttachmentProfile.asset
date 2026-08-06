@@ -12,4 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df05759948e4dc880dc87c78444be0f, type: 3}
   m_Name: ElPrimo_AttachmentProfile
   m_EditorClassIdentifier:
+  GripPose: 1
+  GripPoseWeight: 0
   Attachments: []

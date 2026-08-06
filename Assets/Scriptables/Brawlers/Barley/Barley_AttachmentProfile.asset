@@ -12,6 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df05759948e4dc880dc87c78444be0f, type: 3}
   m_Name: Barley_AttachmentProfile
   m_EditorClassIdentifier:
+  GripPose: 6
+  GripPoseWeight: 1
   Attachments:
   - Id: Bottle
     Socket: 6

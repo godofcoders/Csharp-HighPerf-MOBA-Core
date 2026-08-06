@@ -8,6 +8,13 @@ namespace MOBA.Core.Definitions
         menuName = "MOBA/Presentation/Brawler Attachment Profile")]
     public sealed class BrawlerAttachmentProfile : ScriptableObject
     {
+        [Header("Humanoid Grip Pose")]
+        [Tooltip("Presentation-only hand pose used by imported humanoid models. Auto infers from the generated attachment type.")]
+        public BrawlerAttachmentGripPose GripPose = BrawlerAttachmentGripPose.Auto;
+
+        [Range(0f, 1f)]
+        public float GripPoseWeight = 1f;
+
         public BrawlerAttachmentBinding[] Attachments = new BrawlerAttachmentBinding[0];
     }
 
