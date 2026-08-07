@@ -511,7 +511,7 @@ namespace MOBA.Core.Infrastructure
             float hold,
             float poseWeight)
         {
-            if (_humanPoseHandler == null || !GripMuscles.IsUsable)
+            if (_humanPoseHandler == null || _animator == null || !GripMuscles.IsUsable)
                 return false;
 
             _humanPoseHandler.GetHumanPose(ref _humanPose);
@@ -535,8 +535,28 @@ namespace MOBA.Core.Infrastructure
                 leftThumbCurl,
                 weight);
 
-            _humanPoseHandler.SetHumanPose(ref _humanPose);
-            return true;
+            TransformState modelState = TransformState.Capture(transform);
+            TransformState animatorState = TransformState.Capture(_animator.transform);
+            Vector3 hipsLocalPosition =
+                _hips != null ? _hips.localPosition : Vector3.zero;
+
+            try
+            {
+                _humanPoseHandler.SetHumanPose(ref _humanPose);
+                return true;
+            }
+            catch (System.Exception)
+            {
+                return false;
+            }
+            finally
+            {
+                modelState.Restore();
+                if (_animator != null && _animator.transform != transform)
+                    animatorState.Restore();
+                if (_hips != null)
+                    _hips.localPosition = hipsLocalPosition;
+            }
         }
 
         private static void ApplyHumanoidGripToHand(
@@ -1030,6 +1050,47 @@ namespace MOBA.Core.Infrastructure
             }
 
             return -1;
+        }
+
+        private readonly struct TransformState
+        {
+            private readonly Transform _transform;
+            private readonly Vector3 _localPosition;
+            private readonly Quaternion _localRotation;
+            private readonly Vector3 _localScale;
+
+            private TransformState(
+                Transform transform,
+                Vector3 localPosition,
+                Quaternion localRotation,
+                Vector3 localScale)
+            {
+                _transform = transform;
+                _localPosition = localPosition;
+                _localRotation = localRotation;
+                _localScale = localScale;
+            }
+
+            public static TransformState Capture(Transform transform)
+            {
+                return transform != null
+                    ? new TransformState(
+                        transform,
+                        transform.localPosition,
+                        transform.localRotation,
+                        transform.localScale)
+                    : default;
+            }
+
+            public void Restore()
+            {
+                if (_transform == null)
+                    return;
+
+                _transform.localPosition = _localPosition;
+                _transform.localRotation = _localRotation;
+                _transform.localScale = _localScale;
+            }
         }
     }
 }
