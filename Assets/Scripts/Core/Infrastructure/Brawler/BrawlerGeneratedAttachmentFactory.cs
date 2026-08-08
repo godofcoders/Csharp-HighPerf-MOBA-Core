@@ -201,14 +201,14 @@ namespace MOBA.Core.Infrastructure
             Material red = CreateMaterial("Generated Umbrella Red Panel", new Color(0.92f, 0.14f, 0.11f, 1f));
 
             GameObject root = CreateRoot(id, "Generated_Umbrella");
-            AddPart(root.transform, "StraightHandle", PrimitiveType.Cylinder, new Vector3(0f, -0.30f, 0f), new Vector3(0.035f, 0.88f, 0.035f), Quaternion.identity, handle);
-            AddPart(root.transform, "Ferrule", PrimitiveType.Cylinder, new Vector3(0f, 0.22f, 0f), new Vector3(0.028f, 0.40f, 0.028f), Quaternion.identity, rib);
-            AddPart(root.transform, "CanopyRed", PrimitiveType.Cylinder, new Vector3(0f, 0.54f, 0f), new Vector3(0.55f, 0.050f, 0.55f), Quaternion.identity, red);
-            AddPart(root.transform, "CanopyGoldCenter", PrimitiveType.Cylinder, new Vector3(0f, 0.585f, 0f), new Vector3(0.18f, 0.040f, 0.18f), Quaternion.identity, yellow);
-            AddPart(root.transform, "TopCap", PrimitiveType.Cylinder, new Vector3(0f, 0.66f, 0f), new Vector3(0.055f, 0.080f, 0.055f), Quaternion.identity, rib);
-            AddPart(root.transform, "RibForward", PrimitiveType.Cube, new Vector3(0f, 0.585f, 0.25f), new Vector3(0.018f, 0.014f, 0.50f), Quaternion.identity, rib);
-            AddPart(root.transform, "RibSide", PrimitiveType.Cube, new Vector3(0.25f, 0.585f, 0f), new Vector3(0.50f, 0.014f, 0.018f), Quaternion.identity, rib);
-            AddPart(root.transform, "GripKnob", PrimitiveType.Sphere, new Vector3(0f, -0.76f, 0f), new Vector3(0.070f, 0.050f, 0.070f), Quaternion.identity, handle);
+            AddPart(root.transform, "StraightHandle", PrimitiveType.Cylinder, new Vector3(0f, -0.32f, 0f), new Vector3(0.035f, 1.02f, 0.035f), Quaternion.identity, handle);
+            AddPart(root.transform, "Ferrule", PrimitiveType.Cylinder, new Vector3(0f, 0.28f, 0f), new Vector3(0.026f, 0.52f, 0.026f), Quaternion.identity, rib);
+            AddPart(root.transform, "CanopyRed", PrimitiveType.Cylinder, new Vector3(0f, 0.58f, 0f), new Vector3(0.82f, 0.052f, 0.82f), Quaternion.identity, red);
+            AddPart(root.transform, "CanopyGoldCenter", PrimitiveType.Cylinder, new Vector3(0f, 0.630f, 0f), new Vector3(0.24f, 0.040f, 0.24f), Quaternion.identity, yellow);
+            AddPart(root.transform, "TopCap", PrimitiveType.Cylinder, new Vector3(0f, 0.72f, 0f), new Vector3(0.060f, 0.090f, 0.060f), Quaternion.identity, rib);
+            AddPart(root.transform, "RibForward", PrimitiveType.Cube, new Vector3(0f, 0.630f, 0.37f), new Vector3(0.018f, 0.014f, 0.74f), Quaternion.identity, rib);
+            AddPart(root.transform, "RibSide", PrimitiveType.Cube, new Vector3(0.37f, 0.630f, 0f), new Vector3(0.74f, 0.014f, 0.018f), Quaternion.identity, rib);
+            AddPart(root.transform, "GripKnob", PrimitiveType.Sphere, new Vector3(0f, -0.86f, 0f), new Vector3(0.070f, 0.050f, 0.070f), Quaternion.identity, handle);
             AddGripPoint(root.transform, Vector3.zero, Quaternion.identity);
             return root;
         }

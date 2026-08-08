@@ -1,41 +1,10 @@
-newmtl magenta
-Ka 0.324 0.045 0.369
-Kd 0.720 0.100 0.820
-Ks 0.120 0.120 0.120
-Ns 24
-illum 2
-
-newmtl red
-Ka 0.405 0.033 0.024
-Kd 0.900 0.075 0.055
-Ks 0.120 0.120 0.120
-Ns 24
-illum 2
-
-newmtl yellow
-Ka 0.427 0.313 0.036
-Kd 0.950 0.695 0.080
-Ks 0.120 0.120 0.120
-Ns 24
-illum 2
-
-newmtl metal
-Ka 0.284 0.293 0.306
-Kd 0.630 0.650 0.680
-Ks 0.120 0.120 0.120
-Ns 24
-illum 2
-
 newmtl handle
-Ka 0.018 0.016 0.013
-Kd 0.040 0.035 0.030
-Ks 0.120 0.120 0.120
-Ns 24
-illum 2
-
+Kd 0.035 0.035 0.040
 newmtl black
-Ka 0.011 0.011 0.013
-Kd 0.025 0.025 0.030
-Ks 0.120 0.120 0.120
-Ns 24
-illum 2
+Kd 0.010 0.012 0.016
+newmtl metal
+Kd 0.700 0.740 0.780
+newmtl red
+Kd 0.920 0.140 0.110
+newmtl yellow
+Kd 1.000 0.820 0.080
