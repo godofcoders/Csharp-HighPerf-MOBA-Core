@@ -14,6 +14,8 @@ namespace MOBA.Core.Infrastructure
         private const int FingerBoneCount = 15;
         private const float GripIdleHold = 0.88f;
         private const float GripActionBoost = 0.12f;
+        private const float PoseRiseSpeed = 16f;
+        private const float PoseFallSpeed = 9f;
 
         private static readonly HumanBodyBones[] LeftFingerBoneMap =
         {
@@ -101,6 +103,13 @@ namespace MOBA.Core.Infrastructure
         private Quaternion _rightLowerLegBase;
         private Quaternion _rightFootBase;
         private bool _hasBasePose;
+        private float _smoothedMove01;
+        private float _smoothedRun01;
+        private float _smoothedAction;
+        private float _smoothedAttack;
+        private float _smoothedSuper;
+        private float _smoothedHit;
+        private float _smoothedHyper;
 
         public static BrawlerAuthoredModelAnimator Ensure(
             GameObject root,
@@ -164,6 +173,7 @@ namespace MOBA.Core.Infrastructure
             if (_animator == null || !_animator.isHuman || !_hasBasePose)
                 return;
 
+            SmoothPoseSignals(_owner == null ? Time.unscaledDeltaTime : Time.deltaTime);
             ResetToBasePose();
             ApplyPresentationPose();
         }
@@ -264,31 +274,34 @@ namespace MOBA.Core.Infrastructure
         {
             float weight = Mathf.Clamp01(_poseWeight);
             float time = _runtime != null ? _runtime.PoseTime : Time.unscaledTime;
-            float move01 = _runtime != null ? _runtime.Move01 : 0f;
-            float run01 = _runtime != null ? _runtime.Run01 : 0f;
-            float action = _runtime != null ? _runtime.ActionWeight : 0f;
-            float attack = _runtime != null ? _runtime.MainAttackWeight : 0f;
-            float super = _runtime != null ? _runtime.SuperWeight : 0f;
-            float hit = _runtime != null ? _runtime.HitReactWeight : 0f;
-            float hyper = _runtime != null ? _runtime.HyperchargeWeight : 0f;
-            float ready = Mathf.Clamp01(0.35f + action * 0.9f + move01 * 0.25f);
+            float move01 = _smoothedMove01;
+            float run01 = _smoothedRun01;
+            float action = _smoothedAction;
+            float attack = _smoothedAttack;
+            float super = _smoothedSuper;
+            float hit = _smoothedHit;
+            float hyper = _smoothedHyper;
             BrawlerAttachmentGripPose gripPose = ResolveGripPose();
+            float ready = Mathf.Clamp01(action * 1.10f + move01 * 0.20f);
+            if (gripPose != BrawlerAttachmentGripPose.None)
+                ready = Mathf.Clamp01(ready + 0.08f);
+
             if (gripPose == BrawlerAttachmentGripPose.None)
                 ready = Mathf.Clamp01(action * 0.9f + move01 * 0.15f);
 
-            float stride = time * Mathf.Lerp(5.5f, 10.5f, run01);
-            float strideSin = Mathf.Sin(stride);
-            float strideCos = Mathf.Cos(stride);
+            float strideSin = _runtime != null ? _runtime.StrideSin : Mathf.Sin(time * 2.4f);
+            float strideCos = _runtime != null ? _runtime.StrideCos : Mathf.Cos(time * 2.4f);
             float idleBreath = Mathf.Sin(time * 1.7f) * (1f - move01);
+            float idleLook = Mathf.Sin(time * 0.73f) * (1f - move01);
             Vector3 forward = ResolveForward();
             Vector3 right = ResolveRight(forward);
             Vector3 up = Vector3.up;
             Vector3 aim = ResolveAimDirection(forward, Mathf.Clamp01(action + attack + super));
 
-            AddLocal(_hips, _hipsBase, idleBreath * 1.4f - move01 * 4.0f, 0f, strideCos * move01 * 2.2f, weight);
-            AddLocal(_spine, _spineBase, idleBreath * -1.2f + move01 * 3.0f - hit * 6.0f, 0f, -strideCos * move01 * 2.0f, weight);
-            AddLocal(_chest, _chestBase, idleBreath * -0.8f + super * -4.0f, 0f, strideCos * move01 * 1.4f + hyper * 2.0f, weight);
-            AddLocal(_head, _headBase, idleBreath * 0.9f - attack * 2.5f, 0f, -strideCos * move01 * 0.8f, weight);
+            AddLocal(_hips, _hipsBase, idleBreath * 1.1f - move01 * 5.2f, idleLook * 0.7f, strideCos * move01 * 3.0f, weight);
+            AddLocal(_spine, _spineBase, idleBreath * -1.0f + move01 * 4.4f - hit * 7.0f, idleLook * 0.8f, -strideCos * move01 * 2.6f, weight);
+            AddLocal(_chest, _chestBase, idleBreath * -0.7f + super * -5.5f, idleLook * 1.1f, strideCos * move01 * 1.8f + hyper * 2.0f, weight);
+            AddLocal(_head, _headBase, idleBreath * 0.7f - attack * 3.0f, idleLook * 2.2f, -strideCos * move01 * 0.8f, weight);
 
             PoseArm(
                 _rightUpperArm,
@@ -345,33 +358,35 @@ namespace MOBA.Core.Infrastructure
             if (upper == null || lower == null)
                 return;
 
+            float action = Mathf.Clamp01(attack + super);
+            float runSwing = Mathf.Lerp(0.7f, 1.35f, Mathf.Clamp01(move01));
             Vector3 relaxedUpper =
-                (-up * 0.78f + forward * 0.22f + right * side * 0.22f).normalized;
+                (-up * 0.92f + forward * 0.08f + right * side * 0.26f).normalized;
             Vector3 readyUpper =
-                (aim * 0.72f + up * 0.06f + right * side * 0.32f).normalized;
+                (aim * 0.78f + up * 0.04f + right * side * 0.30f).normalized;
             Vector3 desiredUpper = Vector3.Slerp(relaxedUpper, readyUpper, ready);
-            desiredUpper = Vector3.Slerp(desiredUpper, aim, attack * 0.8f + super * 0.55f);
-            desiredUpper = (desiredUpper + forward * swing * move01 * 0.10f).normalized;
+            desiredUpper = Vector3.Slerp(desiredUpper, aim, attack * 0.92f + super * 0.66f);
+            desiredUpper = (desiredUpper + forward * swing * move01 * 0.13f * runSwing).normalized;
             RotateBoneToward(upper, lower, desiredUpper, weight);
 
             if (hand == null)
                 return;
 
             Vector3 relaxedLower =
-                (-up * 0.48f + forward * 0.62f + right * side * 0.12f).normalized;
+                (-up * 0.62f + forward * 0.46f + right * side * 0.12f).normalized;
             Vector3 readyLower =
-                (aim * 0.88f - up * 0.10f + right * side * 0.08f).normalized;
+                (aim * 0.92f - up * 0.06f + right * side * 0.08f).normalized;
             Vector3 desiredLower = Vector3.Slerp(relaxedLower, readyLower, ready);
-            desiredLower = Vector3.Slerp(desiredLower, aim, attack * 0.9f + super * 0.65f);
+            desiredLower = Vector3.Slerp(desiredLower, aim, attack * 0.96f + super * 0.72f);
             RotateBoneToward(lower, hand, desiredLower, weight);
 
             AddLocal(
                 hand,
                 hand.localRotation,
-                -attack * 6.0f - super * 10.0f,
-                side * (8.0f + attack * 3.0f),
-                side * -4.0f,
-                weight * Mathf.Clamp01(ready + attack + super));
+                -action * 10.0f - super * 6.0f,
+                side * (5.0f + attack * 5.0f),
+                side * (-5.0f - super * 3.0f),
+                weight * Mathf.Clamp01(ready + action));
         }
 
         private void PoseHandsForGrip(
@@ -556,7 +571,7 @@ namespace MOBA.Core.Infrastructure
             if (upper == null || lower == null)
                 return;
 
-            float strideAmount = Mathf.Lerp(0.10f, 0.28f, run01) * move01;
+            float strideAmount = Mathf.Lerp(0.12f, 0.42f, run01) * move01;
             Vector3 desiredUpper =
                 (-up * 0.96f + forward * swing * strideAmount).normalized;
             RotateBoneToward(upper, lower, desiredUpper, weight * Mathf.Clamp01(move01 * 1.2f));
@@ -565,8 +580,45 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             Vector3 desiredLower =
-                (-up * 0.98f - forward * swing * strideAmount * 0.45f).normalized;
+                (-up * 0.98f - forward * swing * strideAmount * 0.62f).normalized;
             RotateBoneToward(lower, foot, desiredLower, weight * Mathf.Clamp01(move01 * 1.1f));
+        }
+
+        private void SmoothPoseSignals(float deltaTime)
+        {
+            if (_runtime == null)
+            {
+                _smoothedMove01 = Approach(_smoothedMove01, 0f, deltaTime, PoseRiseSpeed, PoseFallSpeed);
+                _smoothedRun01 = Approach(_smoothedRun01, 0f, deltaTime, PoseRiseSpeed, PoseFallSpeed);
+                _smoothedAction = Approach(_smoothedAction, 0f, deltaTime, PoseRiseSpeed, PoseFallSpeed);
+                _smoothedAttack = Approach(_smoothedAttack, 0f, deltaTime, PoseRiseSpeed, PoseFallSpeed);
+                _smoothedSuper = Approach(_smoothedSuper, 0f, deltaTime, PoseRiseSpeed, PoseFallSpeed);
+                _smoothedHit = Approach(_smoothedHit, 0f, deltaTime, PoseRiseSpeed, PoseFallSpeed);
+                _smoothedHyper = Approach(_smoothedHyper, 0f, deltaTime, PoseRiseSpeed, PoseFallSpeed);
+                return;
+            }
+
+            _smoothedMove01 = Approach(_smoothedMove01, _runtime.Move01, deltaTime, 9f, 7f);
+            _smoothedRun01 = Approach(_smoothedRun01, _runtime.Run01, deltaTime, 10f, 8f);
+            _smoothedAction = Approach(_smoothedAction, _runtime.ActionWeight, deltaTime, PoseRiseSpeed, PoseFallSpeed);
+            _smoothedAttack = Approach(_smoothedAttack, _runtime.MainAttackWeight, deltaTime, 18f, 10f);
+            _smoothedSuper = Approach(_smoothedSuper, _runtime.SuperWeight, deltaTime, 14f, 8f);
+            _smoothedHit = Approach(_smoothedHit, _runtime.HitReactWeight, deltaTime, 18f, 12f);
+            _smoothedHyper = Approach(_smoothedHyper, _runtime.HyperchargeWeight, deltaTime, 8f, 5f);
+        }
+
+        private static float Approach(
+            float current,
+            float target,
+            float deltaTime,
+            float riseSpeed,
+            float fallSpeed)
+        {
+            float speed = target > current ? riseSpeed : fallSpeed;
+            return Mathf.MoveTowards(
+                current,
+                Mathf.Clamp01(target),
+                Mathf.Max(0f, deltaTime) * Mathf.Max(0f, speed));
         }
 
         private Vector3 ResolveForward()
