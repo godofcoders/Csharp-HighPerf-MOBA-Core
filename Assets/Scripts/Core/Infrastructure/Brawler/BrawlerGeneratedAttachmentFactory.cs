@@ -6,6 +6,9 @@ namespace MOBA.Core.Infrastructure
 {
     public static class BrawlerGeneratedAttachmentFactory
     {
+        public const string GripPointName = "GripPoint";
+        public const string HoldPointName = "HoldPoint";
+
         private static readonly Dictionary<string, Material> MaterialCache =
             new Dictionary<string, Material>(16);
 
@@ -65,6 +68,7 @@ namespace MOBA.Core.Infrastructure
             AddPart(root.transform, "Trigger", PrimitiveType.Cube, new Vector3(0f, -0.15f, 0.08f), new Vector3(0.045f, 0.10f, 0.026f), Quaternion.Euler(0f, 0f, 12f), barrel);
             AddPart(root.transform, "GripScrewTop", PrimitiveType.Sphere, new Vector3(0f, -0.125f, -0.158f), new Vector3(0.028f, 0.028f, 0.010f), Quaternion.identity, screw);
             AddPart(root.transform, "GripScrewBottom", PrimitiveType.Sphere, new Vector3(0f, -0.270f, -0.125f), new Vector3(0.025f, 0.025f, 0.010f), Quaternion.identity, screw);
+            AddGripPoint(root.transform, new Vector3(0f, -0.19f, -0.08f), Quaternion.identity);
             return root;
         }
 
@@ -94,6 +98,7 @@ namespace MOBA.Core.Infrastructure
             AddPart(root.transform, "SideStickRight", PrimitiveType.Cylinder, new Vector3(0.18f, -0.02f, 0f), new Vector3(0.020f, 0.46f, 0.020f), Quaternion.identity, wire);
             AddPart(root.transform, "RagFoldA", PrimitiveType.Cube, new Vector3(0.10f, 0.60f, 0.045f), new Vector3(0.045f, 0.36f, 0.018f), Quaternion.Euler(0f, 0f, -22f), rag);
             AddPart(root.transform, "RagFoldB", PrimitiveType.Cube, new Vector3(0.17f, 0.49f, 0.035f), new Vector3(0.038f, 0.30f, 0.018f), Quaternion.Euler(0f, 0f, -12f), rag);
+            AddGripPoint(root.transform, new Vector3(0f, 0.25f, 0f), Quaternion.identity);
             return root;
         }
 
@@ -120,6 +125,7 @@ namespace MOBA.Core.Infrastructure
             AddPart(root.transform, "PetalRight", PrimitiveType.Cube, new Vector3(0.10f, 0.56f, 0f), new Vector3(0.06f, 0.19f, 0.035f), Quaternion.Euler(0f, 0f, 32f), metal);
             AddPart(root.transform, "CrystalBody", PrimitiveType.Cylinder, new Vector3(0f, 0.73f, 0f), new Vector3(0.085f, 0.30f, 0.085f), Quaternion.identity, crystal);
             AddPart(root.transform, "CrystalTip", PrimitiveType.Sphere, new Vector3(0f, 0.92f, 0f), new Vector3(0.08f, 0.10f, 0.08f), Quaternion.identity, crystal);
+            AddGripPoint(root.transform, new Vector3(0f, -0.32f, 0f), Quaternion.identity);
             return root;
         }
 
@@ -149,6 +155,7 @@ namespace MOBA.Core.Infrastructure
             {
                 AddPart(root.transform, "Vent" + i, PrimitiveType.Cube, new Vector3(0f, -0.070f, 0.03f + i * 0.08f), new Vector3(0.22f, 0.018f, 0.025f), Quaternion.identity, dark);
             }
+            AddGripPoint(root.transform, new Vector3(0f, -0.22f, -0.18f), Quaternion.identity);
             return root;
         }
 
@@ -169,6 +176,7 @@ namespace MOBA.Core.Infrastructure
             AddPart(root.transform, "String", PrimitiveType.Cube, new Vector3(-0.18f, 0f, -0.02f), new Vector3(0.020f, 1.47f, 0.016f), Quaternion.identity, stringMaterial);
             AddPart(root.transform, "GrainA", PrimitiveType.Cube, new Vector3(0.04f, 0.42f, -0.038f), new Vector3(0.022f, 0.22f, 0.010f), Quaternion.Euler(0f, 0f, -22f), darkWood);
             AddPart(root.transform, "GrainB", PrimitiveType.Cube, new Vector3(0.04f, -0.42f, -0.038f), new Vector3(0.022f, 0.22f, 0.010f), Quaternion.Euler(0f, 0f, 22f), darkWood);
+            AddGripPoint(root.transform, Vector3.zero, Quaternion.identity);
             return root;
         }
 
@@ -182,6 +190,7 @@ namespace MOBA.Core.Infrastructure
             GameObject root = CreateRoot(id, "Generated_NinjaStars");
             CreateStar(root.transform, "StarA", new Vector3(-0.055f, 0.03f, 0f), 0f, black, orange, yellow, core, 1f);
             CreateStar(root.transform, "StarB", new Vector3(0.105f, -0.04f, 0.018f), 18f, black, orange, yellow, core, 0.78f);
+            AddGripPoint(root.transform, new Vector3(0.02f, -0.01f, 0f), Quaternion.identity);
             return root;
         }
 
@@ -211,6 +220,7 @@ namespace MOBA.Core.Infrastructure
             AddPart(root.transform, "TailGreen", PrimitiveType.Cube, new Vector3(-0.17f, 0.68f, -0.010f), new Vector3(0.09f, 0.13f, 0.030f), Quaternion.Euler(0f, 0f, -18f), green);
             AddPart(root.transform, "RibA", PrimitiveType.Cube, new Vector3(-0.055f, 0.25f, -0.115f), new Vector3(0.020f, 0.78f, 0.014f), Quaternion.Euler(0f, 0f, -8f), rib);
             AddPart(root.transform, "RibB", PrimitiveType.Cube, new Vector3(0.055f, 0.25f, -0.125f), new Vector3(0.020f, 0.78f, 0.014f), Quaternion.Euler(0f, 0f, 8f), rib);
+            AddGripPoint(root.transform, new Vector3(0f, -0.44f, 0f), Quaternion.identity);
             return root;
         }
 
@@ -251,6 +261,19 @@ namespace MOBA.Core.Infrastructure
             root.transform.localRotation = Quaternion.identity;
             root.transform.localScale = Vector3.one;
             return root;
+        }
+
+        private static Transform AddGripPoint(
+            Transform parent,
+            Vector3 localPosition,
+            Quaternion localRotation)
+        {
+            Transform grip = new GameObject(GripPointName).transform;
+            grip.SetParent(parent, false);
+            grip.localPosition = localPosition;
+            grip.localRotation = localRotation;
+            grip.localScale = Vector3.one;
+            return grip;
         }
 
         private static Transform AddPart(

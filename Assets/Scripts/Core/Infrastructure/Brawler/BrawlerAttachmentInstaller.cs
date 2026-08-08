@@ -82,6 +82,7 @@ namespace MOBA.Core.Infrastructure
                 }
 
                 attachment.transform.localScale = ResolveScale(binding.LocalScale);
+                AlignAttachmentGripPoint(binding, socket, attachment.transform);
 
                 ConfigureLayer(attachment, gameObject.layer);
                 StripGameplayComponents(attachment);
@@ -252,6 +253,31 @@ namespace MOBA.Core.Infrastructure
             return anchorTransform;
         }
 
+        private static void AlignAttachmentGripPoint(
+            BrawlerAttachmentBinding binding,
+            Transform socket,
+            Transform attachmentRoot)
+        {
+            if (binding == null || socket == null || attachmentRoot == null)
+                return;
+
+            Transform gripPoint =
+                FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.GripPointName) ??
+                FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.HoldPointName) ??
+                FindChildRecursive(attachmentRoot, "WeaponGrip");
+            if (gripPoint == null)
+                return;
+
+            Quaternion targetRotation = binding.FollowSocketRotation
+                ? socket.rotation * Quaternion.Euler(binding.LocalEulerOffset)
+                : Quaternion.Euler(binding.LocalEulerOffset);
+            Vector3 targetPosition = socket.TransformPoint(binding.LocalPositionOffset);
+            Quaternion gripLocalRotation = Quaternion.Inverse(attachmentRoot.rotation) * gripPoint.rotation;
+
+            attachmentRoot.rotation = targetRotation * Quaternion.Inverse(gripLocalRotation);
+            attachmentRoot.position += targetPosition - gripPoint.position;
+        }
+
         private void ApplyPresentationAnchorOverrides(
             Transform primaryFireOverride,
             Transform secondaryFireOverride,
@@ -294,6 +320,24 @@ namespace MOBA.Core.Infrastructure
             Rigidbody[] bodies = attachment.GetComponentsInChildren<Rigidbody>(true);
             for (int i = 0; i < bodies.Length; i++)
                 Destroy(bodies[i]);
+        }
+
+        private static Transform FindChildRecursive(Transform root, string childName)
+        {
+            if (root == null || string.IsNullOrEmpty(childName))
+                return null;
+
+            if (string.Equals(root.name, childName, StringComparison.OrdinalIgnoreCase))
+                return root;
+
+            for (int i = 0; i < root.childCount; i++)
+            {
+                Transform found = FindChildRecursive(root.GetChild(i), childName);
+                if (found != null)
+                    return found;
+            }
+
+            return null;
         }
     }
 }
