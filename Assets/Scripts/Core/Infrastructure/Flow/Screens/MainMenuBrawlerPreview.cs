@@ -34,18 +34,6 @@ namespace MOBA.Core.Infrastructure
         [Min(0f)]
         [SerializeField] private float _clickDragThreshold = 8f;
 
-        [Header("Preview Animation")]
-        [SerializeField] private bool _playShowcaseIdle = true;
-
-        [Min(0.1f)]
-        [SerializeField] private float _showcaseGestureInterval = 3.8f;
-
-        [Min(0f)]
-        [SerializeField] private float _showcaseGestureJitter = 1.2f;
-
-        [Range(0f, 1f)]
-        [SerializeField] private float _showcaseMainAttackChance = 0.68f;
-
         [Header("Info display")]
         [SerializeField] private TMP_Text _nameTextTmp;
         [SerializeField] private Text _nameTextLegacy;
@@ -57,10 +45,8 @@ namespace MOBA.Core.Infrastructure
 
         private GameObject _spawned;
         private BrawlerDefinition _currentDef;
-        private BrawlerAnimationRuntime _previewRuntime;
 
         private float _accumulatedDragMagnitude;
-        private float _nextShowcaseGestureTime;
 
         // Inertial rotation state
         private float _rotationVelocity;
@@ -121,7 +107,6 @@ namespace MOBA.Core.Infrastructure
             }
 
             ApplyPreviewPose();
-            TickShowcaseIdle(Time.unscaledTime);
         }
 
         public void Refresh()
@@ -153,7 +138,6 @@ namespace MOBA.Core.Infrastructure
 
             _baseLocalPosition = Vector3.zero;
             _currentYaw = _initialYaw;
-            _previewRuntime = _spawned.GetComponentInChildren<BrawlerAnimationRuntime>(true);
             ApplyPreviewPose();
 
             _baseLocalPosition = CalculateGroundedLocalPosition(_spawned);
@@ -161,7 +145,6 @@ namespace MOBA.Core.Infrastructure
 
             StripGameplayComponents(_spawned);
             UpdateInfoText(def);
-            ScheduleShowcaseGesture(Time.unscaledTime, immediate: true);
 
             _rotationVelocity = 0f;
         }
@@ -297,33 +280,6 @@ namespace MOBA.Core.Infrastructure
 
             _spawned.transform.localPosition = _baseLocalPosition;
             _spawned.transform.localRotation = Quaternion.Euler(0f, _currentYaw, 0f);
-        }
-
-        private void TickShowcaseIdle(float now)
-        {
-            if (!_playShowcaseIdle || _previewRuntime == null || now < _nextShowcaseGestureTime)
-                return;
-
-            if (Random.value <= _showcaseMainAttackChance)
-                _previewRuntime.PulseMainAttack(0.58f);
-            else
-                _previewRuntime.PulseSuper(0.42f);
-
-            ScheduleShowcaseGesture(now, immediate: false);
-        }
-
-        private void ScheduleShowcaseGesture(float now, bool immediate)
-        {
-            if (immediate)
-            {
-                _nextShowcaseGestureTime = now + Random.Range(0.45f, 0.95f);
-                return;
-            }
-
-            float jitter = _showcaseGestureJitter > 0f
-                ? Random.Range(-_showcaseGestureJitter, _showcaseGestureJitter)
-                : 0f;
-            _nextShowcaseGestureTime = now + Mathf.Max(0.25f, _showcaseGestureInterval + jitter);
         }
 
         private Vector3 CalculateGroundedLocalPosition(GameObject root)
