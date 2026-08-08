@@ -317,6 +317,7 @@ namespace MOBA.Core.Infrastructure
                 right,
                 up,
                 aim,
+                gripPose,
                 weight);
             PoseArm(
                 _leftUpperArm,
@@ -332,6 +333,7 @@ namespace MOBA.Core.Infrastructure
                 right,
                 up,
                 aim,
+                gripPose,
                 weight);
 
             PoseLeg(_rightUpperLeg, _rightLowerLeg, _rightFoot, strideSin, move01, run01, forward, up, weight);
@@ -353,6 +355,7 @@ namespace MOBA.Core.Infrastructure
             Vector3 right,
             Vector3 up,
             Vector3 aim,
+            BrawlerAttachmentGripPose gripPose,
             float weight)
         {
             if (upper == null || lower == null)
@@ -364,8 +367,10 @@ namespace MOBA.Core.Infrastructure
                 (-up * 0.92f + forward * 0.08f + right * side * 0.26f).normalized;
             Vector3 readyUpper =
                 (aim * 0.78f + up * 0.04f + right * side * 0.30f).normalized;
+            ApplyGripUpperBias(gripPose, side, aim, right, up, ref readyUpper);
             Vector3 desiredUpper = Vector3.Slerp(relaxedUpper, readyUpper, ready);
             desiredUpper = Vector3.Slerp(desiredUpper, aim, attack * 0.92f + super * 0.66f);
+            ApplyGripActionBias(gripPose, side, action, aim, right, up, ref desiredUpper);
             desiredUpper = (desiredUpper + forward * swing * move01 * 0.13f * runSwing).normalized;
             RotateBoneToward(upper, lower, desiredUpper, weight);
 
@@ -376,8 +381,10 @@ namespace MOBA.Core.Infrastructure
                 (-up * 0.62f + forward * 0.46f + right * side * 0.12f).normalized;
             Vector3 readyLower =
                 (aim * 0.92f - up * 0.06f + right * side * 0.08f).normalized;
+            ApplyGripLowerBias(gripPose, side, aim, right, up, ref readyLower);
             Vector3 desiredLower = Vector3.Slerp(relaxedLower, readyLower, ready);
             desiredLower = Vector3.Slerp(desiredLower, aim, attack * 0.96f + super * 0.72f);
+            ApplyGripActionBias(gripPose, side, action, aim, right, up, ref desiredLower);
             RotateBoneToward(lower, hand, desiredLower, weight);
 
             AddLocal(
@@ -387,6 +394,145 @@ namespace MOBA.Core.Infrastructure
                 side * (5.0f + attack * 5.0f),
                 side * (-5.0f - super * 3.0f),
                 weight * Mathf.Clamp01(ready + action));
+        }
+
+        private static void ApplyGripUpperBias(
+            BrawlerAttachmentGripPose gripPose,
+            float side,
+            Vector3 aim,
+            Vector3 right,
+            Vector3 up,
+            ref Vector3 readyUpper)
+        {
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Sidearm:
+                    if (side > 0f)
+                        readyUpper = (aim * 0.92f + right * 0.24f - up * 0.02f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.DualSidearm:
+                    readyUpper = (aim * 0.90f + right * side * 0.28f - up * 0.02f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.LongGun:
+                    readyUpper = side > 0f
+                        ? (aim * 0.72f + right * 0.22f - up * 0.08f).normalized
+                        : (aim * 0.84f - right * 0.24f + up * 0.06f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    readyUpper = side > 0f
+                        ? (aim * 0.66f + right * 0.18f - up * 0.08f).normalized
+                        : (aim * 0.48f - right * 0.22f - up * 0.10f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.Bottle:
+                    readyUpper = side > 0f
+                        ? (aim * 0.52f + right * 0.20f + up * 0.42f).normalized
+                        : (-up * 0.75f - right * 0.18f + aim * 0.18f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.Bow:
+                    readyUpper = side > 0f
+                        ? (aim * 0.34f + right * 0.14f - up * 0.18f).normalized
+                        : (aim * 0.94f - right * 0.26f + up * 0.05f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    readyUpper = side > 0f
+                        ? (aim * 0.72f + right * 0.30f + up * 0.10f).normalized
+                        : (-up * 0.82f - right * 0.18f + aim * 0.12f).normalized;
+                    break;
+            }
+        }
+
+        private static void ApplyGripLowerBias(
+            BrawlerAttachmentGripPose gripPose,
+            float side,
+            Vector3 aim,
+            Vector3 right,
+            Vector3 up,
+            ref Vector3 readyLower)
+        {
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Sidearm:
+                    if (side > 0f)
+                        readyLower = (aim * 0.98f + right * 0.08f - up * 0.04f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.DualSidearm:
+                    readyLower = (aim * 0.98f + right * side * 0.10f - up * 0.04f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.LongGun:
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    readyLower = side > 0f
+                        ? (aim * 0.86f + right * 0.08f - up * 0.10f).normalized
+                        : (aim * 0.92f - right * 0.10f - up * 0.02f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.Bottle:
+                    readyLower = side > 0f
+                        ? (aim * 0.56f + right * 0.10f + up * 0.58f).normalized
+                        : (-up * 0.86f - right * 0.08f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.Bow:
+                    readyLower = side > 0f
+                        ? (-right * 0.42f + aim * 0.22f - up * 0.06f).normalized
+                        : (aim * 0.98f - right * 0.06f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    readyLower = side > 0f
+                        ? (aim * 0.78f + right * 0.18f + up * 0.22f).normalized
+                        : (-up * 0.86f - right * 0.04f).normalized;
+                    break;
+            }
+        }
+
+        private static void ApplyGripActionBias(
+            BrawlerAttachmentGripPose gripPose,
+            float side,
+            float action,
+            Vector3 aim,
+            Vector3 right,
+            Vector3 up,
+            ref Vector3 desired)
+        {
+            if (action <= 0f)
+                return;
+
+            Vector3 actionPose = desired;
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Bottle:
+                    if (side > 0f)
+                        actionPose = (aim * 0.68f + up * 0.46f + right * 0.12f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.Bow:
+                    actionPose = side > 0f
+                        ? (-right * 0.55f + aim * 0.22f - up * 0.02f).normalized
+                        : (aim * 0.98f - right * 0.08f + up * 0.05f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    if (side > 0f)
+                        actionPose = (aim * 0.90f + right * 0.12f + up * 0.18f).normalized;
+                    break;
+
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    actionPose = (aim * 0.82f + right * side * 0.10f - up * 0.04f).normalized;
+                    break;
+            }
+
+            desired = Vector3.Slerp(desired, actionPose, Mathf.Clamp01(action));
         }
 
         private void PoseHandsForGrip(
