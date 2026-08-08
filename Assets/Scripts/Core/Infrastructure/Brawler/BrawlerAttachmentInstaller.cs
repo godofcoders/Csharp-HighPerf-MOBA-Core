@@ -261,21 +261,78 @@ namespace MOBA.Core.Infrastructure
             if (binding == null || socket == null || attachmentRoot == null)
                 return;
 
-            Transform gripPoint =
-                FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.GripPointName) ??
-                FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.HoldPointName) ??
-                FindChildRecursive(attachmentRoot, "WeaponGrip");
-            if (gripPoint == null)
+            if (!TryResolveAttachmentGripPoint(
+                    binding,
+                    attachmentRoot,
+                    out Vector3 gripLocalPosition,
+                    out Quaternion gripLocalRotation))
+            {
                 return;
+            }
 
             Quaternion targetRotation = binding.FollowSocketRotation
                 ? socket.rotation * Quaternion.Euler(binding.LocalEulerOffset)
                 : Quaternion.Euler(binding.LocalEulerOffset);
             Vector3 targetPosition = socket.TransformPoint(binding.LocalPositionOffset);
-            Quaternion gripLocalRotation = Quaternion.Inverse(attachmentRoot.rotation) * gripPoint.rotation;
 
             attachmentRoot.rotation = targetRotation * Quaternion.Inverse(gripLocalRotation);
-            attachmentRoot.position += targetPosition - gripPoint.position;
+            Vector3 gripWorldPosition = attachmentRoot.TransformPoint(gripLocalPosition);
+            attachmentRoot.position += targetPosition - gripWorldPosition;
+        }
+
+        private static bool TryResolveAttachmentGripPoint(
+            BrawlerAttachmentBinding binding,
+            Transform attachmentRoot,
+            out Vector3 localPosition,
+            out Quaternion localRotation)
+        {
+            Transform gripPoint =
+                FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.GripPointName) ??
+                FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.HoldPointName) ??
+                FindChildRecursive(attachmentRoot, "WeaponGrip");
+            if (gripPoint != null)
+            {
+                localPosition = attachmentRoot.InverseTransformPoint(gripPoint.position);
+                localRotation = Quaternion.Inverse(attachmentRoot.rotation) * gripPoint.rotation;
+                return true;
+            }
+
+            return TryResolveVirtualGripPoint(
+                binding.GeneratedAttachment,
+                out localPosition,
+                out localRotation);
+        }
+
+        private static bool TryResolveVirtualGripPoint(
+            BrawlerGeneratedAttachmentType attachmentType,
+            out Vector3 localPosition,
+            out Quaternion localRotation)
+        {
+            localRotation = Quaternion.identity;
+
+            switch (attachmentType)
+            {
+                case BrawlerGeneratedAttachmentType.Pistol:
+                    localPosition = new Vector3(0f, -0.19f, -0.08f);
+                    return true;
+                case BrawlerGeneratedAttachmentType.Bottle:
+                    localPosition = new Vector3(0f, 0.25f, 0f);
+                    return true;
+                case BrawlerGeneratedAttachmentType.Staff:
+                    localPosition = new Vector3(0f, -0.32f, 0f);
+                    return true;
+                case BrawlerGeneratedAttachmentType.ShockGun:
+                    localPosition = new Vector3(0f, -0.22f, -0.18f);
+                    return true;
+                case BrawlerGeneratedAttachmentType.Bow:
+                case BrawlerGeneratedAttachmentType.NinjaStars:
+                case BrawlerGeneratedAttachmentType.Umbrella:
+                    localPosition = Vector3.zero;
+                    return true;
+                default:
+                    localPosition = Vector3.zero;
+                    return false;
+            }
         }
 
         private void ApplyPresentationAnchorOverrides(

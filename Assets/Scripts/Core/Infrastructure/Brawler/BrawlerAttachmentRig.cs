@@ -268,9 +268,9 @@ namespace MOBA.Core.Infrastructure
             Vector3 up = Vector3.up;
             Vector3 worldPosition =
                 hand.position +
-                forward * 0.075f +
-                right * side * 0.018f -
-                up * 0.025f;
+                forward * 0.035f +
+                right * side * 0.006f -
+                up * 0.010f;
 
             return hand.InverseTransformPoint(worldPosition);
         }
