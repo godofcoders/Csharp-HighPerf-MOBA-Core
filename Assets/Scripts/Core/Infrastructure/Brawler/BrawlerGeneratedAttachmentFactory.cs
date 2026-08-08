@@ -187,10 +187,9 @@ namespace MOBA.Core.Infrastructure
             Material yellow = CreateMaterial("Generated Ninja Star Yellow Mark", new Color(1.00f, 0.88f, 0.14f, 1f));
             Material core = CreateMaterial("Generated Ninja Star Core", new Color(0.12f, 0.12f, 0.13f, 1f));
 
-            GameObject root = CreateRoot(id, "Generated_NinjaStars");
-            CreateStar(root.transform, "StarA", new Vector3(-0.055f, 0.03f, 0f), 0f, black, orange, yellow, core, 1f);
-            CreateStar(root.transform, "StarB", new Vector3(0.105f, -0.04f, 0.018f), 18f, black, orange, yellow, core, 0.78f);
-            AddGripPoint(root.transform, new Vector3(0.02f, -0.01f, 0f), Quaternion.identity);
+            GameObject root = CreateRoot(id, "Generated_NinjaStar");
+            CreateStar(root.transform, "Star", Vector3.zero, 0f, black, orange, yellow, core, 1.15f);
+            AddGripPoint(root.transform, Vector3.zero, Quaternion.identity);
             return root;
         }
 
@@ -199,28 +198,18 @@ namespace MOBA.Core.Infrastructure
             Material handle = CreateMaterial("Generated Umbrella Black Handle", new Color(0.035f, 0.035f, 0.040f, 1f));
             Material rib = CreateMaterial("Generated Umbrella Silver Rib", new Color(0.70f, 0.74f, 0.78f, 1f));
             Material yellow = CreateMaterial("Generated Umbrella Yellow Panel", new Color(1.00f, 0.82f, 0.08f, 1f));
-            Material orange = CreateMaterial("Generated Umbrella Orange Panel", new Color(1.00f, 0.45f, 0.08f, 1f));
             Material red = CreateMaterial("Generated Umbrella Red Panel", new Color(0.92f, 0.14f, 0.11f, 1f));
-            Material magenta = CreateMaterial("Generated Umbrella Magenta Panel", new Color(0.78f, 0.12f, 0.82f, 1f));
-            Material blue = CreateMaterial("Generated Umbrella Blue Panel", new Color(0.06f, 0.24f, 0.80f, 1f));
-            Material green = CreateMaterial("Generated Umbrella Green Tail", new Color(0.08f, 0.72f, 0.32f, 1f));
 
             GameObject root = CreateRoot(id, "Generated_Umbrella");
-            AddPart(root.transform, "Handle", PrimitiveType.Cylinder, new Vector3(0f, -0.48f, 0f), new Vector3(0.042f, 0.32f, 0.042f), Quaternion.identity, handle);
-            AddPart(root.transform, "HookA", PrimitiveType.Cylinder, new Vector3(0.08f, -0.70f, 0f), new Vector3(0.042f, 0.14f, 0.042f), Quaternion.Euler(0f, 0f, 90f), handle);
-            AddPart(root.transform, "HookB", PrimitiveType.Cylinder, new Vector3(0.16f, -0.64f, 0f), new Vector3(0.036f, 0.12f, 0.036f), Quaternion.identity, handle);
-            AddPart(root.transform, "Collar", PrimitiveType.Cylinder, new Vector3(0f, -0.19f, 0f), new Vector3(0.085f, 0.055f, 0.085f), Quaternion.identity, rib);
-            AddPart(root.transform, "Spine", PrimitiveType.Cylinder, new Vector3(0f, 0.26f, 0f), new Vector3(0.030f, 0.86f, 0.030f), Quaternion.identity, rib);
-            AddPart(root.transform, "TipNeedle", PrimitiveType.Cylinder, new Vector3(0f, 0.80f, 0f), new Vector3(0.030f, 0.24f, 0.030f), Quaternion.identity, rib);
-            AddPart(root.transform, "PanelYellow", PrimitiveType.Cube, new Vector3(-0.09f, 0.23f, -0.010f), new Vector3(0.145f, 0.74f, 0.035f), Quaternion.Euler(0f, 0f, -9f), yellow);
-            AddPart(root.transform, "PanelOrange", PrimitiveType.Cube, new Vector3(-0.035f, 0.24f, -0.030f), new Vector3(0.145f, 0.78f, 0.032f), Quaternion.Euler(0f, 0f, -4f), orange);
-            AddPart(root.transform, "PanelRed", PrimitiveType.Cube, new Vector3(0.035f, 0.24f, -0.050f), new Vector3(0.145f, 0.78f, 0.032f), Quaternion.Euler(0f, 0f, 4f), red);
-            AddPart(root.transform, "PanelMagenta", PrimitiveType.Cube, new Vector3(0.095f, 0.22f, -0.070f), new Vector3(0.135f, 0.72f, 0.030f), Quaternion.Euler(0f, 0f, 9f), magenta);
-            AddPart(root.transform, "PanelBlue", PrimitiveType.Cube, new Vector3(0.155f, 0.19f, -0.090f), new Vector3(0.120f, 0.62f, 0.028f), Quaternion.Euler(0f, 0f, 14f), blue);
-            AddPart(root.transform, "TailGreen", PrimitiveType.Cube, new Vector3(-0.17f, 0.68f, -0.010f), new Vector3(0.09f, 0.13f, 0.030f), Quaternion.Euler(0f, 0f, -18f), green);
-            AddPart(root.transform, "RibA", PrimitiveType.Cube, new Vector3(-0.055f, 0.25f, -0.115f), new Vector3(0.020f, 0.78f, 0.014f), Quaternion.Euler(0f, 0f, -8f), rib);
-            AddPart(root.transform, "RibB", PrimitiveType.Cube, new Vector3(0.055f, 0.25f, -0.125f), new Vector3(0.020f, 0.78f, 0.014f), Quaternion.Euler(0f, 0f, 8f), rib);
-            AddGripPoint(root.transform, new Vector3(0f, -0.44f, 0f), Quaternion.identity);
+            AddPart(root.transform, "StraightHandle", PrimitiveType.Cylinder, new Vector3(0f, -0.30f, 0f), new Vector3(0.035f, 0.88f, 0.035f), Quaternion.identity, handle);
+            AddPart(root.transform, "Ferrule", PrimitiveType.Cylinder, new Vector3(0f, 0.22f, 0f), new Vector3(0.028f, 0.40f, 0.028f), Quaternion.identity, rib);
+            AddPart(root.transform, "CanopyRed", PrimitiveType.Cylinder, new Vector3(0f, 0.54f, 0f), new Vector3(0.55f, 0.050f, 0.55f), Quaternion.identity, red);
+            AddPart(root.transform, "CanopyGoldCenter", PrimitiveType.Cylinder, new Vector3(0f, 0.585f, 0f), new Vector3(0.18f, 0.040f, 0.18f), Quaternion.identity, yellow);
+            AddPart(root.transform, "TopCap", PrimitiveType.Cylinder, new Vector3(0f, 0.66f, 0f), new Vector3(0.055f, 0.080f, 0.055f), Quaternion.identity, rib);
+            AddPart(root.transform, "RibForward", PrimitiveType.Cube, new Vector3(0f, 0.585f, 0.25f), new Vector3(0.018f, 0.014f, 0.50f), Quaternion.identity, rib);
+            AddPart(root.transform, "RibSide", PrimitiveType.Cube, new Vector3(0.25f, 0.585f, 0f), new Vector3(0.50f, 0.014f, 0.018f), Quaternion.identity, rib);
+            AddPart(root.transform, "GripKnob", PrimitiveType.Sphere, new Vector3(0f, -0.76f, 0f), new Vector3(0.070f, 0.050f, 0.070f), Quaternion.identity, handle);
+            AddGripPoint(root.transform, Vector3.zero, Quaternion.identity);
             return root;
         }
 

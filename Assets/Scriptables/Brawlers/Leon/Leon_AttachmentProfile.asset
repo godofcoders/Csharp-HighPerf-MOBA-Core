@@ -15,13 +15,13 @@ MonoBehaviour:
   GripPose: 8
   GripPoseWeight: 1
   Attachments:
-  - Id: NinjaStars
+  - Id: NinjaStar
     Socket: 6
     Prefab: {fileID: 100000, guid: 4bf44923c19b43009dbbec77647f3ee4, type: 3}
     GeneratedAttachment: 6
-    LocalPositionOffset: {x: 0.005, y: 0.0, z: 0.02}
-    LocalEulerOffset: {x: 10, y: 0, z: 14}
-    LocalScale: {x: 0.34, y: 0.34, z: 0.34}
+    LocalPositionOffset: {x: 0.005, y: -0.015, z: 0.02}
+    LocalEulerOffset: {x: 0, y: 0, z: 35}
+    LocalScale: {x: 0.45, y: 0.45, z: 0.45}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1
