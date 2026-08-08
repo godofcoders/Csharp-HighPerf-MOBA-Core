@@ -15,9 +15,6 @@ namespace MOBA.Core.Infrastructure
         private const float GripIdleHold = 0.88f;
         private const float GripActionBoost = 0.12f;
 
-        private static readonly HumanoidGripMuscleMap GripMuscles =
-            HumanoidGripMuscleMap.Build();
-
         private static readonly HumanBodyBones[] LeftFingerBoneMap =
         {
             HumanBodyBones.LeftThumbProximal,
@@ -64,7 +61,6 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerAttachmentGripPose _gripPose =
             BrawlerAttachmentGripPose.Auto;
         [SerializeField, Range(0f, 1f)] private float _gripPoseWeight = 1f;
-        [SerializeField] private bool _debugUsingHumanoidGripMuscles;
 
         private Transform _hips;
         private Transform _spine;
@@ -105,8 +101,6 @@ namespace MOBA.Core.Infrastructure
         private Quaternion _rightLowerLegBase;
         private Quaternion _rightFootBase;
         private bool _hasBasePose;
-        private HumanPoseHandler _humanPoseHandler;
-        private HumanPose _humanPose;
 
         public static BrawlerAuthoredModelAnimator Ensure(
             GameObject root,
@@ -142,7 +136,6 @@ namespace MOBA.Core.Infrastructure
             _animator = animator != null ? animator : GetComponentInChildren<Animator>(true);
             _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
             RefreshGripProfile();
-            RefreshHumanPoseHandler();
             CacheBones();
             CaptureBasePose();
         }
@@ -162,7 +155,6 @@ namespace MOBA.Core.Infrastructure
                 _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
 
             RefreshGripProfile();
-            RefreshHumanPoseHandler();
             CacheBones();
             CaptureBasePose();
         }
@@ -389,7 +381,6 @@ namespace MOBA.Core.Infrastructure
             float weight)
         {
             float poseWeight = weight * Mathf.Clamp01(_gripPoseWeight);
-            _debugUsingHumanoidGripMuscles = false;
 
             if (poseWeight <= 0f)
                 return;
@@ -471,18 +462,6 @@ namespace MOBA.Core.Infrastructure
             float hold,
             float poseWeight)
         {
-            if (ApplyHumanoidGripMuscles(
-                    rightFingerCurl,
-                    rightThumbCurl,
-                    leftFingerCurl,
-                    leftThumbCurl,
-                    hold,
-                    poseWeight))
-            {
-                _debugUsingHumanoidGripMuscles = true;
-                return;
-            }
-
             PoseGripHand(
                 _rightHand,
                 _rightFingerBones,
@@ -501,115 +480,6 @@ namespace MOBA.Core.Infrastructure
                 -1f,
                 hold,
                 poseWeight);
-        }
-
-        private bool ApplyHumanoidGripMuscles(
-            float rightFingerCurl,
-            float rightThumbCurl,
-            float leftFingerCurl,
-            float leftThumbCurl,
-            float hold,
-            float poseWeight)
-        {
-            if (_humanPoseHandler == null || _animator == null || !GripMuscles.IsUsable)
-                return false;
-
-            _humanPoseHandler.GetHumanPose(ref _humanPose);
-            if (_humanPose.muscles == null || _humanPose.muscles.Length == 0)
-                return false;
-
-            float weight = Mathf.Clamp01(hold * poseWeight);
-            if (weight <= 0f)
-                return false;
-
-            ApplyHumanoidGripToHand(
-                _humanPose.muscles,
-                GripMuscles.Right,
-                rightFingerCurl,
-                rightThumbCurl,
-                weight);
-            ApplyHumanoidGripToHand(
-                _humanPose.muscles,
-                GripMuscles.Left,
-                leftFingerCurl,
-                leftThumbCurl,
-                weight);
-
-            TransformState modelState = TransformState.Capture(transform);
-            TransformState animatorState = TransformState.Capture(_animator.transform);
-            Vector3 hipsLocalPosition =
-                _hips != null ? _hips.localPosition : Vector3.zero;
-
-            try
-            {
-                _humanPoseHandler.SetHumanPose(ref _humanPose);
-                return true;
-            }
-            catch (System.Exception)
-            {
-                return false;
-            }
-            finally
-            {
-                modelState.Restore();
-                if (_animator != null && _animator.transform != transform)
-                    animatorState.Restore();
-                if (_hips != null)
-                    _hips.localPosition = hipsLocalPosition;
-            }
-        }
-
-        private static void ApplyHumanoidGripToHand(
-            float[] muscles,
-            HumanoidHandMuscles hand,
-            float fingerCurl,
-            float thumbCurl,
-            float weight)
-        {
-            if (muscles == null || !hand.IsUsable)
-                return;
-
-            BlendMuscle(muscles, hand.Thumb1, -0.72f * thumbCurl, weight);
-            BlendMuscle(muscles, hand.Thumb2, -0.82f * thumbCurl, weight);
-            BlendMuscle(muscles, hand.Thumb3, -0.76f * thumbCurl, weight);
-            BlendMuscle(muscles, hand.ThumbSpread, 0.36f * thumbCurl, weight);
-
-            BlendFinger(muscles, hand.Index1, hand.Index2, hand.Index3, fingerCurl, weight);
-            BlendFinger(muscles, hand.Middle1, hand.Middle2, hand.Middle3, fingerCurl, weight);
-            BlendFinger(muscles, hand.Ring1, hand.Ring2, hand.Ring3, fingerCurl * 0.94f, weight);
-            BlendFinger(muscles, hand.Little1, hand.Little2, hand.Little3, fingerCurl * 0.88f, weight);
-            BlendMuscle(muscles, hand.IndexSpread, -0.18f * fingerCurl, weight);
-            BlendMuscle(muscles, hand.MiddleSpread, -0.08f * fingerCurl, weight);
-            BlendMuscle(muscles, hand.RingSpread, 0.08f * fingerCurl, weight);
-            BlendMuscle(muscles, hand.LittleSpread, 0.18f * fingerCurl, weight);
-        }
-
-        private static void BlendFinger(
-            float[] muscles,
-            int proximal,
-            int intermediate,
-            int distal,
-            float curl,
-            float weight)
-        {
-            BlendMuscle(muscles, proximal, -0.92f * curl, weight);
-            BlendMuscle(muscles, intermediate, -1f * curl, weight);
-            BlendMuscle(muscles, distal, -0.86f * curl, weight);
-        }
-
-        private static void BlendMuscle(
-            float[] muscles,
-            int index,
-            float target,
-            float weight)
-        {
-            if (muscles == null || index < 0 || index >= muscles.Length)
-                return;
-
-            muscles[index] = Mathf.Lerp(
-                muscles[index],
-                Mathf.Clamp(target, -1f, 1f),
-                Mathf.Clamp01(weight));
         }
 
         private static void PoseGripHand(
@@ -727,32 +597,6 @@ namespace MOBA.Core.Infrastructure
 
             _gripPose = profile.GripPose;
             _gripPoseWeight = Mathf.Clamp01(profile.GripPoseWeight);
-        }
-
-        private void RefreshHumanPoseHandler()
-        {
-            _humanPoseHandler = null;
-            _humanPose = default;
-
-            if (_animator == null ||
-                !_animator.isHuman ||
-                _animator.avatar == null ||
-                !_animator.avatar.isValid ||
-                !_animator.avatar.isHuman)
-            {
-                return;
-            }
-
-            try
-            {
-                _humanPoseHandler = new HumanPoseHandler(
-                    _animator.avatar,
-                    _animator.transform);
-            }
-            catch (System.Exception)
-            {
-                _humanPoseHandler = null;
-            }
         }
 
         private BrawlerAttachmentGripPose ResolveGripPose()
@@ -895,202 +739,5 @@ namespace MOBA.Core.Infrastructure
                 Quaternion.Slerp(baseRotation, target, Mathf.Clamp01(weight));
         }
 
-        private readonly struct HumanoidGripMuscleMap
-        {
-            public readonly HumanoidHandMuscles Left;
-            public readonly HumanoidHandMuscles Right;
-
-            public bool IsUsable => Left.IsUsable || Right.IsUsable;
-
-            private HumanoidGripMuscleMap(
-                HumanoidHandMuscles left,
-                HumanoidHandMuscles right)
-            {
-                Left = left;
-                Right = right;
-            }
-
-            public static HumanoidGripMuscleMap Build()
-            {
-                return new HumanoidGripMuscleMap(
-                    HumanoidHandMuscles.Build("Left"),
-                    HumanoidHandMuscles.Build("Right"));
-            }
-        }
-
-        private readonly struct HumanoidHandMuscles
-        {
-            public readonly int Thumb1;
-            public readonly int Thumb2;
-            public readonly int Thumb3;
-            public readonly int ThumbSpread;
-            public readonly int Index1;
-            public readonly int Index2;
-            public readonly int Index3;
-            public readonly int IndexSpread;
-            public readonly int Middle1;
-            public readonly int Middle2;
-            public readonly int Middle3;
-            public readonly int MiddleSpread;
-            public readonly int Ring1;
-            public readonly int Ring2;
-            public readonly int Ring3;
-            public readonly int RingSpread;
-            public readonly int Little1;
-            public readonly int Little2;
-            public readonly int Little3;
-            public readonly int LittleSpread;
-
-            public bool IsUsable =>
-                Index1 >= 0 ||
-                Middle1 >= 0 ||
-                Ring1 >= 0 ||
-                Little1 >= 0 ||
-                Thumb1 >= 0;
-
-            private HumanoidHandMuscles(
-                int thumb1,
-                int thumb2,
-                int thumb3,
-                int thumbSpread,
-                int index1,
-                int index2,
-                int index3,
-                int indexSpread,
-                int middle1,
-                int middle2,
-                int middle3,
-                int middleSpread,
-                int ring1,
-                int ring2,
-                int ring3,
-                int ringSpread,
-                int little1,
-                int little2,
-                int little3,
-                int littleSpread)
-            {
-                Thumb1 = thumb1;
-                Thumb2 = thumb2;
-                Thumb3 = thumb3;
-                ThumbSpread = thumbSpread;
-                Index1 = index1;
-                Index2 = index2;
-                Index3 = index3;
-                IndexSpread = indexSpread;
-                Middle1 = middle1;
-                Middle2 = middle2;
-                Middle3 = middle3;
-                MiddleSpread = middleSpread;
-                Ring1 = ring1;
-                Ring2 = ring2;
-                Ring3 = ring3;
-                RingSpread = ringSpread;
-                Little1 = little1;
-                Little2 = little2;
-                Little3 = little3;
-                LittleSpread = littleSpread;
-            }
-
-            public static HumanoidHandMuscles Build(string side)
-            {
-                return new HumanoidHandMuscles(
-                    FindMuscle(side, "thumb", "1", "stretched"),
-                    FindMuscle(side, "thumb", "2", "stretched"),
-                    FindMuscle(side, "thumb", "3", "stretched"),
-                    FindMuscle(side, "thumb", "spread"),
-                    FindMuscle(side, "index", "1", "stretched"),
-                    FindMuscle(side, "index", "2", "stretched"),
-                    FindMuscle(side, "index", "3", "stretched"),
-                    FindMuscle(side, "index", "spread"),
-                    FindMuscle(side, "middle", "1", "stretched"),
-                    FindMuscle(side, "middle", "2", "stretched"),
-                    FindMuscle(side, "middle", "3", "stretched"),
-                    FindMuscle(side, "middle", "spread"),
-                    FindMuscle(side, "ring", "1", "stretched"),
-                    FindMuscle(side, "ring", "2", "stretched"),
-                    FindMuscle(side, "ring", "3", "stretched"),
-                    FindMuscle(side, "ring", "spread"),
-                    FindMuscle(side, "little", "1", "stretched"),
-                    FindMuscle(side, "little", "2", "stretched"),
-                    FindMuscle(side, "little", "3", "stretched"),
-                    FindMuscle(side, "little", "spread"));
-            }
-        }
-
-        private static int FindMuscle(params string[] tokens)
-        {
-            string[] muscleNames = HumanTrait.MuscleName;
-            if (muscleNames == null || tokens == null)
-                return -1;
-
-            for (int i = 0; i < muscleNames.Length; i++)
-            {
-                string muscleName = muscleNames[i];
-                if (string.IsNullOrEmpty(muscleName))
-                    continue;
-
-                string normalizedName = muscleName.ToLowerInvariant();
-                bool matches = true;
-                for (int tokenIndex = 0; tokenIndex < tokens.Length; tokenIndex++)
-                {
-                    string token = tokens[tokenIndex];
-                    if (string.IsNullOrEmpty(token))
-                        continue;
-
-                    if (!normalizedName.Contains(token.ToLowerInvariant()))
-                    {
-                        matches = false;
-                        break;
-                    }
-                }
-
-                if (matches)
-                    return i;
-            }
-
-            return -1;
-        }
-
-        private readonly struct TransformState
-        {
-            private readonly Transform _transform;
-            private readonly Vector3 _localPosition;
-            private readonly Quaternion _localRotation;
-            private readonly Vector3 _localScale;
-
-            private TransformState(
-                Transform transform,
-                Vector3 localPosition,
-                Quaternion localRotation,
-                Vector3 localScale)
-            {
-                _transform = transform;
-                _localPosition = localPosition;
-                _localRotation = localRotation;
-                _localScale = localScale;
-            }
-
-            public static TransformState Capture(Transform transform)
-            {
-                return transform != null
-                    ? new TransformState(
-                        transform,
-                        transform.localPosition,
-                        transform.localRotation,
-                        transform.localScale)
-                    : default;
-            }
-
-            public void Restore()
-            {
-                if (_transform == null)
-                    return;
-
-                _transform.localPosition = _localPosition;
-                _transform.localRotation = _localRotation;
-                _transform.localScale = _localScale;
-            }
-        }
     }
 }
