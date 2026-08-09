@@ -118,30 +118,16 @@ namespace MOBA.Core.Infrastructure
                 return null;
             }
 
-            return TryCreateGeneratedAttachment(binding, parent, out GameObject generated)
-                ? generated
-                : null;
-        }
-
-        private static bool TryCreateGeneratedAttachment(
-            BrawlerAttachmentBinding binding,
-            Transform parent,
-            out GameObject attachment)
-        {
-            attachment = null;
-
-            if (binding == null ||
-                !BrawlerGeneratedAttachmentFactory.TryCreate(
-                    binding.GeneratedAttachment,
-                    binding.Id,
-                    out GameObject generated))
+            if (binding.GeneratedAttachment == BrawlerGeneratedAttachmentType.None)
             {
-                return false;
+                Debug.LogWarning(
+                    $"[BrawlerAttachmentInstaller] Attachment '{binding.Id}' has no authored weapon prefab assigned. No fallback will be generated.");
+                return null;
             }
 
-            generated.transform.SetParent(parent, false);
-            attachment = generated;
-            return true;
+            Debug.LogWarning(
+                $"[BrawlerAttachmentInstaller] Attachment '{binding.Id}' requested generated weapon '{binding.GeneratedAttachment}', but generated fallbacks are disabled. Assign an authored weapon prefab instead.");
+            return null;
         }
 
         private static bool TryCreatePrefabAttachment(
@@ -157,7 +143,7 @@ namespace MOBA.Core.Infrastructure
             UnityEngine.Object clone = null;
             try
             {
-                clone = Instantiate(binding.Prefab);
+                clone = Instantiate((UnityEngine.Object)binding.Prefab);
             }
             catch (Exception exception)
             {
