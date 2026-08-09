@@ -20,7 +20,7 @@ MonoBehaviour:
     Prefab: {fileID: 100000, guid: de391466dc464785af8d94ca33eff3a2, type: 3}
     GeneratedAttachment: 5
     LocalPositionOffset: {x: -0.015, y: 0.0, z: 0.025}
-    LocalEulerOffset: {x: 0, y: 0, z: -5}
+    LocalEulerOffset: {x: 0, y: 0, z: 85}
     LocalScale: {x: 0.42, y: 0.42, z: 0.42}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1

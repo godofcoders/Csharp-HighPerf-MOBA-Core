@@ -12,7 +12,6 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerDefinition _definition;
         [SerializeField] private BrawlerAttachmentRig _rig;
         [SerializeField] private Transform _runtimeAttachmentRoot;
-        [SerializeField] private bool _preferGeneratedAttachments;
 
         private readonly List<GameObject> _spawnedAttachments = new List<GameObject>(4);
 
@@ -33,15 +32,6 @@ namespace MOBA.Core.Infrastructure
         {
             _definition = definition;
             _rig = rig;
-            RebuildAttachments();
-        }
-
-        public void SetPreferGeneratedAttachments(bool preferGeneratedAttachments)
-        {
-            if (_preferGeneratedAttachments == preferGeneratedAttachments)
-                return;
-
-            _preferGeneratedAttachments = preferGeneratedAttachments;
             RebuildAttachments();
         }
 
@@ -118,12 +108,6 @@ namespace MOBA.Core.Infrastructure
             BrawlerAttachmentBinding binding,
             Transform parent)
         {
-            if (_preferGeneratedAttachments &&
-                TryCreateGeneratedAttachment(binding, parent, out GameObject generatedFirst))
-            {
-                return generatedFirst;
-            }
-
             if (TryCreatePrefabAttachment(binding, parent, out GameObject prefabAttachment))
                 return prefabAttachment;
 

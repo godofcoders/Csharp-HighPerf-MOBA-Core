@@ -136,11 +136,6 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            BrawlerAttachmentInstaller attachmentInstaller =
-                _spawned.GetComponentInChildren<BrawlerAttachmentInstaller>(true);
-            if (attachmentInstaller != null)
-                attachmentInstaller.SetPreferGeneratedAttachments(true);
-
             BrawlerAuthoredModelAnimator authoredAnimator =
                 _spawned.GetComponentInChildren<BrawlerAuthoredModelAnimator>(true);
             if (authoredAnimator != null)
