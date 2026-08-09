@@ -18,10 +18,13 @@ MonoBehaviour:
   - Id: RightPistol
     Socket: 6
     Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
-    GeneratedAttachment: 1
+    GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.01, y: -0.015, z: 0.025}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+    UseExplicitGripPoint: 1
+    ExplicitGripLocalPosition: {x: 0, y: -0.19, z: -0.08}
+    ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1
@@ -31,10 +34,13 @@ MonoBehaviour:
   - Id: LeftPistol
     Socket: 7
     Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
-    GeneratedAttachment: 1
+    GeneratedAttachment: 0
     LocalPositionOffset: {x: -0.01, y: -0.015, z: 0.025}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+    UseExplicitGripPoint: 1
+    ExplicitGripLocalPosition: {x: 0, y: -0.19, z: -0.08}
+    ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 0

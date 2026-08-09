@@ -157,10 +157,12 @@ namespace MOBA.Core.Infrastructure
             UnityEngine.Object clone = null;
             try
             {
-                clone = Instantiate((UnityEngine.Object)binding.Prefab);
+                clone = Instantiate(binding.Prefab);
             }
-            catch (InvalidCastException)
+            catch (Exception exception)
             {
+                Debug.LogWarning(
+                    $"[BrawlerAttachmentInstaller] Failed to instantiate authored attachment '{binding.Prefab.name}' for '{binding.Id}': {exception.GetType().Name} {exception.Message}");
                 return false;
             }
 
