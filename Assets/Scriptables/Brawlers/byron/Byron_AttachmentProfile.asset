@@ -18,6 +18,7 @@ MonoBehaviour:
   - Id: Staff
     Socket: 6
     Prefab: {fileID: 100000, guid: 2d0868b4af1442c5a897f4acfc3c3efa, type: 3}
+    PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Byron_Staff.obj
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.012, y: -0.05, z: 0.02}
     LocalEulerOffset: {x: 14, y: 0, z: -12}

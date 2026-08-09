@@ -18,6 +18,7 @@ MonoBehaviour:
   - Id: Bottle
     Socket: 6
     Prefab: {fileID: 100000, guid: 131504e2f6ea4b87a53813b03784c556, type: 3}
+    PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Barley_Bottle.obj
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.015, y: -0.04, z: 0.025}
     LocalEulerOffset: {x: -24, y: 0, z: -14}

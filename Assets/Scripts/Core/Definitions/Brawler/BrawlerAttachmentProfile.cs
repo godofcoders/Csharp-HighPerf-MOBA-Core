@@ -16,6 +16,37 @@ namespace MOBA.Core.Definitions
         public float GripPoseWeight = 1f;
 
         public BrawlerAttachmentBinding[] Attachments = new BrawlerAttachmentBinding[0];
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (Attachments == null)
+                return;
+
+            bool changed = false;
+            for (int i = 0; i < Attachments.Length; i++)
+            {
+                BrawlerAttachmentBinding binding = Attachments[i];
+                if (binding == null ||
+                    binding.Prefab != null ||
+                    string.IsNullOrWhiteSpace(binding.PrefabAssetPath))
+                {
+                    continue;
+                }
+
+                GameObject prefab =
+                    UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(binding.PrefabAssetPath);
+                if (prefab == null)
+                    continue;
+
+                binding.Prefab = prefab;
+                changed = true;
+            }
+
+            if (changed)
+                UnityEditor.EditorUtility.SetDirty(this);
+        }
+#endif
     }
 
     [Serializable]
@@ -24,6 +55,7 @@ namespace MOBA.Core.Definitions
         public string Id;
         public BrawlerAttachmentSocket Socket = BrawlerAttachmentSocket.PrimaryWeapon;
         public GameObject Prefab;
+        public string PrefabAssetPath;
         public BrawlerGeneratedAttachmentType GeneratedAttachment = BrawlerGeneratedAttachmentType.None;
         public Vector3 LocalPositionOffset;
         public Vector3 LocalEulerOffset;

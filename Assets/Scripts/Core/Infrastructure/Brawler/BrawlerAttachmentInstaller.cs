@@ -108,13 +108,14 @@ namespace MOBA.Core.Infrastructure
             BrawlerAttachmentBinding binding,
             Transform parent)
         {
-            if (binding.Prefab != null)
+            GameObject authoredPrefab = ResolveAuthoredPrefab(binding);
+            if (authoredPrefab != null)
             {
-                if (TryCreatePrefabAttachment(binding, parent, out GameObject prefabAttachment))
+                if (TryCreatePrefabAttachment(binding, authoredPrefab, parent, out GameObject prefabAttachment))
                     return prefabAttachment;
 
                 Debug.LogWarning(
-                    $"[BrawlerAttachmentInstaller] Authored attachment '{binding.Prefab.name}' for '{binding.Id}' could not be instantiated. Generated fallback skipped so the authored asset mismatch is visible.");
+                    $"[BrawlerAttachmentInstaller] Authored attachment '{authoredPrefab.name}' for '{binding.Id}' could not be instantiated. Generated fallback skipped so the authored asset mismatch is visible.");
                 return null;
             }
 
@@ -132,23 +133,24 @@ namespace MOBA.Core.Infrastructure
 
         private static bool TryCreatePrefabAttachment(
             BrawlerAttachmentBinding binding,
+            GameObject prefab,
             Transform parent,
             out GameObject attachment)
         {
             attachment = null;
 
-            if (binding.Prefab == null)
+            if (prefab == null)
                 return false;
 
             UnityEngine.Object clone = null;
             try
             {
-                clone = Instantiate((UnityEngine.Object)binding.Prefab);
+                clone = Instantiate((UnityEngine.Object)prefab);
             }
             catch (Exception exception)
             {
                 Debug.LogWarning(
-                    $"[BrawlerAttachmentInstaller] Failed to instantiate authored attachment '{binding.Prefab.name}' for '{binding.Id}': {exception.GetType().Name} {exception.Message}");
+                    $"[BrawlerAttachmentInstaller] Failed to instantiate authored attachment '{prefab.name}' for '{binding.Id}': {exception.GetType().Name} {exception.Message}");
                 return false;
             }
 
@@ -163,6 +165,22 @@ namespace MOBA.Core.Infrastructure
                 Destroy(clone);
 
             return false;
+        }
+
+        private static GameObject ResolveAuthoredPrefab(BrawlerAttachmentBinding binding)
+        {
+            if (binding == null)
+                return null;
+
+            if (binding.Prefab != null)
+                return binding.Prefab;
+
+#if UNITY_EDITOR
+            if (!string.IsNullOrWhiteSpace(binding.PrefabAssetPath))
+                return UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(binding.PrefabAssetPath);
+#endif
+
+            return null;
         }
 
         private static GameObject ResolveInstantiatedRoot(UnityEngine.Object clone)

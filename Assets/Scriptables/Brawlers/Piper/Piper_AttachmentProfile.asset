@@ -18,6 +18,7 @@ MonoBehaviour:
   - Id: Umbrella
     Socket: 4
     Prefab: {fileID: 100000, guid: 854df8b6a6e74a778ff52870202b2ebd, type: 3}
+    PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Piper_Umbrella.obj
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.02, y: -0.06, z: 0.04}
     LocalEulerOffset: {x: 8, y: 0, z: -12}
