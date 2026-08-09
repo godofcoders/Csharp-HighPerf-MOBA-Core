@@ -157,21 +157,35 @@ namespace MOBA.Core.Infrastructure
             UnityEngine.Object clone = null;
             try
             {
-                clone = Instantiate((UnityEngine.Object)binding.Prefab, parent);
+                clone = Instantiate((UnityEngine.Object)binding.Prefab);
             }
             catch (InvalidCastException)
             {
                 return false;
             }
 
-            attachment = clone as GameObject;
+            attachment = ResolveInstantiatedRoot(clone);
             if (attachment != null)
+            {
+                attachment.transform.SetParent(parent, false);
                 return true;
+            }
 
             if (clone != null)
                 Destroy(clone);
 
             return false;
+        }
+
+        private static GameObject ResolveInstantiatedRoot(UnityEngine.Object clone)
+        {
+            if (clone is GameObject gameObject)
+                return gameObject;
+
+            if (clone is Component component)
+                return component.gameObject;
+
+            return null;
         }
 
         private void EnsureRuntimeAttachmentRoot()
