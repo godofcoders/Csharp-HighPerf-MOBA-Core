@@ -12,6 +12,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerDefinition _definition;
         [SerializeField] private BrawlerAttachmentRig _rig;
         [SerializeField] private Transform _runtimeAttachmentRoot;
+        [SerializeField] private bool _preferGeneratedAttachments;
 
         private readonly List<GameObject> _spawnedAttachments = new List<GameObject>(4);
 
@@ -32,6 +33,15 @@ namespace MOBA.Core.Infrastructure
         {
             _definition = definition;
             _rig = rig;
+            RebuildAttachments();
+        }
+
+        public void SetPreferGeneratedAttachments(bool preferGeneratedAttachments)
+        {
+            if (_preferGeneratedAttachments == preferGeneratedAttachments)
+                return;
+
+            _preferGeneratedAttachments = preferGeneratedAttachments;
             RebuildAttachments();
         }
 
@@ -104,23 +114,43 @@ namespace MOBA.Core.Infrastructure
             ApplyPresentationAnchorOverrides(primaryFireOverride, secondaryFireOverride, castOverride);
         }
 
-        private static GameObject CreateAttachment(
+        private GameObject CreateAttachment(
             BrawlerAttachmentBinding binding,
             Transform parent)
         {
+            if (_preferGeneratedAttachments &&
+                TryCreateGeneratedAttachment(binding, parent, out GameObject generatedFirst))
+            {
+                return generatedFirst;
+            }
+
             if (TryCreatePrefabAttachment(binding, parent, out GameObject prefabAttachment))
                 return prefabAttachment;
 
-            if (!BrawlerGeneratedAttachmentFactory.TryCreate(
+            return TryCreateGeneratedAttachment(binding, parent, out GameObject generated)
+                ? generated
+                : null;
+        }
+
+        private static bool TryCreateGeneratedAttachment(
+            BrawlerAttachmentBinding binding,
+            Transform parent,
+            out GameObject attachment)
+        {
+            attachment = null;
+
+            if (binding == null ||
+                !BrawlerGeneratedAttachmentFactory.TryCreate(
                     binding.GeneratedAttachment,
                     binding.Id,
                     out GameObject generated))
             {
-                return null;
+                return false;
             }
 
             generated.transform.SetParent(parent, false);
-            return generated;
+            attachment = generated;
+            return true;
         }
 
         private static bool TryCreatePrefabAttachment(
