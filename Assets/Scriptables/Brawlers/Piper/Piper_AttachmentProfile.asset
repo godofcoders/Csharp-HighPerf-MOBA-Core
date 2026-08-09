@@ -16,12 +16,15 @@ MonoBehaviour:
   GripPoseWeight: 1
   Attachments:
   - Id: Umbrella
-    Socket: 6
+    Socket: 4
     Prefab: {fileID: 100000, guid: 854df8b6a6e74a778ff52870202b2ebd, type: 3}
-    GeneratedAttachment: 7
-    LocalPositionOffset: {x: 0.015, y: -0.025, z: 0.035}
-    LocalEulerOffset: {x: 0, y: 0, z: -8}
-    LocalScale: {x: 0.78, y: 0.78, z: 0.78}
+    GeneratedAttachment: 0
+    LocalPositionOffset: {x: 0.02, y: -0.06, z: 0.04}
+    LocalEulerOffset: {x: 8, y: 0, z: -12}
+    LocalScale: {x: 0.52, y: 0.52, z: 0.52}
+    UseExplicitGripPoint: 1
+    ExplicitGripLocalPosition: {x: 0, y: -0.42, z: 0}
+    ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1

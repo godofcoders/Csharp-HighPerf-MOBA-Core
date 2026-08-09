@@ -28,6 +28,9 @@ namespace MOBA.Core.Definitions
         public Vector3 LocalPositionOffset;
         public Vector3 LocalEulerOffset;
         public Vector3 LocalScale = Vector3.one;
+        public bool UseExplicitGripPoint;
+        public Vector3 ExplicitGripLocalPosition;
+        public Vector3 ExplicitGripLocalEulerOffset;
         public bool FollowSocketRotation = true;
         public bool ReplaceExistingWithSameId = true;
         public bool UseAsPrimaryFirePoint;

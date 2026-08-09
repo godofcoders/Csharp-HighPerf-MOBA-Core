@@ -108,8 +108,15 @@ namespace MOBA.Core.Infrastructure
             BrawlerAttachmentBinding binding,
             Transform parent)
         {
-            if (TryCreatePrefabAttachment(binding, parent, out GameObject prefabAttachment))
-                return prefabAttachment;
+            if (binding.Prefab != null)
+            {
+                if (TryCreatePrefabAttachment(binding, parent, out GameObject prefabAttachment))
+                    return prefabAttachment;
+
+                Debug.LogWarning(
+                    $"[BrawlerAttachmentInstaller] Authored attachment '{binding.Prefab.name}' for '{binding.Id}' could not be instantiated. Generated fallback skipped so the authored asset mismatch is visible.");
+                return null;
+            }
 
             return TryCreateGeneratedAttachment(binding, parent, out GameObject generated)
                 ? generated
@@ -300,6 +307,13 @@ namespace MOBA.Core.Infrastructure
             out Vector3 localPosition,
             out Quaternion localRotation)
         {
+            if (binding.UseExplicitGripPoint)
+            {
+                localPosition = binding.ExplicitGripLocalPosition;
+                localRotation = Quaternion.Euler(binding.ExplicitGripLocalEulerOffset);
+                return true;
+            }
+
             Transform gripPoint =
                 FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.GripPointName) ??
                 FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.HoldPointName) ??
