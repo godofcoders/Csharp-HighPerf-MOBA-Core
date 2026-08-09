@@ -63,6 +63,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerAttachmentGripPose _gripPose =
             BrawlerAttachmentGripPose.Auto;
         [SerializeField, Range(0f, 1f)] private float _gripPoseWeight = 1f;
+        [SerializeField] private bool _useShowcasePose;
 
         private Transform _hips;
         private Transform _spine;
@@ -147,6 +148,11 @@ namespace MOBA.Core.Infrastructure
             RefreshGripProfile();
             CacheBones();
             CaptureBasePose();
+        }
+
+        public void SetShowcasePose(bool useShowcasePose)
+        {
+            _useShowcasePose = useShowcasePose;
         }
 
         private void Awake()
@@ -289,6 +295,14 @@ namespace MOBA.Core.Infrastructure
             if (gripPose == BrawlerAttachmentGripPose.None)
                 ready = Mathf.Clamp01(action * 0.9f + move01 * 0.15f);
 
+            float showcase = ResolveShowcaseReady(gripPose);
+            if (showcase > 0f)
+            {
+                ready = Mathf.Max(ready, showcase);
+                attack = Mathf.Max(attack, ResolveShowcaseAction(gripPose));
+                action = Mathf.Max(action, attack);
+            }
+
             float strideSin = _runtime != null ? _runtime.StrideSin : Mathf.Sin(time * 2.4f);
             float strideCos = _runtime != null ? _runtime.StrideCos : Mathf.Cos(time * 2.4f);
             float idleBreath = Mathf.Sin(time * 1.7f) * (1f - move01);
@@ -339,6 +353,53 @@ namespace MOBA.Core.Infrastructure
             PoseLeg(_rightUpperLeg, _rightLowerLeg, _rightFoot, strideSin, move01, run01, forward, up, weight);
             PoseLeg(_leftUpperLeg, _leftLowerLeg, _leftFoot, -strideSin, move01, run01, forward, up, weight);
             PoseHandsForGrip(gripPose, attack, super, weight);
+        }
+
+        private float ResolveShowcaseReady(BrawlerAttachmentGripPose gripPose)
+        {
+            if (!_useShowcasePose)
+                return 0f;
+
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.DualSidearm:
+                    return 0.58f;
+                case BrawlerAttachmentGripPose.Sidearm:
+                case BrawlerAttachmentGripPose.LongGun:
+                    return 0.54f;
+                case BrawlerAttachmentGripPose.Bow:
+                    return 0.72f;
+                case BrawlerAttachmentGripPose.Umbrella:
+                    return 0.62f;
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Bottle:
+                    return 0.46f;
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    return 0.42f;
+                default:
+                    return 0f;
+            }
+        }
+
+        private float ResolveShowcaseAction(BrawlerAttachmentGripPose gripPose)
+        {
+            if (!_useShowcasePose)
+                return 0f;
+
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Bow:
+                    return 0.18f;
+                case BrawlerAttachmentGripPose.Umbrella:
+                case BrawlerAttachmentGripPose.LongGun:
+                    return 0.10f;
+                case BrawlerAttachmentGripPose.Sidearm:
+                case BrawlerAttachmentGripPose.DualSidearm:
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    return 0.08f;
+                default:
+                    return 0f;
+            }
         }
 
         private void PoseArm(

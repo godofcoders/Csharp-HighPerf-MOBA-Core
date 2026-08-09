@@ -136,6 +136,11 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
+            BrawlerAuthoredModelAnimator authoredAnimator =
+                _spawned.GetComponentInChildren<BrawlerAuthoredModelAnimator>(true);
+            if (authoredAnimator != null)
+                authoredAnimator.SetShowcasePose(true);
+
             _baseLocalPosition = Vector3.zero;
             _currentYaw = _initialYaw;
             ApplyPreviewPose();
