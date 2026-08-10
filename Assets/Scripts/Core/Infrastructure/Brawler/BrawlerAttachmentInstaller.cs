@@ -63,14 +63,18 @@ namespace MOBA.Core.Infrastructure
                     RemoveExisting(binding.Id);
 
                 Transform socket = _rig.ResolveSocket(binding.Socket, transform);
-                Transform parent = binding.FollowSocketRotation ? socket : _runtimeAttachmentRoot;
+                bool useFollower = binding.UseStableCharacterRotation;
+                Transform parent =
+                    binding.FollowSocketRotation && !useFollower
+                        ? socket
+                        : _runtimeAttachmentRoot;
                 GameObject attachment = CreateAttachment(binding, parent);
                 if (attachment == null)
                     continue;
 
                 attachment.name = BuildAttachmentName(binding, attachment);
 
-                if (binding.FollowSocketRotation)
+                if (binding.FollowSocketRotation && !useFollower)
                 {
                     attachment.transform.localPosition = binding.LocalPositionOffset;
                     attachment.transform.localRotation = Quaternion.Euler(binding.LocalEulerOffset);
@@ -82,7 +86,10 @@ namespace MOBA.Core.Infrastructure
                 }
 
                 attachment.transform.localScale = ResolveScale(binding.LocalScale);
-                AlignAttachmentGripPoint(binding, socket, attachment.transform);
+                if (useFollower)
+                    InstallAttachmentFollower(binding, socket, attachment.transform);
+                else
+                    AlignAttachmentGripPoint(binding, socket, attachment.transform);
 
                 ConfigureLayer(attachment, gameObject.layer);
                 StripGameplayComponents(attachment);
@@ -102,6 +109,37 @@ namespace MOBA.Core.Infrastructure
             }
 
             ApplyPresentationAnchorOverrides(primaryFireOverride, secondaryFireOverride, castOverride);
+        }
+
+        private void InstallAttachmentFollower(
+            BrawlerAttachmentBinding binding,
+            Transform socket,
+            Transform attachmentRoot)
+        {
+            if (binding == null || socket == null || attachmentRoot == null)
+                return;
+
+            bool alignGripPoint = TryResolveAttachmentGripPoint(
+                binding,
+                attachmentRoot,
+                out Vector3 gripLocalPosition,
+                out Quaternion gripLocalRotation);
+
+            BrawlerAttachmentFollower follower =
+                attachmentRoot.GetComponent<BrawlerAttachmentFollower>();
+            if (follower == null)
+                follower = attachmentRoot.gameObject.AddComponent<BrawlerAttachmentFollower>();
+
+            Transform characterRoot = _rig != null ? _rig.Root : transform;
+            follower.Configure(
+                socket,
+                characterRoot,
+                binding.LocalPositionOffset,
+                binding.LocalEulerOffset,
+                binding.UseStableCharacterRotation,
+                alignGripPoint,
+                gripLocalPosition,
+                gripLocalRotation);
         }
 
         private GameObject CreateAttachment(

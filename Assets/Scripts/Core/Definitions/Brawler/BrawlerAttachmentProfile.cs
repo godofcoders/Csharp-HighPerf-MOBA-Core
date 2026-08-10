@@ -64,6 +64,7 @@ namespace MOBA.Core.Definitions
         public Vector3 ExplicitGripLocalPosition;
         public Vector3 ExplicitGripLocalEulerOffset;
         public bool FollowSocketRotation = true;
+        public bool UseStableCharacterRotation;
         public bool ReplaceExistingWithSameId = true;
         public bool UseAsPrimaryFirePoint;
         public bool UseAsSecondaryFirePoint;
