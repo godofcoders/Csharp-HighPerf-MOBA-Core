@@ -12,7 +12,7 @@ namespace MOBA.Core.Infrastructure
     public sealed class BrawlerAuthoredModelAnimator : MonoBehaviour
     {
         private const int FingerBoneCount = 15;
-        private const float GripIdleHold = 0.88f;
+        private const float GripIdleHold = 0.96f;
         private const float GripActionBoost = 0.12f;
         private const float PoseRiseSpeed = 16f;
         private const float PoseFallSpeed = 9f;
@@ -678,7 +678,7 @@ namespace MOBA.Core.Infrastructure
                 case BrawlerAttachmentGripPose.Sidearm:
                     PoseGripHands(
                         rightFingerCurl: 1f,
-                        rightThumbCurl: 0.72f,
+                        rightThumbCurl: 0.92f,
                         leftFingerCurl: 0f,
                         leftThumbCurl: 0f,
                         hold,
@@ -688,9 +688,9 @@ namespace MOBA.Core.Infrastructure
                 case BrawlerAttachmentGripPose.DualSidearm:
                     PoseGripHands(
                         rightFingerCurl: 1f,
-                        rightThumbCurl: 0.72f,
+                        rightThumbCurl: 0.92f,
                         leftFingerCurl: 1f,
-                        leftThumbCurl: 0.72f,
+                        leftThumbCurl: 0.92f,
                         hold,
                         poseWeight);
                     break;
@@ -698,9 +698,9 @@ namespace MOBA.Core.Infrastructure
                 case BrawlerAttachmentGripPose.LongGun:
                     PoseGripHands(
                         rightFingerCurl: 1f,
-                        rightThumbCurl: 0.76f,
-                        leftFingerCurl: 0.62f,
-                        leftThumbCurl: 0.48f,
+                        rightThumbCurl: 0.94f,
+                        leftFingerCurl: 0.78f,
+                        leftThumbCurl: 0.68f,
                         hold,
                         poseWeight);
                     break;
@@ -709,28 +709,28 @@ namespace MOBA.Core.Infrastructure
                 case BrawlerAttachmentGripPose.Bottle:
                 case BrawlerAttachmentGripPose.Umbrella:
                     PoseGripHands(
-                        rightFingerCurl: 0.96f,
-                        rightThumbCurl: 0.68f,
-                        leftFingerCurl: 0.12f,
-                        leftThumbCurl: 0.08f,
+                        rightFingerCurl: 1f,
+                        rightThumbCurl: 0.90f,
+                        leftFingerCurl: 0.18f,
+                        leftThumbCurl: 0.14f,
                         hold,
                         poseWeight);
                     break;
 
                 case BrawlerAttachmentGripPose.Bow:
                     PoseGripHands(
-                        rightFingerCurl: 0.82f,
-                        rightThumbCurl: 0.50f,
-                        leftFingerCurl: 0.66f,
-                        leftThumbCurl: 0.42f,
+                        rightFingerCurl: 0.94f,
+                        rightThumbCurl: 0.74f,
+                        leftFingerCurl: 0.82f,
+                        leftThumbCurl: 0.64f,
                         hold,
                         poseWeight);
                     break;
 
                 case BrawlerAttachmentGripPose.ThrowingStars:
                     PoseGripHands(
-                        rightFingerCurl: 0.62f,
-                        rightThumbCurl: 0.90f,
+                        rightFingerCurl: 0.88f,
+                        rightThumbCurl: 1f,
                         leftFingerCurl: 0.18f,
                         leftThumbCurl: 0.20f,
                         hold,
@@ -789,7 +789,7 @@ namespace MOBA.Core.Infrastructure
                 side * -5f,
                 weight);
 
-            ApplyFingerCurl(fingerBones, fingerBase, 0, thumbCurl, side * -10f, weight);
+            ApplyFingerCurl(fingerBones, fingerBase, 0, thumbCurl, side * -14f, weight);
             ApplyFingerCurl(fingerBones, fingerBase, 3, fingerCurl, side * 2f, weight);
             ApplyFingerCurl(fingerBones, fingerBase, 6, fingerCurl, 0f, weight);
             ApplyFingerCurl(fingerBones, fingerBase, 9, fingerCurl * 0.92f, side * -2f, weight);
@@ -807,9 +807,9 @@ namespace MOBA.Core.Infrastructure
             if (bones == null || bases == null || start < 0 || start + 2 >= bones.Length)
                 return;
 
-            SetFingerRotation(bones[start], bases[start], 26f * curl, yaw, 0f, weight);
-            SetFingerRotation(bones[start + 1], bases[start + 1], 34f * curl, 0f, 0f, weight);
-            SetFingerRotation(bones[start + 2], bases[start + 2], 24f * curl, 0f, 0f, weight);
+            SetFingerRotation(bones[start], bases[start], 40f * curl, yaw, 0f, weight);
+            SetFingerRotation(bones[start + 1], bases[start + 1], 52f * curl, 0f, 0f, weight);
+            SetFingerRotation(bones[start + 2], bases[start + 2], 36f * curl, 0f, 0f, weight);
         }
 
         private static void SetFingerRotation(

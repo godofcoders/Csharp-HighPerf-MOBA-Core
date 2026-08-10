@@ -20,7 +20,7 @@ MonoBehaviour:
     Prefab: {fileID: 100000, guid: 2d0868b4af1442c5a897f4acfc3c3efa, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Byron_Staff.obj
     GeneratedAttachment: 0
-    LocalPositionOffset: {x: 0.012, y: -0.045, z: 0.02}
+    LocalPositionOffset: {x: 0.004, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.42, y: 0.42, z: 0.42}
     UseExplicitGripPoint: 1

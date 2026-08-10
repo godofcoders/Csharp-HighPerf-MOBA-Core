@@ -16,15 +16,15 @@ MonoBehaviour:
   GripPoseWeight: 1
   Attachments:
   - Id: Umbrella
-    Socket: 4
+    Socket: 6
     Prefab: {fileID: 100000, guid: 854df8b6a6e74a778ff52870202b2ebd, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Piper_Umbrella.obj
     GeneratedAttachment: 0
-    LocalPositionOffset: {x: 0.02, y: -0.055, z: 0.035}
+    LocalPositionOffset: {x: 0.01, y: -0.01, z: 0.015}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.52, y: 0.52, z: 0.52}
     UseExplicitGripPoint: 1
-    ExplicitGripLocalPosition: {x: 0, y: -0.42, z: 0}
+    ExplicitGripLocalPosition: {x: 0, y: -0.64, z: 0}
     ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     UseStableCharacterRotation: 1

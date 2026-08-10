@@ -20,7 +20,7 @@ MonoBehaviour:
     Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Colt_Pistol.obj
     GeneratedAttachment: 0
-    LocalPositionOffset: {x: 0.01, y: -0.015, z: 0.025}
+    LocalPositionOffset: {x: 0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.36, y: 0.36, z: 0.36}
     UseExplicitGripPoint: 1
@@ -37,7 +37,7 @@ MonoBehaviour:
     Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Colt_Pistol.obj
     GeneratedAttachment: 0
-    LocalPositionOffset: {x: -0.01, y: -0.015, z: 0.025}
+    LocalPositionOffset: {x: -0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.36, y: 0.36, z: 0.36}
     UseExplicitGripPoint: 1

@@ -7,6 +7,10 @@ namespace MOBA.Core.Infrastructure
 {
     public sealed class BrawlerAttachmentRig : MonoBehaviour
     {
+        private const float PalmForwardOffset = 0.092f;
+        private const float PalmSideOffset = 0.014f;
+        private const float PalmUpOffset = 0.004f;
+
         [SerializeField] private Transform _root;
         [SerializeField] private BrawlerAttachmentSocketBinding[] _socketBindings =
             new BrawlerAttachmentSocketBinding[0];
@@ -268,9 +272,9 @@ namespace MOBA.Core.Infrastructure
             Vector3 up = Vector3.up;
             Vector3 worldPosition =
                 hand.position +
-                forward * 0.035f +
-                right * side * 0.006f -
-                up * 0.010f;
+                forward * PalmForwardOffset +
+                right * side * PalmSideOffset +
+                up * PalmUpOffset;
 
             return hand.InverseTransformPoint(worldPosition);
         }

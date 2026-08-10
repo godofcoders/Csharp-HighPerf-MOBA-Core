@@ -20,7 +20,7 @@ MonoBehaviour:
     Prefab: {fileID: 100000, guid: e9bb064a152f42f2ab79f10513c629cc, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Jessie_ShockGun.obj
     GeneratedAttachment: 0
-    LocalPositionOffset: {x: 0.01, y: -0.015, z: 0.035}
+    LocalPositionOffset: {x: 0.006, y: 0, z: 0.014}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.3, y: 0.3, z: 0.3}
     UseExplicitGripPoint: 1

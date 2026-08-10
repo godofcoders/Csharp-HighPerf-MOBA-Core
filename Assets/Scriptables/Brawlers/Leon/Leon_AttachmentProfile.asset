@@ -20,7 +20,7 @@ MonoBehaviour:
     Prefab: {fileID: 100000, guid: 4bf44923c19b43009dbbec77647f3ee4, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Leon_NinjaStar.obj
     GeneratedAttachment: 0
-    LocalPositionOffset: {x: 0.005, y: -0.015, z: 0.02}
+    LocalPositionOffset: {x: 0.004, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 35}
     LocalScale: {x: 0.45, y: 0.45, z: 0.45}
     UseExplicitGripPoint: 1

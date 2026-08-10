@@ -16,11 +16,11 @@ MonoBehaviour:
   GripPoseWeight: 1
   Attachments:
   - Id: Bow
-    Socket: 5
+    Socket: 7
     Prefab: {fileID: 100000, guid: de391466dc464785af8d94ca33eff3a2, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Bo_Bow.obj
     GeneratedAttachment: 0
-    LocalPositionOffset: {x: -0.02, y: 0, z: 0.03}
+    LocalPositionOffset: {x: 0, y: 0, z: 0.015}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.82, y: 0.82, z: 0.82}
     UseExplicitGripPoint: 1
@@ -29,8 +29,8 @@ MonoBehaviour:
     FollowSocketRotation: 1
     UseStableCharacterRotation: 1
     UseSecondaryGripPoint: 1
-    SecondaryGripSocket: 4
-    SecondaryGripLocalPosition: {x: 0.075, y: 0.02, z: 0}
+    SecondaryGripSocket: 6
+    SecondaryGripLocalPosition: {x: 0.075, y: 0.015, z: 0}
     SecondaryGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     SecondaryGripWeight: 0.58
     ReplaceExistingWithSameId: 1
