@@ -65,6 +65,12 @@ namespace MOBA.Core.Definitions
         public Vector3 ExplicitGripLocalEulerOffset;
         public bool FollowSocketRotation = true;
         public bool UseStableCharacterRotation;
+        public bool UseSecondaryGripPoint;
+        public BrawlerAttachmentSocket SecondaryGripSocket = BrawlerAttachmentSocket.LeftHand;
+        public Vector3 SecondaryGripLocalPosition;
+        public Vector3 SecondaryGripLocalEulerOffset;
+        [Range(0f, 1f)]
+        public float SecondaryGripWeight = 0.65f;
         public bool ReplaceExistingWithSameId = true;
         public bool UseAsPrimaryFirePoint;
         public bool UseAsSecondaryFirePoint;

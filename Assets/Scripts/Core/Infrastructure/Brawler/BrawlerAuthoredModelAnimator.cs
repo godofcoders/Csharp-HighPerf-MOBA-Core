@@ -86,6 +86,10 @@ namespace MOBA.Core.Infrastructure
         private readonly Transform[] _rightFingerBones = new Transform[FingerBoneCount];
         private readonly Quaternion[] _leftFingerBase = new Quaternion[FingerBoneCount];
         private readonly Quaternion[] _rightFingerBase = new Quaternion[FingerBoneCount];
+        private BrawlerAttachmentFollower[] _attachmentFollowers =
+            new BrawlerAttachmentFollower[0];
+        private BrawlerRuntimeAttachmentGrip[] _runtimeAttachmentGrips =
+            new BrawlerRuntimeAttachmentGrip[0];
 
         private Quaternion _hipsBase;
         private Quaternion _spineBase;
@@ -155,6 +159,14 @@ namespace MOBA.Core.Infrastructure
             _useShowcasePose = useShowcasePose;
         }
 
+        public void RefreshRuntimeGripTargets()
+        {
+            _attachmentFollowers =
+                GetComponentsInChildren<BrawlerAttachmentFollower>(true);
+            _runtimeAttachmentGrips =
+                GetComponentsInChildren<BrawlerRuntimeAttachmentGrip>(true);
+        }
+
         private void Awake()
         {
             if (_animator == null)
@@ -172,6 +184,7 @@ namespace MOBA.Core.Infrastructure
             RefreshGripProfile();
             CacheBones();
             CaptureBasePose();
+            RefreshRuntimeGripTargets();
         }
 
         private void LateUpdate()
@@ -353,6 +366,56 @@ namespace MOBA.Core.Infrastructure
             PoseLeg(_rightUpperLeg, _rightLowerLeg, _rightFoot, strideSin, move01, run01, forward, up, weight);
             PoseLeg(_leftUpperLeg, _leftLowerLeg, _leftFoot, -strideSin, move01, run01, forward, up, weight);
             PoseHandsForGrip(gripPose, attack, super, weight);
+            ApplyAttachmentFollowersNow();
+            ApplyRuntimeGripTargets(weight);
+        }
+
+        private void ApplyAttachmentFollowersNow()
+        {
+            if (_attachmentFollowers == null || _attachmentFollowers.Length == 0)
+                return;
+
+            for (int i = 0; i < _attachmentFollowers.Length; i++)
+            {
+                BrawlerAttachmentFollower follower = _attachmentFollowers[i];
+                if (follower != null)
+                    follower.ApplyNow();
+            }
+        }
+
+        private void ApplyRuntimeGripTargets(float weight)
+        {
+            if (_runtimeAttachmentGrips == null || _runtimeAttachmentGrips.Length == 0)
+                return;
+
+            for (int i = 0; i < _runtimeAttachmentGrips.Length; i++)
+            {
+                BrawlerRuntimeAttachmentGrip grip = _runtimeAttachmentGrips[i];
+                if (grip == null ||
+                    !grip.TryGetSecondaryGrip(
+                        out BrawlerAttachmentSocket socket,
+                        out Transform target,
+                        out float gripWeight))
+                {
+                    continue;
+                }
+
+                if (!TryResolveArmForSocket(
+                        socket,
+                        out Transform upper,
+                        out Transform lower,
+                        out Transform hand))
+                {
+                    continue;
+                }
+
+                ApplyArmGripIk(
+                    upper,
+                    lower,
+                    hand,
+                    target,
+                    Mathf.Clamp01(weight * gripWeight));
+            }
         }
 
         private float ResolveShowcaseReady(BrawlerAttachmentGripPose gripPose)
@@ -961,6 +1024,70 @@ namespace MOBA.Core.Infrastructure
             Vector3 aim = _runtime != null ? _runtime.AimDirection : fallbackForward;
             aim.y = 0f;
             return aim.sqrMagnitude > 0.0001f ? aim.normalized : fallbackForward;
+        }
+
+        private bool TryResolveArmForSocket(
+            BrawlerAttachmentSocket socket,
+            out Transform upper,
+            out Transform lower,
+            out Transform hand)
+        {
+            switch (socket)
+            {
+                case BrawlerAttachmentSocket.LeftHand:
+                case BrawlerAttachmentSocket.SecondaryWeapon:
+                    upper = _leftUpperArm;
+                    lower = _leftLowerArm;
+                    hand = _leftHand;
+                    return upper != null && lower != null && hand != null;
+
+                case BrawlerAttachmentSocket.RightHand:
+                case BrawlerAttachmentSocket.PrimaryWeapon:
+                    upper = _rightUpperArm;
+                    lower = _rightLowerArm;
+                    hand = _rightHand;
+                    return upper != null && lower != null && hand != null;
+
+                default:
+                    upper = null;
+                    lower = null;
+                    hand = null;
+                    return false;
+            }
+        }
+
+        private static void ApplyArmGripIk(
+            Transform upper,
+            Transform lower,
+            Transform hand,
+            Transform target,
+            float weight)
+        {
+            if (upper == null ||
+                lower == null ||
+                hand == null ||
+                target == null ||
+                weight <= 0f)
+            {
+                return;
+            }
+
+            Vector3 targetPosition = target.position;
+            for (int i = 0; i < 2; i++)
+            {
+                Vector3 upperDirection = targetPosition - upper.position;
+                if (upperDirection.sqrMagnitude > 0.000001f)
+                    RotateBoneToward(upper, lower, upperDirection.normalized, weight * 0.58f);
+
+                Vector3 lowerDirection = targetPosition - lower.position;
+                if (lowerDirection.sqrMagnitude > 0.000001f)
+                    RotateBoneToward(lower, hand, lowerDirection.normalized, weight);
+            }
+
+            hand.rotation = Quaternion.Slerp(
+                hand.rotation,
+                target.rotation,
+                Mathf.Clamp01(weight * 0.42f));
         }
 
         private static void RotateBoneToward(

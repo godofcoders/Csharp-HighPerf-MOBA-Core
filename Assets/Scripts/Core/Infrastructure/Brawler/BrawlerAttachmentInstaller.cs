@@ -93,6 +93,7 @@ namespace MOBA.Core.Infrastructure
 
                 ConfigureLayer(attachment, gameObject.layer);
                 StripGameplayComponents(attachment);
+                InstallRuntimeGripTargets(binding, attachment.transform);
 
                 Transform presentationAnchor = CreatePresentationAnchor(binding, attachment.transform);
                 if (presentationAnchor != null)
@@ -109,6 +110,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             ApplyPresentationAnchorOverrides(primaryFireOverride, secondaryFireOverride, castOverride);
+            RefreshModelGripTargets();
         }
 
         private void InstallAttachmentFollower(
@@ -140,6 +142,59 @@ namespace MOBA.Core.Infrastructure
                 alignGripPoint,
                 gripLocalPosition,
                 gripLocalRotation);
+        }
+
+        private static void InstallRuntimeGripTargets(
+            BrawlerAttachmentBinding binding,
+            Transform attachmentRoot)
+        {
+            if (binding == null ||
+                attachmentRoot == null ||
+                !binding.UseSecondaryGripPoint)
+            {
+                return;
+            }
+
+            Transform secondaryGrip = GetOrCreateChild(
+                attachmentRoot,
+                "SecondaryGripTarget");
+            secondaryGrip.localPosition = binding.SecondaryGripLocalPosition;
+            secondaryGrip.localRotation = Quaternion.Euler(binding.SecondaryGripLocalEulerOffset);
+            secondaryGrip.localScale = Vector3.one;
+
+            BrawlerRuntimeAttachmentGrip runtimeGrip =
+                attachmentRoot.GetComponent<BrawlerRuntimeAttachmentGrip>();
+            if (runtimeGrip == null)
+                runtimeGrip = attachmentRoot.gameObject.AddComponent<BrawlerRuntimeAttachmentGrip>();
+
+            runtimeGrip.ConfigureSecondaryGrip(
+                secondaryGrip,
+                binding.SecondaryGripSocket,
+                binding.SecondaryGripWeight);
+        }
+
+        private static Transform GetOrCreateChild(
+            Transform parent,
+            string childName)
+        {
+            Transform existing = parent.Find(childName);
+            if (existing != null)
+                return existing;
+
+            GameObject child = new GameObject(childName);
+            child.transform.SetParent(parent, false);
+            return child.transform;
+        }
+
+        private void RefreshModelGripTargets()
+        {
+            BrawlerAuthoredModelAnimator modelAnimator =
+                GetComponentInChildren<BrawlerAuthoredModelAnimator>(true);
+            if (modelAnimator == null)
+                modelAnimator = GetComponentInParent<BrawlerAuthoredModelAnimator>();
+
+            if (modelAnimator != null)
+                modelAnimator.RefreshRuntimeGripTargets();
         }
 
         private GameObject CreateAttachment(
