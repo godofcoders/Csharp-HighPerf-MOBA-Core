@@ -269,9 +269,9 @@ namespace MOBA.Core.Infrastructure
 
         private void DecayWeights(float deltaTime)
         {
-            MainAttackWeight = Mathf.MoveTowards(MainAttackWeight, 0f, deltaTime * 7.0f);
-            SuperWeight = Mathf.MoveTowards(SuperWeight, 0f, deltaTime * 4.5f);
-            GadgetWeight = Mathf.MoveTowards(GadgetWeight, 0f, deltaTime * 6.0f);
+            MainAttackWeight = Mathf.MoveTowards(MainAttackWeight, 0f, deltaTime * 4.8f);
+            SuperWeight = Mathf.MoveTowards(SuperWeight, 0f, deltaTime * 3.6f);
+            GadgetWeight = Mathf.MoveTowards(GadgetWeight, 0f, deltaTime * 5.0f);
             HitReactWeight = Mathf.MoveTowards(HitReactWeight, 0f, deltaTime * 7.5f);
             HealWeight = Mathf.MoveTowards(HealWeight, 0f, deltaTime * 4.0f);
 
@@ -368,7 +368,7 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             _eventAimDirection = direction.normalized;
-            _eventAimHoldSeconds = 0.22f;
+            _eventAimHoldSeconds = 0.34f;
         }
 
         private void HandleTargetCombatEvent(CombatPresentationEvent evt)

@@ -115,6 +115,12 @@ namespace MOBA.Core.Infrastructure
         private float _smoothedSuper;
         private float _smoothedHit;
         private float _smoothedHyper;
+        private float _gaitPhaseOffset;
+        private float _gaitTempoScale = 1f;
+        private float _gaitAmplitudeScale = 1f;
+        private float _strideReachScale = 1f;
+        private float _footLiftScale = 1f;
+        private float _armSwingScale = 1f;
 
         public static BrawlerAuthoredModelAnimator Ensure(
             GameObject root,
@@ -150,6 +156,7 @@ namespace MOBA.Core.Infrastructure
             _animator = animator != null ? animator : GetComponentInChildren<Animator>(true);
             _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
             RefreshGripProfile();
+            ConfigureGaitProfile();
             CacheBones();
             CaptureBasePose();
         }
@@ -182,6 +189,7 @@ namespace MOBA.Core.Infrastructure
                 _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
 
             RefreshGripProfile();
+            ConfigureGaitProfile();
             CacheBones();
             CaptureBasePose();
             RefreshRuntimeGripTargets();
@@ -301,12 +309,12 @@ namespace MOBA.Core.Infrastructure
             float hit = _smoothedHit;
             float hyper = _smoothedHyper;
             BrawlerAttachmentGripPose gripPose = ResolveGripPose();
-            float ready = Mathf.Clamp01(action * 1.10f + move01 * 0.20f);
+            float ready = Mathf.Clamp01(action * 1.24f + super * 0.18f + move01 * 0.05f);
             if (gripPose != BrawlerAttachmentGripPose.None)
-                ready = Mathf.Clamp01(ready + 0.08f);
+                ready = Mathf.Clamp01(ready + 0.02f);
 
             if (gripPose == BrawlerAttachmentGripPose.None)
-                ready = Mathf.Clamp01(action * 0.9f + move01 * 0.15f);
+                ready = Mathf.Clamp01(action * 1.05f + move01 * 0.04f);
 
             float showcase = ResolveShowcaseReady(gripPose);
             if (showcase > 0f)
@@ -316,8 +324,13 @@ namespace MOBA.Core.Infrastructure
                 action = Mathf.Max(action, attack);
             }
 
-            float strideSin = _runtime != null ? _runtime.StrideSin : Mathf.Sin(time * 2.4f);
-            float strideCos = _runtime != null ? _runtime.StrideCos : Mathf.Cos(time * 2.4f);
+            float stridePhase =
+                (_runtime != null ? _runtime.StridePhase : time * 4.2f) * _gaitTempoScale +
+                _gaitPhaseOffset;
+            float strideSin = Mathf.Sin(stridePhase);
+            float strideCos = Mathf.Cos(stridePhase);
+            float gaitMove01 = Mathf.Clamp01(move01 * _gaitAmplitudeScale);
+            float gaitRun01 = Mathf.Clamp01(run01 * _gaitAmplitudeScale);
             float idleBreath = Mathf.Sin(time * 1.7f) * (1f - move01);
             float idleLook = Mathf.Sin(time * 0.73f) * (1f - move01);
             Vector3 forward = ResolveForward();
@@ -325,10 +338,10 @@ namespace MOBA.Core.Infrastructure
             Vector3 up = Vector3.up;
             Vector3 aim = ResolveAimDirection(forward, Mathf.Clamp01(action + attack + super));
 
-            AddLocal(_hips, _hipsBase, idleBreath * 1.1f - move01 * 5.2f, idleLook * 0.7f, strideCos * move01 * 3.0f, weight);
-            AddLocal(_spine, _spineBase, idleBreath * -1.0f + move01 * 4.4f - hit * 7.0f, idleLook * 0.8f, -strideCos * move01 * 2.6f, weight);
-            AddLocal(_chest, _chestBase, idleBreath * -0.7f + super * -5.5f, idleLook * 1.1f, strideCos * move01 * 1.8f + hyper * 2.0f, weight);
-            AddLocal(_head, _headBase, idleBreath * 0.7f - attack * 3.0f, idleLook * 2.2f, -strideCos * move01 * 0.8f, weight);
+            AddLocal(_hips, _hipsBase, idleBreath * 1.1f - gaitMove01 * 6.0f, idleLook * 0.7f, strideCos * gaitMove01 * 3.8f, weight);
+            AddLocal(_spine, _spineBase, idleBreath * -1.0f + gaitMove01 * 4.8f - hit * 7.0f, idleLook * 0.8f, -strideCos * gaitMove01 * 3.0f, weight);
+            AddLocal(_chest, _chestBase, idleBreath * -0.7f + super * -5.5f, idleLook * 1.1f, strideCos * gaitMove01 * 2.2f + hyper * 2.0f, weight);
+            AddLocal(_head, _headBase, idleBreath * 0.7f - attack * 3.0f, idleLook * 2.2f, -strideCos * gaitMove01 * 1.0f, weight);
 
             PoseArm(
                 _rightUpperArm,
@@ -339,7 +352,7 @@ namespace MOBA.Core.Infrastructure
                 attack,
                 super,
                 strideSin,
-                move01,
+                gaitMove01 * _armSwingScale,
                 forward,
                 right,
                 up,
@@ -355,7 +368,7 @@ namespace MOBA.Core.Infrastructure
                 attack * 0.65f,
                 super,
                 -strideSin,
-                move01,
+                gaitMove01 * _armSwingScale,
                 forward,
                 right,
                 up,
@@ -363,8 +376,26 @@ namespace MOBA.Core.Infrastructure
                 gripPose,
                 weight);
 
-            PoseLeg(_rightUpperLeg, _rightLowerLeg, _rightFoot, strideSin, move01, run01, forward, up, weight);
-            PoseLeg(_leftUpperLeg, _leftLowerLeg, _leftFoot, -strideSin, move01, run01, forward, up, weight);
+            PoseLeg(
+                _rightUpperLeg,
+                _rightLowerLeg,
+                _rightFoot,
+                strideSin,
+                gaitMove01,
+                gaitRun01,
+                forward,
+                up,
+                weight);
+            PoseLeg(
+                _leftUpperLeg,
+                _leftLowerLeg,
+                _leftFoot,
+                -strideSin,
+                gaitMove01,
+                gaitRun01,
+                forward,
+                up,
+                weight);
             PoseHandsForGrip(gripPose, attack, super, weight);
             ApplyAttachmentFollowersNow();
             ApplyRuntimeGripTargets(weight);
@@ -841,17 +872,33 @@ namespace MOBA.Core.Infrastructure
             if (upper == null || lower == null)
                 return;
 
-            float strideAmount = Mathf.Lerp(0.12f, 0.42f, run01) * move01;
+            float strideAmount =
+                Mathf.Lerp(0.16f, 0.56f, run01) *
+                move01 *
+                _strideReachScale;
+            float stepLift =
+                Mathf.Pow(Mathf.Max(0f, swing), 0.72f) *
+                Mathf.Lerp(0.018f, 0.115f, run01) *
+                move01 *
+                _footLiftScale;
             Vector3 desiredUpper =
-                (-up * 0.96f + forward * swing * strideAmount).normalized;
+                (-up * 0.94f + forward * swing * strideAmount + up * stepLift * 0.22f).normalized;
             RotateBoneToward(upper, lower, desiredUpper, weight * Mathf.Clamp01(move01 * 1.2f));
 
             if (foot == null)
                 return;
 
             Vector3 desiredLower =
-                (-up * 0.98f - forward * swing * strideAmount * 0.62f).normalized;
+                (-up * 0.96f - forward * swing * strideAmount * 0.68f + up * stepLift * 0.18f).normalized;
             RotateBoneToward(lower, foot, desiredLower, weight * Mathf.Clamp01(move01 * 1.1f));
+
+            AddLocal(
+                foot,
+                foot.localRotation,
+                -swing * Mathf.Lerp(5f, 16f, run01) * move01,
+                0f,
+                swing * Mathf.Lerp(1.2f, 3.8f, run01) * move01,
+                weight * Mathf.Clamp01(move01 * 1.2f));
         }
 
         private void SmoothPoseSignals(float deltaTime)
@@ -919,6 +966,85 @@ namespace MOBA.Core.Infrastructure
 
             _gripPose = profile.GripPose;
             _gripPoseWeight = Mathf.Clamp01(profile.GripPoseWeight);
+        }
+
+        private void ConfigureGaitProfile()
+        {
+            string seed = ResolveBrawlerName();
+            _gaitPhaseOffset = Stable01(seed + "_phase") * Mathf.PI * 2f;
+            _gaitTempoScale = Mathf.Lerp(0.94f, 1.10f, Stable01(seed + "_tempo"));
+            _gaitAmplitudeScale = Mathf.Lerp(0.92f, 1.08f, Stable01(seed + "_amplitude"));
+            _strideReachScale = 1f;
+            _footLiftScale = 1f;
+            _armSwingScale = 1f;
+
+            if (Contains(seed, "El Primo"))
+            {
+                _gaitTempoScale *= 0.90f;
+                _gaitAmplitudeScale *= 1.10f;
+                _strideReachScale = 1.10f;
+                _footLiftScale = 0.92f;
+                _armSwingScale = 0.86f;
+            }
+            else if (Contains(seed, "Barley"))
+            {
+                _gaitTempoScale *= 1.10f;
+                _gaitAmplitudeScale *= 0.82f;
+                _strideReachScale = 0.78f;
+                _footLiftScale = 0.64f;
+                _armSwingScale = 0.62f;
+            }
+            else if (Contains(seed, "Jessie") || Contains(seed, "Leon"))
+            {
+                _gaitTempoScale *= 1.12f;
+                _gaitAmplitudeScale *= 0.98f;
+                _strideReachScale = 0.94f;
+                _footLiftScale = 1.12f;
+                _armSwingScale = 1.05f;
+            }
+            else if (Contains(seed, "Byron") || Contains(seed, "Piper"))
+            {
+                _gaitTempoScale *= 0.96f;
+                _gaitAmplitudeScale *= 0.88f;
+                _strideReachScale = 0.90f;
+                _footLiftScale = 0.86f;
+                _armSwingScale = 0.76f;
+            }
+        }
+
+        private string ResolveBrawlerName()
+        {
+            BrawlerDefinition definition = _definition != null
+                ? _definition
+                : (_owner != null ? _owner.Definition : null);
+
+            if (definition == null)
+                return gameObject.name;
+
+            return !string.IsNullOrWhiteSpace(definition.BrawlerName)
+                ? definition.BrawlerName
+                : definition.name;
+        }
+
+        private static bool Contains(string value, string expected)
+        {
+            return !string.IsNullOrEmpty(value) &&
+                   !string.IsNullOrEmpty(expected) &&
+                   value.IndexOf(expected, System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static float Stable01(string seedText)
+        {
+            unchecked
+            {
+                string value = seedText ?? string.Empty;
+                int hash = 23;
+
+                for (int i = 0; i < value.Length; i++)
+                    hash = (hash * 31) + value[i];
+
+                return (hash & 0x7fffffff) / 2147483647f;
+            }
         }
 
         private BrawlerAttachmentGripPose ResolveGripPose()
