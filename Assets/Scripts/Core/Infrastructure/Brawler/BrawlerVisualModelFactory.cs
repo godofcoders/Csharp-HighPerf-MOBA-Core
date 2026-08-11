@@ -123,6 +123,7 @@ namespace MOBA.Core.Infrastructure
         {
             BrawlerAnimationRuntime.Ensure(instance, owner);
             BrawlerAuthoredModelAnimator.Ensure(instance, owner, definition);
+            BrawlerLegIkRuntime.Ensure(instance, owner);
 
             BrawlerAttachmentRig rig = BrawlerAttachmentRig.Ensure(instance);
             if (rig != null)
