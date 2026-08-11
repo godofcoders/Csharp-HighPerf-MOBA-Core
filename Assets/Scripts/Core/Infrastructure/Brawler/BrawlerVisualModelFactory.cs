@@ -70,7 +70,7 @@ namespace MOBA.Core.Infrastructure
             if (model == null)
                 return;
 
-            model.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            model.localRotation = Quaternion.identity;
         }
 
         private static void NormalizeScaleAndGrounding(
