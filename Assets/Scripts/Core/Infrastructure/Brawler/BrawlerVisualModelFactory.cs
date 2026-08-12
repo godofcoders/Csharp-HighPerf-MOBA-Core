@@ -124,6 +124,8 @@ namespace MOBA.Core.Infrastructure
             BrawlerAnimationRuntime.Ensure(instance, owner);
             BrawlerAuthoredModelAnimator.Ensure(instance, owner, definition);
             BrawlerLegIkRuntime.Ensure(instance, owner);
+            BrawlerVisualGroundingStabilizer grounding =
+                BrawlerVisualGroundingStabilizer.Ensure(instance, instance.transform.parent);
 
             BrawlerAttachmentRig rig = BrawlerAttachmentRig.Ensure(instance);
             if (rig != null)
@@ -136,7 +138,11 @@ namespace MOBA.Core.Infrastructure
 
             BrawlerAttachmentInstaller installer = BrawlerAttachmentInstaller.Ensure(instance);
             if (installer != null)
+            {
                 installer.Bind(definition, rig);
+                if (grounding != null)
+                    grounding.RefreshRenderers();
+            }
         }
 
         private static void EnsurePresentationAnchors(

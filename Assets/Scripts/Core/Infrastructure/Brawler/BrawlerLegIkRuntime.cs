@@ -16,12 +16,14 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Animator _animator;
         [SerializeField] private BrawlerAnimationRuntime _runtime;
         [SerializeField] private bool _enableLegIk = true;
-        [SerializeField, Range(0f, 1f)] private float _ikWeight = 0.82f;
-        [SerializeField] private float _walkStrideDistance = 0.12f;
-        [SerializeField] private float _runStrideDistance = 0.26f;
-        [SerializeField] private float _walkFootLift = 0.025f;
-        [SerializeField] private float _runFootLift = 0.095f;
-        [SerializeField] private float _sideSwayDistance = 0.025f;
+        [SerializeField, Range(0f, 1f)] private float _ikWeight = 0.74f;
+        [SerializeField] private float _walkStrideDistance = 0.09f;
+        [SerializeField] private float _runStrideDistance = 0.18f;
+        [SerializeField] private float _walkFootLift = 0.012f;
+        [SerializeField] private float _runFootLift = 0.045f;
+        [SerializeField] private float _sideSwayDistance = 0.018f;
+        [SerializeField] private float _plantedFootDownforce = 0.024f;
+        [SerializeField] private float _swingFootDownforce = 0.004f;
 
         [Header("Runtime Debug")]
         [SerializeField] private float _debugMove01;
@@ -161,14 +163,19 @@ namespace MOBA.Core.Infrastructure
             float strideCos = Mathf.Cos(phase);
             float strideDistance = Mathf.Lerp(_walkStrideDistance, _runStrideDistance, run01) * move01;
             float liftDistance = Mathf.Lerp(_walkFootLift, _runFootLift, run01) * move01;
-            float footLift = Mathf.Pow(Mathf.Max(0f, strideSin), 0.72f) * liftDistance;
+            float lift01 = Mathf.SmoothStep(0f, 1f, Mathf.Max(0f, strideSin));
+            float planted01 = Mathf.SmoothStep(0f, 1f, Mathf.Max(0f, -strideSin));
+            float footLift = lift01 * liftDistance;
+            float groundBias =
+                Mathf.Lerp(_swingFootDownforce, _plantedFootDownforce, planted01) *
+                move01;
             float sideSway = strideCos * _sideSwayDistance * move01 * leg.Side;
 
             Vector3 target =
                 _space.TransformPoint(leg.RestFootLocalPosition) +
                 moveDirection * (strideSin * strideDistance) +
                 ResolveRight(moveDirection) * sideSway +
-                Vector3.up * footLift;
+                Vector3.up * (footLift - groundBias);
 
             SolveTwoBone(
                 leg.Upper,

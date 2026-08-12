@@ -338,10 +338,10 @@ namespace MOBA.Core.Infrastructure
             Vector3 up = Vector3.up;
             Vector3 aim = ResolveAimDirection(forward, Mathf.Clamp01(action + attack + super));
 
-            AddLocal(_hips, _hipsBase, idleBreath * 1.1f - gaitMove01 * 6.0f, idleLook * 0.7f, strideCos * gaitMove01 * 3.8f, weight);
-            AddLocal(_spine, _spineBase, idleBreath * -1.0f + gaitMove01 * 4.8f - hit * 7.0f, idleLook * 0.8f, -strideCos * gaitMove01 * 3.0f, weight);
-            AddLocal(_chest, _chestBase, idleBreath * -0.7f + super * -5.5f, idleLook * 1.1f, strideCos * gaitMove01 * 2.2f + hyper * 2.0f, weight);
-            AddLocal(_head, _headBase, idleBreath * 0.7f - attack * 3.0f, idleLook * 2.2f, -strideCos * gaitMove01 * 1.0f, weight);
+            AddLocal(_hips, _hipsBase, idleBreath * 1.1f - gaitMove01 * 3.8f, idleLook * 0.7f, strideCos * gaitMove01 * 2.4f, weight);
+            AddLocal(_spine, _spineBase, idleBreath * -1.0f + gaitMove01 * 3.2f - hit * 7.0f, idleLook * 0.8f, -strideCos * gaitMove01 * 1.9f, weight);
+            AddLocal(_chest, _chestBase, idleBreath * -0.7f + super * -5.5f, idleLook * 1.1f, strideCos * gaitMove01 * 1.4f + hyper * 2.0f, weight);
+            AddLocal(_head, _headBase, idleBreath * 0.7f - attack * 3.0f, idleLook * 2.2f, -strideCos * gaitMove01 * 0.7f, weight);
 
             PoseArm(
                 _rightUpperArm,
@@ -1173,31 +1173,34 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             float strideAmount =
-                Mathf.Lerp(0.16f, 0.56f, run01) *
+                Mathf.Lerp(0.10f, 0.34f, run01) *
                 move01 *
                 _strideReachScale;
+            float lift01 = Mathf.SmoothStep(0f, 1f, Mathf.Max(0f, swing));
+            float planted01 = Mathf.SmoothStep(0f, 1f, Mathf.Max(0f, -swing));
             float stepLift =
-                Mathf.Pow(Mathf.Max(0f, swing), 0.72f) *
-                Mathf.Lerp(0.018f, 0.115f, run01) *
+                lift01 *
+                Mathf.Lerp(0.010f, 0.044f, run01) *
                 move01 *
                 _footLiftScale;
+            float plantPress = planted01 * Mathf.Lerp(0.018f, 0.040f, run01) * move01;
             Vector3 desiredUpper =
-                (-up * 0.94f + forward * swing * strideAmount + up * stepLift * 0.22f).normalized;
+                (-up * 0.98f + forward * swing * strideAmount + up * (stepLift * 0.10f - plantPress * 0.18f)).normalized;
             RotateBoneToward(upper, lower, desiredUpper, weight * Mathf.Clamp01(move01 * 1.2f));
 
             if (foot == null)
                 return;
 
             Vector3 desiredLower =
-                (-up * 0.96f - forward * swing * strideAmount * 0.68f + up * stepLift * 0.18f).normalized;
+                (-up * 0.99f - forward * swing * strideAmount * 0.56f + up * (stepLift * 0.08f - plantPress * 0.20f)).normalized;
             RotateBoneToward(lower, foot, desiredLower, weight * Mathf.Clamp01(move01 * 1.1f));
 
             AddLocal(
                 foot,
                 foot.localRotation,
-                -swing * Mathf.Lerp(5f, 16f, run01) * move01,
+                -swing * Mathf.Lerp(3f, 9f, run01) * move01,
                 0f,
-                swing * Mathf.Lerp(1.2f, 3.8f, run01) * move01,
+                swing * Mathf.Lerp(0.8f, 2.2f, run01) * move01,
                 weight * Mathf.Clamp01(move01 * 1.2f));
         }
 

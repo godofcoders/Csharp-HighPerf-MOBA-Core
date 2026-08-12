@@ -259,12 +259,12 @@ namespace MOBA.Core.Infrastructure
 
         private void UpdateStride(float deltaTime)
         {
-            float strideRate = Mathf.Lerp(2.0f, 13.2f, Mathf.Sqrt(Move01));
+            float strideRate = Mathf.Lerp(1.8f, 10.6f, Mathf.Sqrt(Move01));
             StridePhase += strideRate * deltaTime;
             StrideSin = Mathf.Sin(StridePhase);
             StrideCos = Mathf.Cos(StridePhase);
-            BodyBob = Mathf.Lerp(0.012f, 0.095f, Run01) * Mathf.Abs(StrideSin) * Move01;
-            BodyLeanDegrees = Mathf.Lerp(2.0f, 9.2f, Run01) * Move01;
+            BodyBob = Mathf.Lerp(0.008f, 0.045f, Run01) * Mathf.Abs(StrideSin) * Move01;
+            BodyLeanDegrees = Mathf.Lerp(1.4f, 6.6f, Run01) * Move01;
         }
 
         private void DecayWeights(float deltaTime)
