@@ -397,6 +397,17 @@ namespace MOBA.Core.Infrastructure
                 up,
                 weight);
             PoseHandsForGrip(gripPose, attack, super, weight);
+            ApplyActionPoseAccent(
+                gripPose,
+                attack,
+                super,
+                hit,
+                hyper,
+                forward,
+                right,
+                up,
+                aim,
+                weight);
             ApplyAttachmentFollowersNow();
             ApplyRuntimeGripTargets(weight);
         }
@@ -770,6 +781,295 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        private void ApplyActionPoseAccent(
+            BrawlerAttachmentGripPose gripPose,
+            float attack,
+            float super,
+            float hit,
+            float hyper,
+            Vector3 forward,
+            Vector3 right,
+            Vector3 up,
+            Vector3 aim,
+            float weight)
+        {
+            float shot = Mathf.Clamp01(attack);
+            float ability = Mathf.Clamp01(super);
+            float impact = Mathf.Clamp01(hit);
+            float action = Mathf.Clamp01(shot + ability);
+            float accent = Mathf.Clamp01(action + impact + hyper * 0.35f);
+            if (accent <= 0.001f || weight <= 0f)
+                return;
+
+            float yawToAim = SignedPlanarAngle(forward, aim, up);
+            float torsoAim = Mathf.Clamp(yawToAim, -36f, 36f) * action;
+            float recoil = ResolveRecoilAmount(gripPose, shot, ability);
+
+            AddLocal(
+                _spine,
+                _spine != null ? _spine.localRotation : Quaternion.identity,
+                impact * 5.5f - recoil * 1.2f,
+                torsoAim * 0.10f,
+                -torsoAim * 0.04f + hyper * 1.6f,
+                weight * accent);
+            AddLocal(
+                _chest,
+                _chest != null ? _chest.localRotation : Quaternion.identity,
+                impact * 4.0f - recoil * 1.8f - ability * 3.0f,
+                torsoAim * 0.16f,
+                -torsoAim * 0.07f + hyper * 2.0f,
+                weight * accent);
+            AddLocal(
+                _head,
+                _head != null ? _head.localRotation : Quaternion.identity,
+                -recoil * 0.55f + impact * 2.0f,
+                torsoAim * 0.08f,
+                -torsoAim * 0.025f,
+                weight * accent);
+
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Sidearm:
+                    ApplySidearmActionAccent(_rightUpperArm, _rightLowerArm, _rightHand, 1f, shot, ability, recoil, weight);
+                    break;
+
+                case BrawlerAttachmentGripPose.DualSidearm:
+                    ApplySidearmActionAccent(_rightUpperArm, _rightLowerArm, _rightHand, 1f, shot, ability, recoil, weight);
+                    ApplySidearmActionAccent(_leftUpperArm, _leftLowerArm, _leftHand, -1f, shot * 0.92f, ability, recoil, weight);
+                    break;
+
+                case BrawlerAttachmentGripPose.LongGun:
+                    ApplyLongWeaponActionAccent(shot, ability, recoil, weight, primarySide: 1f);
+                    break;
+
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    ApplyLongToolActionAccent(shot, ability, recoil, weight);
+                    break;
+
+                case BrawlerAttachmentGripPose.Bottle:
+                    ApplyBottleActionAccent(shot, ability, weight);
+                    break;
+
+                case BrawlerAttachmentGripPose.Bow:
+                    ApplyBowActionAccent(shot, ability, weight);
+                    break;
+
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    ApplyThrowingStarActionAccent(shot, ability, weight);
+                    break;
+            }
+        }
+
+        private static float ResolveRecoilAmount(
+            BrawlerAttachmentGripPose gripPose,
+            float shot,
+            float ability)
+        {
+            float baseRecoil;
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Bottle:
+                case BrawlerAttachmentGripPose.Bow:
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    baseRecoil = 4.5f;
+                    break;
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    baseRecoil = 3.2f;
+                    break;
+                case BrawlerAttachmentGripPose.LongGun:
+                    baseRecoil = 5.0f;
+                    break;
+                default:
+                    baseRecoil = 6.0f;
+                    break;
+            }
+
+            return baseRecoil * Mathf.Clamp01(shot + ability * 0.85f);
+        }
+
+        private void ApplySidearmActionAccent(
+            Transform upper,
+            Transform lower,
+            Transform hand,
+            float side,
+            float shot,
+            float ability,
+            float recoil,
+            float weight)
+        {
+            float action = Mathf.Clamp01(shot + ability);
+            if (action <= 0f)
+                return;
+
+            AddLocal(
+                upper,
+                upper != null ? upper.localRotation : Quaternion.identity,
+                -recoil * 0.55f,
+                side * 2.5f * action,
+                side * -2.0f * action,
+                weight * action);
+            AddLocal(
+                lower,
+                lower != null ? lower.localRotation : Quaternion.identity,
+                -recoil * 0.75f,
+                side * 2.0f * action,
+                side * -2.5f * action,
+                weight * action);
+            AddLocal(
+                hand,
+                hand != null ? hand.localRotation : Quaternion.identity,
+                -recoil * 1.35f,
+                side * 3.5f * action,
+                side * -4.0f * action,
+                weight * action);
+        }
+
+        private void ApplyLongWeaponActionAccent(
+            float shot,
+            float ability,
+            float recoil,
+            float weight,
+            float primarySide)
+        {
+            float action = Mathf.Clamp01(shot + ability);
+            if (action <= 0f)
+                return;
+
+            ApplySidearmActionAccent(
+                _rightUpperArm,
+                _rightLowerArm,
+                _rightHand,
+                primarySide,
+                shot * 0.75f,
+                ability,
+                recoil * 0.70f,
+                weight);
+            AddLocal(
+                _leftLowerArm,
+                _leftLowerArm != null ? _leftLowerArm.localRotation : Quaternion.identity,
+                -recoil * 0.24f,
+                -primarySide * 2.5f * action,
+                primarySide * 2.0f * action,
+                weight * action);
+        }
+
+        private void ApplyLongToolActionAccent(
+            float shot,
+            float ability,
+            float recoil,
+            float weight)
+        {
+            float action = Mathf.Clamp01(shot + ability);
+            if (action <= 0f)
+                return;
+
+            AddLocal(
+                _rightUpperArm,
+                _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
+                -recoil * 0.35f - ability * 2.0f,
+                1.5f * action,
+                -2.2f * action,
+                weight * action);
+            AddLocal(
+                _rightHand,
+                _rightHand != null ? _rightHand.localRotation : Quaternion.identity,
+                -recoil * 0.9f,
+                2.0f * action,
+                -3.0f * action,
+                weight * action);
+        }
+
+        private void ApplyBottleActionAccent(
+            float shot,
+            float ability,
+            float weight)
+        {
+            float action = Mathf.Clamp01(shot + ability);
+            if (action <= 0f)
+                return;
+
+            AddLocal(
+                _rightUpperArm,
+                _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
+                -10.5f * action,
+                5.0f * action,
+                -8.0f * action,
+                weight * action);
+            AddLocal(
+                _rightLowerArm,
+                _rightLowerArm != null ? _rightLowerArm.localRotation : Quaternion.identity,
+                -13.0f * action,
+                3.0f * action,
+                -6.0f * action,
+                weight * action);
+            AddLocal(
+                _rightHand,
+                _rightHand != null ? _rightHand.localRotation : Quaternion.identity,
+                -18.0f * action,
+                4.0f * action,
+                -9.0f * action,
+                weight * action);
+        }
+
+        private void ApplyBowActionAccent(
+            float shot,
+            float ability,
+            float weight)
+        {
+            float action = Mathf.Clamp01(shot + ability);
+            if (action <= 0f)
+                return;
+
+            AddLocal(
+                _rightUpperArm,
+                _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
+                5.0f * action,
+                6.0f * action,
+                -5.5f * action,
+                weight * action);
+            AddLocal(
+                _rightLowerArm,
+                _rightLowerArm != null ? _rightLowerArm.localRotation : Quaternion.identity,
+                8.0f * action,
+                5.0f * action,
+                -7.0f * action,
+                weight * action);
+            AddLocal(
+                _leftLowerArm,
+                _leftLowerArm != null ? _leftLowerArm.localRotation : Quaternion.identity,
+                -3.0f * action,
+                -2.0f * action,
+                3.0f * action,
+                weight * action);
+        }
+
+        private void ApplyThrowingStarActionAccent(
+            float shot,
+            float ability,
+            float weight)
+        {
+            float action = Mathf.Clamp01(shot + ability);
+            if (action <= 0f)
+                return;
+
+            AddLocal(
+                _rightUpperArm,
+                _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
+                -8.0f * action,
+                8.0f * action,
+                -10.0f * action,
+                weight * action);
+            AddLocal(
+                _rightHand,
+                _rightHand != null ? _rightHand.localRotation : Quaternion.identity,
+                -14.0f * action,
+                12.0f * action,
+                -18.0f * action,
+                weight * action);
+        }
+
         private void PoseGripHands(
             float rightFingerCurl,
             float rightThumbCurl,
@@ -1140,6 +1440,20 @@ namespace MOBA.Core.Infrastructure
         {
             Vector3 right = Vector3.Cross(Vector3.up, forward);
             return right.sqrMagnitude > 0.0001f ? right.normalized : Vector3.right;
+        }
+
+        private static float SignedPlanarAngle(
+            Vector3 from,
+            Vector3 to,
+            Vector3 axis)
+        {
+            from.y = 0f;
+            to.y = 0f;
+
+            if (from.sqrMagnitude <= 0.0001f || to.sqrMagnitude <= 0.0001f)
+                return 0f;
+
+            return Vector3.SignedAngle(from.normalized, to.normalized, axis);
         }
 
         private Vector3 ResolveAimDirection(Vector3 fallbackForward, float actionSignal)
