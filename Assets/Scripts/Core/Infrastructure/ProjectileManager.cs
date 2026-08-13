@@ -66,6 +66,9 @@ namespace MOBA.Core.Infrastructure
             go.transform.position = context.Origin;
             go.transform.rotation = Quaternion.LookRotation(context.Direction);
             bool isHypercharged = ResolveIsHypercharged(context);
+            HashSet<int> ignoredEntityIds = new HashSet<int>();
+            if (SpatialEntityUtility.TryGetEntityId(context.Owner, out int ownerEntityId))
+                ignoredEntityIds.Add(ownerEntityId);
 
             ProjectileVisualController visualController = go.GetComponent<ProjectileVisualController>();
             if (visualController != null)
@@ -121,7 +124,7 @@ namespace MOBA.Core.Infrastructure
                 IsChainProjectile = context.IsChainProjectile,
                 RemainingBounces = context.RemainingBounces,
                 BounceRadius = context.BounceRadius,
-                HitEntityIds = new System.Collections.Generic.HashSet<int>(),
+                HitEntityIds = ignoredEntityIds,
                 CanAffectEnemiesOnImpact = context.CanAffectEnemiesOnImpact,
                 CanAffectAlliesOnImpact = context.CanAffectAlliesOnImpact,
             });
@@ -146,6 +149,8 @@ namespace MOBA.Core.Infrastructure
             for (int i = _activeProjectiles.Count - 1; i >= 0; i--)
             {
                 var p = _activeProjectiles[i];
+                Vector3 directCollisionStart = p.GameObject.transform.position;
+                bool reachedDirectProjectileMaxRange = false;
 
                 if (p.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE && p.UseArcMotion)
                 {
@@ -168,8 +173,19 @@ namespace MOBA.Core.Infrastructure
                 else
                 {
                     Vector3 previousPosition = p.GameObject.transform.position;
+                    directCollisionStart = previousPosition;
                     Vector3 movement = p.Direction * (p.Speed * SimulationClock.TickDeltaTime);
                     Vector3 nextPosition = previousPosition + movement;
+
+                    if (p.DeliveryType != ProjectileDeliveryType.ThrownImpactAoE)
+                    {
+                        Vector3 nextTravel = nextPosition - p.Origin;
+                        if (nextTravel.sqrMagnitude >= p.MaxRangeSq)
+                        {
+                            nextPosition = p.Origin + p.Direction * p.MaxRange;
+                            reachedDirectProjectileMaxRange = true;
+                        }
+                    }
 
                     if (TryResolveDirectProjectileWorldImpact(
                             p,
@@ -178,6 +194,26 @@ namespace MOBA.Core.Infrastructure
                             out Vector3 worldImpactPosition,
                             out BreakableObjectController worldBreakable))
                     {
+                        ISpatialEntity entityBeforeWorld = null;
+                        Vector3 entityImpactPosition = worldImpactPosition;
+                        SpatialGrid grid = SimulationClock.Grid;
+                        if (grid != null)
+                        {
+                            entityBeforeWorld = grid.CheckCollisionSegment(
+                                previousPosition,
+                                worldImpactPosition,
+                                0.5f,
+                                p.Team,
+                                p.HitTeamRule,
+                                out entityImpactPosition,
+                                p.HitEntityIds);
+                        }
+
+                        if (ResolveProjectileEntityImpact(i, p, entityBeforeWorld, entityImpactPosition))
+                        {
+                            continue;
+                        }
+
                         p.GameObject.transform.position = worldImpactPosition;
 
                         if (SpatialEntityUtility.IsAlive(worldBreakable))
@@ -203,15 +239,6 @@ namespace MOBA.Core.Infrastructure
                     }
                 }
 
-                if (p.DeliveryType != ProjectileDeliveryType.ThrownImpactAoE)
-                {
-                    if ((p.GameObject.transform.position - p.Origin).sqrMagnitude >= p.MaxRangeSq)
-                    {
-                        Despawn(i, ProjectileEndReason.Expired, p.GameObject.transform.position, null);
-                        continue;
-                    }
-                }
-
                 if (p.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE)
                 {
                     bool reachedImpact =
@@ -228,56 +255,85 @@ namespace MOBA.Core.Infrastructure
                     continue;
                 }
 
-                var hit = SimulationClock.Grid?.CheckCollision(
-                    p.GameObject.transform.position,
-                    0.5f,
-                    p.Team,
-                    p.HitTeamRule
-                );
-
-                if (SpatialEntityUtility.IsAlive(hit))
+                ISpatialEntity hit = null;
+                Vector3 projectileImpactPosition = p.GameObject.transform.position;
+                SpatialGrid collisionGrid = SimulationClock.Grid;
+                if (collisionGrid != null)
                 {
-                    Vector3 projectilePosition = p.GameObject.transform.position;
-                    BrawlerController targetBrawler = hit as BrawlerController;
+                    hit = collisionGrid.CheckCollisionSegment(
+                        directCollisionStart,
+                        p.GameObject.transform.position,
+                        0.5f,
+                        p.Team,
+                        p.HitTeamRule,
+                        out projectileImpactPosition,
+                        p.HitEntityIds);
+                }
 
-                    if (p.IsChainProjectile && targetBrawler != null && p.HitEntityIds.Contains(targetBrawler.EntityID))
-                    {
-                        continue;
-                    }
+                if (ResolveProjectileEntityImpact(i, p, hit, projectileImpactPosition))
+                    continue;
 
-                    ApplyProjectileImpact(p, hit, projectilePosition);
-
-                    // CHAIN PROJECTILE HANDLING
-                    if (p.IsChainProjectile && targetBrawler != null)
-                    {
-                        p.HitEntityIds.Add(targetBrawler.EntityID);
-                        RaiseProjectileEndEvent(p, ProjectileEndReason.Impact, projectilePosition, targetBrawler);
-
-                        if (p.RemainingBounces > 0)
-                        {
-                            BrawlerController nextTarget = ResolveNextChainTarget(p, targetBrawler);
-                            if (nextTarget != null)
-                            {
-                                p.RemainingBounces--;
-
-                                Vector3 nextDirection = (nextTarget.Position - projectilePosition).normalized;
-                                p.Direction = nextDirection;
-
-                                if (nextDirection.sqrMagnitude > 0.001f)
-                                    p.GameObject.transform.rotation = Quaternion.LookRotation(nextDirection);
-
-                                continue;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        RaiseProjectileEndEvent(p, ProjectileEndReason.Impact, projectilePosition, targetBrawler);
-                    }
-
-                    Despawn(i, ProjectileEndReason.Impact, projectilePosition, targetBrawler, false);
+                if (reachedDirectProjectileMaxRange ||
+                    (p.GameObject.transform.position - p.Origin).sqrMagnitude >= p.MaxRangeSq)
+                {
+                    Despawn(i, ProjectileEndReason.Expired, p.GameObject.transform.position, null);
+                    continue;
                 }
             }
+        }
+
+        private bool ResolveProjectileEntityImpact(
+            int projectileIndex,
+            ActiveProjectile projectile,
+            ISpatialEntity hit,
+            Vector3 projectilePosition)
+        {
+            if (!SpatialEntityUtility.IsAlive(hit))
+                return false;
+
+            if (projectile.GameObject != null)
+                projectile.GameObject.transform.position = projectilePosition;
+
+            BrawlerController targetBrawler = hit as BrawlerController;
+
+            if (projectile.IsChainProjectile &&
+                targetBrawler != null &&
+                projectile.HitEntityIds.Contains(targetBrawler.EntityID))
+            {
+                return false;
+            }
+
+            ApplyProjectileImpact(projectile, hit, projectilePosition);
+
+            if (projectile.IsChainProjectile && targetBrawler != null)
+            {
+                projectile.HitEntityIds.Add(targetBrawler.EntityID);
+                RaiseProjectileEndEvent(projectile, ProjectileEndReason.Impact, projectilePosition, targetBrawler);
+
+                if (projectile.RemainingBounces > 0)
+                {
+                    BrawlerController nextTarget = ResolveNextChainTarget(projectile, targetBrawler);
+                    if (nextTarget != null)
+                    {
+                        projectile.RemainingBounces--;
+
+                        Vector3 nextDirection = (nextTarget.Position - projectilePosition).normalized;
+                        projectile.Direction = nextDirection;
+
+                        if (nextDirection.sqrMagnitude > 0.001f)
+                            projectile.GameObject.transform.rotation = Quaternion.LookRotation(nextDirection);
+
+                        return true;
+                    }
+                }
+            }
+            else
+            {
+                RaiseProjectileEndEvent(projectile, ProjectileEndReason.Impact, projectilePosition, targetBrawler);
+            }
+
+            Despawn(projectileIndex, ProjectileEndReason.Impact, projectilePosition, targetBrawler, false);
+            return true;
         }
 
         private bool TryResolveDirectProjectileWorldImpact(
