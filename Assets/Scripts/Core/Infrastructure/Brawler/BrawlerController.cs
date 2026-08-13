@@ -40,6 +40,8 @@ namespace MOBA.Core.Infrastructure
         private const float WorldCollisionSkinEpsilon = 0.001f;
         private const float MovementInputDeadZoneSqr = 0.01f;
         private const float MovementVelocityStopEpsilonSqr = 0.0004f;
+        public const float BodyScaleMultiplier = 1.25f;
+        private const float BaseCollisionRadius = 0.5f;
 
         private static TeamType _cachedLocalObserverTeam = TeamType.Neutral;
         private static float _nextLocalObserverRefreshTime;
@@ -85,7 +87,7 @@ namespace MOBA.Core.Infrastructure
         public TeamType Team => _team;
         public Vector3 Position => this != null ? GetLivePosition() : _lastKnownPosition;
         public Vector3 CurrentPosition => Position;
-        public float CollisionRadius => 0.5f;
+        public float CollisionRadius => BaseCollisionRadius * BodyScaleMultiplier;
         public int EntityID => GetEntityId();
         public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
         public GameObject VisualModel => _visualModel;
@@ -124,7 +126,7 @@ namespace MOBA.Core.Infrastructure
             out float skin)
         {
             collisionMask = ResolveWorldCollisionMask();
-            radius = Mathf.Max(0.01f, _worldCollisionRadius);
+            radius = EffectiveWorldCollisionRadius;
             probeHeight = Mathf.Max(0f, _worldCollisionProbeHeight);
             skin = Mathf.Max(0f, _worldCollisionSkin);
             return collisionMask != 0;
@@ -847,7 +849,7 @@ namespace MOBA.Core.Infrastructure
             float desiredDistance = desiredMovement.magnitude;
             Vector3 direction = desiredMovement / desiredDistance;
 
-            float radius = Mathf.Max(0.01f, _worldCollisionRadius);
+            float radius = EffectiveWorldCollisionRadius;
             float skin = Mathf.Max(0f, _worldCollisionSkin);
             Vector3 startCorrection = ClampWorldOverlapCorrection(
                 ResolveWorldOverlap(transform.position, radius, skin, collisionMask),
@@ -967,6 +969,8 @@ namespace MOBA.Core.Infrastructure
             _resolvedWorldCollisionMask = obstacleLayer >= 0 ? 1 << obstacleLayer : 0;
             return _resolvedWorldCollisionMask;
         }
+
+        private float EffectiveWorldCollisionRadius => Mathf.Max(0.01f, _worldCollisionRadius * BodyScaleMultiplier);
 
         private Vector3 ResolveWorldOverlap(
             Vector3 position,

@@ -35,6 +35,7 @@ namespace MOBA.Core.Infrastructure
             if (!ProceduralBrawlerModelFactory.TryCreate(definition, parent, owner, out instance))
                 return false;
 
+            instance.transform.localScale *= BrawlerController.BodyScaleMultiplier;
             ConfigureLayer(instance, parent.gameObject.layer);
             PrepareAttachmentPresentation(instance, definition, owner, installAttachmentProfile: false);
             return true;
@@ -83,7 +84,7 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             float height = Mathf.Max(0.001f, bounds.size.y);
-            float targetHeight = ResolveTargetHeight(definition);
+            float targetHeight = ResolveTargetHeight(definition) * BrawlerController.BodyScaleMultiplier;
             float scale = Mathf.Clamp(targetHeight / height, 0.01f, 50f);
             instance.transform.localScale = Vector3.one * scale;
 
