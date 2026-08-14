@@ -27,6 +27,12 @@ MonoBehaviour:
     ExplicitGripLocalPosition: {x: 0, y: -0.22, z: -0.18}
     ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
+    UseStableCharacterRotation: 0
+    UseSecondaryGripPoint: 1
+    SecondaryGripSocket: 5
+    SecondaryGripLocalPosition: {x: 0, y: -0.04, z: 0.12}
+    SecondaryGripLocalEulerOffset: {x: 0, y: 0, z: 0}
+    SecondaryGripWeight: 0.52
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1
     UseAsSecondaryFirePoint: 0

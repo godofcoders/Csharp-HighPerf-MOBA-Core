@@ -343,13 +343,18 @@ namespace MOBA.Core.Infrastructure
             AddLocal(_chest, _chestBase, idleBreath * -0.7f + super * -5.5f, idleLook * 1.1f, strideCos * gaitMove01 * 1.4f + hyper * 2.0f, weight);
             AddLocal(_head, _headBase, idleBreath * 0.7f - attack * 3.0f, idleLook * 2.2f, -strideCos * gaitMove01 * 0.7f, weight);
 
+            float rightReady = ResolveArmReady(gripPose, side: 1f, ready);
+            float leftReady = ResolveArmReady(gripPose, side: -1f, ready);
+            float rightAttack = ResolveArmAction(gripPose, side: 1f, attack);
+            float leftAttack = ResolveArmAction(gripPose, side: -1f, attack * 0.65f);
+
             PoseArm(
                 _rightUpperArm,
                 _rightLowerArm,
                 _rightHand,
                 1f,
-                ready,
-                attack,
+                rightReady,
+                rightAttack,
                 super,
                 strideSin,
                 gaitMove01 * _armSwingScale,
@@ -364,8 +369,8 @@ namespace MOBA.Core.Infrastructure
                 _leftLowerArm,
                 _leftHand,
                 -1f,
-                ready,
-                attack * 0.65f,
+                leftReady,
+                leftAttack,
                 super,
                 -strideSin,
                 gaitMove01 * _armSwingScale,
@@ -376,6 +381,16 @@ namespace MOBA.Core.Infrastructure
                 gripPose,
                 weight);
 
+            ApplyWeaponReadyHandAnchors(
+                gripPose,
+                ready,
+                attack,
+                super,
+                forward,
+                right,
+                up,
+                aim,
+                weight);
             PoseLeg(
                 _rightUpperLeg,
                 _rightLowerLeg,
@@ -505,6 +520,220 @@ namespace MOBA.Core.Infrastructure
                 default:
                     return 0f;
             }
+        }
+
+        private static float ResolveArmReady(
+            BrawlerAttachmentGripPose gripPose,
+            float side,
+            float ready)
+        {
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Sidearm:
+                case BrawlerAttachmentGripPose.Bottle:
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    return side > 0f ? ready : ready * 0.08f;
+
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    return side > 0f ? ready : ready * 0.16f;
+
+                case BrawlerAttachmentGripPose.LongGun:
+                case BrawlerAttachmentGripPose.Bow:
+                case BrawlerAttachmentGripPose.DualSidearm:
+                    return ready;
+
+                default:
+                    return ready;
+            }
+        }
+
+        private static float ResolveArmAction(
+            BrawlerAttachmentGripPose gripPose,
+            float side,
+            float action)
+        {
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Sidearm:
+                case BrawlerAttachmentGripPose.Bottle:
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    return side > 0f ? action : action * 0.08f;
+
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    return side > 0f ? action : action * 0.12f;
+
+                default:
+                    return action;
+            }
+        }
+
+        private void ApplyWeaponReadyHandAnchors(
+            BrawlerAttachmentGripPose gripPose,
+            float ready,
+            float attack,
+            float super,
+            Vector3 forward,
+            Vector3 right,
+            Vector3 up,
+            Vector3 aim,
+            float weight)
+        {
+            if (gripPose == BrawlerAttachmentGripPose.None)
+                return;
+
+            float poseWeight =
+                weight *
+                Mathf.Clamp01(_gripPoseWeight) *
+                Mathf.Clamp01(ready * 1.18f + attack * 0.35f + super * 0.25f);
+            if (poseWeight <= 0.001f)
+                return;
+
+            Vector3 anchor = ResolveUpperBodyAnchor(up);
+            Quaternion aimRotation = Quaternion.LookRotation(aim.sqrMagnitude > 0.001f ? aim : forward, up);
+
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Sidearm:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.43f + right * 0.22f - up * 0.08f,
+                        aimRotation,
+                        poseWeight * 0.72f);
+                    break;
+
+                case BrawlerAttachmentGripPose.DualSidearm:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.43f + right * 0.24f - up * 0.08f,
+                        aimRotation,
+                        poseWeight * 0.72f);
+                    ApplyHandAnchor(
+                        _leftUpperArm,
+                        _leftLowerArm,
+                        _leftHand,
+                        anchor + aim * 0.43f - right * 0.24f - up * 0.08f,
+                        aimRotation,
+                        poseWeight * 0.72f);
+                    break;
+
+                case BrawlerAttachmentGripPose.LongGun:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.36f + right * 0.17f - up * 0.12f,
+                        aimRotation,
+                        poseWeight * 0.70f);
+                    ApplyHandAnchor(
+                        _leftUpperArm,
+                        _leftLowerArm,
+                        _leftHand,
+                        anchor + aim * 0.52f - right * 0.17f - up * 0.08f,
+                        aimRotation,
+                        poseWeight * 0.64f);
+                    break;
+
+                case BrawlerAttachmentGripPose.LongTool:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.28f + right * 0.19f - up * 0.16f,
+                        aimRotation,
+                        poseWeight * 0.62f);
+                    ApplyHandAnchor(
+                        _leftUpperArm,
+                        _leftLowerArm,
+                        _leftHand,
+                        anchor + aim * 0.34f - right * 0.13f - up * 0.12f,
+                        aimRotation,
+                        poseWeight * 0.32f);
+                    break;
+
+                case BrawlerAttachmentGripPose.Bottle:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.22f + right * 0.22f + up * 0.03f,
+                        aimRotation,
+                        poseWeight * 0.62f);
+                    break;
+
+                case BrawlerAttachmentGripPose.Bow:
+                    ApplyHandAnchor(
+                        _leftUpperArm,
+                        _leftLowerArm,
+                        _leftHand,
+                        anchor + aim * 0.34f - right * 0.24f - up * 0.03f,
+                        aimRotation,
+                        poseWeight * 0.72f);
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.24f + right * 0.18f - up * 0.05f,
+                        aimRotation,
+                        poseWeight * 0.60f);
+                    break;
+
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.28f + right * 0.22f - up * 0.04f,
+                        aimRotation,
+                        poseWeight * 0.58f);
+                    break;
+
+                case BrawlerAttachmentGripPose.Umbrella:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.24f + right * 0.18f - up * 0.04f,
+                        aimRotation,
+                        poseWeight * 0.62f);
+                    break;
+            }
+        }
+
+        private Vector3 ResolveUpperBodyAnchor(Vector3 up)
+        {
+            if (_chest != null)
+                return _chest.position - up * 0.04f;
+
+            if (_spine != null)
+                return _spine.position + up * 0.18f;
+
+            if (_hips != null)
+                return _hips.position + up * 0.72f;
+
+            return transform.position + up * 0.96f;
+        }
+
+        private static void ApplyHandAnchor(
+            Transform upper,
+            Transform lower,
+            Transform hand,
+            Vector3 targetPosition,
+            Quaternion targetRotation,
+            float weight)
+        {
+            ApplyArmGripIk(
+                upper,
+                lower,
+                hand,
+                targetPosition,
+                targetRotation,
+                Mathf.Clamp01(weight));
         }
 
         private void PoseArm(
@@ -1515,12 +1744,36 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            Vector3 targetPosition = target.position;
-            for (int i = 0; i < 2; i++)
+            ApplyArmGripIk(
+                upper,
+                lower,
+                hand,
+                target.position,
+                target.rotation,
+                weight);
+        }
+
+        private static void ApplyArmGripIk(
+            Transform upper,
+            Transform lower,
+            Transform hand,
+            Vector3 targetPosition,
+            Quaternion targetRotation,
+            float weight)
+        {
+            if (upper == null ||
+                lower == null ||
+                hand == null ||
+                weight <= 0f)
+            {
+                return;
+            }
+
+            for (int i = 0; i < 3; i++)
             {
                 Vector3 upperDirection = targetPosition - upper.position;
                 if (upperDirection.sqrMagnitude > 0.000001f)
-                    RotateBoneToward(upper, lower, upperDirection.normalized, weight * 0.58f);
+                    RotateBoneToward(upper, lower, upperDirection.normalized, weight * 0.62f);
 
                 Vector3 lowerDirection = targetPosition - lower.position;
                 if (lowerDirection.sqrMagnitude > 0.000001f)
@@ -1529,8 +1782,8 @@ namespace MOBA.Core.Infrastructure
 
             hand.rotation = Quaternion.Slerp(
                 hand.rotation,
-                target.rotation,
-                Mathf.Clamp01(weight * 0.42f));
+                targetRotation,
+                Mathf.Clamp01(weight * 0.36f));
         }
 
         private static void RotateBoneToward(
