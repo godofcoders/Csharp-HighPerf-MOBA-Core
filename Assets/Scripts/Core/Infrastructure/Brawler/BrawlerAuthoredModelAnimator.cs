@@ -90,6 +90,8 @@ namespace MOBA.Core.Infrastructure
             new BrawlerAttachmentFollower[0];
         private BrawlerRuntimeAttachmentGrip[] _runtimeAttachmentGrips =
             new BrawlerRuntimeAttachmentGrip[0];
+        private BrawlerHandPoseTargets[] _handPoseTargets =
+            new BrawlerHandPoseTargets[0];
 
         private Quaternion _hipsBase;
         private Quaternion _spineBase;
@@ -159,6 +161,7 @@ namespace MOBA.Core.Infrastructure
             ConfigureGaitProfile();
             CacheBones();
             CaptureBasePose();
+            RefreshRuntimeGripTargets();
         }
 
         public void SetShowcasePose(bool useShowcasePose)
@@ -172,6 +175,8 @@ namespace MOBA.Core.Infrastructure
                 GetComponentsInChildren<BrawlerAttachmentFollower>(true);
             _runtimeAttachmentGrips =
                 GetComponentsInChildren<BrawlerRuntimeAttachmentGrip>(true);
+            _handPoseTargets =
+                GetComponentsInChildren<BrawlerHandPoseTargets>(true);
         }
 
         private void Awake()
@@ -425,6 +430,7 @@ namespace MOBA.Core.Infrastructure
                 weight);
             ApplyAttachmentFollowersNow();
             ApplyRuntimeGripTargets(weight);
+            ApplyAuthoredHandPoseTargets(ready, attack, super, weight);
         }
 
         private void ApplyAttachmentFollowersNow()
@@ -473,6 +479,79 @@ namespace MOBA.Core.Infrastructure
                     target,
                     Mathf.Clamp01(weight * gripWeight));
             }
+        }
+
+        private void ApplyAuthoredHandPoseTargets(
+            float ready,
+            float attack,
+            float super,
+            float weight)
+        {
+            if (_handPoseTargets == null || _handPoseTargets.Length == 0)
+                return;
+
+            float action01 = Mathf.Clamp01(attack + super);
+            for (int i = 0; i < _handPoseTargets.Length; i++)
+            {
+                BrawlerHandPoseTargets targetSet = _handPoseTargets[i];
+                if (targetSet == null)
+                    continue;
+
+                float targetSetWeight =
+                    weight *
+                    targetSet.ResolvePoseWeight(ready, action01, _useShowcasePose);
+                if (targetSetWeight <= 0.001f)
+                    continue;
+
+                if (targetSet.TryGetRightHandTarget(
+                        out Transform rightTarget,
+                        out float rightWeight,
+                        out bool useRightRotation))
+                {
+                    ApplyHandPoseTarget(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        rightTarget,
+                        targetSetWeight * rightWeight,
+                        useRightRotation);
+                }
+
+                if (targetSet.TryGetLeftHandTarget(
+                        out Transform leftTarget,
+                        out float leftWeight,
+                        out bool useLeftRotation))
+                {
+                    ApplyHandPoseTarget(
+                        _leftUpperArm,
+                        _leftLowerArm,
+                        _leftHand,
+                        leftTarget,
+                        targetSetWeight * leftWeight,
+                        useLeftRotation);
+                }
+            }
+        }
+
+        private static void ApplyHandPoseTarget(
+            Transform upper,
+            Transform lower,
+            Transform hand,
+            Transform target,
+            float weight,
+            bool useTargetRotation)
+        {
+            if (target == null)
+                return;
+
+            ApplyArmGripIk(
+                upper,
+                lower,
+                hand,
+                target.position,
+                target.rotation,
+                Mathf.Clamp01(weight),
+                useTargetRotation);
         }
 
         private float ResolveShowcaseReady(BrawlerAttachmentGripPose gripPose)
@@ -1761,6 +1840,25 @@ namespace MOBA.Core.Infrastructure
             Quaternion targetRotation,
             float weight)
         {
+            ApplyArmGripIk(
+                upper,
+                lower,
+                hand,
+                targetPosition,
+                targetRotation,
+                weight,
+                rotateHand: true);
+        }
+
+        private static void ApplyArmGripIk(
+            Transform upper,
+            Transform lower,
+            Transform hand,
+            Vector3 targetPosition,
+            Quaternion targetRotation,
+            float weight,
+            bool rotateHand)
+        {
             if (upper == null ||
                 lower == null ||
                 hand == null ||
@@ -1780,10 +1878,13 @@ namespace MOBA.Core.Infrastructure
                     RotateBoneToward(lower, hand, lowerDirection.normalized, weight);
             }
 
-            hand.rotation = Quaternion.Slerp(
-                hand.rotation,
-                targetRotation,
-                Mathf.Clamp01(weight * 0.36f));
+            if (rotateHand)
+            {
+                hand.rotation = Quaternion.Slerp(
+                    hand.rotation,
+                    targetRotation,
+                    Mathf.Clamp01(weight * 0.36f));
+            }
         }
 
         private static void RotateBoneToward(
