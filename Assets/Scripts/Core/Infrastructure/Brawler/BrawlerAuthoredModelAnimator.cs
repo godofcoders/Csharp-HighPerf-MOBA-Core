@@ -313,6 +313,10 @@ namespace MOBA.Core.Infrastructure
             float super = _smoothedSuper;
             float hit = _smoothedHit;
             float hyper = _smoothedHyper;
+            float attackPulse =
+                _runtime != null ? ResolveActionPulse(_runtime.MainAttackAgeSeconds, 0.18f) : attack;
+            float superPulse =
+                _runtime != null ? ResolveActionPulse(_runtime.SuperAgeSeconds, 0.28f) : super;
             BrawlerAttachmentGripPose gripPose = ResolveGripPose();
             float ready = Mathf.Clamp01(action * 1.24f + super * 0.18f + move01 * 0.05f);
             if (gripPose != BrawlerAttachmentGripPose.None)
@@ -421,6 +425,8 @@ namespace MOBA.Core.Infrastructure
                 gripPose,
                 attack,
                 super,
+                attackPulse,
+                superPulse,
                 hit,
                 hyper,
                 forward,
@@ -1093,6 +1099,8 @@ namespace MOBA.Core.Infrastructure
             BrawlerAttachmentGripPose gripPose,
             float attack,
             float super,
+            float attackPulse,
+            float superPulse,
             float hit,
             float hyper,
             Vector3 forward,
@@ -1101,8 +1109,8 @@ namespace MOBA.Core.Infrastructure
             Vector3 aim,
             float weight)
         {
-            float shot = Mathf.Clamp01(attack);
-            float ability = Mathf.Clamp01(super);
+            float shot = Mathf.Clamp01(Mathf.Max(attack, attackPulse));
+            float ability = Mathf.Clamp01(Mathf.Max(super, superPulse));
             float impact = Mathf.Clamp01(hit);
             float action = Mathf.Clamp01(shot + ability);
             float accent = Mathf.Clamp01(action + impact + hyper * 0.35f);
@@ -1111,7 +1119,8 @@ namespace MOBA.Core.Infrastructure
 
             float yawToAim = SignedPlanarAngle(forward, aim, up);
             float torsoAim = Mathf.Clamp(yawToAim, -36f, 36f) * action;
-            float recoil = ResolveRecoilAmount(gripPose, shot, ability);
+            float releaseKick = Mathf.Clamp01(attackPulse + superPulse * 0.85f);
+            float recoil = ResolveRecoilAmount(gripPose, shot, ability) * Mathf.Lerp(0.72f, 1.22f, releaseKick);
 
             AddLocal(
                 _spine,
@@ -1137,6 +1146,18 @@ namespace MOBA.Core.Infrastructure
 
             switch (gripPose)
             {
+                case BrawlerAttachmentGripPose.None:
+                    ApplyUnarmedActionAccent(
+                        shot,
+                        ability,
+                        recoil,
+                        forward,
+                        right,
+                        up,
+                        aim,
+                        weight);
+                    break;
+
                 case BrawlerAttachmentGripPose.Sidearm:
                     ApplySidearmActionAccent(_rightUpperArm, _rightLowerArm, _rightHand, 1f, shot, ability, recoil, weight);
                     break;
@@ -1231,6 +1252,72 @@ namespace MOBA.Core.Infrastructure
                 -recoil * 1.35f,
                 side * 3.5f * action,
                 side * -4.0f * action,
+                weight * action);
+        }
+
+        private void ApplyUnarmedActionAccent(
+            float shot,
+            float ability,
+            float recoil,
+            Vector3 forward,
+            Vector3 right,
+            Vector3 up,
+            Vector3 aim,
+            float weight)
+        {
+            float action = Mathf.Clamp01(shot + ability);
+            if (action <= 0f)
+                return;
+
+            Vector3 anchor = ResolveUpperBodyAnchor(up);
+            Quaternion punchRotation =
+                Quaternion.LookRotation(aim.sqrMagnitude > 0.001f ? aim : forward, up);
+            float heavy = Mathf.Clamp01(ability * 1.25f);
+            float rightPunch = Mathf.Clamp01(action * Mathf.Lerp(0.76f, 1.0f, heavy));
+            float leftGuard = Mathf.Clamp01(action * Mathf.Lerp(0.42f, 0.72f, heavy));
+
+            ApplyHandAnchor(
+                _rightUpperArm,
+                _rightLowerArm,
+                _rightHand,
+                anchor + aim * Mathf.Lerp(0.44f, 0.60f, heavy) + right * 0.18f - up * 0.02f,
+                punchRotation,
+                weight * rightPunch * 0.74f);
+            ApplyHandAnchor(
+                _leftUpperArm,
+                _leftLowerArm,
+                _leftHand,
+                anchor + aim * Mathf.Lerp(0.30f, 0.48f, heavy) - right * 0.22f - up * 0.04f,
+                punchRotation,
+                weight * leftGuard * 0.56f);
+
+            AddLocal(
+                _rightUpperArm,
+                _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
+                -recoil * 0.42f - heavy * 7.0f,
+                7.0f * action,
+                -10.0f * action,
+                weight * action);
+            AddLocal(
+                _rightLowerArm,
+                _rightLowerArm != null ? _rightLowerArm.localRotation : Quaternion.identity,
+                -recoil * 0.56f - heavy * 5.0f,
+                5.0f * action,
+                -7.0f * action,
+                weight * action);
+            AddLocal(
+                _leftUpperArm,
+                _leftUpperArm != null ? _leftUpperArm.localRotation : Quaternion.identity,
+                -heavy * 4.5f,
+                -4.0f * leftGuard,
+                5.5f * leftGuard,
+                weight * leftGuard);
+            AddLocal(
+                _chest,
+                _chest != null ? _chest.localRotation : Quaternion.identity,
+                -heavy * 5.0f,
+                0f,
+                -4.5f * action,
                 weight * action);
         }
 
@@ -1376,6 +1463,15 @@ namespace MOBA.Core.Infrastructure
                 12.0f * action,
                 -18.0f * action,
                 weight * action);
+        }
+
+        private static float ResolveActionPulse(float ageSeconds, float durationSeconds)
+        {
+            if (ageSeconds < 0f || ageSeconds >= durationSeconds)
+                return 0f;
+
+            float t = Mathf.Clamp01(ageSeconds / Mathf.Max(0.001f, durationSeconds));
+            return 1f - Mathf.SmoothStep(0f, 1f, t);
         }
 
         private void PoseGripHands(

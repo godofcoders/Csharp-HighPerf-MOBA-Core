@@ -13,6 +13,7 @@ namespace MOBA.Core.Infrastructure
     {
         private const float DefaultMaxReadableSpeed = 5.5f;
         private const float MoveDeadZone = 0.02f;
+        private const float EventAgeCapSeconds = 10f;
 
         private static readonly int SpeedHash = Animator.StringToHash("Speed");
         private static readonly int Move01Hash = Animator.StringToHash("Move01");
@@ -42,8 +43,11 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _debugForwardMove;
         [SerializeField] private float _debugLateralMove;
         [SerializeField] private float _debugMainAttack;
+        [SerializeField] private float _debugMainAttackAge;
         [SerializeField] private float _debugSuper;
+        [SerializeField] private float _debugSuperAge;
         [SerializeField] private float _debugGadget;
+        [SerializeField] private float _debugGadgetAge;
         [SerializeField] private float _debugHeal;
         [SerializeField] private float _debugHypercharge;
         [SerializeField] private float _debugHitReact;
@@ -55,6 +59,9 @@ namespace MOBA.Core.Infrastructure
         private Vector3 _aimDirection = Vector3.forward;
         private Vector3 _eventAimDirection = Vector3.forward;
         private float _eventAimHoldSeconds;
+        private float _mainAttackAgeSeconds = EventAgeCapSeconds;
+        private float _superAgeSeconds = EventAgeCapSeconds;
+        private float _gadgetAgeSeconds = EventAgeCapSeconds;
         private bool _hyperchargeActive;
         private int _lastTickFrame = -1;
 
@@ -93,6 +100,9 @@ namespace MOBA.Core.Infrastructure
         public float MainAttackWeight { get; private set; }
         public float SuperWeight { get; private set; }
         public float GadgetWeight { get; private set; }
+        public float MainAttackAgeSeconds => _mainAttackAgeSeconds;
+        public float SuperAgeSeconds => _superAgeSeconds;
+        public float GadgetAgeSeconds => _gadgetAgeSeconds;
         public float HitReactWeight { get; private set; }
         public float HealWeight { get; private set; }
         public float DeathWeight { get; private set; }
@@ -186,6 +196,7 @@ namespace MOBA.Core.Infrastructure
             RefreshDirections(velocity);
             RefreshAimDirection(deltaTime);
             UpdateStride(deltaTime);
+            AdvanceEventAges(deltaTime);
             DecayWeights(deltaTime);
             DriveAnimatorParameters();
             RefreshDebugFields();
@@ -195,18 +206,21 @@ namespace MOBA.Core.Infrastructure
         {
             MainAttackWeight = Mathf.Max(MainAttackWeight, Mathf.Clamp01(strength));
             ActionWeight = Mathf.Max(ActionWeight, MainAttackWeight);
+            _mainAttackAgeSeconds = 0f;
         }
 
         public void PulseSuper(float strength = 1f)
         {
             SuperWeight = Mathf.Max(SuperWeight, Mathf.Clamp01(strength));
             ActionWeight = Mathf.Max(ActionWeight, SuperWeight);
+            _superAgeSeconds = 0f;
         }
 
         public void PulseGadget(float strength = 1f)
         {
             GadgetWeight = Mathf.Max(GadgetWeight, Mathf.Clamp01(strength));
             ActionWeight = Mathf.Max(ActionWeight, GadgetWeight);
+            _gadgetAgeSeconds = 0f;
         }
 
         public void PulseHitReact(float strength = 1f)
@@ -265,6 +279,13 @@ namespace MOBA.Core.Infrastructure
             StrideCos = Mathf.Cos(StridePhase);
             BodyBob = Mathf.Lerp(0.008f, 0.045f, Run01) * Mathf.Abs(StrideSin) * Move01;
             BodyLeanDegrees = Mathf.Lerp(1.4f, 6.6f, Run01) * Move01;
+        }
+
+        private void AdvanceEventAges(float deltaTime)
+        {
+            _mainAttackAgeSeconds = Mathf.Min(EventAgeCapSeconds, _mainAttackAgeSeconds + deltaTime);
+            _superAgeSeconds = Mathf.Min(EventAgeCapSeconds, _superAgeSeconds + deltaTime);
+            _gadgetAgeSeconds = Mathf.Min(EventAgeCapSeconds, _gadgetAgeSeconds + deltaTime);
         }
 
         private void DecayWeights(float deltaTime)
@@ -529,8 +550,11 @@ namespace MOBA.Core.Infrastructure
             _debugForwardMove = ForwardMove;
             _debugLateralMove = LateralMove;
             _debugMainAttack = MainAttackWeight;
+            _debugMainAttackAge = _mainAttackAgeSeconds;
             _debugSuper = SuperWeight;
+            _debugSuperAge = _superAgeSeconds;
             _debugGadget = GadgetWeight;
+            _debugGadgetAge = _gadgetAgeSeconds;
             _debugHeal = HealWeight;
             _debugHypercharge = HyperchargeWeight;
             _debugHitReact = HitReactWeight;
