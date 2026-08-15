@@ -24,6 +24,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _sideSwayDistance = 0.018f;
         [SerializeField] private float _plantedFootDownforce = 0.024f;
         [SerializeField] private float _swingFootDownforce = 0.004f;
+        [SerializeField] private float _targetSmoothSpeed = 30f;
+        [SerializeField] private float _targetSnapDistance = 0.55f;
 
         [Header("Runtime Debug")]
         [SerializeField] private float _debugMove01;
@@ -89,6 +91,7 @@ namespace MOBA.Core.Infrastructure
             float run01 = _runtime != null ? _runtime.Run01 : 0f;
             float stridePhase = _runtime != null ? _runtime.StridePhase : Time.unscaledTime * 5.5f;
             float activeWeight = Mathf.Clamp01(_ikWeight * Mathf.Clamp01(0.18f + move01 * 1.15f));
+            float deltaTime = Time.deltaTime > 0f ? Time.deltaTime : Time.unscaledDeltaTime;
 
             _debugMove01 = move01;
             _debugRun01 = run01;
@@ -96,8 +99,8 @@ namespace MOBA.Core.Infrastructure
 
             Vector3 moveDirection = ResolveMoveDirection();
             Vector3 poleDirection = ResolvePoleDirection(moveDirection);
-            SolveLeg(_rightLeg, stridePhase, move01, run01, activeWeight, moveDirection, poleDirection);
-            SolveLeg(_leftLeg, stridePhase + Mathf.PI, move01, run01, activeWeight, moveDirection, poleDirection);
+            SolveLeg(_rightLeg, stridePhase, move01, run01, activeWeight, moveDirection, poleDirection, deltaTime);
+            SolveLeg(_leftLeg, stridePhase + Mathf.PI, move01, run01, activeWeight, moveDirection, poleDirection, deltaTime);
         }
 
         private void CacheLegs()
@@ -138,6 +141,7 @@ namespace MOBA.Core.Infrastructure
             leg.RestFootLocalPosition = _space.InverseTransformPoint(foot.position);
             leg.UpperLength = Mathf.Max(MinimumBoneLength, Vector3.Distance(upper.position, lower.position));
             leg.LowerLength = Mathf.Max(MinimumBoneLength, Vector3.Distance(lower.position, foot.position));
+            leg.HasSmoothedTarget = false;
         }
 
         private Transform Bone(HumanBodyBones bone)
@@ -154,7 +158,8 @@ namespace MOBA.Core.Infrastructure
             float run01,
             float activeWeight,
             Vector3 moveDirection,
-            Vector3 poleDirection)
+            Vector3 poleDirection,
+            float deltaTime)
         {
             if (!leg.IsValid || activeWeight <= 0f)
                 return;
@@ -177,6 +182,8 @@ namespace MOBA.Core.Infrastructure
                 ResolveRight(moveDirection) * sideSway +
                 Vector3.up * (footLift - groundBias);
 
+            target = SmoothTarget(leg, target, run01, deltaTime);
+
             SolveTwoBone(
                 leg.Upper,
                 leg.Lower,
@@ -186,6 +193,26 @@ namespace MOBA.Core.Infrastructure
                 leg.LowerLength,
                 poleDirection,
                 activeWeight);
+        }
+
+        private Vector3 SmoothTarget(
+            LegState leg,
+            Vector3 target,
+            float run01,
+            float deltaTime)
+        {
+            float snapDistance = Mathf.Max(0.05f, _targetSnapDistance);
+            if (!leg.HasSmoothedTarget || Vector3.Distance(leg.SmoothedTarget, target) > snapDistance)
+            {
+                leg.SmoothedTarget = target;
+                leg.HasSmoothedTarget = true;
+                return target;
+            }
+
+            float speed = Mathf.Max(0f, Mathf.Lerp(_targetSmoothSpeed * 0.72f, _targetSmoothSpeed * 1.18f, run01));
+            float blend = 1f - Mathf.Exp(-Mathf.Max(0f, deltaTime) * speed);
+            leg.SmoothedTarget = Vector3.Lerp(leg.SmoothedTarget, target, Mathf.Clamp01(blend));
+            return leg.SmoothedTarget;
         }
 
         private Vector3 ResolveMoveDirection()
@@ -296,6 +323,8 @@ namespace MOBA.Core.Infrastructure
             public float UpperLength;
             public float LowerLength;
             public float Side;
+            public Vector3 SmoothedTarget;
+            public bool HasSmoothedTarget;
             public bool IsValid;
         }
     }
