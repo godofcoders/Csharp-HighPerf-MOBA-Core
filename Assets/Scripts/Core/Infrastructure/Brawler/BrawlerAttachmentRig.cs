@@ -15,6 +15,10 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private BrawlerAttachmentSocketBinding[] _socketBindings =
             new BrawlerAttachmentSocketBinding[0];
 
+        [Header("Scene View")]
+        [SerializeField] private bool _drawSocketGizmos = true;
+        [SerializeField] private float _socketGizmoScale = 0.06f;
+
         private readonly Dictionary<BrawlerAttachmentSocket, Transform> _socketLookup =
             new Dictionary<BrawlerAttachmentSocket, Transform>(16);
 
@@ -42,8 +46,22 @@ namespace MOBA.Core.Infrastructure
             _socketLookup.Clear();
 
             Animator animator = visualRoot.GetComponentInChildren<Animator>(true);
+            BrawlerHandPoseTargets authoredTargets =
+                visualRoot.GetComponentInChildren<BrawlerHandPoseTargets>(true);
             bool hasHumanoidRig = animator != null && animator.isHuman;
             Transform socketRoot = GetOrCreateSocketRoot(visualRoot.transform);
+            Transform authoredWeaponGrip = null;
+            Transform authoredOffhandGrip = null;
+            Transform authoredAim = null;
+            Transform authoredMuzzle = null;
+            if (authoredTargets != null)
+            {
+                authoredTargets.TryGetWeaponGripTarget(out authoredWeaponGrip);
+                authoredTargets.TryGetOffhandGripTarget(out authoredOffhandGrip);
+                authoredTargets.TryGetAimTarget(out authoredAim);
+                authoredTargets.TryGetMuzzleTarget(out authoredMuzzle);
+            }
+
             Transform rightHand =
                 ResolveBone(animator, HumanBodyBones.RightHand) ??
                 FindFirst(visualRoot.transform, "RightHand", "Right_Hand", "Right_Arm");
@@ -53,7 +71,8 @@ namespace MOBA.Core.Infrastructure
             Quaternion weaponSocketRotation =
                 ResolveForwardFacingSocketRotation(visualRoot.transform, animator);
             Transform primaryWeapon =
-                hasHumanoidRig && rightHand != null
+                authoredWeaponGrip ??
+                (hasHumanoidRig && rightHand != null
                     ? GetOrCreateSocket(
                         rightHand,
                         "Weapon_Main",
@@ -61,9 +80,10 @@ namespace MOBA.Core.Infrastructure
                         Quaternion.Inverse(rightHand.rotation) * weaponSocketRotation,
                         forceTransform: true)
                     : FindFirst(visualRoot.transform, "Weapon_Main", "PrimaryWeapon") ??
-                      rightHand;
+                      rightHand);
             Transform secondaryWeapon =
-                hasHumanoidRig && leftHand != null
+                authoredOffhandGrip ??
+                (hasHumanoidRig && leftHand != null
                     ? GetOrCreateSocket(
                         leftHand,
                         "Weapon_Offhand",
@@ -71,7 +91,7 @@ namespace MOBA.Core.Infrastructure
                         Quaternion.Inverse(leftHand.rotation) * weaponSocketRotation,
                         forceTransform: true)
                     : FindFirst(visualRoot.transform, "Weapon_Offhand", "SecondaryWeapon") ??
-                      leftHand;
+                      leftHand);
 
             SetSocket(BrawlerAttachmentSocket.Root, visualRoot.transform);
             SetSocket(
@@ -107,6 +127,7 @@ namespace MOBA.Core.Infrastructure
                 ResolveSocket(BrawlerAttachmentSocket.LeftHand, visualRoot.transform));
             SetSocket(
                 BrawlerAttachmentSocket.PrimaryMuzzle,
+                authoredMuzzle ??
                 FindFirst(visualRoot.transform, "Muzzle_Main", "PrimaryFirePoint") ??
                 GetOrCreateSocket(socketRoot, "Muzzle_Main", new Vector3(0f, 1.05f, 0.65f)));
             SetSocket(
@@ -119,11 +140,14 @@ namespace MOBA.Core.Infrastructure
                 GetOrCreateSocket(socketRoot, "Throwable", new Vector3(0.18f, 1.02f, 0.46f)));
             SetSocket(
                 BrawlerAttachmentSocket.AimTarget,
+                authoredAim ??
                 FindFirst(visualRoot.transform, "AimTarget") ??
                 GetOrCreateSocket(socketRoot, "AimTarget", new Vector3(0f, 1.25f, 2.5f)));
             SetSocket(
                 BrawlerAttachmentSocket.CastPoint,
                 FindFirst(visualRoot.transform, "CastPoint") ??
+                authoredMuzzle ??
+                authoredAim ??
                 ResolveSocket(BrawlerAttachmentSocket.AimTarget, visualRoot.transform));
 
             RebuildSerializedBindings();
@@ -140,6 +164,22 @@ namespace MOBA.Core.Infrastructure
                 return transform;
 
             return fallback != null ? fallback : Root;
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (!_drawSocketGizmos || _socketBindings == null)
+                return;
+
+            float size = Mathf.Max(0.01f, _socketGizmoScale);
+            for (int i = 0; i < _socketBindings.Length; i++)
+            {
+                BrawlerAttachmentSocketBinding binding = _socketBindings[i];
+                if (binding.Transform == null)
+                    continue;
+
+                DrawSocketGizmo(binding.Socket, binding.Transform, size);
+            }
         }
 
         private void SetSocket(BrawlerAttachmentSocket socket, Transform socketTransform)
@@ -307,6 +347,54 @@ namespace MOBA.Core.Infrastructure
             }
 
             return null;
+        }
+
+        private static void DrawSocketGizmo(
+            BrawlerAttachmentSocket socket,
+            Transform socketTransform,
+            float size)
+        {
+            Color color = ResolveSocketColor(socket);
+            Matrix4x4 previousMatrix = Gizmos.matrix;
+
+            Gizmos.color = color;
+            Gizmos.matrix = Matrix4x4.TRS(socketTransform.position, socketTransform.rotation, Vector3.one);
+            Gizmos.DrawWireCube(Vector3.zero, Vector3.one * size);
+            Gizmos.DrawLine(Vector3.zero, Vector3.forward * size * 3f);
+            Gizmos.DrawLine(Vector3.zero, Vector3.up * size * 1.75f);
+            Gizmos.matrix = previousMatrix;
+
+#if UNITY_EDITOR
+            UnityEditor.Handles.color = color;
+            UnityEditor.Handles.Label(
+                socketTransform.position + Vector3.up * size * 1.8f,
+                socket.ToString());
+#endif
+        }
+
+        private static Color ResolveSocketColor(BrawlerAttachmentSocket socket)
+        {
+            switch (socket)
+            {
+                case BrawlerAttachmentSocket.PrimaryWeapon:
+                    return new Color(1f, 0.85f, 0.10f);
+                case BrawlerAttachmentSocket.SecondaryWeapon:
+                    return new Color(0.45f, 1f, 0.20f);
+                case BrawlerAttachmentSocket.PrimaryMuzzle:
+                case BrawlerAttachmentSocket.SecondaryMuzzle:
+                    return new Color(1f, 0.35f, 0.05f);
+                case BrawlerAttachmentSocket.AimTarget:
+                    return new Color(0.30f, 0.55f, 1f);
+                case BrawlerAttachmentSocket.RightHand:
+                    return new Color(0.10f, 0.90f, 1f);
+                case BrawlerAttachmentSocket.LeftHand:
+                    return new Color(1f, 0.15f, 0.90f);
+                case BrawlerAttachmentSocket.CastPoint:
+                case BrawlerAttachmentSocket.Throwable:
+                    return new Color(0.75f, 0.45f, 1f);
+                default:
+                    return new Color(1f, 1f, 1f, 0.85f);
+            }
         }
     }
 
