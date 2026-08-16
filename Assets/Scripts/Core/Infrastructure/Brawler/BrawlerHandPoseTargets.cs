@@ -12,8 +12,15 @@ namespace MOBA.Core.Infrastructure
         private const string TargetRootName = "HandPoseTargets";
         private const string RightTargetName = "RightHand_IK_Target";
         private const string LeftTargetName = "LeftHand_IK_Target";
+        private const string WeaponGripTargetName = "WeaponGrip_Target";
+        private const string OffhandGripTargetName = "OffhandGrip_Target";
+        private const string AimTargetName = "Aim_Target";
+        private const string MuzzleTargetName = "Muzzle_Target";
 
+        [Header("Runtime")]
         [SerializeField] private bool _enabled = true;
+
+        [Header("Hand IK")]
         [SerializeField] private Transform _rightHandTarget;
         [SerializeField] private Transform _leftHandTarget;
         [SerializeField, Range(0f, 1f)] private float _rightHandWeight = 1f;
@@ -21,11 +28,22 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private bool _useRightTargetRotation = true;
         [SerializeField] private bool _useLeftTargetRotation = true;
 
+        [Header("Weapon Authoring Markers")]
+        [SerializeField] private Transform _weaponGripTarget;
+        [SerializeField] private Transform _offhandGripTarget;
+        [SerializeField] private Transform _aimTarget;
+        [SerializeField] private Transform _muzzleTarget;
+
         [Header("Blend")]
         [SerializeField, Range(0f, 1f)] private float _idleWeight = 0.35f;
         [SerializeField, Range(0f, 1f)] private float _readyWeight = 0.78f;
         [SerializeField, Range(0f, 1f)] private float _actionWeight = 1f;
         [SerializeField, Range(0f, 1f)] private float _showcaseWeight = 1f;
+
+        [Header("Scene View")]
+        [SerializeField] private bool _drawGizmos = true;
+        [SerializeField] private bool _drawWhenNotSelected;
+        [SerializeField] private float _gizmoScale = 0.09f;
 
         public float ResolvePoseWeight(
             float ready01,
@@ -71,28 +89,120 @@ namespace MOBA.Core.Infrastructure
             return _enabled && target != null && weight > 0f;
         }
 
-#if UNITY_EDITOR
-        [ContextMenu("Create Missing Hand Targets")]
-        private void CreateMissingHandTargets()
+        public bool TryGetWeaponGripTarget(out Transform target)
         {
-            Transform targetRoot = GetOrCreateChild(transform, TargetRootName);
+            target = ResolveTarget(_weaponGripTarget, WeaponGripTargetName);
+            return _enabled && target != null;
+        }
+
+        public bool TryGetOffhandGripTarget(out Transform target)
+        {
+            target = ResolveTarget(_offhandGripTarget, OffhandGripTargetName);
+            return _enabled && target != null;
+        }
+
+        public bool TryGetAimTarget(out Transform target)
+        {
+            target = ResolveTarget(_aimTarget, AimTargetName);
+            return _enabled && target != null;
+        }
+
+        public bool TryGetMuzzleTarget(out Transform target)
+        {
+            target = ResolveTarget(_muzzleTarget, MuzzleTargetName);
+            return _enabled && target != null;
+        }
+
+#if UNITY_EDITOR
+        [ContextMenu("Create Full Grip Authoring Rig")]
+        public void CreateFullGripAuthoringRig()
+        {
+            UnityEditor.Undo.RecordObject(this, "Create Grip Authoring Rig");
+
+            Transform targetRoot = GetOrCreateChild(transform, TargetRootName, out _);
             Animator animator = GetComponentInChildren<Animator>(true);
             Transform rightHand = ResolveBone(animator, HumanBodyBones.RightHand);
             Transform leftHand = ResolveBone(animator, HumanBodyBones.LeftHand);
+            Quaternion forwardRotation = ResolveDefaultForwardRotation(animator, transform);
+            bool rightCreated = false;
+            bool leftCreated = false;
+            bool weaponCreated = false;
+            bool offhandCreated = false;
+            bool aimCreated = false;
+            bool muzzleCreated = false;
 
             if (_rightHandTarget == null)
-            {
-                _rightHandTarget = GetOrCreateChild(targetRoot, RightTargetName);
-                PlaceTarget(_rightHandTarget, rightHand, new Vector3(0.24f, 1.02f, 0.42f));
-            }
+                _rightHandTarget = GetOrCreateChild(targetRoot, RightTargetName, out rightCreated);
 
             if (_leftHandTarget == null)
-            {
-                _leftHandTarget = GetOrCreateChild(targetRoot, LeftTargetName);
-                PlaceTarget(_leftHandTarget, leftHand, new Vector3(-0.24f, 1.02f, 0.42f));
-            }
+                _leftHandTarget = GetOrCreateChild(targetRoot, LeftTargetName, out leftCreated);
+
+            if (_weaponGripTarget == null)
+                _weaponGripTarget = GetOrCreateChild(targetRoot, WeaponGripTargetName, out weaponCreated);
+
+            if (_offhandGripTarget == null)
+                _offhandGripTarget = GetOrCreateChild(targetRoot, OffhandGripTargetName, out offhandCreated);
+
+            if (_aimTarget == null)
+                _aimTarget = GetOrCreateChild(targetRoot, AimTargetName, out aimCreated);
+
+            if (_muzzleTarget == null)
+                _muzzleTarget = GetOrCreateChild(targetRoot, MuzzleTargetName, out muzzleCreated);
+
+            if (rightCreated)
+                PlaceTarget(_rightHandTarget, rightHand, new Vector3(0.24f, 1.02f, 0.42f), forwardRotation);
+
+            if (leftCreated)
+                PlaceTarget(_leftHandTarget, leftHand, new Vector3(-0.24f, 1.02f, 0.42f), forwardRotation);
+
+            if (weaponCreated)
+                PlaceTarget(_weaponGripTarget, rightHand, new Vector3(0.16f, 1.02f, 0.44f), forwardRotation);
+
+            if (offhandCreated)
+                PlaceTarget(_offhandGripTarget, leftHand, new Vector3(-0.16f, 1.02f, 0.38f), forwardRotation);
+
+            if (aimCreated)
+                PlaceTarget(_aimTarget, null, new Vector3(0f, 1.18f, 1.35f), forwardRotation);
+
+            if (muzzleCreated)
+                PlaceTarget(_muzzleTarget, null, new Vector3(0.10f, 1.05f, 0.74f), forwardRotation);
+
+            UnityEditor.EditorUtility.SetDirty(targetRoot.gameObject);
+            UnityEditor.EditorUtility.SetDirty(gameObject);
+            UnityEditor.EditorUtility.SetDirty(this);
+        }
+
+        [ContextMenu("Create Missing Hand Targets")]
+        public void CreateMissingHandTargets()
+        {
+            CreateFullGripAuthoringRig();
+        }
+
+        [ContextMenu("Snap Hand Targets To Humanoid Hands")]
+        public void SnapHandTargetsToHumanoidHands()
+        {
+            UnityEditor.Undo.RecordObject(this, "Snap Hand Targets");
+
+            Animator animator = GetComponentInChildren<Animator>(true);
+            Transform rightHand = ResolveBone(animator, HumanBodyBones.RightHand);
+            Transform leftHand = ResolveBone(animator, HumanBodyBones.LeftHand);
+            Quaternion forwardRotation = ResolveDefaultForwardRotation(animator, transform);
+
+            if (_rightHandTarget != null)
+                PlaceTarget(_rightHandTarget, rightHand, new Vector3(0.24f, 1.02f, 0.42f), forwardRotation);
+
+            if (_leftHandTarget != null)
+                PlaceTarget(_leftHandTarget, leftHand, new Vector3(-0.24f, 1.02f, 0.42f), forwardRotation);
 
             UnityEditor.EditorUtility.SetDirty(this);
+        }
+
+        [ContextMenu("Select Target Root")]
+        public void SelectTargetRoot()
+        {
+            Transform targetRoot = ResolveTargetRoot();
+            if (targetRoot != null)
+                UnityEditor.Selection.activeTransform = targetRoot;
         }
 
         private static Transform ResolveBone(Animator animator, HumanBodyBones bone)
@@ -105,7 +215,8 @@ namespace MOBA.Core.Infrastructure
         private static void PlaceTarget(
             Transform target,
             Transform source,
-            Vector3 fallbackLocalPosition)
+            Vector3 fallbackLocalPosition,
+            Quaternion fallbackRotation)
         {
             if (target == null)
                 return;
@@ -118,17 +229,42 @@ namespace MOBA.Core.Infrastructure
             else
             {
                 target.localPosition = fallbackLocalPosition;
-                target.localRotation = Quaternion.identity;
+                target.rotation = fallbackRotation;
             }
 
             target.localScale = Vector3.one;
         }
 
-        private static Transform GetOrCreateChild(Transform parent, string childName)
+        private static Quaternion ResolveDefaultForwardRotation(
+            Animator animator,
+            Transform fallback)
+        {
+            Vector3 forward = animator != null
+                ? animator.transform.forward
+                : (fallback != null ? fallback.forward : Vector3.forward);
+
+            forward.y = 0f;
+            if (forward.sqrMagnitude <= 0.0001f && fallback != null)
+                forward = fallback.forward;
+
+            forward.y = 0f;
+            if (forward.sqrMagnitude <= 0.0001f)
+                forward = Vector3.forward;
+
+            return Quaternion.LookRotation(forward.normalized, Vector3.up);
+        }
+
+        private static Transform GetOrCreateChild(
+            Transform parent,
+            string childName,
+            out bool created)
         {
             Transform existing = parent.Find(childName);
             if (existing != null)
+            {
+                created = false;
                 return existing;
+            }
 
             GameObject child = new GameObject(childName);
             UnityEditor.Undo.RegisterCreatedObjectUndo(child, $"Create {childName}");
@@ -136,16 +272,23 @@ namespace MOBA.Core.Infrastructure
             child.transform.localPosition = Vector3.zero;
             child.transform.localRotation = Quaternion.identity;
             child.transform.localScale = Vector3.one;
+            created = true;
             return child.transform;
         }
 #endif
+
+        private Transform ResolveTargetRoot()
+        {
+            Transform direct = transform.Find(TargetRootName);
+            return direct != null ? direct : FindDeep(transform, TargetRootName);
+        }
 
         private Transform ResolveTarget(Transform assigned, string fallbackName)
         {
             if (assigned != null)
                 return assigned;
 
-            Transform root = transform.Find(TargetRootName);
+            Transform root = ResolveTargetRoot();
             if (root == null)
                 return FindDeep(transform, fallbackName);
 
@@ -171,21 +314,77 @@ namespace MOBA.Core.Infrastructure
             return null;
         }
 
-        private void OnDrawGizmosSelected()
+        private void OnDrawGizmos()
         {
-            DrawTargetGizmo(ResolveTarget(_rightHandTarget, RightTargetName), Color.cyan);
-            DrawTargetGizmo(ResolveTarget(_leftHandTarget, LeftTargetName), Color.magenta);
+            if (_drawWhenNotSelected)
+                DrawAuthoringGizmos(false);
         }
 
-        private static void DrawTargetGizmo(Transform target, Color color)
+        private void OnDrawGizmosSelected()
+        {
+            DrawAuthoringGizmos(true);
+        }
+
+        private void DrawAuthoringGizmos(bool selected)
+        {
+            if (!_drawGizmos)
+                return;
+
+            float size = Mathf.Max(0.01f, _gizmoScale);
+            Transform right = ResolveTarget(_rightHandTarget, RightTargetName);
+            Transform left = ResolveTarget(_leftHandTarget, LeftTargetName);
+            Transform weapon = ResolveTarget(_weaponGripTarget, WeaponGripTargetName);
+            Transform offhand = ResolveTarget(_offhandGripTarget, OffhandGripTargetName);
+            Transform aim = ResolveTarget(_aimTarget, AimTargetName);
+            Transform muzzle = ResolveTarget(_muzzleTarget, MuzzleTargetName);
+
+            DrawLink(right, weapon, new Color(0.1f, 0.9f, 1f, selected ? 0.95f : 0.55f));
+            DrawLink(left, offhand, new Color(1f, 0.15f, 0.9f, selected ? 0.95f : 0.55f));
+            DrawLink(weapon, offhand, new Color(1f, 0.95f, 0.15f, selected ? 0.85f : 0.45f));
+            DrawLink(muzzle, aim, new Color(1f, 0.42f, 0.08f, selected ? 0.95f : 0.55f));
+
+            DrawTargetGizmo(right, new Color(0.1f, 0.9f, 1f), "Right IK", size);
+            DrawTargetGizmo(left, new Color(1f, 0.15f, 0.9f), "Left IK", size);
+            DrawTargetGizmo(weapon, new Color(1f, 0.88f, 0.10f), "Weapon Grip", size * 1.15f);
+            DrawTargetGizmo(offhand, new Color(0.45f, 1f, 0.20f), "Offhand Grip", size);
+            DrawTargetGizmo(aim, new Color(0.30f, 0.55f, 1f), "Aim", size * 1.25f);
+            DrawTargetGizmo(muzzle, new Color(1f, 0.35f, 0.05f), "Muzzle", size);
+        }
+
+        private static void DrawTargetGizmo(
+            Transform target,
+            Color color,
+            string label,
+            float size)
         {
             if (target == null)
                 return;
 
+            Matrix4x4 previousMatrix = Gizmos.matrix;
             Gizmos.color = color;
-            Gizmos.DrawWireSphere(target.position, 0.035f);
-            Gizmos.DrawLine(target.position, target.position + target.forward * 0.16f);
-            Gizmos.DrawLine(target.position, target.position + target.up * 0.10f);
+            Gizmos.matrix = Matrix4x4.TRS(target.position, target.rotation, Vector3.one);
+            Gizmos.DrawWireCube(Vector3.zero, Vector3.one * size);
+            Gizmos.DrawLine(Vector3.zero, Vector3.forward * size * 2.75f);
+            Gizmos.DrawLine(Vector3.zero, Vector3.up * size * 1.75f);
+            Gizmos.DrawLine(Vector3.zero, Vector3.right * size * 1.45f);
+            Gizmos.matrix = previousMatrix;
+
+#if UNITY_EDITOR
+            UnityEditor.Handles.color = color;
+            UnityEditor.Handles.Label(target.position + Vector3.up * size * 1.8f, label);
+#endif
+        }
+
+        private static void DrawLink(
+            Transform from,
+            Transform to,
+            Color color)
+        {
+            if (from == null || to == null)
+                return;
+
+            Gizmos.color = color;
+            Gizmos.DrawLine(from.position, to.position);
         }
     }
 }
