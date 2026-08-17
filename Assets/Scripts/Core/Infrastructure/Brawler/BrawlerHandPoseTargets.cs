@@ -16,6 +16,7 @@ namespace MOBA.Core.Infrastructure
         private const string OffhandGripTargetName = "OffhandGrip_Target";
         private const string AimTargetName = "Aim_Target";
         private const string MuzzleTargetName = "Muzzle_Target";
+        private const float MarkerFallbackHandWeight = 0.72f;
 
         [Header("Runtime")]
         [SerializeField] private bool _enabled = true;
@@ -95,6 +96,34 @@ namespace MOBA.Core.Infrastructure
         {
             target = ResolveTarget(_leftHandTarget, LeftTargetName);
             weight = Mathf.Clamp01(_leftHandWeight);
+            useRotation = _useLeftTargetRotation;
+            return _enabled && target != null && weight > 0f;
+        }
+
+        public bool TryGetRightHandPoseTarget(
+            out Transform target,
+            out float weight,
+            out bool useRotation)
+        {
+            if (TryGetRightHandTarget(out target, out weight, out useRotation))
+                return true;
+
+            target = ResolveTarget(_weaponGripTarget, WeaponGripTargetName);
+            weight = Mathf.Clamp01(_rightHandWeight * MarkerFallbackHandWeight);
+            useRotation = _useRightTargetRotation;
+            return _enabled && target != null && weight > 0f;
+        }
+
+        public bool TryGetLeftHandPoseTarget(
+            out Transform target,
+            out float weight,
+            out bool useRotation)
+        {
+            if (TryGetLeftHandTarget(out target, out weight, out useRotation))
+                return true;
+
+            target = ResolveTarget(_offhandGripTarget, OffhandGripTargetName);
+            weight = Mathf.Clamp01(_leftHandWeight * MarkerFallbackHandWeight);
             useRotation = _useLeftTargetRotation;
             return _enabled && target != null && weight > 0f;
         }

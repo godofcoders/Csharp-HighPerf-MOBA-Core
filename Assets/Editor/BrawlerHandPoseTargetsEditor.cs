@@ -29,7 +29,7 @@ namespace MOBA.EditorTools
             }
 
             EditorGUILayout.HelpBox(
-                "Move Right/Left IK targets to place the hands. Move Weapon/Offhand Grip targets to publish attachment sockets. Aim and Muzzle targets show the intended firing line.",
+                "Move Right/Left IK targets to place the hands. Move Weapon/Offhand Grip targets to publish attachment sockets and provide a fallback hand pose when explicit IK targets are not authored. Finger Grip can curl fingers around the weapon once the hands are placed.",
                 MessageType.Info);
         }
 

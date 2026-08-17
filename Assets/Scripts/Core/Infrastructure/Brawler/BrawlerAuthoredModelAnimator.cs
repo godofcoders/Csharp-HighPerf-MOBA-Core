@@ -16,6 +16,8 @@ namespace MOBA.Core.Infrastructure
         private const float GripActionBoost = 0.12f;
         private const float PoseRiseSpeed = 16f;
         private const float PoseFallSpeed = 9f;
+        private const float DefaultHandRotationStrength = 0.36f;
+        private const float AuthoredHandRotationStrength = 0.72f;
 
         private static readonly HumanBodyBones[] LeftFingerBoneMap =
         {
@@ -509,7 +511,7 @@ namespace MOBA.Core.Infrastructure
                 if (targetSetWeight <= 0.001f)
                     continue;
 
-                if (targetSet.TryGetRightHandTarget(
+                if (targetSet.TryGetRightHandPoseTarget(
                         out Transform rightTarget,
                         out float rightWeight,
                         out bool useRightRotation))
@@ -540,7 +542,7 @@ namespace MOBA.Core.Infrastructure
                         targetSetWeight * rightGripWeight);
                 }
 
-                if (targetSet.TryGetLeftHandTarget(
+                if (targetSet.TryGetLeftHandPoseTarget(
                         out Transform leftTarget,
                         out float leftWeight,
                         out bool useLeftRotation))
@@ -627,7 +629,8 @@ namespace MOBA.Core.Infrastructure
                 target.position,
                 target.rotation,
                 Mathf.Clamp01(weight),
-                useTargetRotation);
+                useTargetRotation,
+                AuthoredHandRotationStrength);
         }
 
         private float ResolveShowcaseReady(BrawlerAttachmentGripPose gripPose)
@@ -1995,7 +1998,9 @@ namespace MOBA.Core.Infrastructure
                 hand,
                 target.position,
                 target.rotation,
-                weight);
+                weight,
+                rotateHand: true,
+                DefaultHandRotationStrength);
         }
 
         private static void ApplyArmGripIk(
@@ -2013,7 +2018,8 @@ namespace MOBA.Core.Infrastructure
                 targetPosition,
                 targetRotation,
                 weight,
-                rotateHand: true);
+                rotateHand: true,
+                DefaultHandRotationStrength);
         }
 
         private static void ApplyArmGripIk(
@@ -2024,6 +2030,27 @@ namespace MOBA.Core.Infrastructure
             Quaternion targetRotation,
             float weight,
             bool rotateHand)
+        {
+            ApplyArmGripIk(
+                upper,
+                lower,
+                hand,
+                targetPosition,
+                targetRotation,
+                weight,
+                rotateHand,
+                DefaultHandRotationStrength);
+        }
+
+        private static void ApplyArmGripIk(
+            Transform upper,
+            Transform lower,
+            Transform hand,
+            Vector3 targetPosition,
+            Quaternion targetRotation,
+            float weight,
+            bool rotateHand,
+            float handRotationStrength)
         {
             if (upper == null ||
                 lower == null ||
@@ -2049,7 +2076,7 @@ namespace MOBA.Core.Infrastructure
                 hand.rotation = Quaternion.Slerp(
                     hand.rotation,
                     targetRotation,
-                    Mathf.Clamp01(weight * 0.36f));
+                    Mathf.Clamp01(weight * Mathf.Max(0f, handRotationStrength)));
             }
         }
 
