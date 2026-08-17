@@ -61,12 +61,16 @@ namespace MOBA.Core.Definitions
         public Vector3 LocalEulerOffset;
         public Vector3 LocalScale = Vector3.one;
         public bool UseExplicitGripPoint;
+        [Tooltip("Optional child transform name inside the authored weapon prefab that should align to the socket.")]
+        public string GripPointName;
         public Vector3 ExplicitGripLocalPosition;
         public Vector3 ExplicitGripLocalEulerOffset;
         public bool FollowSocketRotation = true;
         public bool UseStableCharacterRotation;
         public bool UseSecondaryGripPoint;
         public BrawlerAttachmentSocket SecondaryGripSocket = BrawlerAttachmentSocket.LeftHand;
+        [Tooltip("Optional child transform name inside the authored weapon prefab for the offhand grip target.")]
+        public string SecondaryGripPointName;
         public Vector3 SecondaryGripLocalPosition;
         public Vector3 SecondaryGripLocalEulerOffset;
         [Range(0f, 1f)]

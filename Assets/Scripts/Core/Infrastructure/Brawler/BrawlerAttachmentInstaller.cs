@@ -155,12 +155,17 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            Transform secondaryGrip = GetOrCreateChild(
-                attachmentRoot,
-                "SecondaryGripTarget");
-            secondaryGrip.localPosition = binding.SecondaryGripLocalPosition;
-            secondaryGrip.localRotation = Quaternion.Euler(binding.SecondaryGripLocalEulerOffset);
-            secondaryGrip.localScale = Vector3.one;
+            Transform configuredSecondaryGrip =
+                FindConfiguredChild(attachmentRoot, binding.SecondaryGripPointName);
+            Transform secondaryGrip =
+                configuredSecondaryGrip ??
+                GetOrCreateChild(attachmentRoot, "SecondaryGripTarget");
+            if (configuredSecondaryGrip == null)
+            {
+                secondaryGrip.localPosition = binding.SecondaryGripLocalPosition;
+                secondaryGrip.localRotation = Quaternion.Euler(binding.SecondaryGripLocalEulerOffset);
+                secondaryGrip.localScale = Vector3.one;
+            }
 
             BrawlerRuntimeAttachmentGrip runtimeGrip =
                 attachmentRoot.GetComponent<BrawlerRuntimeAttachmentGrip>();
@@ -428,6 +433,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             Transform gripPoint =
+                FindConfiguredChild(attachmentRoot, binding.GripPointName) ??
                 FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.GripPointName) ??
                 FindChildRecursive(attachmentRoot, BrawlerGeneratedAttachmentFactory.HoldPointName) ??
                 FindChildRecursive(attachmentRoot, "WeaponGrip");
@@ -536,6 +542,15 @@ namespace MOBA.Core.Infrastructure
             }
 
             return null;
+        }
+
+        private static Transform FindConfiguredChild(
+            Transform root,
+            string childName)
+        {
+            return string.IsNullOrWhiteSpace(childName)
+                ? null
+                : FindChildRecursive(root, childName.Trim());
         }
     }
 }
