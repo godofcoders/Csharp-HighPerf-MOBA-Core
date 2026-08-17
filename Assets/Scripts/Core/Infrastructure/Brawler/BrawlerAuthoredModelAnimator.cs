@@ -523,6 +523,23 @@ namespace MOBA.Core.Infrastructure
                         useRightRotation);
                 }
 
+                if (targetSet.TryGetRightFingerGrip(
+                        out float rightFingerCurl,
+                        out float rightThumbCurl,
+                        out Vector3 rightHandOffset,
+                        out float rightGripWeight))
+                {
+                    ApplyAuthoredFingerGrip(
+                        _rightHand,
+                        _rightFingerBones,
+                        _rightFingerBase,
+                        rightFingerCurl,
+                        rightThumbCurl,
+                        rightHandOffset,
+                        1f,
+                        targetSetWeight * rightGripWeight);
+                }
+
                 if (targetSet.TryGetLeftHandTarget(
                         out Transform leftTarget,
                         out float leftWeight,
@@ -536,6 +553,59 @@ namespace MOBA.Core.Infrastructure
                         targetSetWeight * leftWeight,
                         useLeftRotation);
                 }
+
+                if (targetSet.TryGetLeftFingerGrip(
+                        out float leftFingerCurl,
+                        out float leftThumbCurl,
+                        out Vector3 leftHandOffset,
+                        out float leftGripWeight))
+                {
+                    ApplyAuthoredFingerGrip(
+                        _leftHand,
+                        _leftFingerBones,
+                        _leftFingerBase,
+                        leftFingerCurl,
+                        leftThumbCurl,
+                        leftHandOffset,
+                        -1f,
+                        targetSetWeight * leftGripWeight);
+                }
+            }
+        }
+
+        private static void ApplyAuthoredFingerGrip(
+            Transform hand,
+            Transform[] fingerBones,
+            Quaternion[] fingerBase,
+            float fingerCurl,
+            float thumbCurl,
+            Vector3 localEulerOffset,
+            float side,
+            float weight)
+        {
+            float poseWeight = Mathf.Clamp01(weight);
+            if (poseWeight <= 0f)
+                return;
+
+            PoseGripHand(
+                hand,
+                fingerBones,
+                fingerBase,
+                Mathf.Clamp01(fingerCurl),
+                Mathf.Clamp01(thumbCurl),
+                side,
+                1f,
+                poseWeight);
+
+            if (localEulerOffset.sqrMagnitude > 0.000001f)
+            {
+                AddLocal(
+                    hand,
+                    hand != null ? hand.localRotation : Quaternion.identity,
+                    localEulerOffset.x,
+                    localEulerOffset.y,
+                    localEulerOffset.z,
+                    poseWeight);
             }
         }
 

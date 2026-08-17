@@ -40,6 +40,16 @@ namespace MOBA.Core.Infrastructure
         [SerializeField, Range(0f, 1f)] private float _actionWeight = 1f;
         [SerializeField, Range(0f, 1f)] private float _showcaseWeight = 1f;
 
+        [Header("Finger Grip")]
+        [SerializeField] private bool _overrideFingerGrip;
+        [SerializeField, Range(0f, 1f)] private float _rightFingerCurl = 1f;
+        [SerializeField, Range(0f, 1f)] private float _rightThumbCurl = 0.9f;
+        [SerializeField, Range(0f, 1f)] private float _leftFingerCurl = 0.45f;
+        [SerializeField, Range(0f, 1f)] private float _leftThumbCurl = 0.35f;
+        [SerializeField, Range(0f, 1f)] private float _fingerGripWeight = 1f;
+        [SerializeField] private Vector3 _rightHandLocalEulerOffset;
+        [SerializeField] private Vector3 _leftHandLocalEulerOffset;
+
         [Header("Scene View")]
         [SerializeField] private bool _drawGizmos = true;
         [SerializeField] private bool _drawWhenNotSelected;
@@ -111,6 +121,32 @@ namespace MOBA.Core.Infrastructure
         {
             target = ResolveTarget(_muzzleTarget, MuzzleTargetName);
             return _enabled && target != null;
+        }
+
+        public bool TryGetRightFingerGrip(
+            out float fingerCurl,
+            out float thumbCurl,
+            out Vector3 localEulerOffset,
+            out float weight)
+        {
+            fingerCurl = Mathf.Clamp01(_rightFingerCurl);
+            thumbCurl = Mathf.Clamp01(_rightThumbCurl);
+            localEulerOffset = _rightHandLocalEulerOffset;
+            weight = Mathf.Clamp01(_fingerGripWeight);
+            return _enabled && _overrideFingerGrip && weight > 0f;
+        }
+
+        public bool TryGetLeftFingerGrip(
+            out float fingerCurl,
+            out float thumbCurl,
+            out Vector3 localEulerOffset,
+            out float weight)
+        {
+            fingerCurl = Mathf.Clamp01(_leftFingerCurl);
+            thumbCurl = Mathf.Clamp01(_leftThumbCurl);
+            localEulerOffset = _leftHandLocalEulerOffset;
+            weight = Mathf.Clamp01(_fingerGripWeight);
+            return _enabled && _overrideFingerGrip && weight > 0f;
         }
 
 #if UNITY_EDITOR
