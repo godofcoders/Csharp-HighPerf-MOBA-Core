@@ -4,6 +4,12 @@ using UnityEngine;
 
 namespace MOBA.Core.Definitions
 {
+    public enum BrawlerVisualModelSource
+    {
+        AuthoredPrefabWithProceduralFallback = 0,
+        ProceduralGeneratedWithAuthoredFallback = 1
+    }
+
     [CreateAssetMenu(fileName = "NewBrawler", menuName = "MOBA/Brawler Definition")]
     public class BrawlerDefinition : ScriptableObject
     {
@@ -15,6 +21,10 @@ namespace MOBA.Core.Definitions
         public Sprite Portrait;
 
         [Header("Presentation")]
+        [Tooltip("Controls whether this brawler prefers an imported character prefab or the deterministic low-poly generated model. Procedural mode still falls back safely to the authored prefab if a generated recipe is missing.")]
+        public BrawlerVisualModelSource VisualModelSource =
+            BrawlerVisualModelSource.AuthoredPrefabWithProceduralFallback;
+
         [Tooltip("Visual-only attachments such as weapons, backpacks, throwable props, and future cosmetic gear. Gameplay stays on BrawlerController.")]
         public BrawlerAttachmentProfile AttachmentProfile;
 
