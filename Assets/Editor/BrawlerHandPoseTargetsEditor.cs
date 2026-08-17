@@ -7,7 +7,7 @@ namespace MOBA.EditorTools
 {
     [CustomEditor(typeof(BrawlerHandPoseTargets))]
     [CanEditMultipleObjects]
-    public sealed class BrawlerHandPoseTargetsEditor : Editor
+    public sealed class BrawlerHandPoseTargetsEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {
