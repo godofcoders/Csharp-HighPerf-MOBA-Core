@@ -18,6 +18,9 @@ namespace MOBA.Core.Definitions
         [Tooltip("Visual-only attachments such as weapons, backpacks, throwable props, and future cosmetic gear. Gameplay stays on BrawlerController.")]
         public BrawlerAttachmentProfile AttachmentProfile;
 
+        [Tooltip("Optional authored-model target height before the global body scale multiplier. Leave 0 to use the brawler archetype default.")]
+        public float VisualTargetHeightOverride = 0f;
+
         [Header("Base Stats")]
         public float BaseHealth = 3000f;
         public float BaseMoveSpeed = 5.0f;

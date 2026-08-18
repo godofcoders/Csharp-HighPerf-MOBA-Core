@@ -99,6 +99,9 @@ namespace MOBA.Core.Infrastructure
 
         private static float ResolveTargetHeight(BrawlerDefinition definition)
         {
+            if (definition != null && definition.VisualTargetHeightOverride > 0.01f)
+                return Mathf.Max(0.25f, definition.VisualTargetHeightOverride);
+
             string name = ResolveBrawlerName(definition);
 
             if (Matches(name, "El Primo") || Matches(name, "ElPrimo"))

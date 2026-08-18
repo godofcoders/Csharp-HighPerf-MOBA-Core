@@ -16,6 +16,7 @@ MonoBehaviour:
   ModelPrefab: {fileID: 3338249247812769499, guid: f4cbe62e81aba4608a05718a4f16e790, type: 3}
   Portrait: {fileID: 0}
   AttachmentProfile: {fileID: 11400000, guid: 7af1e3c9d4b342678951c438967a5241, type: 2}
+  VisualTargetHeightOverride: 1.2
   BaseHealth: 3000
   BaseMoveSpeed: 4
   BaseDamage: 720
