@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Colt_Definition
   m_EditorClassIdentifier: 
   BrawlerName: Colt
-  ModelPrefab: {fileID: 3004796574872013153, guid: 0dcf17d3926af4e6f9d3a17d69c074db, type: 3}
+  ModelPrefab: {fileID: 3338249247812769499, guid: f4cbe62e81aba4608a05718a4f16e790, type: 3}
   Portrait: {fileID: 0}
   AttachmentProfile: {fileID: 11400000, guid: 7af1e3c9d4b342678951c438967a5241, type: 2}
   BaseHealth: 3000
