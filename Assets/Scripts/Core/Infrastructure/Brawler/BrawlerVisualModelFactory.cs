@@ -19,12 +19,6 @@ namespace MOBA.Core.Infrastructure
             if (definition == null || parent == null)
                 return false;
 
-            if (definition.VisualModelSource == BrawlerVisualModelSource.ProceduralGeneratedWithAuthoredFallback &&
-                TryCreateProceduralModel(definition, parent, owner, out instance))
-            {
-                return true;
-            }
-
             if (definition.ModelPrefab != null)
             {
                 instance = Object.Instantiate(definition.ModelPrefab, parent);
@@ -38,22 +32,9 @@ namespace MOBA.Core.Infrastructure
                 instance = null;
             }
 
-            if (!TryCreateProceduralModel(definition, parent, owner, out instance))
-                return false;
-
-            return true;
-        }
-
-        private static bool TryCreateProceduralModel(
-            BrawlerDefinition definition,
-            Transform parent,
-            BrawlerController owner,
-            out GameObject instance)
-        {
             if (!ProceduralBrawlerModelFactory.TryCreate(definition, parent, owner, out instance))
                 return false;
 
-            instance.name = ResolveInstanceName(definition, "Generated");
             instance.transform.localScale *= BrawlerController.BodyScaleMultiplier;
             ConfigureLayer(instance, parent.gameObject.layer);
             PrepareAttachmentPresentation(instance, definition, owner, installAttachmentProfile: false);
