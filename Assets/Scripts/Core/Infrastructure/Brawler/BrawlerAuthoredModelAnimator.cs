@@ -19,6 +19,20 @@ namespace MOBA.Core.Infrastructure
         private const float DefaultHandRotationStrength = 0.36f;
         private const float AuthoredHandRotationStrength = 0.72f;
 
+        private enum AnimationPersona
+        {
+            Balanced,
+            Gunslinger,
+            Engineer,
+            Thrower,
+            Heavyweight,
+            Archer,
+            Support,
+            Sniper,
+            Assassin,
+            Robot
+        }
+
         private static readonly string[] HipBoneNames =
             { "mixamorig:Hips", "Hips", "hips", "root" };
         private static readonly string[] SpineBoneNames =
@@ -99,6 +113,8 @@ namespace MOBA.Core.Infrastructure
             BrawlerAttachmentGripPose.Auto;
         [SerializeField, Range(0f, 1f)] private float _gripPoseWeight = 1f;
         [SerializeField] private bool _useShowcasePose;
+        [SerializeField] private AnimationPersona _animationPersona =
+            AnimationPersona.Balanced;
 
         private Transform _hips;
         private Transform _spine;
@@ -158,6 +174,13 @@ namespace MOBA.Core.Infrastructure
         private float _strideReachScale = 1f;
         private float _footLiftScale = 1f;
         private float _armSwingScale = 1f;
+        private float _locomotionBounceScale = 1f;
+        private float _locomotionLeanScale = 1f;
+        private float _locomotionSwaggerScale = 1f;
+        private float _actionSnapScale = 1f;
+        private float _superSnapScale = 1f;
+        private float _showcaseInspectScale = 1f;
+        private float _showcaseTempoScale = 1f;
 
         public static BrawlerAuthoredModelAnimator Ensure(
             GameObject root,
@@ -194,6 +217,7 @@ namespace MOBA.Core.Infrastructure
             _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
             RefreshGripProfile();
             ConfigureGaitProfile();
+            ConfigureAnimationStyle();
             _hasBasePose = false;
             CacheBones();
             CaptureBasePose();
@@ -231,6 +255,7 @@ namespace MOBA.Core.Infrastructure
 
             RefreshGripProfile();
             ConfigureGaitProfile();
+            ConfigureAnimationStyle();
             _hasBasePose = false;
             CacheBones();
             CaptureBasePose();
@@ -486,6 +511,14 @@ namespace MOBA.Core.Infrastructure
             AddLocal(_spine, _spineBase, idleBreath * -1.0f + gaitMove01 * 3.2f - hit * 7.0f, idleLook * 0.8f, -strideCos * gaitMove01 * 1.9f, weight);
             AddLocal(_chest, _chestBase, idleBreath * -0.7f + super * -5.5f, idleLook * 1.1f, strideCos * gaitMove01 * 1.4f + hyper * 2.0f, weight);
             AddLocal(_head, _headBase, idleBreath * 0.7f - attack * 3.0f, idleLook * 2.2f, -strideCos * gaitMove01 * 0.7f, weight);
+            ApplyStylizedLocomotionAccent(
+                strideSin,
+                strideCos,
+                gaitMove01,
+                gaitRun01,
+                move01,
+                run01,
+                weight);
 
             float rightReady = ResolveArmReady(gripPose, side: 1f, ready);
             float leftReady = ResolveArmReady(gripPose, side: -1f, ready);
@@ -569,9 +602,245 @@ namespace MOBA.Core.Infrastructure
                 up,
                 aim,
                 weight);
+            ApplyShowcaseIdleAccent(
+                gripPose,
+                time,
+                ready,
+                move01,
+                forward,
+                right,
+                up,
+                aim,
+                weight);
             ApplyAttachmentFollowersNow();
             ApplyRuntimeGripTargets(weight);
             ApplyAuthoredHandPoseTargets(ready, attack, super, weight);
+        }
+
+        private void ApplyStylizedLocomotionAccent(
+            float strideSin,
+            float strideCos,
+            float gaitMove01,
+            float gaitRun01,
+            float move01,
+            float run01,
+            float weight)
+        {
+            float energy =
+                Mathf.Clamp01(move01 * 0.78f + run01 * 0.46f) *
+                Mathf.Clamp01(gaitMove01 + gaitRun01 * 0.35f);
+            if (energy <= 0.001f || weight <= 0f)
+                return;
+
+            float bounce = Mathf.Abs(strideSin) * energy * _locomotionBounceScale;
+            float sway = strideCos * energy * _locomotionSwaggerScale;
+            float lean = energy * _locomotionLeanScale;
+            float heavy = _animationPersona == AnimationPersona.Heavyweight ? 1f : 0f;
+            float robot = _animationPersona == AnimationPersona.Robot ? 1f : 0f;
+            float light = _animationPersona == AnimationPersona.Assassin ? 1f : 0f;
+
+            AddLocal(
+                _hips,
+                LocalRotation(_hips),
+                -lean * Mathf.Lerp(1.25f, 2.35f, heavy) - bounce * Mathf.Lerp(1.15f, 1.90f, heavy),
+                sway * Mathf.Lerp(0.45f, 0.20f, robot),
+                sway * Mathf.Lerp(0.95f, 1.42f, light),
+                weight * energy);
+            AddLocal(
+                _spine,
+                LocalRotation(_spine),
+                lean * Mathf.Lerp(0.72f, 1.18f, heavy) + bounce * Mathf.Lerp(0.90f, 0.42f, robot),
+                -sway * Mathf.Lerp(0.34f, 0.10f, robot),
+                -sway * Mathf.Lerp(0.78f, 1.18f, light),
+                weight * energy);
+            AddLocal(
+                _chest,
+                LocalRotation(_chest),
+                -lean * Mathf.Lerp(0.38f, 0.75f, heavy) + bounce * 0.38f,
+                sway * Mathf.Lerp(0.62f, 0.18f, robot),
+                sway * Mathf.Lerp(0.80f, 1.08f, light),
+                weight * energy);
+            AddLocal(
+                _head,
+                LocalRotation(_head),
+                bounce * Mathf.Lerp(0.58f, 0.30f, heavy),
+                -sway * Mathf.Lerp(0.75f, 0.30f, robot),
+                -sway * 0.36f,
+                weight * energy);
+        }
+
+        private void ApplyShowcaseIdleAccent(
+            BrawlerAttachmentGripPose gripPose,
+            float time,
+            float ready,
+            float move01,
+            Vector3 forward,
+            Vector3 right,
+            Vector3 up,
+            Vector3 aim,
+            float weight)
+        {
+            if (!_useShowcasePose || weight <= 0f)
+                return;
+
+            float idle01 = Mathf.Clamp01(1f - move01 * 1.8f);
+            if (idle01 <= 0.001f)
+                return;
+
+            float pulse = ResolveShowcaseInspectPulse(time);
+            float inspect =
+                pulse *
+                idle01 *
+                Mathf.Clamp01(0.42f + ready * 0.72f) *
+                _showcaseInspectScale;
+            float breathe =
+                Mathf.Sin(time * 1.12f * _showcaseTempoScale + _gaitPhaseOffset) *
+                idle01;
+            float look =
+                Mathf.Sin(time * 0.46f * _showcaseTempoScale + _gaitPhaseOffset * 0.33f) *
+                idle01;
+
+            AddLocal(
+                _spine,
+                LocalRotation(_spine),
+                breathe * 1.15f,
+                look * 0.70f,
+                -look * 0.46f,
+                weight * idle01);
+            AddLocal(
+                _chest,
+                LocalRotation(_chest),
+                -breathe * 0.92f,
+                look * 1.05f,
+                look * 0.62f,
+                weight * idle01);
+            AddLocal(
+                _head,
+                LocalRotation(_head),
+                breathe * 0.72f,
+                look * 2.15f,
+                -look * 0.38f,
+                weight * idle01);
+
+            if (inspect <= 0.001f)
+                return;
+
+            Quaternion aimRotation =
+                Quaternion.LookRotation(aim.sqrMagnitude > 0.001f ? aim : forward, up);
+            Vector3 anchor = ResolveUpperBodyAnchor(up);
+
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.DualSidearm:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.28f + right * 0.28f + up * 0.02f,
+                        aimRotation,
+                        weight * inspect * 0.46f);
+                    AddLocal(
+                        _rightHand,
+                        LocalRotation(_rightHand),
+                        -8.0f * inspect,
+                        18.0f * inspect,
+                        -22.0f * inspect,
+                        weight * inspect);
+                    AddLocal(
+                        _leftHand,
+                        LocalRotation(_leftHand),
+                        -4.0f * inspect,
+                        -10.0f * inspect,
+                        12.0f * inspect,
+                        weight * inspect * 0.72f);
+                    break;
+
+                case BrawlerAttachmentGripPose.Sidearm:
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.24f + right * 0.24f + up * 0.04f,
+                        aimRotation,
+                        weight * inspect * 0.44f);
+                    AddLocal(
+                        _rightHand,
+                        LocalRotation(_rightHand),
+                        -6.0f * inspect,
+                        14.0f * inspect,
+                        -20.0f * inspect,
+                        weight * inspect);
+                    break;
+
+                case BrawlerAttachmentGripPose.LongGun:
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    ApplyHandAnchor(
+                        _rightUpperArm,
+                        _rightLowerArm,
+                        _rightHand,
+                        anchor + aim * 0.26f + right * 0.18f + up * 0.01f,
+                        aimRotation,
+                        weight * inspect * 0.36f);
+                    ApplyHandAnchor(
+                        _leftUpperArm,
+                        _leftLowerArm,
+                        _leftHand,
+                        anchor + aim * 0.30f - right * 0.18f - up * 0.03f,
+                        aimRotation,
+                        weight * inspect * 0.28f);
+                    AddLocal(
+                        _rightHand,
+                        LocalRotation(_rightHand),
+                        -5.0f * inspect,
+                        8.0f * inspect,
+                        -12.0f * inspect,
+                        weight * inspect);
+                    break;
+
+                case BrawlerAttachmentGripPose.Bottle:
+                    AddLocal(
+                        _rightUpperArm,
+                        LocalRotation(_rightUpperArm),
+                        -12.0f * inspect,
+                        5.0f * inspect,
+                        -8.0f * inspect,
+                        weight * inspect);
+                    AddLocal(
+                        _rightHand,
+                        LocalRotation(_rightHand),
+                        -18.0f * inspect,
+                        6.0f * inspect,
+                        -14.0f * inspect,
+                        weight * inspect);
+                    break;
+
+                case BrawlerAttachmentGripPose.Bow:
+                    ApplyHandAnchor(
+                        _leftUpperArm,
+                        _leftLowerArm,
+                        _leftHand,
+                        anchor + aim * 0.28f - right * 0.25f + up * 0.01f,
+                        aimRotation,
+                        weight * inspect * 0.38f);
+                    AddLocal(
+                        _rightLowerArm,
+                        LocalRotation(_rightLowerArm),
+                        8.0f * inspect,
+                        6.0f * inspect,
+                        -10.0f * inspect,
+                        weight * inspect);
+                    break;
+            }
+        }
+
+        private float ResolveShowcaseInspectPulse(float time)
+        {
+            float phase = time * 0.82f * _showcaseTempoScale + _gaitPhaseOffset;
+            float wave = Mathf.Sin(phase) * 0.5f + 0.5f;
+            float pulse = Mathf.SmoothStep(0.54f, 1f, wave);
+            return pulse * pulse;
         }
 
         private void ApplyAttachmentFollowersNow()
@@ -2022,6 +2291,108 @@ namespace MOBA.Core.Infrastructure
                 _strideReachScale = 0.90f;
                 _footLiftScale = 0.86f;
                 _armSwingScale = 0.76f;
+            }
+        }
+
+        private void ConfigureAnimationStyle()
+        {
+            string name = ResolveBrawlerName();
+            _animationPersona = AnimationPersona.Balanced;
+            _locomotionBounceScale = 1f;
+            _locomotionLeanScale = 1f;
+            _locomotionSwaggerScale = 1f;
+            _actionSnapScale = 1f;
+            _superSnapScale = 1f;
+            _showcaseInspectScale = 1f;
+            _showcaseTempoScale = 1f;
+
+            if (Contains(name, "Colt"))
+            {
+                _animationPersona = AnimationPersona.Gunslinger;
+                _locomotionBounceScale = 1.16f;
+                _locomotionLeanScale = 1.18f;
+                _locomotionSwaggerScale = 1.22f;
+                _actionSnapScale = 1.28f;
+                _superSnapScale = 1.18f;
+                _showcaseInspectScale = 1.35f;
+                _showcaseTempoScale = 1.18f;
+            }
+            else if (Contains(name, "Jessie"))
+            {
+                _animationPersona = AnimationPersona.Engineer;
+                _locomotionBounceScale = 1.10f;
+                _locomotionLeanScale = 0.96f;
+                _locomotionSwaggerScale = 1.10f;
+                _actionSnapScale = 1.06f;
+                _superSnapScale = 1.14f;
+                _showcaseInspectScale = 1.18f;
+                _showcaseTempoScale = 1.10f;
+            }
+            else if (Contains(name, "Barley"))
+            {
+                _animationPersona = AnimationPersona.Robot;
+                _locomotionBounceScale = 0.70f;
+                _locomotionLeanScale = 0.72f;
+                _locomotionSwaggerScale = 0.60f;
+                _actionSnapScale = 0.92f;
+                _superSnapScale = 1.10f;
+                _showcaseInspectScale = 0.82f;
+                _showcaseTempoScale = 0.84f;
+            }
+            else if (Contains(name, "El Primo"))
+            {
+                _animationPersona = AnimationPersona.Heavyweight;
+                _locomotionBounceScale = 1.34f;
+                _locomotionLeanScale = 1.26f;
+                _locomotionSwaggerScale = 0.84f;
+                _actionSnapScale = 1.22f;
+                _superSnapScale = 1.42f;
+                _showcaseInspectScale = 0.88f;
+                _showcaseTempoScale = 0.82f;
+            }
+            else if (Contains(name, "Bo"))
+            {
+                _animationPersona = AnimationPersona.Archer;
+                _locomotionBounceScale = 0.92f;
+                _locomotionLeanScale = 0.98f;
+                _locomotionSwaggerScale = 0.86f;
+                _actionSnapScale = 1.08f;
+                _superSnapScale = 1.18f;
+                _showcaseInspectScale = 1.06f;
+                _showcaseTempoScale = 0.94f;
+            }
+            else if (Contains(name, "Byron"))
+            {
+                _animationPersona = AnimationPersona.Support;
+                _locomotionBounceScale = 0.76f;
+                _locomotionLeanScale = 0.72f;
+                _locomotionSwaggerScale = 0.66f;
+                _actionSnapScale = 0.94f;
+                _superSnapScale = 1.16f;
+                _showcaseInspectScale = 1.12f;
+                _showcaseTempoScale = 0.78f;
+            }
+            else if (Contains(name, "Piper"))
+            {
+                _animationPersona = AnimationPersona.Sniper;
+                _locomotionBounceScale = 0.82f;
+                _locomotionLeanScale = 0.80f;
+                _locomotionSwaggerScale = 0.72f;
+                _actionSnapScale = 1.12f;
+                _superSnapScale = 1.22f;
+                _showcaseInspectScale = 1.22f;
+                _showcaseTempoScale = 0.84f;
+            }
+            else if (Contains(name, "Leon"))
+            {
+                _animationPersona = AnimationPersona.Assassin;
+                _locomotionBounceScale = 1.24f;
+                _locomotionLeanScale = 1.12f;
+                _locomotionSwaggerScale = 1.26f;
+                _actionSnapScale = 1.18f;
+                _superSnapScale = 1.08f;
+                _showcaseInspectScale = 1.16f;
+                _showcaseTempoScale = 1.28f;
             }
         }
 
