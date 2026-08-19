@@ -19,6 +19,39 @@ namespace MOBA.Core.Infrastructure
         private const float DefaultHandRotationStrength = 0.36f;
         private const float AuthoredHandRotationStrength = 0.72f;
 
+        private static readonly string[] HipBoneNames =
+            { "mixamorig:Hips", "Hips", "hips", "root" };
+        private static readonly string[] SpineBoneNames =
+            { "mixamorig:Spine", "mixamorig:Spine1", "Spine", "spine", "torso" };
+        private static readonly string[] ChestBoneNames =
+            { "mixamorig:Spine2", "mixamorig:Chest", "Chest", "UpperChest", "chest" };
+        private static readonly string[] HeadBoneNames =
+            { "mixamorig:Head", "Head", "head" };
+        private static readonly string[] LeftUpperArmBoneNames =
+            { "mixamorig:LeftArm", "mixamorig:LeftShoulder", "LeftUpperArm", "LeftArm", "LeftShoulder", "arm-left" };
+        private static readonly string[] LeftLowerArmBoneNames =
+            { "mixamorig:LeftForeArm", "LeftLowerArm", "LeftForeArm", "forearm-left", "lower-arm-left" };
+        private static readonly string[] LeftHandBoneNames =
+            { "mixamorig:LeftHand", "LeftHand", "hand-left" };
+        private static readonly string[] RightUpperArmBoneNames =
+            { "mixamorig:RightArm", "mixamorig:RightShoulder", "RightUpperArm", "RightArm", "RightShoulder", "arm-right" };
+        private static readonly string[] RightLowerArmBoneNames =
+            { "mixamorig:RightForeArm", "RightLowerArm", "RightForeArm", "forearm-right", "lower-arm-right" };
+        private static readonly string[] RightHandBoneNames =
+            { "mixamorig:RightHand", "RightHand", "hand-right" };
+        private static readonly string[] LeftUpperLegBoneNames =
+            { "mixamorig:LeftUpLeg", "LeftUpperLeg", "LeftUpLeg", "leg-left" };
+        private static readonly string[] LeftLowerLegBoneNames =
+            { "mixamorig:LeftLeg", "LeftLowerLeg", "LeftLeg", "lower-leg-left" };
+        private static readonly string[] LeftFootBoneNames =
+            { "mixamorig:LeftFoot", "LeftFoot", "foot-left" };
+        private static readonly string[] RightUpperLegBoneNames =
+            { "mixamorig:RightUpLeg", "RightUpperLeg", "RightUpLeg", "leg-right" };
+        private static readonly string[] RightLowerLegBoneNames =
+            { "mixamorig:RightLeg", "RightLowerLeg", "RightLeg", "lower-leg-right" };
+        private static readonly string[] RightFootBoneNames =
+            { "mixamorig:RightFoot", "RightFoot", "foot-right" };
+
         private static readonly HumanBodyBones[] LeftFingerBoneMap =
         {
             HumanBodyBones.LeftThumbProximal,
@@ -135,7 +168,7 @@ namespace MOBA.Core.Infrastructure
                 return null;
 
             Animator animator = root.GetComponentInChildren<Animator>(true);
-            if (animator == null || !animator.isHuman)
+            if (animator == null && !LooksLikeSparseRig(root.transform))
                 return null;
 
             BrawlerAuthoredModelAnimator pose =
@@ -161,6 +194,7 @@ namespace MOBA.Core.Infrastructure
             _runtime = BrawlerAnimationRuntime.Ensure(gameObject, _owner);
             RefreshGripProfile();
             ConfigureGaitProfile();
+            _hasBasePose = false;
             CacheBones();
             CaptureBasePose();
             RefreshRuntimeGripTargets();
@@ -197,6 +231,7 @@ namespace MOBA.Core.Infrastructure
 
             RefreshGripProfile();
             ConfigureGaitProfile();
+            _hasBasePose = false;
             CacheBones();
             CaptureBasePose();
             RefreshRuntimeGripTargets();
@@ -204,7 +239,7 @@ namespace MOBA.Core.Infrastructure
 
         private void LateUpdate()
         {
-            if (_animator == null || !_animator.isHuman || !_hasBasePose)
+            if (!_hasBasePose)
                 return;
 
             SmoothPoseSignals(_owner == null ? Time.unscaledDeltaTime : Time.deltaTime);
@@ -214,40 +249,74 @@ namespace MOBA.Core.Infrastructure
 
         private void CacheBones()
         {
-            if (_animator == null || !_animator.isHuman)
-                return;
+            Transform searchRoot = _animator != null ? _animator.transform : transform;
 
-            _hips = Bone(HumanBodyBones.Hips);
-            _spine = Bone(HumanBodyBones.Spine);
-            _chest = Bone(HumanBodyBones.Chest) ?? Bone(HumanBodyBones.UpperChest);
-            _head = Bone(HumanBodyBones.Head);
-            _leftUpperArm = Bone(HumanBodyBones.LeftUpperArm);
-            _leftLowerArm = Bone(HumanBodyBones.LeftLowerArm);
-            _leftHand = Bone(HumanBodyBones.LeftHand);
-            _rightUpperArm = Bone(HumanBodyBones.RightUpperArm);
-            _rightLowerArm = Bone(HumanBodyBones.RightLowerArm);
-            _rightHand = Bone(HumanBodyBones.RightHand);
-            _leftUpperLeg = Bone(HumanBodyBones.LeftUpperLeg);
-            _leftLowerLeg = Bone(HumanBodyBones.LeftLowerLeg);
-            _leftFoot = Bone(HumanBodyBones.LeftFoot);
-            _rightUpperLeg = Bone(HumanBodyBones.RightUpperLeg);
-            _rightLowerLeg = Bone(HumanBodyBones.RightLowerLeg);
-            _rightFoot = Bone(HumanBodyBones.RightFoot);
+            _hips = Bone(HumanBodyBones.Hips, HipBoneNames);
+            _spine = Bone(HumanBodyBones.Spine, SpineBoneNames);
+            _chest =
+                Bone(HumanBodyBones.Chest, ChestBoneNames) ??
+                Bone(HumanBodyBones.UpperChest, ChestBoneNames);
+            _head = Bone(HumanBodyBones.Head, HeadBoneNames);
+            _leftUpperArm =
+                Bone(HumanBodyBones.LeftUpperArm, LeftUpperArmBoneNames) ??
+                Bone(HumanBodyBones.LeftShoulder, LeftUpperArmBoneNames) ??
+                FindBone(searchRoot, LeftUpperArmBoneNames);
+            _leftLowerArm =
+                Bone(HumanBodyBones.LeftLowerArm, LeftLowerArmBoneNames) ??
+                FindBone(searchRoot, LeftLowerArmBoneNames);
+            _leftHand =
+                Bone(HumanBodyBones.LeftHand, LeftHandBoneNames) ??
+                FindBone(searchRoot, LeftHandBoneNames);
+            _rightUpperArm =
+                Bone(HumanBodyBones.RightUpperArm, RightUpperArmBoneNames) ??
+                Bone(HumanBodyBones.RightShoulder, RightUpperArmBoneNames) ??
+                FindBone(searchRoot, RightUpperArmBoneNames);
+            _rightLowerArm =
+                Bone(HumanBodyBones.RightLowerArm, RightLowerArmBoneNames) ??
+                FindBone(searchRoot, RightLowerArmBoneNames);
+            _rightHand =
+                Bone(HumanBodyBones.RightHand, RightHandBoneNames) ??
+                FindBone(searchRoot, RightHandBoneNames);
+            _leftUpperLeg =
+                Bone(HumanBodyBones.LeftUpperLeg, LeftUpperLegBoneNames) ??
+                FindBone(searchRoot, LeftUpperLegBoneNames);
+            _leftLowerLeg =
+                Bone(HumanBodyBones.LeftLowerLeg, LeftLowerLegBoneNames) ??
+                FindBone(searchRoot, LeftLowerLegBoneNames);
+            _leftFoot =
+                Bone(HumanBodyBones.LeftFoot, LeftFootBoneNames) ??
+                FindBone(searchRoot, LeftFootBoneNames);
+            _rightUpperLeg =
+                Bone(HumanBodyBones.RightUpperLeg, RightUpperLegBoneNames) ??
+                FindBone(searchRoot, RightUpperLegBoneNames);
+            _rightLowerLeg =
+                Bone(HumanBodyBones.RightLowerLeg, RightLowerLegBoneNames) ??
+                FindBone(searchRoot, RightLowerLegBoneNames);
+            _rightFoot =
+                Bone(HumanBodyBones.RightFoot, RightFootBoneNames) ??
+                FindBone(searchRoot, RightFootBoneNames);
 
             CacheFingerBones(_leftFingerBones, LeftFingerBoneMap);
             CacheFingerBones(_rightFingerBones, RightFingerBoneMap);
         }
 
-        private Transform Bone(HumanBodyBones bone)
+        private Transform Bone(HumanBodyBones bone, string[] fallbackNames = null)
         {
-            return _animator != null && _animator.isHuman
-                ? _animator.GetBoneTransform(bone)
+            if (_animator != null && _animator.isHuman)
+            {
+                Transform humanoidBone = _animator.GetBoneTransform(bone);
+                if (humanoidBone != null)
+                    return humanoidBone;
+            }
+
+            return fallbackNames != null
+                ? FindBone(_animator != null ? _animator.transform : transform, fallbackNames)
                 : null;
         }
 
         private void CaptureBasePose()
         {
-            if (_animator == null || !_animator.isHuman)
+            if (!HasUsablePoseRig())
                 return;
 
             _hipsBase = LocalRotation(_hips);
@@ -274,6 +343,70 @@ namespace MOBA.Core.Infrastructure
         private static Quaternion LocalRotation(Transform bone)
         {
             return bone != null ? bone.localRotation : Quaternion.identity;
+        }
+
+        private bool HasUsablePoseRig()
+        {
+            return _hips != null ||
+                   _spine != null ||
+                   _head != null ||
+                   _leftUpperArm != null ||
+                   _rightUpperArm != null ||
+                   _leftUpperLeg != null ||
+                   _rightUpperLeg != null;
+        }
+
+        private static bool LooksLikeSparseRig(Transform root)
+        {
+            return root != null &&
+                   FindBone(root, HipBoneNames) != null &&
+                   FindBone(root, SpineBoneNames) != null &&
+                   (FindBone(root, LeftUpperArmBoneNames) != null ||
+                    FindBone(root, RightUpperArmBoneNames) != null);
+        }
+
+        private static Transform FindBone(Transform root, string[] names)
+        {
+            if (root == null || names == null)
+                return null;
+
+            for (int i = 0; i < names.Length; i++)
+            {
+                Transform result = FindBone(root, names[i]);
+                if (result != null)
+                    return result;
+            }
+
+            return null;
+        }
+
+        private static Transform FindBone(Transform root, string name)
+        {
+            if (root == null || string.IsNullOrEmpty(name))
+                return null;
+
+            if (NameEquals(root.name, name))
+                return root;
+
+            for (int i = 0; i < root.childCount; i++)
+            {
+                Transform child = root.GetChild(i);
+                Transform result = FindBone(child, name);
+                if (result != null)
+                    return result;
+            }
+
+            return null;
+        }
+
+        private static bool NameEquals(string actual, string expected)
+        {
+            return !string.IsNullOrEmpty(actual) &&
+                   !string.IsNullOrEmpty(expected) &&
+                   string.Equals(
+                       actual,
+                       expected,
+                       System.StringComparison.OrdinalIgnoreCase);
         }
 
         private void ResetToBasePose()
@@ -911,8 +1044,23 @@ namespace MOBA.Core.Infrastructure
             BrawlerAttachmentGripPose gripPose,
             float weight)
         {
-            if (upper == null || lower == null)
+            if (upper == null)
                 return;
+
+            if (lower == null)
+            {
+                PoseSparseArm(
+                    upper,
+                    side,
+                    ready,
+                    attack,
+                    super,
+                    swing,
+                    move01,
+                    gripPose,
+                    weight);
+                return;
+            }
 
             float action = Mathf.Clamp01(attack + super);
             float runSwing = Mathf.Lerp(0.7f, 1.35f, Mathf.Clamp01(move01));
@@ -947,6 +1095,64 @@ namespace MOBA.Core.Infrastructure
                 side * (5.0f + attack * 5.0f),
                 side * (-5.0f - super * 3.0f),
                 weight * Mathf.Clamp01(ready + action));
+        }
+
+        private void PoseSparseArm(
+            Transform upper,
+            float side,
+            float ready,
+            float attack,
+            float super,
+            float swing,
+            float move01,
+            BrawlerAttachmentGripPose gripPose,
+            float weight)
+        {
+            float action = Mathf.Clamp01(attack + super);
+            float runSwing = swing * move01 * Mathf.Lerp(5.0f, 12.0f, _smoothedRun01);
+            float idleBreath = (1f - move01) *
+                Mathf.Sin((_runtime != null ? _runtime.PoseTime : Time.unscaledTime) * 1.45f);
+            float baseDrop = ResolveSparseArmDrop(gripPose, side, ready, action);
+            Quaternion baseRotation = side > 0f ? _rightUpperArmBase : _leftUpperArmBase;
+
+            AddLocal(
+                upper,
+                baseRotation,
+                runSwing + action * -8.0f + idleBreath * 1.5f,
+                side * (ready * 16.0f + action * 6.0f),
+                baseDrop,
+                weight);
+        }
+
+        private static float ResolveSparseArmDrop(
+            BrawlerAttachmentGripPose gripPose,
+            float side,
+            float ready,
+            float action)
+        {
+            float relaxedDrop = -side * 82.0f;
+            float readyDrop = -side * 48.0f;
+
+            switch (gripPose)
+            {
+                case BrawlerAttachmentGripPose.Bow:
+                    readyDrop = side > 0f ? -36.0f : 44.0f;
+                    break;
+                case BrawlerAttachmentGripPose.DualSidearm:
+                case BrawlerAttachmentGripPose.LongGun:
+                    readyDrop = -side * 40.0f;
+                    break;
+                case BrawlerAttachmentGripPose.LongTool:
+                case BrawlerAttachmentGripPose.Umbrella:
+                    readyDrop = side > 0f ? -42.0f : 66.0f;
+                    break;
+                case BrawlerAttachmentGripPose.Bottle:
+                case BrawlerAttachmentGripPose.ThrowingStars:
+                    readyDrop = side > 0f ? -38.0f : 78.0f;
+                    break;
+            }
+
+            return Mathf.Lerp(relaxedDrop, readyDrop, Mathf.Clamp01(ready + action * 0.65f));
         }
 
         private static void ApplyGripUpperBias(
@@ -1646,8 +1852,14 @@ namespace MOBA.Core.Infrastructure
             Vector3 up,
             float weight)
         {
-            if (upper == null || lower == null)
+            if (upper == null)
                 return;
+
+            if (lower == null)
+            {
+                PoseSparseLeg(upper, swing, move01, run01, weight);
+                return;
+            }
 
             float strideAmount =
                 Mathf.Lerp(0.10f, 0.34f, run01) *
@@ -1678,6 +1890,27 @@ namespace MOBA.Core.Infrastructure
                 -swing * Mathf.Lerp(3f, 9f, run01) * move01,
                 0f,
                 swing * Mathf.Lerp(0.8f, 2.2f, run01) * move01,
+                weight * Mathf.Clamp01(move01 * 1.2f));
+        }
+
+        private void PoseSparseLeg(
+            Transform upper,
+            float swing,
+            float move01,
+            float run01,
+            float weight)
+        {
+            Quaternion baseRotation =
+                upper == _rightUpperLeg ? _rightUpperLegBase : _leftUpperLegBase;
+            float stride = swing * Mathf.Lerp(8.0f, 18.0f, run01) * move01 * _strideReachScale;
+            float lift = Mathf.Max(0f, swing) * Mathf.Lerp(2.0f, 6.0f, run01) * move01;
+
+            AddLocal(
+                upper,
+                baseRotation,
+                stride - lift,
+                0f,
+                swing * Mathf.Lerp(1.0f, 3.0f, run01) * move01,
                 weight * Mathf.Clamp01(move01 * 1.2f));
         }
 
