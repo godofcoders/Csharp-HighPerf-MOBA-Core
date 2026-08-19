@@ -1657,8 +1657,8 @@ namespace MOBA.Core.Infrastructure
             Vector3 aim,
             float weight)
         {
-            float shot = Mathf.Clamp01(Mathf.Max(attack, attackPulse));
-            float ability = Mathf.Clamp01(Mathf.Max(super, superPulse));
+            float shot = Mathf.Clamp01(Mathf.Max(attack, attackPulse) * _actionSnapScale);
+            float ability = Mathf.Clamp01(Mathf.Max(super, superPulse) * _superSnapScale);
             float impact = Mathf.Clamp01(hit);
             float action = Mathf.Clamp01(shot + ability);
             float accent = Mathf.Clamp01(action + impact + hyper * 0.35f);
@@ -1668,7 +1668,10 @@ namespace MOBA.Core.Infrastructure
             float yawToAim = SignedPlanarAngle(forward, aim, up);
             float torsoAim = Mathf.Clamp(yawToAim, -36f, 36f) * action;
             float releaseKick = Mathf.Clamp01(attackPulse + superPulse * 0.85f);
-            float recoil = ResolveRecoilAmount(gripPose, shot, ability) * Mathf.Lerp(0.72f, 1.22f, releaseKick);
+            float recoil =
+                ResolveRecoilAmount(gripPose, shot, ability) *
+                Mathf.Lerp(0.72f, 1.22f, releaseKick) *
+                Mathf.Lerp(1f, 1.18f, Mathf.Clamp01(hyper));
 
             AddLocal(
                 _spine,
@@ -1691,6 +1694,13 @@ namespace MOBA.Core.Infrastructure
                 torsoAim * 0.08f,
                 -torsoAim * 0.025f,
                 weight * accent);
+            ApplyPersonaActionAccent(
+                gripPose,
+                shot,
+                ability,
+                releaseKick,
+                hyper,
+                weight);
 
             switch (gripPose)
             {
@@ -1729,12 +1739,168 @@ namespace MOBA.Core.Infrastructure
                     break;
 
                 case BrawlerAttachmentGripPose.Bow:
-                    ApplyBowActionAccent(shot, ability, weight);
+                    ApplyBowActionAccent(shot, ability, forward, right, up, aim, weight);
                     break;
 
                 case BrawlerAttachmentGripPose.ThrowingStars:
                     ApplyThrowingStarActionAccent(shot, ability, weight);
                     break;
+            }
+        }
+
+        private void ApplyPersonaActionAccent(
+            BrawlerAttachmentGripPose gripPose,
+            float shot,
+            float ability,
+            float releaseKick,
+            float hyper,
+            float weight)
+        {
+            float action = Mathf.Clamp01(shot + ability);
+            if (action <= 0.001f)
+                return;
+
+            float commit = Mathf.Clamp01(action + releaseKick * 0.42f);
+            float superCommit = Mathf.Clamp01(ability + hyper * 0.28f);
+            switch (_animationPersona)
+            {
+                case AnimationPersona.Gunslinger:
+                    AddLocal(
+                        _hips,
+                        LocalRotation(_hips),
+                        -2.2f * commit,
+                        0f,
+                        -2.8f * commit,
+                        weight * commit);
+                    AddLocal(
+                        _chest,
+                        LocalRotation(_chest),
+                        -3.4f * commit - 2.4f * superCommit,
+                        3.6f * releaseKick,
+                        5.2f * commit,
+                        weight * commit);
+                    AddLocal(
+                        _head,
+                        LocalRotation(_head),
+                        -1.8f * commit,
+                        -2.4f * releaseKick,
+                        -1.4f * commit,
+                        weight * commit);
+                    break;
+
+                case AnimationPersona.Heavyweight:
+                    AddLocal(
+                        _hips,
+                        LocalRotation(_hips),
+                        -5.2f * commit - 4.0f * superCommit,
+                        0f,
+                        1.4f * releaseKick,
+                        weight * commit);
+                    AddLocal(
+                        _chest,
+                        LocalRotation(_chest),
+                        -2.8f * commit - 7.2f * superCommit,
+                        0f,
+                        -5.4f * commit,
+                        weight * commit);
+                    AddLocal(
+                        _head,
+                        LocalRotation(_head),
+                        -2.0f * commit,
+                        0f,
+                        2.2f * releaseKick,
+                        weight * commit);
+                    break;
+
+                case AnimationPersona.Engineer:
+                    AddLocal(
+                        _chest,
+                        LocalRotation(_chest),
+                        -1.8f * commit,
+                        2.0f * releaseKick,
+                        2.8f * commit,
+                        weight * commit);
+                    AddLocal(
+                        _head,
+                        LocalRotation(_head),
+                        -0.8f * commit,
+                        -1.6f * releaseKick,
+                        0.8f * commit,
+                        weight * commit);
+                    break;
+
+                case AnimationPersona.Archer:
+                    AddLocal(
+                        _chest,
+                        LocalRotation(_chest),
+                        1.4f * commit - 2.8f * superCommit,
+                        -3.2f * commit,
+                        -3.8f * commit,
+                        weight * commit);
+                    AddLocal(
+                        _head,
+                        LocalRotation(_head),
+                        -1.0f * commit,
+                        -2.2f * commit,
+                        0.8f * commit,
+                        weight * commit);
+                    break;
+
+                case AnimationPersona.Robot:
+                    AddLocal(
+                        _chest,
+                        LocalRotation(_chest),
+                        -2.2f * commit,
+                        0f,
+                        Mathf.Sign(releaseKick - 0.5f) * 2.0f * commit,
+                        weight * commit);
+                    break;
+
+                case AnimationPersona.Support:
+                case AnimationPersona.Sniper:
+                    AddLocal(
+                        _spine,
+                        LocalRotation(_spine),
+                        -1.2f * commit,
+                        0f,
+                        1.5f * commit,
+                        weight * commit);
+                    AddLocal(
+                        _head,
+                        LocalRotation(_head),
+                        -0.8f * commit,
+                        -1.4f * releaseKick,
+                        0.6f * commit,
+                        weight * commit);
+                    break;
+
+                case AnimationPersona.Assassin:
+                    AddLocal(
+                        _chest,
+                        LocalRotation(_chest),
+                        -2.5f * commit,
+                        4.0f * releaseKick,
+                        -6.0f * commit,
+                        weight * commit);
+                    AddLocal(
+                        _head,
+                        LocalRotation(_head),
+                        -1.4f * commit,
+                        2.2f * releaseKick,
+                        2.0f * commit,
+                        weight * commit);
+                    break;
+            }
+
+            if (gripPose == BrawlerAttachmentGripPose.None && _animationPersona != AnimationPersona.Heavyweight)
+            {
+                AddLocal(
+                    _chest,
+                    LocalRotation(_chest),
+                    -2.2f * superCommit,
+                    0f,
+                    -2.0f * commit,
+                    weight * commit);
             }
         }
 
@@ -1780,26 +1946,29 @@ namespace MOBA.Core.Infrastructure
             if (action <= 0f)
                 return;
 
+            float gunslinger = _animationPersona == AnimationPersona.Gunslinger ? 1f : 0f;
+            float snap = Mathf.Lerp(1f, 1.24f, gunslinger);
+            float flourish = gunslinger * Mathf.Clamp01(shot * 0.88f + ability * 0.55f);
             AddLocal(
                 upper,
                 upper != null ? upper.localRotation : Quaternion.identity,
-                -recoil * 0.55f,
-                side * 2.5f * action,
-                side * -2.0f * action,
+                -recoil * 0.55f * snap - flourish * 1.6f,
+                side * (2.5f + flourish * 2.6f) * action,
+                side * (-2.0f - flourish * 3.4f) * action,
                 weight * action);
             AddLocal(
                 lower,
                 lower != null ? lower.localRotation : Quaternion.identity,
-                -recoil * 0.75f,
-                side * 2.0f * action,
-                side * -2.5f * action,
+                -recoil * 0.75f * snap,
+                side * (2.0f + flourish * 3.8f) * action,
+                side * (-2.5f - flourish * 5.2f) * action,
                 weight * action);
             AddLocal(
                 hand,
                 hand != null ? hand.localRotation : Quaternion.identity,
-                -recoil * 1.35f,
-                side * 3.5f * action,
-                side * -4.0f * action,
+                -recoil * 1.35f * snap,
+                side * (3.5f + flourish * 8.5f) * action,
+                side * (-4.0f - flourish * 12.0f) * action,
                 weight * action);
         }
 
@@ -1820,7 +1989,10 @@ namespace MOBA.Core.Infrastructure
             Vector3 anchor = ResolveUpperBodyAnchor(up);
             Quaternion punchRotation =
                 Quaternion.LookRotation(aim.sqrMagnitude > 0.001f ? aim : forward, up);
-            float heavy = Mathf.Clamp01(ability * 1.25f);
+            float personaHeavy = _animationPersona == AnimationPersona.Heavyweight ? 1f : 0f;
+            float heavy = Mathf.Clamp01(
+                Mathf.Max(ability * 1.25f, personaHeavy * (shot * 0.76f + ability)));
+            float lunge = Mathf.Clamp01(shot * 0.72f + ability + personaHeavy * action * 0.16f);
             float rightPunch = Mathf.Clamp01(action * Mathf.Lerp(0.76f, 1.0f, heavy));
             float leftGuard = Mathf.Clamp01(action * Mathf.Lerp(0.42f, 0.72f, heavy));
 
@@ -1828,9 +2000,9 @@ namespace MOBA.Core.Infrastructure
                 _rightUpperArm,
                 _rightLowerArm,
                 _rightHand,
-                anchor + aim * Mathf.Lerp(0.44f, 0.60f, heavy) + right * 0.18f - up * 0.02f,
+                anchor + aim * Mathf.Lerp(0.44f, 0.66f, heavy) + right * 0.18f - up * 0.02f,
                 punchRotation,
-                weight * rightPunch * 0.74f);
+                weight * rightPunch * Mathf.Lerp(0.74f, 0.90f, personaHeavy));
             ApplyHandAnchor(
                 _leftUpperArm,
                 _leftLowerArm,
@@ -1840,16 +2012,23 @@ namespace MOBA.Core.Infrastructure
                 weight * leftGuard * 0.56f);
 
             AddLocal(
+                _hips,
+                _hips != null ? _hips.localRotation : Quaternion.identity,
+                -lunge * Mathf.Lerp(1.5f, 5.0f, personaHeavy),
+                0f,
+                3.8f * heavy,
+                weight * action);
+            AddLocal(
                 _rightUpperArm,
                 _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
-                -recoil * 0.42f - heavy * 7.0f,
+                -recoil * 0.42f - heavy * 9.0f,
                 7.0f * action,
-                -10.0f * action,
+                -10.0f * action - 4.0f * heavy,
                 weight * action);
             AddLocal(
                 _rightLowerArm,
                 _rightLowerArm != null ? _rightLowerArm.localRotation : Quaternion.identity,
-                -recoil * 0.56f - heavy * 5.0f,
+                -recoil * 0.56f - heavy * 6.5f,
                 5.0f * action,
                 -7.0f * action,
                 weight * action);
@@ -1863,7 +2042,7 @@ namespace MOBA.Core.Infrastructure
             AddLocal(
                 _chest,
                 _chest != null ? _chest.localRotation : Quaternion.identity,
-                -heavy * 5.0f,
+                -heavy * 7.0f - lunge * 2.0f,
                 0f,
                 -4.5f * action,
                 weight * action);
@@ -1908,19 +2087,38 @@ namespace MOBA.Core.Infrastructure
             if (action <= 0f)
                 return;
 
+            float precision = _animationPersona == AnimationPersona.Support ||
+                _animationPersona == AnimationPersona.Sniper
+                    ? 1f
+                    : 0f;
+            float superRead = Mathf.Clamp01(ability * Mathf.Lerp(1f, 1.28f, precision));
             AddLocal(
                 _rightUpperArm,
                 _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
-                -recoil * 0.35f - ability * 2.0f,
-                1.5f * action,
-                -2.2f * action,
+                -recoil * Mathf.Lerp(0.35f, 0.48f, precision) - superRead * 2.8f,
+                1.5f * action + precision * 2.2f * shot,
+                -2.2f * action - precision * 1.8f * shot,
+                weight * action);
+            AddLocal(
+                _rightLowerArm,
+                _rightLowerArm != null ? _rightLowerArm.localRotation : Quaternion.identity,
+                -recoil * Mathf.Lerp(0.18f, 0.38f, precision) - superRead * 1.5f,
+                precision * 2.0f * action,
+                -precision * 2.5f * action,
                 weight * action);
             AddLocal(
                 _rightHand,
                 _rightHand != null ? _rightHand.localRotation : Quaternion.identity,
-                -recoil * 0.9f,
-                2.0f * action,
-                -3.0f * action,
+                -recoil * Mathf.Lerp(0.9f, 1.12f, precision),
+                2.0f * action + precision * 4.0f * shot,
+                -3.0f * action - precision * 4.4f * shot,
+                weight * action);
+            AddLocal(
+                _leftHand,
+                _leftHand != null ? _leftHand.localRotation : Quaternion.identity,
+                -superRead * 3.0f,
+                -precision * 2.5f * action,
+                precision * 3.2f * action,
                 weight * action);
         }
 
@@ -1933,58 +2131,105 @@ namespace MOBA.Core.Infrastructure
             if (action <= 0f)
                 return;
 
+            float thrower = _animationPersona == AnimationPersona.Robot ||
+                _animationPersona == AnimationPersona.Thrower
+                    ? 1f
+                    : 0f;
+            float windup = Mathf.Clamp01(action * Mathf.Lerp(1f, 1.24f, thrower));
+            AddLocal(
+                _chest,
+                _chest != null ? _chest.localRotation : Quaternion.identity,
+                -3.2f * windup,
+                5.2f * windup,
+                -4.5f * windup,
+                weight * windup);
             AddLocal(
                 _rightUpperArm,
                 _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
-                -10.5f * action,
-                5.0f * action,
-                -8.0f * action,
+                (-10.5f - thrower * 5.0f) * action,
+                (5.0f + thrower * 4.0f) * action,
+                (-8.0f - thrower * 5.0f) * action,
                 weight * action);
             AddLocal(
                 _rightLowerArm,
                 _rightLowerArm != null ? _rightLowerArm.localRotation : Quaternion.identity,
-                -13.0f * action,
-                3.0f * action,
-                -6.0f * action,
+                (-13.0f - thrower * 6.0f) * action,
+                (3.0f + thrower * 2.0f) * action,
+                (-6.0f - thrower * 6.0f) * action,
                 weight * action);
             AddLocal(
                 _rightHand,
                 _rightHand != null ? _rightHand.localRotation : Quaternion.identity,
-                -18.0f * action,
-                4.0f * action,
-                -9.0f * action,
+                (-18.0f - thrower * 9.0f) * action,
+                (4.0f + thrower * 4.0f) * action,
+                (-9.0f - thrower * 8.0f) * action,
+                weight * action);
+            AddLocal(
+                _leftUpperArm,
+                _leftUpperArm != null ? _leftUpperArm.localRotation : Quaternion.identity,
+                3.0f * thrower * action,
+                -5.5f * thrower * action,
+                6.0f * thrower * action,
                 weight * action);
         }
 
         private void ApplyBowActionAccent(
             float shot,
             float ability,
+            Vector3 forward,
+            Vector3 right,
+            Vector3 up,
+            Vector3 aim,
             float weight)
         {
             float action = Mathf.Clamp01(shot + ability);
             if (action <= 0f)
                 return;
 
+            float archer = _animationPersona == AnimationPersona.Archer ? 1f : 0f;
+            float draw = Mathf.Clamp01(action * Mathf.Lerp(1f, 1.30f, archer));
+            Vector3 aimDirection = aim.sqrMagnitude > 0.001f ? aim : forward;
+            Vector3 anchor = ResolveUpperBodyAnchor(up);
+            Quaternion aimRotation = Quaternion.LookRotation(aimDirection, up);
+
+            if (archer > 0f)
+            {
+                ApplyHandAnchor(
+                    _leftUpperArm,
+                    _leftLowerArm,
+                    _leftHand,
+                    anchor + aimDirection * 0.48f - right * 0.24f - up * 0.02f,
+                    aimRotation,
+                    weight * draw * 0.45f);
+                ApplyHandAnchor(
+                    _rightUpperArm,
+                    _rightLowerArm,
+                    _rightHand,
+                    anchor + aimDirection * 0.18f + right * 0.22f - up * 0.05f,
+                    aimRotation,
+                    weight * draw * 0.50f);
+            }
+
             AddLocal(
                 _rightUpperArm,
                 _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
-                5.0f * action,
-                6.0f * action,
-                -5.5f * action,
+                (5.0f + archer * 3.0f) * draw,
+                (6.0f + archer * 4.0f) * draw,
+                (-5.5f - archer * 6.0f) * draw,
                 weight * action);
             AddLocal(
                 _rightLowerArm,
                 _rightLowerArm != null ? _rightLowerArm.localRotation : Quaternion.identity,
-                8.0f * action,
-                5.0f * action,
-                -7.0f * action,
+                (8.0f + archer * 4.0f) * draw,
+                (5.0f + archer * 3.0f) * draw,
+                (-7.0f - archer * 8.0f) * draw,
                 weight * action);
             AddLocal(
                 _leftLowerArm,
                 _leftLowerArm != null ? _leftLowerArm.localRotation : Quaternion.identity,
-                -3.0f * action,
-                -2.0f * action,
-                3.0f * action,
+                (-3.0f - archer * 2.4f) * draw,
+                (-2.0f - archer * 3.2f) * draw,
+                (3.0f + archer * 5.0f) * draw,
                 weight * action);
         }
 
@@ -1997,19 +2242,35 @@ namespace MOBA.Core.Infrastructure
             if (action <= 0f)
                 return;
 
+            float assassin = _animationPersona == AnimationPersona.Assassin ? 1f : 0f;
+            float flick = Mathf.Clamp01(action * Mathf.Lerp(1f, 1.28f, assassin));
+            AddLocal(
+                _chest,
+                _chest != null ? _chest.localRotation : Quaternion.identity,
+                -2.8f * assassin * flick,
+                3.0f * assassin * flick,
+                -5.0f * assassin * flick,
+                weight * flick);
             AddLocal(
                 _rightUpperArm,
                 _rightUpperArm != null ? _rightUpperArm.localRotation : Quaternion.identity,
-                -8.0f * action,
-                8.0f * action,
-                -10.0f * action,
+                (-8.0f - assassin * 4.0f) * flick,
+                (8.0f + assassin * 5.0f) * flick,
+                (-10.0f - assassin * 6.0f) * flick,
+                weight * action);
+            AddLocal(
+                _rightLowerArm,
+                _rightLowerArm != null ? _rightLowerArm.localRotation : Quaternion.identity,
+                (-7.0f - assassin * 5.0f) * flick,
+                (5.0f + assassin * 3.5f) * flick,
+                (-8.0f - assassin * 5.0f) * flick,
                 weight * action);
             AddLocal(
                 _rightHand,
                 _rightHand != null ? _rightHand.localRotation : Quaternion.identity,
-                -14.0f * action,
-                12.0f * action,
-                -18.0f * action,
+                (-14.0f - assassin * 6.0f) * flick,
+                (12.0f + assassin * 8.0f) * flick,
+                (-18.0f - assassin * 12.0f) * flick,
                 weight * action);
         }
 
