@@ -17,35 +17,35 @@ MonoBehaviour:
   Attachments:
   - Id: RightPistol
     Socket: 6
-    Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
-    PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Colt_Pistol.obj
+    Prefab: {fileID: 100000, guid: 8ec23ee06bdf4c1c92e846f46dcbdd1a, type: 3}
+    PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Colt/Colt_BlasterA.obj
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
-    LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+    LocalScale: {x: 0.46, y: 0.46, z: 0.46}
     UseExplicitGripPoint: 1
-    ExplicitGripLocalPosition: {x: 0, y: -0.19, z: -0.08}
+    ExplicitGripLocalPosition: {x: 0, y: -0.22, z: -0.09}
     ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1
     UseAsSecondaryFirePoint: 0
     UseAsCastPoint: 1
-    PresentationAnchorLocalOffset: {x: 0, y: 0.04, z: 0.23}
+    PresentationAnchorLocalOffset: {x: 0, y: 0.04, z: 0.43}
   - Id: LeftPistol
     Socket: 7
-    Prefab: {fileID: 100000, guid: cd3e5789870541d39d85cbbdb9b194a8, type: 3}
-    PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Colt_Pistol.obj
+    Prefab: {fileID: 100000, guid: 8ec23ee06bdf4c1c92e846f46dcbdd1a, type: 3}
+    PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Colt/Colt_BlasterA.obj
     GeneratedAttachment: 0
     LocalPositionOffset: {x: -0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
-    LocalScale: {x: 0.36, y: 0.36, z: 0.36}
+    LocalScale: {x: 0.46, y: 0.46, z: 0.46}
     UseExplicitGripPoint: 1
-    ExplicitGripLocalPosition: {x: 0, y: -0.19, z: -0.08}
+    ExplicitGripLocalPosition: {x: 0, y: -0.22, z: -0.09}
     ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 0
     UseAsSecondaryFirePoint: 1
     UseAsCastPoint: 0
-    PresentationAnchorLocalOffset: {x: 0, y: 0.04, z: 0.23}
+    PresentationAnchorLocalOffset: {x: 0, y: 0.04, z: 0.43}
