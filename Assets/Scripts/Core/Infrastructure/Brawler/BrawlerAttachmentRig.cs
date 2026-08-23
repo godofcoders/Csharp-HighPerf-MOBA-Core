@@ -71,27 +71,25 @@ namespace MOBA.Core.Infrastructure
             Quaternion weaponSocketRotation =
                 ResolveForwardFacingSocketRotation(visualRoot.transform, animator);
             Transform primaryWeapon =
-                authoredWeaponGrip ??
-                (hasHumanoidRig && rightHand != null
-                    ? GetOrCreateSocket(
-                        rightHand,
-                        "Weapon_Main",
-                        ResolveHandSocketLocalPosition(rightHand, weaponSocketRotation, side: 1f),
-                        Quaternion.Inverse(rightHand.rotation) * weaponSocketRotation,
-                        forceTransform: true)
-                    : FindFirst(visualRoot.transform, "Weapon_Main", "PrimaryWeapon") ??
-                      rightHand);
+                ResolveAnimatedHandWeaponSocket(
+                    visualRoot.transform,
+                    rightHand,
+                    authoredWeaponGrip,
+                    "Weapon_Main",
+                    "PrimaryWeapon",
+                    weaponSocketRotation,
+                    side: 1f,
+                    usePalmOffset: hasHumanoidRig);
             Transform secondaryWeapon =
-                authoredOffhandGrip ??
-                (hasHumanoidRig && leftHand != null
-                    ? GetOrCreateSocket(
-                        leftHand,
-                        "Weapon_Offhand",
-                        ResolveHandSocketLocalPosition(leftHand, weaponSocketRotation, side: -1f),
-                        Quaternion.Inverse(leftHand.rotation) * weaponSocketRotation,
-                        forceTransform: true)
-                    : FindFirst(visualRoot.transform, "Weapon_Offhand", "SecondaryWeapon") ??
-                      leftHand);
+                ResolveAnimatedHandWeaponSocket(
+                    visualRoot.transform,
+                    leftHand,
+                    authoredOffhandGrip,
+                    "Weapon_Offhand",
+                    "SecondaryWeapon",
+                    weaponSocketRotation,
+                    side: -1f,
+                    usePalmOffset: hasHumanoidRig);
 
             SetSocket(BrawlerAttachmentSocket.Root, visualRoot.transform);
             SetSocket(
@@ -317,6 +315,38 @@ namespace MOBA.Core.Infrastructure
                 up * PalmUpOffset;
 
             return hand.InverseTransformPoint(worldPosition);
+        }
+
+        private static Transform ResolveAnimatedHandWeaponSocket(
+            Transform visualRoot,
+            Transform hand,
+            Transform authoredGrip,
+            string socketName,
+            string legacySocketName,
+            Quaternion weaponSocketRotation,
+            float side,
+            bool usePalmOffset)
+        {
+            if (hand != null)
+            {
+                Transform existing = hand.Find(socketName) ?? hand.Find(legacySocketName);
+                if (existing != null)
+                    return existing;
+
+                Vector3 localPosition = usePalmOffset
+                    ? ResolveHandSocketLocalPosition(hand, weaponSocketRotation, side)
+                    : Vector3.zero;
+                Quaternion localRotation =
+                    Quaternion.Inverse(hand.rotation) * weaponSocketRotation;
+                return GetOrCreateSocket(
+                    hand,
+                    socketName,
+                    localPosition,
+                    localRotation,
+                    forceTransform: false);
+            }
+
+            return authoredGrip ?? FindFirst(visualRoot, socketName, legacySocketName);
         }
 
         private static Transform FindFirst(Transform root, params string[] names)
