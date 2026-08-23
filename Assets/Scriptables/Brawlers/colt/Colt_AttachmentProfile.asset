@@ -24,7 +24,7 @@ MonoBehaviour:
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.46, y: 0.46, z: 0.46}
     UseExplicitGripPoint: 1
-    ExplicitGripLocalPosition: {x: 0, y: -0.22, z: -0.09}
+    ExplicitGripLocalPosition: {x: 0, y: -0.08, z: -0.08}
     ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
@@ -41,7 +41,7 @@ MonoBehaviour:
     LocalEulerOffset: {x: 0, y: 0, z: 0}
     LocalScale: {x: 0.46, y: 0.46, z: 0.46}
     UseExplicitGripPoint: 1
-    ExplicitGripLocalPosition: {x: 0, y: -0.22, z: -0.09}
+    ExplicitGripLocalPosition: {x: 0, y: -0.08, z: -0.08}
     ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     ReplaceExistingWithSameId: 1
