@@ -126,7 +126,8 @@ namespace MOBA.Core.Infrastructure
             bool installAttachmentProfile)
         {
             BrawlerAnimationRuntime.Ensure(instance, owner);
-            BrawlerAuthoredModelAnimator.Ensure(instance, owner, definition);
+            BrawlerAuthoredModelAnimator authoredAnimator =
+                BrawlerAuthoredModelAnimator.Ensure(instance, owner, definition);
             BrawlerLegIkRuntime.Ensure(instance, owner);
             BrawlerVisualGroundingStabilizer grounding =
                 BrawlerVisualGroundingStabilizer.Ensure(instance, instance.transform.parent);
@@ -144,6 +145,8 @@ namespace MOBA.Core.Infrastructure
             if (installer != null)
             {
                 installer.Bind(definition, rig);
+                if (authoredAnimator != null)
+                    authoredAnimator.RefreshRuntimeGripTargets();
                 if (grounding != null)
                     grounding.RefreshRenderers();
             }

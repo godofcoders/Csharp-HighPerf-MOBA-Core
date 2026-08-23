@@ -203,6 +203,10 @@ namespace MOBA.Core.Infrastructure
             return pose;
         }
 
+        public Transform RightHandTransform => _rightHand;
+
+        public Transform LeftHandTransform => _leftHand;
+
         public void Bind(
             BrawlerController owner,
             Animator animator,
@@ -395,9 +399,21 @@ namespace MOBA.Core.Infrastructure
             if (root == null || names == null)
                 return null;
 
+            Transform preferred = FindBone(root, names, allowAuthoringSockets: false);
+            if (preferred != null)
+                return preferred;
+
+            return FindBone(root, names, allowAuthoringSockets: true);
+        }
+
+        private static Transform FindBone(
+            Transform root,
+            string[] names,
+            bool allowAuthoringSockets)
+        {
             for (int i = 0; i < names.Length; i++)
             {
-                Transform result = FindBone(root, names[i]);
+                Transform result = FindBone(root, names[i], allowAuthoringSockets);
                 if (result != null)
                     return result;
             }
@@ -407,21 +423,52 @@ namespace MOBA.Core.Infrastructure
 
         private static Transform FindBone(Transform root, string name)
         {
+            Transform preferred = FindBone(root, name, allowAuthoringSockets: false);
+            return preferred != null
+                ? preferred
+                : FindBone(root, name, allowAuthoringSockets: true);
+        }
+
+        private static Transform FindBone(
+            Transform root,
+            string name,
+            bool allowAuthoringSockets)
+        {
             if (root == null || string.IsNullOrEmpty(name))
                 return null;
 
-            if (NameEquals(root.name, name))
+            if (NameEquals(root.name, name) &&
+                (allowAuthoringSockets || !IsAuthoringSocketBranch(root)))
+            {
                 return root;
+            }
 
             for (int i = 0; i < root.childCount; i++)
             {
                 Transform child = root.GetChild(i);
-                Transform result = FindBone(child, name);
+                Transform result = FindBone(child, name, allowAuthoringSockets);
                 if (result != null)
                     return result;
             }
 
             return null;
+        }
+
+        private static bool IsAuthoringSocketBranch(Transform transform)
+        {
+            for (Transform cursor = transform; cursor != null; cursor = cursor.parent)
+            {
+                string name = cursor.name;
+                if (NameEquals(name, "Sockets") ||
+                    NameEquals(name, "AttachmentSockets") ||
+                    NameEquals(name, "HandPoseTargets") ||
+                    NameEquals(name, "RuntimeAttachments"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool NameEquals(string actual, string expected)
@@ -613,8 +660,10 @@ namespace MOBA.Core.Infrastructure
                 aim,
                 weight);
             ApplyAttachmentFollowersNow();
-            ApplyRuntimeGripTargets(weight);
             ApplyAuthoredHandPoseTargets(ready, attack, super, weight);
+            ApplyAttachmentFollowersNow();
+            ApplyRuntimeGripTargets(weight);
+            ApplyAttachmentFollowersNow();
         }
 
         private void ApplyStylizedLocomotionAccent(

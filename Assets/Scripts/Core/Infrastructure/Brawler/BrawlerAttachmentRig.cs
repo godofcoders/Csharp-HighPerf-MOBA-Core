@@ -46,6 +46,8 @@ namespace MOBA.Core.Infrastructure
             _socketLookup.Clear();
 
             Animator animator = visualRoot.GetComponentInChildren<Animator>(true);
+            BrawlerAuthoredModelAnimator authoredAnimator =
+                visualRoot.GetComponent<BrawlerAuthoredModelAnimator>();
             BrawlerHandPoseTargets authoredTargets =
                 visualRoot.GetComponentInChildren<BrawlerHandPoseTargets>(true);
             bool hasHumanoidRig = animator != null && animator.isHuman;
@@ -64,10 +66,12 @@ namespace MOBA.Core.Infrastructure
 
             Transform rightHand =
                 ResolveBone(animator, HumanBodyBones.RightHand) ??
-                FindFirst(visualRoot.transform, "RightHand", "Right_Hand", "Right_Arm");
+                (authoredAnimator != null ? authoredAnimator.RightHandTransform : null) ??
+                FindFirstAnimatedPart(visualRoot.transform, "RightHand", "Right_Hand", "Right_Arm");
             Transform leftHand =
                 ResolveBone(animator, HumanBodyBones.LeftHand) ??
-                FindFirst(visualRoot.transform, "LeftHand", "Left_Hand", "Left_Arm");
+                (authoredAnimator != null ? authoredAnimator.LeftHandTransform : null) ??
+                FindFirstAnimatedPart(visualRoot.transform, "LeftHand", "Left_Hand", "Left_Arm");
             Quaternion weaponSocketRotation =
                 ResolveForwardFacingSocketRotation(visualRoot.transform, animator);
             Transform primaryWeapon =
@@ -361,22 +365,68 @@ namespace MOBA.Core.Infrastructure
             return null;
         }
 
+        private static Transform FindFirstAnimatedPart(Transform root, params string[] names)
+        {
+            for (int i = 0; i < names.Length; i++)
+            {
+                Transform found = FindChildRecursive(
+                    root,
+                    names[i],
+                    allowAuthoringSockets: false);
+                if (found != null)
+                    return found;
+            }
+
+            return FindFirst(root, names);
+        }
+
         private static Transform FindChildRecursive(Transform root, string childName)
+        {
+            return FindChildRecursive(root, childName, allowAuthoringSockets: true);
+        }
+
+        private static Transform FindChildRecursive(
+            Transform root,
+            string childName,
+            bool allowAuthoringSockets)
         {
             if (root == null || string.IsNullOrEmpty(childName))
                 return null;
 
-            if (string.Equals(root.name, childName, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(root.name, childName, StringComparison.OrdinalIgnoreCase) &&
+                (allowAuthoringSockets || !IsAuthoringSocketBranch(root)))
+            {
                 return root;
+            }
 
             for (int i = 0; i < root.childCount; i++)
             {
-                Transform found = FindChildRecursive(root.GetChild(i), childName);
+                Transform found = FindChildRecursive(
+                    root.GetChild(i),
+                    childName,
+                    allowAuthoringSockets);
                 if (found != null)
                     return found;
             }
 
             return null;
+        }
+
+        private static bool IsAuthoringSocketBranch(Transform transform)
+        {
+            for (Transform cursor = transform; cursor != null; cursor = cursor.parent)
+            {
+                string name = cursor.name;
+                if (string.Equals(name, "Sockets", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "AttachmentSockets", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "HandPoseTargets", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "RuntimeAttachments", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void DrawSocketGizmo(

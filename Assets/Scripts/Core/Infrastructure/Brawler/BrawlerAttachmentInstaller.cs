@@ -63,7 +63,9 @@ namespace MOBA.Core.Infrastructure
                     RemoveExisting(binding.Id);
 
                 Transform socket = _rig.ResolveSocket(binding.Socket, transform);
-                bool useFollower = binding.UseStableCharacterRotation;
+                bool useFollower =
+                    binding.UseStableCharacterRotation ||
+                    RequiresAnimatedSocketFollower(binding.Socket);
                 Transform parent =
                     binding.FollowSocketRotation && !useFollower
                         ? socket
@@ -142,6 +144,21 @@ namespace MOBA.Core.Infrastructure
                 alignGripPoint,
                 gripLocalPosition,
                 gripLocalRotation);
+        }
+
+        private static bool RequiresAnimatedSocketFollower(BrawlerAttachmentSocket socket)
+        {
+            switch (socket)
+            {
+                case BrawlerAttachmentSocket.PrimaryWeapon:
+                case BrawlerAttachmentSocket.SecondaryWeapon:
+                case BrawlerAttachmentSocket.RightHand:
+                case BrawlerAttachmentSocket.LeftHand:
+                case BrawlerAttachmentSocket.Throwable:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static void InstallRuntimeGripTargets(
