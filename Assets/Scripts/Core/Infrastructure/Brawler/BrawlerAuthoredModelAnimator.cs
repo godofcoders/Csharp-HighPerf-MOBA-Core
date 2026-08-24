@@ -153,6 +153,8 @@ namespace MOBA.Core.Infrastructure
             new BrawlerRuntimeAttachmentGrip[0];
         private BrawlerHandPoseTargets[] _handPoseTargets =
             new BrawlerHandPoseTargets[0];
+        private Renderer[] _rightPalmSourceRenderers = new Renderer[0];
+        private Renderer[] _leftPalmSourceRenderers = new Renderer[0];
 
         private Quaternion _hipsBase;
         private Quaternion _spineBase;
@@ -345,6 +347,26 @@ namespace MOBA.Core.Infrastructure
 
             CacheFingerBones(_leftFingerBones, LeftFingerBoneMap);
             CacheFingerBones(_rightFingerBones, RightFingerBoneMap);
+            CachePalmSourceRenderers();
+        }
+
+        private void CachePalmSourceRenderers()
+        {
+            _rightPalmSourceRenderers =
+                ResolvePalmSourceRenderers(_rightHand, _rightLowerArm, _rightUpperArm);
+            _leftPalmSourceRenderers =
+                ResolvePalmSourceRenderers(_leftHand, _leftLowerArm, _leftUpperArm);
+        }
+
+        private static Renderer[] ResolvePalmSourceRenderers(
+            Transform hand,
+            Transform lowerArm,
+            Transform upperArm)
+        {
+            Transform source = hand != null ? hand : (lowerArm != null ? lowerArm : upperArm);
+            return source != null
+                ? source.GetComponentsInChildren<Renderer>(true)
+                : new Renderer[0];
         }
 
         private Transform Bone(HumanBodyBones bone, string[] fallbackNames = null)
@@ -417,11 +439,7 @@ namespace MOBA.Core.Infrastructure
             if (root == null || names == null)
                 return null;
 
-            Transform preferred = FindBone(root, names, allowAuthoringSockets: false);
-            if (preferred != null)
-                return preferred;
-
-            return FindBone(root, names, allowAuthoringSockets: true);
+            return FindBone(root, names, allowAuthoringSockets: false);
         }
 
         private static Transform FindBone(
@@ -441,10 +459,7 @@ namespace MOBA.Core.Infrastructure
 
         private static Transform FindBone(Transform root, string name)
         {
-            Transform preferred = FindBone(root, name, allowAuthoringSockets: false);
-            return preferred != null
-                ? preferred
-                : FindBone(root, name, allowAuthoringSockets: true);
+            return FindBone(root, name, allowAuthoringSockets: false);
         }
 
         private static Transform FindBone(
@@ -796,8 +811,11 @@ namespace MOBA.Core.Infrastructure
             if (inspect <= 0.001f)
                 return;
 
+            Vector3 showcaseAim = ResolveShowcaseCameraAim(aim);
             Quaternion aimRotation =
                 Quaternion.LookRotation(aim.sqrMagnitude > 0.001f ? aim : forward, up);
+            Quaternion showcaseAimRotation =
+                Quaternion.LookRotation(showcaseAim, up);
             Vector3 anchor = ResolveUpperBodyAnchor(up);
 
             switch (gripPose)
@@ -807,16 +825,30 @@ namespace MOBA.Core.Infrastructure
                         _rightUpperArm,
                         _rightLowerArm,
                         _rightHand,
-                        anchor + aim * 0.28f + right * 0.28f + up * 0.02f,
-                        aimRotation,
-                        weight * inspect * 0.46f);
+                        anchor + showcaseAim * 0.54f + right * 0.16f + up * 0.05f,
+                        showcaseAimRotation,
+                        weight * inspect * 0.78f);
+                    AddLocal(
+                        _rightUpperArm,
+                        LocalRotation(_rightUpperArm),
+                        -14.0f * inspect,
+                        2.0f * inspect,
+                        -24.0f * inspect,
+                        weight * inspect * 0.72f);
                     AddLocal(
                         _rightHand,
                         LocalRotation(_rightHand),
+                        -3.0f * inspect,
+                        8.0f * inspect,
                         -8.0f * inspect,
-                        18.0f * inspect,
-                        -22.0f * inspect,
                         weight * inspect);
+                    AddLocal(
+                        _leftUpperArm,
+                        LocalRotation(_leftUpperArm),
+                        2.0f * inspect,
+                        -8.0f * inspect,
+                        10.0f * inspect,
+                        weight * inspect * 0.42f);
                     AddLocal(
                         _leftHand,
                         LocalRotation(_leftHand),
@@ -906,6 +938,25 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
+        private Vector3 ResolveShowcaseCameraAim(Vector3 fallback)
+        {
+            Vector3 fallbackAim =
+                fallback.sqrMagnitude > 0.001f
+                    ? fallback.normalized
+                    : ResolveForward();
+
+            Camera camera = Camera.main;
+            if (camera == null)
+                return fallbackAim;
+
+            Vector3 origin = ResolveUpperBodyAnchor(Vector3.up);
+            Vector3 toCamera = camera.transform.position - origin;
+            if (toCamera.sqrMagnitude < 0.0001f)
+                return fallbackAim;
+
+            return toCamera.normalized;
+        }
+
         private float ResolveShowcaseInspectPulse(float time)
         {
             float phase = time * 0.82f * _showcaseTempoScale + _gaitPhaseOffset;
@@ -952,6 +1003,7 @@ namespace MOBA.Core.Infrastructure
                 _rightHand,
                 _rightLowerArm,
                 _rightUpperArm,
+                _rightPalmSourceRenderers,
                 side: 1f,
                 forward,
                 right,
@@ -961,6 +1013,7 @@ namespace MOBA.Core.Infrastructure
                 _leftHand,
                 _leftLowerArm,
                 _leftUpperArm,
+                _leftPalmSourceRenderers,
                 side: -1f,
                 forward,
                 right,
@@ -972,6 +1025,7 @@ namespace MOBA.Core.Infrastructure
             Transform hand,
             Transform lowerArm,
             Transform upperArm,
+            Renderer[] sourceRenderers,
             float side,
             Vector3 forward,
             Vector3 right,
@@ -989,8 +1043,25 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            Vector3 position = source.position;
-            if (hand == null)
+            Vector3 position;
+            if (hand == null &&
+                TryResolveSparsePalmPosition(
+                    sourceRenderers,
+                    side,
+                    forward,
+                    right,
+                    up,
+                    out position))
+            {
+                // Sparse low-poly rigs often expose only an arm mesh, so use the
+                // moving mesh edge as the palm proxy instead of the upper-arm pivot.
+            }
+            else
+            {
+                position = source.position;
+            }
+
+            if (hand == null && (sourceRenderers == null || sourceRenderers.Length == 0))
                 position -= up * SparsePalmDropOffset;
 
             position +=
@@ -999,6 +1070,55 @@ namespace MOBA.Core.Infrastructure
                 up * RuntimePalmUpOffset;
 
             anchor.SetPositionAndRotation(position, Quaternion.LookRotation(forward, up));
+        }
+
+        private static bool TryResolveSparsePalmPosition(
+            Renderer[] renderers,
+            float side,
+            Vector3 forward,
+            Vector3 right,
+            Vector3 up,
+            out Vector3 position)
+        {
+            position = Vector3.zero;
+            if (renderers == null || renderers.Length == 0)
+                return false;
+
+            Bounds bounds = new Bounds();
+            bool hasBounds = false;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null ||
+                    !renderer.enabled ||
+                    IsAuthoringSocketBranch(renderer.transform))
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            if (!hasBounds || bounds.size.sqrMagnitude < 0.000001f)
+                return false;
+
+            Vector3 palmDirection =
+                (right * side * 0.52f - up * 0.92f + forward * 0.12f).normalized;
+            Vector3 extents = bounds.extents;
+            position = bounds.center + new Vector3(
+                Mathf.Sign(palmDirection.x) * extents.x,
+                Mathf.Sign(palmDirection.y) * extents.y,
+                Mathf.Sign(palmDirection.z) * extents.z);
+            position += right * side * 0.015f - up * 0.01f;
+            return true;
         }
 
         private static Transform GetOrCreateRuntimeChild(Transform parent, string name)
