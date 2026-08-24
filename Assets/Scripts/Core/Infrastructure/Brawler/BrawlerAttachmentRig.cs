@@ -50,6 +50,9 @@ namespace MOBA.Core.Infrastructure
                 visualRoot.GetComponent<BrawlerAuthoredModelAnimator>();
             BrawlerHandPoseTargets authoredTargets =
                 visualRoot.GetComponentInChildren<BrawlerHandPoseTargets>(true);
+            if (authoredAnimator != null)
+                authoredAnimator.RefreshPalmAnchorsNow();
+
             bool hasHumanoidRig = animator != null && animator.isHuman;
             Transform socketRoot = GetOrCreateSocketRoot(visualRoot.transform);
             Transform authoredWeaponGrip = null;
@@ -72,28 +75,34 @@ namespace MOBA.Core.Infrastructure
                 ResolveBone(animator, HumanBodyBones.LeftHand) ??
                 (authoredAnimator != null ? authoredAnimator.LeftHandTransform : null) ??
                 FindFirstAnimatedPart(visualRoot.transform, "LeftHand", "Left_Hand", "Left_Arm");
+            Transform rightPalm =
+                authoredAnimator != null ? authoredAnimator.RightPalmSocketTransform : null;
+            Transform leftPalm =
+                authoredAnimator != null ? authoredAnimator.LeftPalmSocketTransform : null;
+            Transform rightWeaponParent = rightPalm != null ? rightPalm : rightHand;
+            Transform leftWeaponParent = leftPalm != null ? leftPalm : leftHand;
             Quaternion weaponSocketRotation =
                 ResolveForwardFacingSocketRotation(visualRoot.transform, animator);
             Transform primaryWeapon =
                 ResolveAnimatedHandWeaponSocket(
                     visualRoot.transform,
-                    rightHand,
+                    rightWeaponParent,
                     authoredWeaponGrip,
                     "Weapon_Main",
                     "PrimaryWeapon",
                     weaponSocketRotation,
                     side: 1f,
-                    usePalmOffset: hasHumanoidRig);
+                    usePalmOffset: rightPalm == null && hasHumanoidRig);
             Transform secondaryWeapon =
                 ResolveAnimatedHandWeaponSocket(
                     visualRoot.transform,
-                    leftHand,
+                    leftWeaponParent,
                     authoredOffhandGrip,
                     "Weapon_Offhand",
                     "SecondaryWeapon",
                     weaponSocketRotation,
                     side: -1f,
-                    usePalmOffset: hasHumanoidRig);
+                    usePalmOffset: leftPalm == null && hasHumanoidRig);
 
             SetSocket(BrawlerAttachmentSocket.Root, visualRoot.transform);
             SetSocket(
@@ -109,10 +118,12 @@ namespace MOBA.Core.Infrastructure
                 GetOrCreateSocket(socketRoot, "Chest", new Vector3(0f, 1.05f, 0f)));
             SetSocket(
                 BrawlerAttachmentSocket.RightHand,
+                rightPalm ??
                 rightHand ??
                 GetOrCreateSocket(socketRoot, "RightHand", new Vector3(0.36f, 0.95f, 0.25f)));
             SetSocket(
                 BrawlerAttachmentSocket.LeftHand,
+                leftPalm ??
                 leftHand ??
                 GetOrCreateSocket(socketRoot, "LeftHand", new Vector3(-0.36f, 0.95f, 0.25f)));
             SetSocket(
@@ -122,10 +133,12 @@ namespace MOBA.Core.Infrastructure
             SetSocket(
                 BrawlerAttachmentSocket.PrimaryWeapon,
                 primaryWeapon ??
+                rightPalm ??
                 ResolveSocket(BrawlerAttachmentSocket.RightHand, visualRoot.transform));
             SetSocket(
                 BrawlerAttachmentSocket.SecondaryWeapon,
                 secondaryWeapon ??
+                leftPalm ??
                 ResolveSocket(BrawlerAttachmentSocket.LeftHand, visualRoot.transform));
             SetSocket(
                 BrawlerAttachmentSocket.PrimaryMuzzle,
@@ -377,7 +390,7 @@ namespace MOBA.Core.Infrastructure
                     return found;
             }
 
-            return FindFirst(root, names);
+            return null;
         }
 
         private static Transform FindChildRecursive(Transform root, string childName)
@@ -420,7 +433,8 @@ namespace MOBA.Core.Infrastructure
                 if (string.Equals(name, "Sockets", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(name, "AttachmentSockets", StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(name, "HandPoseTargets", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(name, "RuntimeAttachments", StringComparison.OrdinalIgnoreCase))
+                    string.Equals(name, "RuntimeAttachments", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(name, "RuntimePalmAnchors", StringComparison.OrdinalIgnoreCase))
                 {
                     return true;
                 }

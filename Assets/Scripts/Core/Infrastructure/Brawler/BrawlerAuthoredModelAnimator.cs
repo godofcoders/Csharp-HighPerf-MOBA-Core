@@ -18,6 +18,13 @@ namespace MOBA.Core.Infrastructure
         private const float PoseFallSpeed = 9f;
         private const float DefaultHandRotationStrength = 0.36f;
         private const float AuthoredHandRotationStrength = 0.72f;
+        private const string RuntimePalmAnchorRootName = "RuntimePalmAnchors";
+        private const string RightPalmSocketName = "RightPalmSocket";
+        private const string LeftPalmSocketName = "LeftPalmSocket";
+        private const float RuntimePalmForwardOffset = 0.07f;
+        private const float RuntimePalmSideOffset = 0.02f;
+        private const float RuntimePalmUpOffset = 0.005f;
+        private const float SparsePalmDropOffset = 0.18f;
 
         private enum AnimationPersona
         {
@@ -126,6 +133,9 @@ namespace MOBA.Core.Infrastructure
         private Transform _rightUpperArm;
         private Transform _rightLowerArm;
         private Transform _rightHand;
+        private Transform _runtimePalmAnchorRoot;
+        private Transform _rightPalmSocket;
+        private Transform _leftPalmSocket;
         private Transform _leftUpperLeg;
         private Transform _leftLowerLeg;
         private Transform _leftFoot;
@@ -207,6 +217,10 @@ namespace MOBA.Core.Infrastructure
 
         public Transform LeftHandTransform => _leftHand;
 
+        public Transform RightPalmSocketTransform => _rightPalmSocket != null ? _rightPalmSocket : _rightHand;
+
+        public Transform LeftPalmSocketTransform => _leftPalmSocket != null ? _leftPalmSocket : _leftHand;
+
         public void Bind(
             BrawlerController owner,
             Animator animator,
@@ -225,6 +239,8 @@ namespace MOBA.Core.Infrastructure
             _hasBasePose = false;
             CacheBones();
             CaptureBasePose();
+            EnsureRuntimePalmAnchors();
+            RefreshPalmAnchorsNow();
             RefreshRuntimeGripTargets();
         }
 
@@ -263,6 +279,8 @@ namespace MOBA.Core.Infrastructure
             _hasBasePose = false;
             CacheBones();
             CaptureBasePose();
+            EnsureRuntimePalmAnchors();
+            RefreshPalmAnchorsNow();
             RefreshRuntimeGripTargets();
         }
 
@@ -462,7 +480,8 @@ namespace MOBA.Core.Infrastructure
                 if (NameEquals(name, "Sockets") ||
                     NameEquals(name, "AttachmentSockets") ||
                     NameEquals(name, "HandPoseTargets") ||
-                    NameEquals(name, "RuntimeAttachments"))
+                    NameEquals(name, "RuntimeAttachments") ||
+                    NameEquals(name, RuntimePalmAnchorRootName))
                 {
                     return true;
                 }
@@ -659,10 +678,13 @@ namespace MOBA.Core.Infrastructure
                 up,
                 aim,
                 weight);
+            UpdateRuntimePalmAnchors(forward, right, up);
             ApplyAttachmentFollowersNow();
             ApplyAuthoredHandPoseTargets(ready, attack, super, weight);
+            UpdateRuntimePalmAnchors(forward, right, up);
             ApplyAttachmentFollowersNow();
             ApplyRuntimeGripTargets(weight);
+            UpdateRuntimePalmAnchors(forward, right, up);
             ApplyAttachmentFollowersNow();
         }
 
@@ -903,6 +925,94 @@ namespace MOBA.Core.Infrastructure
                 if (follower != null)
                     follower.ApplyNow();
             }
+        }
+
+        public void RefreshPalmAnchorsNow()
+        {
+            Vector3 forward = ResolveForward();
+            UpdateRuntimePalmAnchors(forward, ResolveRight(forward), Vector3.up);
+        }
+
+        private void EnsureRuntimePalmAnchors()
+        {
+            _runtimePalmAnchorRoot = GetOrCreateRuntimeChild(transform, RuntimePalmAnchorRootName);
+            _runtimePalmAnchorRoot.localPosition = Vector3.zero;
+            _runtimePalmAnchorRoot.localRotation = Quaternion.identity;
+            _runtimePalmAnchorRoot.localScale = Vector3.one;
+
+            _rightPalmSocket = GetOrCreateRuntimeChild(_runtimePalmAnchorRoot, RightPalmSocketName);
+            _leftPalmSocket = GetOrCreateRuntimeChild(_runtimePalmAnchorRoot, LeftPalmSocketName);
+        }
+
+        private void UpdateRuntimePalmAnchors(Vector3 forward, Vector3 right, Vector3 up)
+        {
+            EnsureRuntimePalmAnchors();
+            UpdatePalmAnchor(
+                _rightPalmSocket,
+                _rightHand,
+                _rightLowerArm,
+                _rightUpperArm,
+                side: 1f,
+                forward,
+                right,
+                up);
+            UpdatePalmAnchor(
+                _leftPalmSocket,
+                _leftHand,
+                _leftLowerArm,
+                _leftUpperArm,
+                side: -1f,
+                forward,
+                right,
+                up);
+        }
+
+        private void UpdatePalmAnchor(
+            Transform anchor,
+            Transform hand,
+            Transform lowerArm,
+            Transform upperArm,
+            float side,
+            Vector3 forward,
+            Vector3 right,
+            Vector3 up)
+        {
+            if (anchor == null)
+                return;
+
+            Transform source = hand != null ? hand : (lowerArm != null ? lowerArm : upperArm);
+            if (source == null)
+            {
+                anchor.SetPositionAndRotation(
+                    transform.position + up * 0.9f + right * side * 0.24f + forward * 0.14f,
+                    Quaternion.LookRotation(forward, up));
+                return;
+            }
+
+            Vector3 position = source.position;
+            if (hand == null)
+                position -= up * SparsePalmDropOffset;
+
+            position +=
+                forward * RuntimePalmForwardOffset +
+                right * side * RuntimePalmSideOffset +
+                up * RuntimePalmUpOffset;
+
+            anchor.SetPositionAndRotation(position, Quaternion.LookRotation(forward, up));
+        }
+
+        private static Transform GetOrCreateRuntimeChild(Transform parent, string name)
+        {
+            Transform existing = parent != null ? parent.Find(name) : null;
+            if (existing != null)
+                return existing;
+
+            GameObject child = new GameObject(name);
+            child.transform.SetParent(parent, false);
+            child.transform.localPosition = Vector3.zero;
+            child.transform.localRotation = Quaternion.identity;
+            child.transform.localScale = Vector3.one;
+            return child.transform;
         }
 
         private void ApplyRuntimeGripTargets(float weight)
