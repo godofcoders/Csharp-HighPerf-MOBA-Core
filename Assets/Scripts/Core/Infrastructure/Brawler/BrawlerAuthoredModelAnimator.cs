@@ -32,11 +32,12 @@ namespace MOBA.Core.Infrastructure
         private const float RuntimePalmForwardOffset = 0.07f;
         private const float RuntimePalmSideOffset = 0.02f;
         private const float RuntimePalmUpOffset = 0.005f;
-        private const float SparsePalmForwardBias = 0.035f;
-        private const float SparsePalmSideExtentBias = 0.82f;
-        private const float SparsePalmDownExtentBias = 0.80f;
-        private const float SparsePalmMinimumDrop = 0.08f;
-        private const float SparsePalmMinimumSide = 0.035f;
+        private const float SparsePalmForwardBias = 0.055f;
+        private const float SparsePalmForwardExtentBias = 0.34f;
+        private const float SparsePalmSideExtentBias = 1.08f;
+        private const float SparsePalmDownExtentBias = 1.12f;
+        private const float SparsePalmMinimumDrop = 0.14f;
+        private const float SparsePalmMinimumSide = 0.065f;
 
         private enum AnimationPersona
         {
@@ -158,6 +159,8 @@ namespace MOBA.Core.Infrastructure
         private Renderer[] _leftPalmSourceRenderers = new Renderer[0];
         private bool _rightPalmUsesSparseSource;
         private bool _leftPalmUsesSparseSource;
+        private bool _rightHandIsVisualFallback;
+        private bool _leftHandIsVisualFallback;
         private Transform _leftUpperLeg;
         private Transform _leftLowerLeg;
         private Transform _leftFoot;
@@ -326,6 +329,9 @@ namespace MOBA.Core.Infrastructure
         {
             Transform searchRoot = _animator != null ? _animator.transform : transform;
 
+            _rightHandIsVisualFallback = false;
+            _leftHandIsVisualFallback = false;
+
             _hips = Bone(HumanBodyBones.Hips, HipBoneNames);
             _spine = Bone(HumanBodyBones.Spine, SpineBoneNames);
             _chest =
@@ -372,9 +378,17 @@ namespace MOBA.Core.Infrastructure
                 FindBone(searchRoot, RightFootBoneNames);
 
             if (_rightHand == null)
+            {
                 _rightHand = FindVisualPart(searchRoot, side: 1f, preferHand: true);
+                _rightHandIsVisualFallback = _rightHand != null;
+            }
+
             if (_leftHand == null)
+            {
                 _leftHand = FindVisualPart(searchRoot, side: -1f, preferHand: true);
+                _leftHandIsVisualFallback = _leftHand != null;
+            }
+
             if (_rightLowerArm == null)
                 _rightLowerArm = FindVisualPart(searchRoot, side: 1f, preferHand: false);
             if (_leftLowerArm == null)
@@ -1185,8 +1199,12 @@ namespace MOBA.Core.Infrastructure
                 _leftPalmSourceRenderers = ResolvePalmSourceRenderers(leftPalmSource);
             }
 
-            _rightPalmUsesSparseSource = _rightHand == null && _rightPalmSource != null;
-            _leftPalmUsesSparseSource = _leftHand == null && _leftPalmSource != null;
+            _rightPalmUsesSparseSource =
+                (_rightHand == null || _rightHandIsVisualFallback) &&
+                _rightPalmSource != null;
+            _leftPalmUsesSparseSource =
+                (_leftHand == null || _leftHandIsVisualFallback) &&
+                _leftPalmSource != null;
 
             Transform rightPalmParent = rightPalmSource != null
                 ? rightPalmSource
@@ -1413,7 +1431,7 @@ namespace MOBA.Core.Infrastructure
             float downOffset =
                 Mathf.Max(localBounds.extents.y * SparsePalmDownExtentBias, SparsePalmMinimumDrop);
             float forwardOffset =
-                Mathf.Max(localBounds.extents.z * 0.18f, SparsePalmForwardBias);
+                Mathf.Max(localBounds.extents.z * SparsePalmForwardExtentBias, SparsePalmForwardBias);
 
             Vector3 localPalm =
                 localBounds.center +
