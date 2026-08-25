@@ -7,6 +7,9 @@ namespace MOBA.Core.Infrastructure
 {
     public sealed class BrawlerAttachmentRig : MonoBehaviour
     {
+        private const string RuntimePalmAnchorRootName = "RuntimePalmAnchors";
+        private const string RightPalmSocketName = "RightPalmSocket";
+        private const string LeftPalmSocketName = "LeftPalmSocket";
         private const float PalmForwardOffset = 0.092f;
         private const float PalmSideOffset = 0.014f;
         private const float PalmUpOffset = 0.004f;
@@ -346,24 +349,55 @@ namespace MOBA.Core.Infrastructure
         {
             if (hand != null)
             {
+                bool runtimePalmSocket = IsRuntimePalmSocket(hand);
                 Transform existing = hand.Find(socketName) ?? hand.Find(legacySocketName);
                 if (existing != null)
-                    return existing;
+                {
+                    if (runtimePalmSocket)
+                    {
+                        existing.localPosition = Vector3.zero;
+                        existing.localRotation = Quaternion.identity;
+                        existing.localScale = Vector3.one;
+                    }
 
-                Vector3 localPosition = usePalmOffset
-                    ? ResolveHandSocketLocalPosition(hand, weaponSocketRotation, side)
-                    : Vector3.zero;
-                Quaternion localRotation =
-                    Quaternion.Inverse(hand.rotation) * weaponSocketRotation;
+                    return existing;
+                }
+
+                Vector3 localPosition = runtimePalmSocket
+                    ? Vector3.zero
+                    : (usePalmOffset
+                        ? ResolveHandSocketLocalPosition(hand, weaponSocketRotation, side)
+                        : Vector3.zero);
+                Quaternion localRotation = runtimePalmSocket
+                    ? Quaternion.identity
+                    : Quaternion.Inverse(hand.rotation) * weaponSocketRotation;
                 return GetOrCreateSocket(
                     hand,
                     socketName,
                     localPosition,
                     localRotation,
-                    forceTransform: false);
+                    forceTransform: runtimePalmSocket);
             }
 
             return authoredGrip ?? FindFirst(visualRoot, socketName, legacySocketName);
+        }
+
+        private static bool IsRuntimePalmSocket(Transform transform)
+        {
+            if (transform == null)
+                return false;
+
+            if (string.Equals(transform.name, RightPalmSocketName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(transform.name, LeftPalmSocketName, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return transform.parent != null &&
+                   string.Equals(
+                       transform.parent.name,
+                       RuntimePalmAnchorRootName,
+                       StringComparison.OrdinalIgnoreCase);
         }
 
         private static Transform FindFirst(Transform root, params string[] names)

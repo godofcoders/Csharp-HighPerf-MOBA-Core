@@ -1,5 +1,7 @@
 using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 
 namespace MOBA.Core.Infrastructure
@@ -21,10 +23,20 @@ namespace MOBA.Core.Infrastructure
         private const string RuntimePalmAnchorRootName = "RuntimePalmAnchors";
         private const string RightPalmSocketName = "RightPalmSocket";
         private const string LeftPalmSocketName = "LeftPalmSocket";
+        private const string RightHandIkTargetName = "RightHand_IK_Target";
+        private const string LeftHandIkTargetName = "LeftHand_IK_Target";
+        private const string WeaponGripTargetName = "WeaponGrip_Target";
+        private const string OffhandGripTargetName = "OffhandGrip_Target";
+        private const string WeaponMainSocketName = "Weapon_Main";
+        private const string WeaponOffhandSocketName = "Weapon_Offhand";
         private const float RuntimePalmForwardOffset = 0.07f;
         private const float RuntimePalmSideOffset = 0.02f;
         private const float RuntimePalmUpOffset = 0.005f;
-        private const float SparsePalmDropOffset = 0.18f;
+        private const float SparsePalmForwardBias = 0.035f;
+        private const float SparsePalmSideExtentBias = 0.82f;
+        private const float SparsePalmDownExtentBias = 0.80f;
+        private const float SparsePalmMinimumDrop = 0.08f;
+        private const float SparsePalmMinimumSide = 0.035f;
 
         private enum AnimationPersona
         {
@@ -49,17 +61,17 @@ namespace MOBA.Core.Infrastructure
         private static readonly string[] HeadBoneNames =
             { "mixamorig:Head", "Head", "head" };
         private static readonly string[] LeftUpperArmBoneNames =
-            { "mixamorig:LeftArm", "mixamorig:LeftShoulder", "LeftUpperArm", "LeftArm", "LeftShoulder", "arm-left" };
+            { "mixamorig:LeftArm", "mixamorig:LeftShoulder", "LeftUpperArm", "LeftArm", "LeftShoulder", "Left_Arm", "Arm_L", "arm-left", "l-arm" };
         private static readonly string[] LeftLowerArmBoneNames =
-            { "mixamorig:LeftForeArm", "LeftLowerArm", "LeftForeArm", "forearm-left", "lower-arm-left" };
+            { "mixamorig:LeftForeArm", "LeftLowerArm", "LeftForeArm", "Left_ForeArm", "Left_LowerArm", "ForeArm_L", "LowerArm_L", "forearm-left", "lower-arm-left" };
         private static readonly string[] LeftHandBoneNames =
-            { "mixamorig:LeftHand", "LeftHand", "hand-left" };
+            { "mixamorig:LeftHand", "LeftHand", "Left_Hand", "Hand_L", "Palm_L", "hand-left", "palm-left", "l-hand" };
         private static readonly string[] RightUpperArmBoneNames =
-            { "mixamorig:RightArm", "mixamorig:RightShoulder", "RightUpperArm", "RightArm", "RightShoulder", "arm-right" };
+            { "mixamorig:RightArm", "mixamorig:RightShoulder", "RightUpperArm", "RightArm", "RightShoulder", "Right_Arm", "Arm_R", "arm-right", "r-arm" };
         private static readonly string[] RightLowerArmBoneNames =
-            { "mixamorig:RightForeArm", "RightLowerArm", "RightForeArm", "forearm-right", "lower-arm-right" };
+            { "mixamorig:RightForeArm", "RightLowerArm", "RightForeArm", "Right_ForeArm", "Right_LowerArm", "ForeArm_R", "LowerArm_R", "forearm-right", "lower-arm-right" };
         private static readonly string[] RightHandBoneNames =
-            { "mixamorig:RightHand", "RightHand", "hand-right" };
+            { "mixamorig:RightHand", "RightHand", "Right_Hand", "Hand_R", "Palm_R", "hand-right", "palm-right", "r-hand" };
         private static readonly string[] LeftUpperLegBoneNames =
             { "mixamorig:LeftUpLeg", "LeftUpperLeg", "LeftUpLeg", "leg-left" };
         private static readonly string[] LeftLowerLegBoneNames =
@@ -136,6 +148,16 @@ namespace MOBA.Core.Infrastructure
         private Transform _runtimePalmAnchorRoot;
         private Transform _rightPalmSocket;
         private Transform _leftPalmSocket;
+        private Transform _rightPalmParent;
+        private Transform _leftPalmParent;
+        private Transform _rightPalmSource;
+        private Transform _leftPalmSource;
+        private Transform _rightPalmAuthoringTarget;
+        private Transform _leftPalmAuthoringTarget;
+        private Renderer[] _rightPalmSourceRenderers = new Renderer[0];
+        private Renderer[] _leftPalmSourceRenderers = new Renderer[0];
+        private bool _rightPalmUsesSparseSource;
+        private bool _leftPalmUsesSparseSource;
         private Transform _leftUpperLeg;
         private Transform _leftLowerLeg;
         private Transform _leftFoot;
@@ -153,8 +175,6 @@ namespace MOBA.Core.Infrastructure
             new BrawlerRuntimeAttachmentGrip[0];
         private BrawlerHandPoseTargets[] _handPoseTargets =
             new BrawlerHandPoseTargets[0];
-        private Renderer[] _rightPalmSourceRenderers = new Renderer[0];
-        private Renderer[] _leftPalmSourceRenderers = new Renderer[0];
 
         private Quaternion _hipsBase;
         private Quaternion _spineBase;
@@ -219,9 +239,15 @@ namespace MOBA.Core.Infrastructure
 
         public Transform LeftHandTransform => _leftHand;
 
-        public Transform RightPalmSocketTransform => _rightPalmSocket != null ? _rightPalmSocket : _rightHand;
+        public Transform RightPalmSocketTransform =>
+            _rightPalmSocket != null
+                ? _rightPalmSocket
+                : (_rightHand != null ? _rightHand : (_rightLowerArm != null ? _rightLowerArm : _rightUpperArm));
 
-        public Transform LeftPalmSocketTransform => _leftPalmSocket != null ? _leftPalmSocket : _leftHand;
+        public Transform LeftPalmSocketTransform =>
+            _leftPalmSocket != null
+                ? _leftPalmSocket
+                : (_leftHand != null ? _leftHand : (_leftLowerArm != null ? _leftLowerArm : _leftUpperArm));
 
         public void Bind(
             BrawlerController owner,
@@ -345,28 +371,40 @@ namespace MOBA.Core.Infrastructure
                 Bone(HumanBodyBones.RightFoot, RightFootBoneNames) ??
                 FindBone(searchRoot, RightFootBoneNames);
 
+            if (_rightHand == null)
+                _rightHand = FindVisualPart(searchRoot, side: 1f, preferHand: true);
+            if (_leftHand == null)
+                _leftHand = FindVisualPart(searchRoot, side: -1f, preferHand: true);
+            if (_rightLowerArm == null)
+                _rightLowerArm = FindVisualPart(searchRoot, side: 1f, preferHand: false);
+            if (_leftLowerArm == null)
+                _leftLowerArm = FindVisualPart(searchRoot, side: -1f, preferHand: false);
+            if (_rightUpperArm == null)
+                _rightUpperArm = _rightLowerArm;
+            if (_leftUpperArm == null)
+                _leftUpperArm = _leftLowerArm;
+
             CacheFingerBones(_leftFingerBones, LeftFingerBoneMap);
             CacheFingerBones(_rightFingerBones, RightFingerBoneMap);
-            CachePalmSourceRenderers();
+            CachePalmAuthoringTargets();
         }
 
-        private void CachePalmSourceRenderers()
+        private void CachePalmAuthoringTargets()
         {
-            _rightPalmSourceRenderers =
-                ResolvePalmSourceRenderers(_rightHand, _rightLowerArm, _rightUpperArm);
-            _leftPalmSourceRenderers =
-                ResolvePalmSourceRenderers(_leftHand, _leftLowerArm, _leftUpperArm);
-        }
-
-        private static Renderer[] ResolvePalmSourceRenderers(
-            Transform hand,
-            Transform lowerArm,
-            Transform upperArm)
-        {
-            Transform source = hand != null ? hand : (lowerArm != null ? lowerArm : upperArm);
-            return source != null
-                ? source.GetComponentsInChildren<Renderer>(true)
-                : new Renderer[0];
+            _rightPalmAuthoringTarget =
+                FindChildIncludingAuthoring(
+                    transform,
+                    WeaponGripTargetName,
+                    RightHandIkTargetName,
+                    WeaponMainSocketName,
+                    "RightHand");
+            _leftPalmAuthoringTarget =
+                FindChildIncludingAuthoring(
+                    transform,
+                    OffhandGripTargetName,
+                    LeftHandIkTargetName,
+                    WeaponOffhandSocketName,
+                    "LeftHand");
         }
 
         private Transform Bone(HumanBodyBones bone, string[] fallbackNames = null)
@@ -427,11 +465,19 @@ namespace MOBA.Core.Infrastructure
 
         private static bool LooksLikeSparseRig(Transform root)
         {
-            return root != null &&
-                   FindBone(root, HipBoneNames) != null &&
-                   FindBone(root, SpineBoneNames) != null &&
-                   (FindBone(root, LeftUpperArmBoneNames) != null ||
-                    FindBone(root, RightUpperArmBoneNames) != null);
+            if (root == null)
+                return false;
+
+            if (FindBone(root, HipBoneNames) != null &&
+                FindBone(root, SpineBoneNames) != null &&
+                (FindBone(root, LeftUpperArmBoneNames) != null ||
+                 FindBone(root, RightUpperArmBoneNames) != null))
+            {
+                return true;
+            }
+
+            return FindVisualPart(root, side: 1f, preferHand: false) != null ||
+                   FindVisualPart(root, side: -1f, preferHand: false) != null;
         }
 
         private static Transform FindBone(Transform root, string[] names)
@@ -507,12 +553,147 @@ namespace MOBA.Core.Infrastructure
 
         private static bool NameEquals(string actual, string expected)
         {
-            return !string.IsNullOrEmpty(actual) &&
-                   !string.IsNullOrEmpty(expected) &&
-                   string.Equals(
-                       actual,
-                       expected,
-                       System.StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(actual) || string.IsNullOrEmpty(expected))
+                return false;
+
+            if (string.Equals(
+                    actual,
+                    expected,
+                    System.StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return string.Equals(
+                NormalizeName(actual),
+                NormalizeName(expected),
+                System.StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeName(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
+
+            StringBuilder builder = new StringBuilder(value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                if (char.IsLetterOrDigit(c))
+                    builder.Append(char.ToLowerInvariant(c));
+            }
+
+            return builder.ToString();
+        }
+
+        private static Transform FindVisualPart(
+            Transform root,
+            float side,
+            bool preferHand)
+        {
+            Transform best = null;
+            int bestScore = 0;
+            ScoreVisualPart(root, side, preferHand, ref best, ref bestScore);
+            return best;
+        }
+
+        private static void ScoreVisualPart(
+            Transform candidate,
+            float side,
+            bool preferHand,
+            ref Transform best,
+            ref int bestScore)
+        {
+            if (candidate == null ||
+                IsAuthoringSocketBranch(candidate) ||
+                IsAttachmentLikeBranch(candidate))
+            {
+                return;
+            }
+
+            string name = NormalizeName(candidate.name);
+            int score = ScoreVisualPartName(name, side, preferHand);
+            Renderer renderer = candidate.GetComponent<Renderer>();
+            if (renderer != null)
+                score += 8;
+
+            if (score > bestScore)
+            {
+                best = candidate;
+                bestScore = score;
+            }
+
+            for (int i = 0; i < candidate.childCount; i++)
+                ScoreVisualPart(candidate.GetChild(i), side, preferHand, ref best, ref bestScore);
+        }
+
+        private static int ScoreVisualPartName(
+            string normalizedName,
+            float side,
+            bool preferHand)
+        {
+            if (string.IsNullOrEmpty(normalizedName) ||
+                IsAttachmentLikeName(normalizedName))
+            {
+                return -1000;
+            }
+
+            bool right = side >= 0f;
+            bool hasSide =
+                normalizedName.Contains(right ? "right" : "left") ||
+                normalizedName.Contains(right ? "rhand" : "lhand") ||
+                normalizedName.Contains(right ? "rarm" : "larm") ||
+                normalizedName.EndsWith(right ? "r" : "l");
+            bool hasHand =
+                normalizedName.Contains("hand") ||
+                normalizedName.Contains("palm") ||
+                normalizedName.Contains("fist");
+            bool hasArm =
+                normalizedName.Contains("arm") ||
+                normalizedName.Contains("forearm") ||
+                normalizedName.Contains("upperarm") ||
+                normalizedName.Contains("lowerarm");
+
+            if (!hasSide || (!hasHand && !hasArm))
+                return 0;
+
+            int score = 20;
+            score += hasHand ? (preferHand ? 42 : 22) : 0;
+            score += hasArm ? (preferHand ? 18 : 38) : 0;
+            score += normalizedName.Contains("forearm") ||
+                     normalizedName.Contains("lowerarm")
+                ? 12
+                : 0;
+            return score;
+        }
+
+        private static bool IsAttachmentLikeBranch(Transform transform)
+        {
+            for (Transform cursor = transform; cursor != null; cursor = cursor.parent)
+            {
+                if (IsAttachmentLikeName(NormalizeName(cursor.name)))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsAttachmentLikeName(string normalizedName)
+        {
+            return !string.IsNullOrEmpty(normalizedName) &&
+                   (normalizedName.Contains("weapon") ||
+                    normalizedName.Contains("muzzle") ||
+                    normalizedName.Contains("socket") ||
+                    normalizedName.Contains("attachment") ||
+                    normalizedName.Contains("grip") ||
+                    normalizedName.Contains("target") ||
+                    normalizedName.Contains("pistol") ||
+                    normalizedName.Contains("gun") ||
+                    normalizedName.Contains("bow") ||
+                    normalizedName.Contains("umbrella") ||
+                    normalizedName.Contains("staff") ||
+                    normalizedName.Contains("bottle") ||
+                    normalizedName.Contains("star"));
         }
 
         private void ResetToBasePose()
@@ -693,13 +874,13 @@ namespace MOBA.Core.Infrastructure
                 up,
                 aim,
                 weight);
-            UpdateRuntimePalmAnchors(forward, right, up);
+            UpdateRuntimePalmAnchors();
             ApplyAttachmentFollowersNow();
             ApplyAuthoredHandPoseTargets(ready, attack, super, weight);
-            UpdateRuntimePalmAnchors(forward, right, up);
+            UpdateRuntimePalmAnchors();
             ApplyAttachmentFollowersNow();
             ApplyRuntimeGripTargets(weight);
-            UpdateRuntimePalmAnchors(forward, right, up);
+            UpdateRuntimePalmAnchors();
             ApplyAttachmentFollowersNow();
         }
 
@@ -980,8 +1161,7 @@ namespace MOBA.Core.Infrastructure
 
         public void RefreshPalmAnchorsNow()
         {
-            Vector3 forward = ResolveForward();
-            UpdateRuntimePalmAnchors(forward, ResolveRight(forward), Vector3.up);
+            UpdateRuntimePalmAnchors();
         }
 
         private void EnsureRuntimePalmAnchors()
@@ -991,134 +1171,348 @@ namespace MOBA.Core.Infrastructure
             _runtimePalmAnchorRoot.localRotation = Quaternion.identity;
             _runtimePalmAnchorRoot.localScale = Vector3.one;
 
-            _rightPalmSocket = GetOrCreateRuntimeChild(_runtimePalmAnchorRoot, RightPalmSocketName);
-            _leftPalmSocket = GetOrCreateRuntimeChild(_runtimePalmAnchorRoot, LeftPalmSocketName);
-        }
-
-        private void UpdateRuntimePalmAnchors(Vector3 forward, Vector3 right, Vector3 up)
-        {
-            EnsureRuntimePalmAnchors();
-            UpdatePalmAnchor(
-                _rightPalmSocket,
-                _rightHand,
-                _rightLowerArm,
-                _rightUpperArm,
-                _rightPalmSourceRenderers,
-                side: 1f,
-                forward,
-                right,
-                up);
-            UpdatePalmAnchor(
-                _leftPalmSocket,
-                _leftHand,
-                _leftLowerArm,
-                _leftUpperArm,
-                _leftPalmSourceRenderers,
-                side: -1f,
-                forward,
-                right,
-                up);
-        }
-
-        private void UpdatePalmAnchor(
-            Transform anchor,
-            Transform hand,
-            Transform lowerArm,
-            Transform upperArm,
-            Renderer[] sourceRenderers,
-            float side,
-            Vector3 forward,
-            Vector3 right,
-            Vector3 up)
-        {
-            if (anchor == null)
-                return;
-
-            Transform source = hand != null ? hand : (lowerArm != null ? lowerArm : upperArm);
-            if (source == null)
+            Transform rightPalmSource = ResolvePalmParent(_rightHand, _rightLowerArm, _rightUpperArm);
+            Transform leftPalmSource = ResolvePalmParent(_leftHand, _leftLowerArm, _leftUpperArm);
+            if (_rightPalmSource != rightPalmSource)
             {
-                anchor.SetPositionAndRotation(
-                    transform.position + up * 0.9f + right * side * 0.24f + forward * 0.14f,
-                    Quaternion.LookRotation(forward, up));
-                return;
+                _rightPalmSource = rightPalmSource;
+                _rightPalmSourceRenderers = ResolvePalmSourceRenderers(rightPalmSource);
             }
 
-            Vector3 position;
-            if (hand == null &&
-                TryResolveSparsePalmPosition(
-                    sourceRenderers,
-                    side,
-                    forward,
-                    right,
-                    up,
-                    out position))
+            if (_leftPalmSource != leftPalmSource)
             {
-                // Sparse low-poly rigs often expose only an arm mesh, so use the
-                // moving mesh edge as the palm proxy instead of the upper-arm pivot.
+                _leftPalmSource = leftPalmSource;
+                _leftPalmSourceRenderers = ResolvePalmSourceRenderers(leftPalmSource);
+            }
+
+            _rightPalmUsesSparseSource = _rightHand == null && _rightPalmSource != null;
+            _leftPalmUsesSparseSource = _leftHand == null && _leftPalmSource != null;
+
+            _rightPalmSocket = EnsureLivePalmSocket(
+                _rightPalmSocket,
+                ref _rightPalmParent,
+                _runtimePalmAnchorRoot,
+                RightPalmSocketName,
+                WeaponMainSocketName);
+            _leftPalmSocket = EnsureLivePalmSocket(
+                _leftPalmSocket,
+                ref _leftPalmParent,
+                _runtimePalmAnchorRoot,
+                LeftPalmSocketName,
+                WeaponOffhandSocketName);
+        }
+
+        private void UpdateRuntimePalmAnchors()
+        {
+            EnsureRuntimePalmAnchors();
+            UpdatePalmSocket(
+                _rightPalmSocket,
+                _rightPalmSource,
+                _rightPalmSourceRenderers,
+                _rightPalmAuthoringTarget,
+                side: 1f,
+                useSparseSource: _rightPalmUsesSparseSource);
+            UpdatePalmSocket(
+                _leftPalmSocket,
+                _leftPalmSource,
+                _leftPalmSourceRenderers,
+                _leftPalmAuthoringTarget,
+                side: -1f,
+                useSparseSource: _leftPalmUsesSparseSource);
+        }
+
+        private Transform EnsureLivePalmSocket(
+            Transform socket,
+            ref Transform cachedParent,
+            Transform parent,
+            string name,
+            string weaponSocketName)
+        {
+            parent = parent != null ? parent : transform;
+
+            bool createdOrMoved = socket == null || cachedParent != parent || socket.parent != parent;
+            if (socket == null)
+                socket = FindRuntimePalmSocket(name);
+
+            if (socket == null)
+            {
+                GameObject socketObject = new GameObject(name);
+                socket = socketObject.transform;
+                createdOrMoved = true;
+            }
+
+            if (socket.parent != parent)
+            {
+                socket.SetParent(parent, true);
+                createdOrMoved = true;
+            }
+
+            if (createdOrMoved)
+                socket.localScale = Vector3.one;
+            ResetWeaponSocketChild(socket, weaponSocketName);
+            cachedParent = parent;
+            return socket;
+        }
+
+        private static Transform ResolvePalmParent(
+            Transform hand,
+            Transform lowerArm,
+            Transform upperArm)
+        {
+            if (hand != null)
+                return hand;
+            if (lowerArm != null)
+                return lowerArm;
+            return upperArm;
+        }
+
+        private void UpdatePalmSocket(
+            Transform socket,
+            Transform source,
+            Renderer[] sourceRenderers,
+            Transform authoringTarget,
+            float side,
+            bool useSparseSource)
+        {
+            if (socket == null)
+                return;
+
+            Vector3 position;
+            Quaternion rotation;
+            if (source != null)
+            {
+                if (useSparseSource &&
+                    TryResolveSparsePalmWorldPose(source, sourceRenderers, side, out position, out rotation))
+                {
+                    socket.SetPositionAndRotation(position, rotation);
+                }
+                else
+                {
+                    Vector3 worldOffset = ResolvePalmWorldOffset(side);
+                    socket.SetPositionAndRotation(source.position + worldOffset, source.rotation);
+                }
+            }
+            else if (authoringTarget != null && !IsDescendantOf(authoringTarget, socket))
+            {
+                socket.SetPositionAndRotation(authoringTarget.position, authoringTarget.rotation);
             }
             else
             {
-                position = source.position;
+                Vector3 forward = ResolveForward();
+                Vector3 right = ResolveRight(forward);
+                position =
+                    transform.position +
+                    forward * RuntimePalmForwardOffset +
+                    right * side * RuntimePalmSideOffset +
+                    Vector3.up * RuntimePalmUpOffset;
+                rotation = Quaternion.LookRotation(forward, Vector3.up);
+                socket.SetPositionAndRotation(position, rotation);
             }
 
-            if (hand == null && (sourceRenderers == null || sourceRenderers.Length == 0))
-                position -= up * SparsePalmDropOffset;
-
-            position +=
-                forward * RuntimePalmForwardOffset +
-                right * side * RuntimePalmSideOffset +
-                up * RuntimePalmUpOffset;
-
-            anchor.SetPositionAndRotation(position, Quaternion.LookRotation(forward, up));
+            socket.localScale = Vector3.one;
+            ResetWeaponSocketChild(
+                socket,
+                side >= 0f ? WeaponMainSocketName : WeaponOffhandSocketName);
         }
 
-        private static bool TryResolveSparsePalmPosition(
-            Renderer[] renderers,
-            float side,
-            Vector3 forward,
-            Vector3 right,
-            Vector3 up,
-            out Vector3 position)
+        private Transform FindRuntimePalmSocket(string name)
         {
-            position = Vector3.zero;
-            if (renderers == null || renderers.Length == 0)
-                return false;
+            return FindChildIncludingAuthoring(transform, name);
+        }
 
-            Bounds bounds = new Bounds();
-            bool hasBounds = false;
+        private static Transform FindChildIncludingAuthoring(
+            Transform root,
+            params string[] names)
+        {
+            for (int i = 0; i < names.Length; i++)
+            {
+                Transform found = FindBone(root, names[i], allowAuthoringSockets: true);
+                if (found != null)
+                    return found;
+            }
+
+            return null;
+        }
+
+        private static bool IsDescendantOf(Transform candidate, Transform ancestor)
+        {
+            for (Transform cursor = candidate; cursor != null; cursor = cursor.parent)
+            {
+                if (cursor == ancestor)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private Renderer[] ResolvePalmSourceRenderers(Transform source)
+        {
+            if (source == null)
+                return new Renderer[0];
+
+            Renderer[] renderers = source.GetComponentsInChildren<Renderer>(true);
+            if (renderers == null || renderers.Length == 0)
+                return new Renderer[0];
+
+            List<Renderer> usable = new List<Renderer>(renderers.Length);
             for (int i = 0; i < renderers.Length; i++)
             {
                 Renderer renderer = renderers[i];
                 if (renderer == null ||
-                    !renderer.enabled ||
-                    IsAuthoringSocketBranch(renderer.transform))
+                    IsAuthoringSocketBranch(renderer.transform) ||
+                    IsAttachmentLikeBranch(renderer.transform))
                 {
                     continue;
                 }
 
-                if (!hasBounds)
-                {
-                    bounds = renderer.bounds;
-                    hasBounds = true;
-                }
-                else
-                {
-                    bounds.Encapsulate(renderer.bounds);
-                }
+                usable.Add(renderer);
             }
 
-            if (!hasBounds || bounds.size.sqrMagnitude < 0.000001f)
+            return usable.Count > 0 ? usable.ToArray() : new Renderer[0];
+        }
+
+        private Vector3 ResolvePalmWorldOffset(float side)
+        {
+            Vector3 forward = ResolveForward();
+            Vector3 right = ResolveRight(forward);
+            return
+                forward * RuntimePalmForwardOffset +
+                right * side * RuntimePalmSideOffset +
+                Vector3.up * RuntimePalmUpOffset;
+        }
+
+        private bool TryResolveSparsePalmWorldPose(
+            Transform source,
+            Renderer[] sourceRenderers,
+            float side,
+            out Vector3 position,
+            out Quaternion rotation)
+        {
+            position = Vector3.zero;
+            Vector3 forward = ResolveForward();
+            rotation = Quaternion.LookRotation(forward, Vector3.up);
+
+            Bounds localBounds;
+            if (source == null ||
+                !TryCalculateLocalRendererBounds(source, sourceRenderers, out localBounds))
+            {
+                return false;
+            }
+
+            float sideSign = side >= 0f ? 1f : -1f;
+            float sideOffset =
+                Mathf.Max(localBounds.extents.x * SparsePalmSideExtentBias, SparsePalmMinimumSide) *
+                sideSign;
+            float downOffset =
+                Mathf.Max(localBounds.extents.y * SparsePalmDownExtentBias, SparsePalmMinimumDrop);
+            float forwardOffset =
+                Mathf.Max(localBounds.extents.z * 0.18f, SparsePalmForwardBias);
+
+            Vector3 localPalm =
+                localBounds.center +
+                new Vector3(sideOffset, -downOffset, forwardOffset);
+            position = source.TransformPoint(localPalm);
+            return true;
+        }
+
+        private static bool TryCalculateLocalRendererBounds(
+            Transform source,
+            Renderer[] renderers,
+            out Bounds bounds)
+        {
+            bounds = new Bounds(Vector3.zero, Vector3.zero);
+            if (source == null || renderers == null)
                 return false;
 
-            Vector3 palmDirection =
-                (right * side * 0.52f - up * 0.92f + forward * 0.12f).normalized;
-            Vector3 extents = bounds.extents;
-            position = bounds.center + new Vector3(
-                Mathf.Sign(palmDirection.x) * extents.x,
-                Mathf.Sign(palmDirection.y) * extents.y,
-                Mathf.Sign(palmDirection.z) * extents.z);
-            position += right * side * 0.015f - up * 0.01f;
-            return true;
+            bool hasBounds = false;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null || !renderer.enabled)
+                    continue;
+
+                Bounds world = renderer.bounds;
+                Vector3 extents = world.extents;
+                EncapsulateLocalPoint(
+                    source,
+                    world.center + new Vector3(-extents.x, -extents.y, -extents.z),
+                    ref bounds,
+                    ref hasBounds);
+                EncapsulateLocalPoint(
+                    source,
+                    world.center + new Vector3(-extents.x, -extents.y, extents.z),
+                    ref bounds,
+                    ref hasBounds);
+                EncapsulateLocalPoint(
+                    source,
+                    world.center + new Vector3(-extents.x, extents.y, -extents.z),
+                    ref bounds,
+                    ref hasBounds);
+                EncapsulateLocalPoint(
+                    source,
+                    world.center + new Vector3(-extents.x, extents.y, extents.z),
+                    ref bounds,
+                    ref hasBounds);
+                EncapsulateLocalPoint(
+                    source,
+                    world.center + new Vector3(extents.x, -extents.y, -extents.z),
+                    ref bounds,
+                    ref hasBounds);
+                EncapsulateLocalPoint(
+                    source,
+                    world.center + new Vector3(extents.x, -extents.y, extents.z),
+                    ref bounds,
+                    ref hasBounds);
+                EncapsulateLocalPoint(
+                    source,
+                    world.center + new Vector3(extents.x, extents.y, -extents.z),
+                    ref bounds,
+                    ref hasBounds);
+                EncapsulateLocalPoint(
+                    source,
+                    world.center + new Vector3(extents.x, extents.y, extents.z),
+                    ref bounds,
+                    ref hasBounds);
+            }
+
+            return hasBounds;
+        }
+
+        private static void EncapsulateLocalPoint(
+            Transform root,
+            Vector3 worldPoint,
+            ref Bounds bounds,
+            ref bool hasBounds)
+        {
+            Vector3 localPoint = root.InverseTransformPoint(worldPoint);
+            if (!hasBounds)
+            {
+                bounds = new Bounds(localPoint, Vector3.zero);
+                hasBounds = true;
+                return;
+            }
+
+            bounds.Encapsulate(localPoint);
+        }
+
+        private static void ResetWeaponSocketChild(
+            Transform palmSocket,
+            string weaponSocketName)
+        {
+            if (palmSocket == null || string.IsNullOrEmpty(weaponSocketName))
+                return;
+
+            Transform weaponSocket = palmSocket.Find(weaponSocketName);
+            if (weaponSocket == null)
+            {
+                GameObject socketObject = new GameObject(weaponSocketName);
+                weaponSocket = socketObject.transform;
+                weaponSocket.SetParent(palmSocket, false);
+            }
+
+            weaponSocket.localPosition = Vector3.zero;
+            weaponSocket.localRotation = Quaternion.identity;
+            weaponSocket.localScale = Vector3.one;
         }
 
         private static Transform GetOrCreateRuntimeChild(Transform parent, string name)
