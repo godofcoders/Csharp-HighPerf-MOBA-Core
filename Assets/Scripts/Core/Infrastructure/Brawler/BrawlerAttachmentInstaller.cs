@@ -59,13 +59,16 @@ namespace MOBA.Core.Infrastructure
                 if (binding == null)
                     continue;
 
-                if (binding.ReplaceExistingWithSameId)
-                    RemoveExisting(binding.Id);
-
                 Transform socket = _rig.ResolveSocket(binding.Socket, transform);
+                if (binding.ReplaceExistingWithSameId)
+                    RemoveExisting(binding.Id, socket);
+
+                bool parentToLiveSocket =
+                    CanParentToLiveAnimatedSocket(binding, socket);
                 bool useFollower =
-                    binding.UseStableCharacterRotation ||
-                    RequiresAnimatedSocketFollower(binding.Socket);
+                    !parentToLiveSocket &&
+                    (binding.UseStableCharacterRotation ||
+                     RequiresAnimatedSocketFollower(binding.Socket));
                 Transform parent =
                     binding.FollowSocketRotation && !useFollower
                         ? socket
@@ -159,6 +162,41 @@ namespace MOBA.Core.Infrastructure
                 default:
                     return false;
             }
+        }
+
+        private static bool CanParentToLiveAnimatedSocket(
+            BrawlerAttachmentBinding binding,
+            Transform socket)
+        {
+            if (binding == null ||
+                socket == null ||
+                !binding.FollowSocketRotation ||
+                binding.UseStableCharacterRotation)
+            {
+                return false;
+            }
+
+            if (!RequiresAnimatedSocketFollower(binding.Socket))
+                return false;
+
+            return HasAncestorNamed(socket, "RightPalmSocket") ||
+                   HasAncestorNamed(socket, "LeftPalmSocket");
+        }
+
+        private static bool HasAncestorNamed(Transform transform, string name)
+        {
+            for (Transform cursor = transform; cursor != null; cursor = cursor.parent)
+            {
+                if (string.Equals(
+                        cursor.name,
+                        name,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void InstallRuntimeGripTargets(
@@ -340,7 +378,7 @@ namespace MOBA.Core.Infrastructure
             _spawnedAttachments.Clear();
         }
 
-        private void RemoveExisting(string id)
+        private void RemoveExisting(string id, Transform socket)
         {
             if (string.IsNullOrWhiteSpace(id))
                 return;
@@ -360,6 +398,27 @@ namespace MOBA.Core.Infrastructure
 
                 Destroy(attachment);
                 _spawnedAttachments.RemoveAt(i);
+            }
+
+            RemoveExistingChildren(_runtimeAttachmentRoot, expectedName);
+            RemoveExistingChildren(socket, expectedName);
+        }
+
+        private static void RemoveExistingChildren(Transform parent, string expectedName)
+        {
+            if (parent == null || string.IsNullOrEmpty(expectedName))
+                return;
+
+            for (int i = parent.childCount - 1; i >= 0; i--)
+            {
+                Transform child = parent.GetChild(i);
+                if (child == null ||
+                    !child.name.StartsWith(expectedName, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Destroy(child.gameObject);
             }
         }
 

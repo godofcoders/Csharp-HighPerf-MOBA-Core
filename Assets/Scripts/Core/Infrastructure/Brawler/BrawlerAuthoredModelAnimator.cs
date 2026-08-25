@@ -1188,16 +1188,23 @@ namespace MOBA.Core.Infrastructure
             _rightPalmUsesSparseSource = _rightHand == null && _rightPalmSource != null;
             _leftPalmUsesSparseSource = _leftHand == null && _leftPalmSource != null;
 
+            Transform rightPalmParent = rightPalmSource != null
+                ? rightPalmSource
+                : _runtimePalmAnchorRoot;
+            Transform leftPalmParent = leftPalmSource != null
+                ? leftPalmSource
+                : _runtimePalmAnchorRoot;
+
             _rightPalmSocket = EnsureLivePalmSocket(
                 _rightPalmSocket,
                 ref _rightPalmParent,
-                _runtimePalmAnchorRoot,
+                rightPalmParent,
                 RightPalmSocketName,
                 WeaponMainSocketName);
             _leftPalmSocket = EnsureLivePalmSocket(
                 _leftPalmSocket,
                 ref _leftPalmParent,
-                _runtimePalmAnchorRoot,
+                leftPalmParent,
                 LeftPalmSocketName,
                 WeaponOffhandSocketName);
         }
