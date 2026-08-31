@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Piper_Definition
   m_EditorClassIdentifier:
   BrawlerName: Piper
-  ModelPrefab: {fileID: 136538968421815257, guid: 880806c06c97d4417b34b50c63a396ba, type: 3}
+  ModelPrefab: {fileID: 3338249247812769499, guid: 894a7be87e2f47acaba5395089105754, type: 3}
   Portrait: {fileID: 0}
   AttachmentProfile: {fileID: 11400000, guid: d516e274456a417fbad289d1898227c9, type: 2}
   BaseHealth: 3150
