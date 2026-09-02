@@ -12,29 +12,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df05759948e4dc880dc87c78444be0f, type: 3}
   m_Name: Byron_AttachmentProfile
   m_EditorClassIdentifier:
-  GripPose: 5
+  GripPose: 2
   GripPoseWeight: 1
   Attachments:
-  - Id: Staff
+  - Id: Blaster
     Socket: 6
-    Prefab: {fileID: 100000, guid: 2d0868b4af1442c5a897f4acfc3c3efa, type: 3}
-    PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Byron_Staff.obj
+    Prefab: {fileID: 919132149155446097, guid: 8ec23ee06bdf4c1c92e846f46dcbdd1a, type: 3}
+    PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Colt/Colt_BlasterA.obj
     GeneratedAttachment: 0
-    LocalPositionOffset: {x: 0.004, y: 0, z: 0.012}
+    LocalPositionOffset: {x: 0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
-    LocalScale: {x: 0.42, y: 0.42, z: 0.42}
+    LocalScale: {x: 0.46, y: 0.46, z: 0.46}
     UseExplicitGripPoint: 1
-    ExplicitGripLocalPosition: {x: 0, y: -0.32, z: 0}
+    GripPointName: 
+    ExplicitGripLocalPosition: {x: -0.5, y: -0.2, z: -0.08}
     ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     UseStableCharacterRotation: 0
-    UseSecondaryGripPoint: 1
+    UseSecondaryGripPoint: 0
     SecondaryGripSocket: 5
-    SecondaryGripLocalPosition: {x: 0, y: 0.16, z: 0}
+    SecondaryGripPointName: 
+    SecondaryGripLocalPosition: {x: 0, y: 0, z: 0}
     SecondaryGripLocalEulerOffset: {x: 0, y: 0, z: 0}
-    SecondaryGripWeight: 0.42
+    SecondaryGripWeight: 0.65
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1
     UseAsSecondaryFirePoint: 0
     UseAsCastPoint: 1
-    PresentationAnchorLocalOffset: {x: 0, y: 0.42, z: 0}
+    PresentationAnchorLocalOffset: {x: 0, y: 0.04, z: 0.43}
