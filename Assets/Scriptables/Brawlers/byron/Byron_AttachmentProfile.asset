@@ -15,10 +15,10 @@ MonoBehaviour:
   GripPose: 2
   GripPoseWeight: 1
   Attachments:
-  - Id: Blaster
+  - Id: ByronBlaster
     Socket: 6
-    Prefab: {fileID: 919132149155446097, guid: 8ec23ee06bdf4c1c92e846f46dcbdd1a, type: 3}
-    PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Colt/Colt_BlasterA.obj
+    Prefab: {fileID: 919132149155446097, guid: 6a9963de58a84aa98298ca6ce2a64d0f, type: 3}
+    PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Byron/blaster-b.obj
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
