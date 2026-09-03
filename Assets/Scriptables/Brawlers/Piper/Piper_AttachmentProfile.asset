@@ -12,24 +12,31 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4df05759948e4dc880dc87c78444be0f, type: 3}
   m_Name: Piper_AttachmentProfile
   m_EditorClassIdentifier:
-  GripPose: 9
+  GripPose: 2
   GripPoseWeight: 1
   Attachments:
-  - Id: Umbrella
+  - Id: PiperBlaster
     Socket: 6
-    Prefab: {fileID: 100000, guid: 854df8b6a6e74a778ff52870202b2ebd, type: 3}
-    PrefabAssetPath: Assets/_Game/Art/Weapons/LowPoly/Piper_Umbrella.obj
+    Prefab: {fileID: 919132149155446097, guid: da42149db63542ad94b6f2e2fe0c2453, type: 3}
+    PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Piper/blaster-g.obj
     GeneratedAttachment: 0
-    LocalPositionOffset: {x: 0.01, y: -0.01, z: 0.015}
+    LocalPositionOffset: {x: 0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
-    LocalScale: {x: 0.52, y: 0.52, z: 0.52}
+    LocalScale: {x: 0.46, y: 0.46, z: 0.46}
     UseExplicitGripPoint: 1
-    ExplicitGripLocalPosition: {x: 0, y: -0.64, z: 0}
+    GripPointName:
+    ExplicitGripLocalPosition: {x: -0.5, y: -0.2, z: -0.08}
     ExplicitGripLocalEulerOffset: {x: 0, y: 0, z: 0}
     FollowSocketRotation: 1
     UseStableCharacterRotation: 0
+    UseSecondaryGripPoint: 0
+    SecondaryGripSocket: 5
+    SecondaryGripPointName:
+    SecondaryGripLocalPosition: {x: 0, y: 0, z: 0}
+    SecondaryGripLocalEulerOffset: {x: 0, y: 0, z: 0}
+    SecondaryGripWeight: 0.65
     ReplaceExistingWithSameId: 1
     UseAsPrimaryFirePoint: 1
     UseAsSecondaryFirePoint: 0
     UseAsCastPoint: 1
-    PresentationAnchorLocalOffset: {x: 0, y: 0.42, z: 0}
+    PresentationAnchorLocalOffset: {x: 0, y: 0.04, z: 0.43}
