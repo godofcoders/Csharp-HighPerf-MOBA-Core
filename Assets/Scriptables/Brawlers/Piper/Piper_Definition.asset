@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Piper_Definition
   m_EditorClassIdentifier:
-  BrawlerName: Piper
+  BrawlerName: Frost
   ModelPrefab: {fileID: 3338249247812769499, guid: 894a7be87e2f47acaba5395089105754, type: 3}
   Portrait: {fileID: 0}
   AttachmentProfile: {fileID: 11400000, guid: d516e274456a417fbad289d1898227c9, type: 2}

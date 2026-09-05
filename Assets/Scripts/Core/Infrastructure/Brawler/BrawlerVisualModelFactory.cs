@@ -102,7 +102,7 @@ namespace MOBA.Core.Infrastructure
             if (definition != null && definition.VisualTargetHeightOverride > 0.01f)
                 return Mathf.Max(0.25f, definition.VisualTargetHeightOverride);
 
-            string name = ResolveBrawlerName(definition);
+            string name = ResolveBrawlerIdentity(definition);
 
             if (Matches(name, "El Primo") || Matches(name, "ElPrimo"))
                 return 1.88f;
@@ -290,7 +290,29 @@ namespace MOBA.Core.Infrastructure
 
         private static bool Matches(string value, string expected)
         {
-            return string.Equals(value, expected, System.StringComparison.OrdinalIgnoreCase);
+            string normalizedValue = NormalizeIdentity(value);
+            string normalizedExpected = NormalizeIdentity(expected);
+            if (string.IsNullOrEmpty(normalizedValue) || string.IsNullOrEmpty(normalizedExpected))
+                return false;
+
+            return normalizedValue == normalizedExpected ||
+                   normalizedValue.StartsWith(normalizedExpected);
+        }
+
+        private static string NormalizeIdentity(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            System.Text.StringBuilder builder = new System.Text.StringBuilder(value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                if (char.IsLetterOrDigit(c))
+                    builder.Append(char.ToLowerInvariant(c));
+            }
+
+            return builder.ToString();
         }
 
         private static string ResolveBrawlerName(BrawlerDefinition definition)
@@ -301,6 +323,16 @@ namespace MOBA.Core.Infrastructure
             return !string.IsNullOrWhiteSpace(definition.BrawlerName)
                 ? definition.BrawlerName
                 : definition.name;
+        }
+
+        private static string ResolveBrawlerIdentity(BrawlerDefinition definition)
+        {
+            if (definition == null)
+                return string.Empty;
+
+            return !string.IsNullOrWhiteSpace(definition.name)
+                ? definition.name
+                : definition.BrawlerName;
         }
 
         private static string ResolveInstanceName(BrawlerDefinition definition, string source)

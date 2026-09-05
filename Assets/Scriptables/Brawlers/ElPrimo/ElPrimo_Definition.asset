@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: ElPrimo_Definition
   m_EditorClassIdentifier:
-  BrawlerName: El Primo
+  BrawlerName: Terra
   ModelPrefab: {fileID: 3338249247812769499, guid: 70366be85cb54a11ad5ca62a7d3a9173, type: 3}
   Portrait: {fileID: 0}
   AttachmentProfile: {fileID: 11400000, guid: 0d31464ee0cf4aa4a7515ec47c765010, type: 2}

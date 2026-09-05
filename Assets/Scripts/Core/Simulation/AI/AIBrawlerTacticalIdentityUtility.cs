@@ -149,29 +149,64 @@ namespace MOBA.Core.Simulation.AI
             if (definition.TacticalIdentity != BrawlerTacticalIdentity.Auto)
                 return definition.TacticalIdentity;
 
-            string name = definition.BrawlerName;
+            if (TryResolveIdentityName(definition.name, out BrawlerTacticalIdentity identity))
+                return identity;
+
+            if (TryResolveIdentityName(definition.BrawlerName, out identity))
+                return identity;
+
+            return BrawlerTacticalIdentity.Auto;
+        }
+
+        private static bool TryResolveIdentityName(string name, out BrawlerTacticalIdentity identity)
+        {
+            identity = BrawlerTacticalIdentity.Auto;
             if (!string.IsNullOrEmpty(name))
             {
                 string lower = name.ToLowerInvariant();
                 if (lower.Contains("byron"))
-                    return BrawlerTacticalIdentity.Byron;
+                {
+                    identity = BrawlerTacticalIdentity.Byron;
+                    return true;
+                }
                 if (lower.Contains("jessie") || lower.Contains("jesse"))
-                    return BrawlerTacticalIdentity.Jessie;
+                {
+                    identity = BrawlerTacticalIdentity.Jessie;
+                    return true;
+                }
                 if (lower.Contains("primo"))
-                    return BrawlerTacticalIdentity.ElPrimo;
+                {
+                    identity = BrawlerTacticalIdentity.ElPrimo;
+                    return true;
+                }
                 if (lower.Contains("colt"))
-                    return BrawlerTacticalIdentity.Colt;
-                if (lower == "bo" || lower.Contains(" bo"))
-                    return BrawlerTacticalIdentity.Bo;
+                {
+                    identity = BrawlerTacticalIdentity.Colt;
+                    return true;
+                }
+                if (lower == "bo" || lower.StartsWith("bo_") || lower.Contains(" bo"))
+                {
+                    identity = BrawlerTacticalIdentity.Bo;
+                    return true;
+                }
                 if (lower.Contains("barley"))
-                    return BrawlerTacticalIdentity.Barley;
+                {
+                    identity = BrawlerTacticalIdentity.Barley;
+                    return true;
+                }
                 if (lower.Contains("piper"))
-                    return BrawlerTacticalIdentity.Piper;
+                {
+                    identity = BrawlerTacticalIdentity.Piper;
+                    return true;
+                }
                 if (lower.Contains("leon"))
-                    return BrawlerTacticalIdentity.Leon;
+                {
+                    identity = BrawlerTacticalIdentity.Leon;
+                    return true;
+                }
             }
 
-            return BrawlerTacticalIdentity.Auto;
+            return false;
         }
 
         public static float GetDiscipline(BrawlerAIProfile profile)

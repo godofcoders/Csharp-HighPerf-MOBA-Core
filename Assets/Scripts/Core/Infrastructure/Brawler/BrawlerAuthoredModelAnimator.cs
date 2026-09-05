@@ -3364,9 +3364,9 @@ namespace MOBA.Core.Infrastructure
             if (definition == null)
                 return gameObject.name;
 
-            return !string.IsNullOrWhiteSpace(definition.BrawlerName)
-                ? definition.BrawlerName
-                : definition.name;
+            return !string.IsNullOrWhiteSpace(definition.name)
+                ? definition.name
+                : definition.BrawlerName;
         }
 
         private static bool Contains(string value, string expected)

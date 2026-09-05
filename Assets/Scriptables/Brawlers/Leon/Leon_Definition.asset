@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Leon_Definition
   m_EditorClassIdentifier:
-  BrawlerName: Leon
+  BrawlerName: Shade
   ModelPrefab: {fileID: 3338249247812769499, guid: 311efa14d6504bf8a81d6e1bd696478c, type: 3}
   Portrait: {fileID: 0}
   AttachmentProfile: {fileID: 11400000, guid: ea34a60b9f8640a8950a734343578494, type: 2}

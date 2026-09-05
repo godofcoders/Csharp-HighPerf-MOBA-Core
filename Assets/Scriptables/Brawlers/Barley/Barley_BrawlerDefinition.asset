@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Barley_BrawlerDefinition
   m_EditorClassIdentifier: 
-  BrawlerName: Barley
+  BrawlerName: Briar
   ModelPrefab: {fileID: 3338249247812769499, guid: 4034ec0ae924407580a67dac866989a3, type: 3}
   Portrait: {fileID: 0}
   AttachmentProfile: {fileID: 11400000, guid: d2ef0d2c36814cb2811421861e4229d6, type: 2}

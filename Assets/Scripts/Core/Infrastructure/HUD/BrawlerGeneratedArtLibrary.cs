@@ -47,29 +47,17 @@ namespace MOBA.Core.Infrastructure
             if (definition == null)
                 return string.Empty;
 
+            if (TryResolveKnownPortraitKey(definition.name, out string key))
+                return key;
+
+            if (TryResolveKnownPortraitKey(definition.BrawlerName, out key))
+                return key;
+
             string displayName = !string.IsNullOrWhiteSpace(definition.BrawlerName)
                 ? definition.BrawlerName
                 : definition.name;
 
-            string normalized = Normalize(displayName);
-            if (normalized == "elprimo")
-                return "el_primo";
-            if (normalized == "jessie" || normalized == "jesse")
-                return "jessie";
-            if (normalized == "colt")
-                return "colt";
-            if (normalized == "byron")
-                return "byron";
-            if (normalized == "barley")
-                return "barley";
-            if (normalized == "bo")
-                return "bo";
-            if (normalized == "piper")
-                return "piper";
-            if (normalized == "leon")
-                return "leon";
-
-            return normalized;
+            return Normalize(displayName);
         }
 
         public static string ResolveDisplayName(BrawlerDefinition definition)
@@ -96,6 +84,64 @@ namespace MOBA.Core.Infrastructure
             }
 
             return builder.ToString();
+        }
+
+        private static bool TryResolveKnownPortraitKey(string value, out string key)
+        {
+            key = string.Empty;
+            string normalized = Normalize(value);
+            if (string.IsNullOrEmpty(normalized))
+                return false;
+
+            if (normalized.StartsWith("elprimo") || normalized == "primo")
+            {
+                key = "el_primo";
+                return true;
+            }
+
+            if (normalized.StartsWith("jessie") || normalized.StartsWith("jesse"))
+            {
+                key = "jessie";
+                return true;
+            }
+
+            if (normalized.StartsWith("colt"))
+            {
+                key = "colt";
+                return true;
+            }
+
+            if (normalized.StartsWith("byron"))
+            {
+                key = "byron";
+                return true;
+            }
+
+            if (normalized.StartsWith("barley"))
+            {
+                key = "barley";
+                return true;
+            }
+
+            if (normalized == "bo" || normalized.StartsWith("bodefinition"))
+            {
+                key = "bo";
+                return true;
+            }
+
+            if (normalized.StartsWith("piper"))
+            {
+                key = "piper";
+                return true;
+            }
+
+            if (normalized.StartsWith("leon"))
+            {
+                key = "leon";
+                return true;
+            }
+
+            return false;
         }
     }
 }

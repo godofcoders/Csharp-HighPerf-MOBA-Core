@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Colt_Definition
   m_EditorClassIdentifier: 
-  BrawlerName: Colt
+  BrawlerName: Ember
   ModelPrefab: {fileID: 3338249247812769499, guid: f4cbe62e81aba4608a05718a4f16e790, type: 3}
   Portrait: {fileID: 0}
   AttachmentProfile: {fileID: 11400000, guid: 7af1e3c9d4b342678951c438967a5241, type: 2}

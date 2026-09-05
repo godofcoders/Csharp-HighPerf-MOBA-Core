@@ -205,7 +205,73 @@ namespace MOBA.Core.Infrastructure
                 return false;
 
             return string.Equals(BuildBrawlerPersistenceId(def), savedId, System.StringComparison.Ordinal) ||
-                   string.Equals(def.BrawlerName, savedId, System.StringComparison.Ordinal);
+                   string.Equals(def.BrawlerName, savedId, System.StringComparison.Ordinal) ||
+                   MatchesLegacyBrawlerAlias(def, savedId);
+        }
+
+        private static bool MatchesLegacyBrawlerAlias(
+            BrawlerDefinition def,
+            string savedId)
+        {
+            string legacyAlias = ResolveLegacyBrawlerAlias(def);
+            if (string.IsNullOrEmpty(legacyAlias))
+                return false;
+
+            string normalizedSavedId = NormalizePersistenceText(savedId);
+            if (legacyAlias == "jessie" && normalizedSavedId == "jesse")
+                return true;
+            if (legacyAlias == "elprimo" && normalizedSavedId == "primo")
+                return true;
+
+            return string.Equals(
+                legacyAlias,
+                normalizedSavedId,
+                System.StringComparison.Ordinal);
+        }
+
+        private static string ResolveLegacyBrawlerAlias(BrawlerDefinition def)
+        {
+            if (def == null)
+                return string.Empty;
+
+            string normalizedName = NormalizePersistenceText(def.name);
+            if (string.IsNullOrEmpty(normalizedName))
+                return string.Empty;
+
+            if (normalizedName.StartsWith("colt"))
+                return "colt";
+            if (normalizedName.StartsWith("jessie") || normalizedName.StartsWith("jesse"))
+                return "jessie";
+            if (normalizedName.StartsWith("byron"))
+                return "byron";
+            if (normalizedName.StartsWith("barley"))
+                return "barley";
+            if (normalizedName == "bo" || normalizedName.StartsWith("bodefinition"))
+                return "bo";
+            if (normalizedName.StartsWith("elprimo") || normalizedName == "primo")
+                return "elprimo";
+            if (normalizedName.StartsWith("piper"))
+                return "piper";
+            if (normalizedName.StartsWith("leon"))
+                return "leon";
+
+            return string.Empty;
+        }
+
+        private static string NormalizePersistenceText(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            System.Text.StringBuilder builder = new System.Text.StringBuilder(value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                char c = value[i];
+                if (char.IsLetterOrDigit(c))
+                    builder.Append(char.ToLowerInvariant(c));
+            }
+
+            return builder.ToString();
         }
 
         private static int ClampLevel(int level)

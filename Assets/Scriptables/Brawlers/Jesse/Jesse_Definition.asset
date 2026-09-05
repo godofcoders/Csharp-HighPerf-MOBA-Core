@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Jesse_Definition
   m_EditorClassIdentifier: 
-  BrawlerName: Jessie
+  BrawlerName: Volt
   ModelPrefab: {fileID: 3338249247812769499, guid: 8fbef233738b4dbbaee3ca3d0ab0d305, type: 3}
   AttachmentProfile: {fileID: 11400000, guid: d916a0f2d2804a8ea646cb91fe2a5aba, type: 2}
   BaseHealth: 3200

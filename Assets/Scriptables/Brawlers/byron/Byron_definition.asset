@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3571b305cae1f47d289f6b4a50e50d85, type: 3}
   m_Name: Byron_definition
   m_EditorClassIdentifier: 
-  BrawlerName: Byron
+  BrawlerName: Tide
   ModelPrefab: {fileID: 3338249247812769499, guid: 2c6b0b912217462688ee87ae04e8a257, type: 3}
   AttachmentProfile: {fileID: 11400000, guid: 0b22294d34c143ee80da5c93a4585337, type: 2}
   BaseHealth: 3000
