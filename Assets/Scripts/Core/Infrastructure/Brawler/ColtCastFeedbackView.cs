@@ -47,9 +47,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private float _hyperEndScale = 0.66f;
 
         [Header("Colors")]
-        [SerializeField] private Color _mainColor = new Color(1f, 0.74f, 0.14f, 0.92f);
-        [SerializeField] private Color _superColor = new Color(1f, 0.30f, 0.02f, 0.96f);
-        [SerializeField] private Color _hyperColor = new Color(0.24f, 0.05f, 0.48f, 0.98f);
+        [SerializeField] private Color _mainColor = new Color(1f, 0.46f, 0.06f, 0.95f);
+        [SerializeField] private Color _superColor = new Color(1f, 0.12f, 0.00f, 0.98f);
+        [SerializeField] private Color _hyperColor = new Color(1f, 0.72f, 0.10f, 1f);
 
         private readonly List<FlashInstance> _flashPool = new List<FlashInstance>(96);
         private readonly List<ScheduledBurst> _scheduledBursts = new List<ScheduledBurst>(32);
@@ -335,8 +335,13 @@ namespace MOBA.Core.Infrastructure
             string brawlerName = source != null && source.Definition != null
                 ? source.Definition.BrawlerName
                 : string.Empty;
+            string assetName = source != null && source.Definition != null
+                ? source.Definition.name
+                : string.Empty;
 
-            if (ContainsToken(brawlerName, "colt"))
+            if (ContainsToken(assetName, "colt") ||
+                ContainsToken(brawlerName, "colt") ||
+                ContainsToken(brawlerName, "ember"))
                 return true;
 
             return ContainsToken(ability != null ? ability.name : string.Empty, "colt") ||

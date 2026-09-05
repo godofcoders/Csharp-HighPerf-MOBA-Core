@@ -653,42 +653,42 @@ namespace MOBA.Core.Infrastructure
             {
                 if (isHypercharged)
                 {
-                    Color hyperCore = new Color(0.18f, 1f, 0.70f, 1f);
-                    Color hyperGlow = new Color(0.36f, 0.08f, 0.82f, 0.72f);
+                    Color hyperCore = new Color(0.72f, 0.98f, 1f, 1f);
+                    Color hyperGlow = new Color(0.06f, 0.58f, 1f, 0.76f);
                     return new ProjectileVisualStyle(
                         hyperCore,
                         hyperGlow,
-                        hyperGlow,
-                        hyperCore,
-                        0.42f,
-                        0.92f,
-                        0.78f,
-                        56f,
-                        0.090f,
-                        0.13f,
-                        0.42f,
-                        0.042f);
+                        new Color(0.12f, 0.72f, 1f, 0.88f),
+                        new Color(0.86f, 0.98f, 1f, 0.70f),
+                        0.50f,
+                        1.06f,
+                        0.96f,
+                        64f,
+                        0.085f,
+                        0.16f,
+                        0.40f,
+                        0.050f);
                 }
 
                 Color core = isSuper
-                    ? new Color(0.34f, 0.12f, 0.86f, 1f)
-                    : new Color(0.12f, 1f, 0.72f, 1f);
+                    ? new Color(0.72f, 0.96f, 1f, 1f)
+                    : new Color(0.30f, 0.86f, 1f, 1f);
                 Color glow = isSuper
-                    ? new Color(0.12f, 1f, 0.72f, 0.54f)
-                    : new Color(0.18f, 1f, 0.82f, 0.48f);
+                    ? new Color(0.04f, 0.58f, 1f, 0.70f)
+                    : new Color(0.10f, 0.70f, 1f, 0.54f);
                 return new ProjectileVisualStyle(
                     core,
                     glow,
-                    glow,
-                    glow,
-                    isSuper ? 0.34f : 0.20f,
-                    isSuper ? 0.92f : 0.78f,
-                    isSuper ? 0.82f : 0.64f,
-                    isSuper ? 42f : 24f,
-                    isSuper ? 0.090f : 0.055f,
-                    isSuper ? 0.12f : 0.08f,
-                    isSuper ? 0.34f : 0.20f,
-                    isSuper ? 0.040f : 0.026f);
+                    isSuper ? new Color(0.10f, 0.68f, 1f, 0.86f) : new Color(0.16f, 0.82f, 1f, 0.78f),
+                    isSuper ? new Color(0.84f, 0.98f, 1f, 0.62f) : new Color(0.64f, 0.94f, 1f, 0.54f),
+                    isSuper ? 0.42f : 0.26f,
+                    isSuper ? 1.02f : 0.88f,
+                    isSuper ? 0.96f : 0.78f,
+                    isSuper ? 52f : 32f,
+                    isSuper ? 0.085f : 0.060f,
+                    isSuper ? 0.15f : 0.10f,
+                    isSuper ? 0.36f : 0.24f,
+                    isSuper ? 0.046f : 0.032f);
             }
 
             if (profileName.Contains("jesse") || profileName.Contains("jessie"))
@@ -729,42 +729,42 @@ namespace MOBA.Core.Infrastructure
             {
                 if (isHypercharged)
                 {
-                    Color hyperCore = new Color(1f, 0.70f, 0.16f, 1f);
-                    Color hyperWrap = new Color(0.24f, 0.05f, 0.48f, 0.82f);
+                    Color hyperCore = new Color(1f, 0.92f, 0.42f, 1f);
+                    Color hyperWrap = new Color(1f, 0.08f, 0.00f, 0.86f);
                     return new ProjectileVisualStyle(
                         hyperCore,
                         hyperWrap,
-                        hyperWrap,
-                        hyperWrap,
-                        0.36f,
-                        0.86f,
-                        0.72f,
-                        46f,
-                        0.075f,
-                        0.12f,
-                        0.34f,
-                        0.036f);
+                        new Color(1f, 0.14f, 0.00f, 0.92f),
+                        new Color(1f, 0.64f, 0.06f, 0.74f),
+                        0.44f,
+                        1.00f,
+                        0.88f,
+                        58f,
+                        0.080f,
+                        0.14f,
+                        0.38f,
+                        0.044f);
                 }
 
                 Color core = isSuper
-                    ? new Color(1f, 0.46f, 0.08f, 1f)
-                    : new Color(1f, 0.82f, 0.22f, 1f);
+                    ? new Color(1f, 0.28f, 0.02f, 1f)
+                    : new Color(1f, 0.86f, 0.24f, 1f);
                 Color glow = isSuper
-                    ? new Color(1f, 0.18f, 0.02f, 0.68f)
-                    : new Color(1f, 0.46f, 0.08f, 0.62f);
+                    ? new Color(1f, 0.05f, 0.00f, 0.78f)
+                    : new Color(1f, 0.24f, 0.02f, 0.68f);
                 return new ProjectileVisualStyle(
                     core,
                     glow,
-                    glow,
-                    glow,
-                    isSuper ? 0.30f : 0.24f,
-                    isSuper ? 0.88f : 0.82f,
-                    isSuper ? 0.68f : 0.58f,
-                    isSuper ? 34f : 24f,
-                    isSuper ? 0.070f : 0.055f,
-                    isSuper ? 0.10f : 0.08f,
-                    isSuper ? 0.30f : 0.20f,
-                    isSuper ? 0.034f : 0.026f);
+                    isSuper ? new Color(1f, 0.16f, 0.00f, 0.90f) : new Color(1f, 0.36f, 0.02f, 0.86f),
+                    isSuper ? new Color(1f, 0.52f, 0.04f, 0.68f) : new Color(1f, 0.68f, 0.08f, 0.58f),
+                    isSuper ? 0.38f : 0.30f,
+                    isSuper ? 1.00f : 0.94f,
+                    isSuper ? 0.84f : 0.76f,
+                    isSuper ? 48f : 34f,
+                    isSuper ? 0.080f : 0.060f,
+                    isSuper ? 0.13f : 0.10f,
+                    isSuper ? 0.36f : 0.24f,
+                    isSuper ? 0.042f : 0.032f);
             }
 
             if (profileName.Contains("piper"))
