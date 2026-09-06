@@ -15,16 +15,16 @@ MonoBehaviour:
   VisualPrefab: {fileID: 0}
   LocalPosition: {x: 0, y: 0, z: 0}
   LocalRotationEuler: {x: 0, y: 0, z: 0}
-  LocalScale: {x: 0.66, y: 0.66, z: 0.66}
+  LocalScale: {x: 0.70, y: 0.70, z: 0.70}
   PreferRuntimeShape: 1
   RuntimeShape: 8
   FaceMovementDirection: 1
   UseSpin: 1
   SpinEulerPerSecond: {x: 0, y: 0, z: 860}
-  MinimumVisualDiameter: 0.46
+  MinimumVisualDiameter: 0.50
   UseRuntimeTrail: 1
-  TrailTime: 0.050
-  TrailStartWidth: 0.13
-  TrailEndWidth: 0.018
-  TrailColor: {r: 1, g: 0.10, b: 0.06, a: 0.84}
-  SuperTrailColor: {r: 0.30, g: 0.10, b: 0.90, a: 0.88}
+  TrailTime: 0.075
+  TrailStartWidth: 0.16
+  TrailEndWidth: 0.020
+  TrailColor: {r: 0.36, g: 0.12, b: 0.82, a: 0.88}
+  SuperTrailColor: {r: 0.66, g: 0.20, b: 1, a: 0.92}

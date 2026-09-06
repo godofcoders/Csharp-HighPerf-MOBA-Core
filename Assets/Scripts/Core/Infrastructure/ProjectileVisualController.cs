@@ -617,36 +617,36 @@ namespace MOBA.Core.Infrastructure
             {
                 if (isHypercharged)
                 {
-                    Color hyperCore = new Color(0.76f, 0.22f, 1f, 1f);
-                    Color fizz = new Color(0.72f, 1f, 0.16f, 0.64f);
+                    Color hyperCore = new Color(0.58f, 1f, 0.16f, 1f);
+                    Color fizz = new Color(0.16f, 0.82f, 0.24f, 0.68f);
                     return new ProjectileVisualStyle(
                         hyperCore,
                         fizz,
-                        new Color(0.62f, 0.20f, 1f, 0.78f),
-                        fizz,
+                        new Color(0.22f, 0.92f, 0.16f, 0.86f),
+                        new Color(0.76f, 1f, 0.20f, 0.70f),
+                        0.40f,
+                        1.00f,
+                        0.92f,
+                        52f,
+                        0.080f,
+                        0.14f,
                         0.32f,
-                        0.90f,
-                        0.76f,
-                        44f,
-                        0.085f,
-                        0.13f,
-                        0.34f,
-                        0.040f);
+                        0.044f);
                 }
 
                 return new ProjectileVisualStyle(
-                    isSuper ? new Color(0.62f, 0.20f, 1f, 1f) : new Color(1f, 0.56f, 0.08f, 1f),
-                    isSuper ? new Color(0.72f, 1f, 0.16f, 0.54f) : new Color(1f, 0.78f, 0.12f, 0.48f),
-                    isSuper ? new Color(0.62f, 0.20f, 1f, 0.74f) : new Color(1f, 0.54f, 0.08f, 0.72f),
-                    isSuper ? new Color(0.72f, 1f, 0.16f, 0.58f) : new Color(1f, 0.76f, 0.14f, 0.54f),
-                    isSuper ? 0.28f : 0.22f,
-                    isSuper ? 0.86f : 0.78f,
-                    isSuper ? 0.72f : 0.64f,
-                    isSuper ? 36f : 24f,
-                    isSuper ? 0.075f : 0.060f,
-                    isSuper ? 0.12f : 0.09f,
-                    isSuper ? 0.30f : 0.20f,
-                    isSuper ? 0.036f : 0.026f);
+                    isSuper ? new Color(0.46f, 1f, 0.14f, 1f) : new Color(0.28f, 0.90f, 0.18f, 1f),
+                    isSuper ? new Color(0.74f, 1f, 0.20f, 0.62f) : new Color(0.50f, 1f, 0.20f, 0.52f),
+                    isSuper ? new Color(0.46f, 1f, 0.14f, 0.82f) : new Color(0.30f, 0.92f, 0.18f, 0.78f),
+                    isSuper ? new Color(0.82f, 1f, 0.18f, 0.64f) : new Color(0.68f, 1f, 0.24f, 0.56f),
+                    isSuper ? 0.36f : 0.28f,
+                    isSuper ? 0.96f : 0.88f,
+                    isSuper ? 0.88f : 0.76f,
+                    isSuper ? 44f : 30f,
+                    isSuper ? 0.078f : 0.062f,
+                    isSuper ? 0.13f : 0.10f,
+                    isSuper ? 0.30f : 0.22f,
+                    isSuper ? 0.040f : 0.030f);
             }
 
             if (profileName.Contains("byron"))
@@ -694,35 +694,35 @@ namespace MOBA.Core.Infrastructure
             if (profileName.Contains("jesse") || profileName.Contains("jessie"))
             {
                 return new ProjectileVisualStyle(
-                    new Color(0.10f, 0.94f, 1f, 1f),
-                    new Color(1f, 0.92f, 0.12f, 0.58f),
-                    new Color(0.16f, 0.90f, 1f, 0.78f),
-                    new Color(1f, 0.96f, 0.18f, 0.64f),
-                    0.28f,
-                    0.92f,
-                    0.76f,
-                    34f,
-                    0.080f,
-                    0.11f,
-                    0.28f,
-                    0.034f);
+                    new Color(1f, 0.92f, 0.10f, 1f),
+                    new Color(0.24f, 0.84f, 1f, 0.66f),
+                    new Color(1f, 0.86f, 0.08f, 0.90f),
+                    new Color(0.58f, 0.92f, 1f, 0.68f),
+                    0.34f,
+                    1.00f,
+                    0.68f,
+                    46f,
+                    0.076f,
+                    0.09f,
+                    0.34f,
+                    0.038f);
             }
 
             if (profileName.Contains("scrappy"))
             {
                 return new ProjectileVisualStyle(
-                    new Color(1f, 0.64f, 0.10f, 1f),
-                    new Color(0.18f, 0.88f, 1f, 0.54f),
-                    new Color(0.22f, 0.84f, 1f, 0.78f),
-                    new Color(1f, 0.70f, 0.16f, 0.62f),
-                    0.24f,
-                    0.86f,
-                    0.70f,
-                    30f,
-                    0.070f,
-                    0.10f,
-                    0.26f,
-                    0.030f);
+                    new Color(1f, 0.88f, 0.08f, 1f),
+                    new Color(0.18f, 0.82f, 1f, 0.58f),
+                    new Color(1f, 0.82f, 0.06f, 0.86f),
+                    new Color(0.48f, 0.90f, 1f, 0.64f),
+                    0.28f,
+                    0.92f,
+                    0.66f,
+                    38f,
+                    0.066f,
+                    0.09f,
+                    0.30f,
+                    0.034f);
             }
 
             if (profileName.Contains("colt"))
@@ -770,52 +770,52 @@ namespace MOBA.Core.Infrastructure
             if (profileName.Contains("piper"))
             {
                 return new ProjectileVisualStyle(
-                    new Color(1f, 0.12f, 0.08f, 1f),
-                    new Color(1f, 0.42f, 0.12f, 0.62f),
-                    new Color(1f, 0.10f, 0.06f, 0.82f),
-                    new Color(1f, 0.32f, 0.08f, 0.58f),
-                    0.32f,
-                    0.88f,
-                    0.70f,
-                    28f,
+                    new Color(0.86f, 0.98f, 1f, 1f),
+                    new Color(0.18f, 0.62f, 1f, 0.66f),
+                    new Color(0.62f, 0.92f, 1f, 0.90f),
+                    new Color(0.92f, 1f, 1f, 0.66f),
+                    0.38f,
+                    1.00f,
+                    0.86f,
+                    36f,
                     0.070f,
-                    0.10f,
+                    0.13f,
                     0.26f,
-                    0.030f);
+                    0.034f);
             }
 
             if (profileName.Contains("leon"))
             {
                 return new ProjectileVisualStyle(
-                    new Color(1f, 0.08f, 0.06f, 1f),
-                    new Color(1f, 0.28f, 0.10f, 0.64f),
-                    new Color(1f, 0.08f, 0.05f, 0.82f),
-                    new Color(1f, 0.24f, 0.08f, 0.58f),
-                    0.34f,
+                    new Color(0.18f, 0.08f, 0.34f, 1f),
+                    new Color(0.62f, 0.16f, 1f, 0.62f),
+                    new Color(0.32f, 0.10f, 0.78f, 0.88f),
+                    new Color(0.66f, 0.22f, 1f, 0.58f),
+                    0.36f,
+                    0.96f,
                     0.88f,
-                    0.66f,
-                    30f,
-                    0.068f,
-                    0.095f,
-                    0.28f,
-                    0.030f);
+                    34f,
+                    0.070f,
+                    0.14f,
+                    0.22f,
+                    0.040f);
             }
 
             if (profileName.Contains("bo") || profileName.Contains("arrow"))
             {
                 return new ProjectileVisualStyle(
-                    new Color(1f, 0.78f, 0.28f, 1f),
-                    new Color(1f, 0.48f, 0.10f, 0.54f),
-                    new Color(1f, 0.66f, 0.20f, 0.70f),
-                    new Color(1f, 0.54f, 0.10f, 0.54f),
-                    0.18f,
-                    0.70f,
-                    0.62f,
-                    16f,
-                    0.045f,
-                    0.070f,
-                    0.16f,
-                    0.020f);
+                    new Color(0.90f, 1f, 1f, 1f),
+                    new Color(0.46f, 0.92f, 1f, 0.50f),
+                    new Color(0.70f, 0.96f, 1f, 0.74f),
+                    new Color(0.92f, 1f, 1f, 0.48f),
+                    0.24f,
+                    0.82f,
+                    0.82f,
+                    24f,
+                    0.050f,
+                    0.10f,
+                    0.22f,
+                    0.026f);
             }
 
             return new ProjectileVisualStyle(
