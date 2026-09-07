@@ -7,6 +7,7 @@ namespace MOBA.Core.Infrastructure
     {
         private const float DefaultTargetHeight = 1.72f;
         private const float GroundLocalY = 0f;
+        private const float GameplayVisualScaleReduction = 0.75f;
 
         public static bool TryCreate(
             BrawlerDefinition definition,
@@ -35,7 +36,7 @@ namespace MOBA.Core.Infrastructure
             if (!ProceduralBrawlerModelFactory.TryCreate(definition, parent, owner, out instance))
                 return false;
 
-            instance.transform.localScale *= BrawlerController.BodyScaleMultiplier;
+            instance.transform.localScale *= ResolveVisualScaleMultiplier(owner);
             ConfigureLayer(instance, parent.gameObject.layer);
             PrepareAttachmentPresentation(instance, definition, owner, installAttachmentProfile: false);
             return true;
@@ -60,7 +61,7 @@ namespace MOBA.Core.Infrastructure
             if (!HasUsableRendererBounds(instance))
                 return false;
 
-            NormalizeScaleAndGrounding(instance, parent, definition);
+            NormalizeScaleAndGrounding(instance, parent, definition, owner);
             PrepareAttachmentPresentation(instance, definition, owner, installAttachmentProfile: true);
             return true;
         }
@@ -77,14 +78,15 @@ namespace MOBA.Core.Infrastructure
         private static void NormalizeScaleAndGrounding(
             GameObject instance,
             Transform parent,
-            BrawlerDefinition definition)
+            BrawlerDefinition definition,
+            BrawlerController owner)
         {
             Bounds bounds;
             if (!TryCalculateRendererBounds(instance, out bounds))
                 return;
 
             float height = Mathf.Max(0.001f, bounds.size.y);
-            float targetHeight = ResolveTargetHeight(definition) * BrawlerController.BodyScaleMultiplier;
+            float targetHeight = ResolveTargetHeight(definition) * ResolveVisualScaleMultiplier(owner);
             float scale = Mathf.Clamp(targetHeight / height, 0.01f, 50f);
             instance.transform.localScale = Vector3.one * scale;
 
@@ -95,6 +97,14 @@ namespace MOBA.Core.Infrastructure
             Vector3 localPosition = instance.transform.localPosition;
             localPosition.y += GroundLocalY - localBottom;
             instance.transform.localPosition = localPosition;
+        }
+
+        private static float ResolveVisualScaleMultiplier(BrawlerController owner)
+        {
+            float scale = BrawlerController.BodyScaleMultiplier;
+            return owner != null
+                ? scale * GameplayVisualScaleReduction
+                : scale;
         }
 
         private static float ResolveTargetHeight(BrawlerDefinition definition)
