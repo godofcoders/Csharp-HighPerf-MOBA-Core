@@ -7,7 +7,7 @@ namespace MOBA.Core.Infrastructure
     {
         private const float DefaultTargetHeight = 1.72f;
         private const float GroundLocalY = 0f;
-        private const float GameplayVisualScaleReduction = 0.75f;
+        private const float GameplayVisualScaleReduction = 0.75f * 0.875f;
 
         public static bool TryCreate(
             BrawlerDefinition definition,
