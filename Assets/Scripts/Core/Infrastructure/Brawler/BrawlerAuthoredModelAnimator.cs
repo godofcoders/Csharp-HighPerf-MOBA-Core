@@ -195,6 +195,8 @@ namespace MOBA.Core.Infrastructure
         private Quaternion _rightUpperLegBase;
         private Quaternion _rightLowerLegBase;
         private Quaternion _rightFootBase;
+        private Vector3 _leftUpperLegBasePosition;
+        private Vector3 _rightUpperLegBasePosition;
         private bool _hasBasePose;
         private float _smoothedMove01;
         private float _smoothedRun01;
@@ -456,6 +458,8 @@ namespace MOBA.Core.Infrastructure
             _rightUpperLegBase = LocalRotation(_rightUpperLeg);
             _rightLowerLegBase = LocalRotation(_rightLowerLeg);
             _rightFootBase = LocalRotation(_rightFoot);
+            _leftUpperLegBasePosition = _leftUpperLeg != null ? _leftUpperLeg.localPosition : Vector3.zero;
+            _rightUpperLegBasePosition = _rightUpperLeg != null ? _rightUpperLeg.localPosition : Vector3.zero;
             CaptureFingerBasePose(_leftFingerBones, _leftFingerBase);
             CaptureFingerBasePose(_rightFingerBones, _rightFingerBase);
             _hasBasePose = true;
@@ -728,6 +732,10 @@ namespace MOBA.Core.Infrastructure
             SetLocalRotation(_rightUpperLeg, _rightUpperLegBase);
             SetLocalRotation(_rightLowerLeg, _rightLowerLegBase);
             SetLocalRotation(_rightFoot, _rightFootBase);
+            if (_leftUpperLeg != null && _leftLowerLeg == null)
+                _leftUpperLeg.localPosition = _leftUpperLegBasePosition;
+            if (_rightUpperLeg != null && _rightLowerLeg == null)
+                _rightUpperLeg.localPosition = _rightUpperLegBasePosition;
             ResetFingerPose(_leftFingerBones, _leftFingerBase);
             ResetFingerPose(_rightFingerBones, _rightFingerBase);
         }
@@ -849,6 +857,7 @@ namespace MOBA.Core.Infrastructure
                 _rightLowerLeg,
                 _rightFoot,
                 strideSin,
+                strideCos,
                 gaitMove01,
                 gaitRun01,
                 forward,
@@ -859,6 +868,7 @@ namespace MOBA.Core.Infrastructure
                 _leftLowerLeg,
                 _leftFoot,
                 -strideSin,
+                -strideCos,
                 gaitMove01,
                 gaitRun01,
                 forward,
@@ -3074,6 +3084,7 @@ namespace MOBA.Core.Infrastructure
             Transform lower,
             Transform foot,
             float swing,
+            float swingVelocity,
             float move01,
             float run01,
             Vector3 forward,
@@ -3085,7 +3096,7 @@ namespace MOBA.Core.Infrastructure
 
             if (lower == null)
             {
-                PoseSparseLeg(upper, swing, move01, run01, weight);
+                PoseSparseLeg(upper, swing, swingVelocity, move01, run01, weight);
                 return;
             }
 
@@ -3124,22 +3135,36 @@ namespace MOBA.Core.Infrastructure
         private void PoseSparseLeg(
             Transform upper,
             float swing,
+            float swingVelocity,
             float move01,
             float run01,
             float weight)
         {
             Quaternion baseRotation =
                 upper == _rightUpperLeg ? _rightUpperLegBase : _leftUpperLegBase;
-            float stride = swing * Mathf.Lerp(8.0f, 18.0f, run01) * move01 * _strideReachScale;
-            float lift = Mathf.Max(0f, swing) * Mathf.Lerp(2.0f, 6.0f, run01) * move01;
+            Vector3 basePosition =
+                upper == _rightUpperLeg ? _rightUpperLegBasePosition : _leftUpperLegBasePosition;
+            float movementWeight = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(move01 * 1.5f));
+            float stride = -swing * Mathf.Lerp(24f, 42f, run01) * movementWeight * _strideReachScale;
 
             AddLocal(
                 upper,
                 baseRotation,
-                stride - lift,
+                stride,
                 0f,
-                swing * Mathf.Lerp(1.0f, 3.0f, run01) * move01,
-                weight * Mathf.Clamp01(move01 * 1.2f));
+                swing * Mathf.Lerp(1.5f, 3f, run01) * movementWeight,
+                weight);
+
+            // Mini rigs have one rigid leg, with the hip height measured from their ground-level root.
+            // Keep its rest contact height while the forward-moving foot follows a lifted return arc.
+            float legHeight = Mathf.Abs(basePosition.y);
+            Vector3 restContact = Vector3.down * legHeight;
+            Vector3 rotatedContact = upper.localRotation * Quaternion.Inverse(baseRotation) * restContact;
+            float rotationHeight = rotatedContact.y - restContact.y;
+            float lift01 = Mathf.SmoothStep(0f, 1f, Mathf.Max(0f, swingVelocity));
+            float lift = lift01 * legHeight * Mathf.Lerp(0.16f, 0.32f, run01) *
+                         movementWeight * _footLiftScale * Mathf.Clamp01(weight);
+            upper.localPosition = basePosition + Vector3.up * (lift - rotationHeight);
         }
 
         private void SmoothPoseSignals(float deltaTime)
