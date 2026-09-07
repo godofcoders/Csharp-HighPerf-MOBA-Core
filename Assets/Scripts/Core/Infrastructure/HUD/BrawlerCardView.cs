@@ -95,8 +95,11 @@ namespace MOBA.Core.Infrastructure
             string displayName = string.IsNullOrWhiteSpace(def.BrawlerName) ? def.name : def.BrawlerName;
             SetText(_nameTextTmp, _nameTextLegacy, displayName);
 
-            // Archetype — uppercased label.
-            SetText(_archetypeTextTmp, _archetypeTextLegacy, def.Archetype.ToString().ToUpperInvariant());
+            // Type + archetype — uppercased label.
+            SetText(
+                _archetypeTextTmp,
+                _archetypeTextLegacy,
+                BrawlerElementUtility.FormatTypeAndRole(def).ToUpperInvariant());
 
             // Accent tint by archetype.
             if (_accentImage != null)

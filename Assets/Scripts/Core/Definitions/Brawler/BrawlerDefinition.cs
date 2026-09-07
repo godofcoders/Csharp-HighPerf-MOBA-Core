@@ -9,6 +9,7 @@ namespace MOBA.Core.Definitions
     {
         [Header("Identity")]
         public string BrawlerName;
+        public BrawlerElementType ElementType = BrawlerElementType.None;
         public GameObject ModelPrefab;
 
         [Tooltip("Portrait sprite shown on brawler-select cards and in-match HUD slots. Optional; if null, the card's portrait Image is hidden.")]

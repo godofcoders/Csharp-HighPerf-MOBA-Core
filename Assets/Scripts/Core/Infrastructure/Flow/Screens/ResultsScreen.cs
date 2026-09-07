@@ -367,6 +367,7 @@ namespace MOBA.Core.Infrastructure
             Color headerColor = new Color(0.78f, 0.86f, 1f, 1f);
             CreateCell(header.transform, string.Empty, 58f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
             CreateCell(header.transform, "PLAYER", 132f, 13, TextAnchor.MiddleLeft, headerColor, FontStyle.Bold);
+            CreateCell(header.transform, "TYPE", 72f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
             CreateCell(header.transform, "K/D/A", 68f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
             CreateCell(header.transform, "DAMAGE", 78f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
             CreateCell(header.transform, "TAKEN", 72f, 13, TextAnchor.MiddleCenter, headerColor, FontStyle.Bold);
@@ -390,8 +391,17 @@ namespace MOBA.Core.Infrastructure
             string displayName = entry.IsStarPlayer
                 ? "* " + entry.DisplayName.ToUpperInvariant()
                 : entry.DisplayName.ToUpperInvariant();
+            BrawlerElementType elementType = ResolveElementType(entry);
             CreateMiniatureModelCell(row.transform, entry);
             CreateCell(row.transform, displayName, 132f, 16, TextAnchor.MiddleLeft, Color.white, FontStyle.Bold);
+            CreateCell(
+                row.transform,
+                BrawlerElementUtility.ToDisplayName(elementType).ToUpperInvariant(),
+                72f,
+                13,
+                TextAnchor.MiddleCenter,
+                BrawlerElementUtility.ToColor(elementType),
+                FontStyle.Bold);
             CreateCell(row.transform, $"{entry.Stats.Kills} / {entry.Stats.Deaths} / {entry.Stats.Assists}", 68f, 15, TextAnchor.MiddleCenter, Color.white, FontStyle.Bold);
             CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageDealt).ToString(), 78f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
             CreateCell(row.transform, Mathf.RoundToInt(entry.Stats.DamageTaken).ToString(), 72f, 14, TextAnchor.MiddleCenter, Color.white, FontStyle.Normal);
@@ -941,6 +951,13 @@ namespace MOBA.Core.Infrastructure
                 return new Color(0.55f, 0.10f, 0.13f, 0.44f);
 
             return new Color(0.12f, 0.14f, 0.18f, 0.46f);
+        }
+
+        private static BrawlerElementType ResolveElementType(MatchResultEntry entry)
+        {
+            return entry.Definition != null
+                ? entry.Definition.ElementType
+                : BrawlerElementType.None;
         }
 
         private static string SanitizeName(string value)

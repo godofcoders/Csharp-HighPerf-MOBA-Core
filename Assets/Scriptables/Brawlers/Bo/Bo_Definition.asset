@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Bo_Definition
   m_EditorClassIdentifier:
   BrawlerName: Gale
+  ElementType: 4
   ModelPrefab: {fileID: 3338249247812769499, guid: 96fe53778ab74ff0ba0a3926abb21417, type: 3}
   Portrait: {fileID: 0}
   AttachmentProfile: {fileID: 11400000, guid: 308851c0f55b4646a8d5a3b6c45ec99f, type: 2}

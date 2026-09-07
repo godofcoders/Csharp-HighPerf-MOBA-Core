@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Colt
   m_EditorClassIdentifier: 
   BrawlerName: Ember
+  ElementType: 1
   ModelPrefab: {fileID: 0}
   BaseHealth: 3000
   BaseMoveSpeed: 5

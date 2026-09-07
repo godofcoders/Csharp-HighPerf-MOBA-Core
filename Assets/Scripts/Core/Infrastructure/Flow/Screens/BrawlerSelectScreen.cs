@@ -91,6 +91,7 @@ namespace MOBA.Core.Infrastructure
         private readonly Image[] _nanopowerAccents = new Image[3];
         private readonly TMP_Text[] _nanopowerNameTexts = new TMP_Text[3];
         private readonly TMP_Text[] _nanopowerDescriptionTexts = new TMP_Text[3];
+        private StatRowView _typeStat;
         private StatRowView _healthStat;
         private StatRowView _attackStat;
         private StatRowView _superStat;
@@ -477,6 +478,7 @@ namespace MOBA.Core.Infrastructure
             title.fontStyle = FontStyles.Bold;
             title.gameObject.AddComponent<LayoutElement>().preferredHeight = 30f;
 
+            _typeStat = CreateStatRow(panel.transform, "Type");
             _healthStat = CreateStatRow(panel.transform, "Health");
             _attackStat = CreateStatRow(panel.transform, "Attack");
             _superStat = CreateStatRow(panel.transform, "Super");
@@ -592,7 +594,7 @@ namespace MOBA.Core.Infrastructure
                 TMP_Text role = CreateText(
                     card.transform,
                     "Role",
-                    def.Archetype.ToString().ToUpperInvariant(),
+                    BrawlerElementUtility.FormatTypeAndRole(def).ToUpperInvariant(),
                     11,
                     TextAlignmentOptions.Left,
                     MenuUITheme.TextSoft);
@@ -700,8 +702,8 @@ namespace MOBA.Core.Infrastructure
                 _heroNameText.text = ResolveBrawlerName(_previewed).ToUpperInvariant();
             if (_heroRoleText != null)
             {
-                _heroRoleText.text = _previewed.Archetype.ToString().ToUpperInvariant();
-                _heroRoleText.color = _goldColor;
+                _heroRoleText.text = BrawlerElementUtility.FormatTypeAndRole(_previewed).ToUpperInvariant();
+                _heroRoleText.color = BrawlerElementUtility.ToColor(_previewed.ElementType);
             }
             if (_heroPowerText != null)
                 _heroPowerText.text = $"POWER {ResolvePreviewPowerLevel(_previewed)}";
@@ -746,6 +748,8 @@ namespace MOBA.Core.Infrastructure
             float range = Mathf.Max(0f, ResolveAbilityRange(_previewed.MainAttack));
             bool hasSuper = HasAbility(_previewed.SuperAbility);
 
+            SetStat(_typeStat, BrawlerElementUtility.ToDisplayName(_previewed.ElementType).ToUpperInvariant(), 1f);
+            SetStatColor(_typeStat, BrawlerElementUtility.ToColor(_previewed.ElementType));
             SetStat(_healthStat, Mathf.RoundToInt(health).ToString(), Mathf.InverseLerp(2500f, 9000f, health));
             SetStat(_attackStat, ResolveAbilityDamageText(_previewed.MainAttack, _previewed.BaseDamage + bonus.BonusDamage), Mathf.InverseLerp(300f, 3200f, mainDamage));
             SetStatVisible(_superStat, hasSuper);
@@ -840,6 +844,22 @@ namespace MOBA.Core.Infrastructure
                 Vector2 anchorMax = stat.FillRect.anchorMax;
                 anchorMax.x = Mathf.Clamp01(fill);
                 stat.FillRect.anchorMax = anchorMax;
+            }
+        }
+
+        private static void SetStatColor(StatRowView stat, Color color)
+        {
+            if (stat == null)
+                return;
+
+            if (stat.ValueText != null)
+                stat.ValueText.color = color;
+
+            if (stat.FillRect != null)
+            {
+                Image fill = stat.FillRect.GetComponent<Image>();
+                if (fill != null)
+                    fill.color = color;
             }
         }
 
@@ -1468,14 +1488,14 @@ namespace MOBA.Core.Infrastructure
             Anchor(labelText.rectTransform, new Vector2(0.04f, 0f), new Vector2(0.31f, 1f), Vector2.zero, Vector2.zero);
 
             GameObject barBack = CreatePanel("BarBack", row.transform, MenuUITheme.PanelDark);
-            Anchor(barBack.GetComponent<RectTransform>(), new Vector2(0.33f, 0.28f), new Vector2(0.73f, 0.72f), Vector2.zero, Vector2.zero);
+            Anchor(barBack.GetComponent<RectTransform>(), new Vector2(0.33f, 0.28f), new Vector2(0.68f, 0.72f), Vector2.zero, Vector2.zero);
 
             Image fill = CreatePanel("Fill", barBack.transform, _goldColor).GetComponent<Image>();
             Anchor(fill.rectTransform, Vector2.zero, new Vector2(0f, 1f), Vector2.zero, Vector2.zero);
 
             TMP_Text value = CreateText(row.transform, "Value", "-", 13, TextAlignmentOptions.Right, _goldColor);
             value.fontStyle = FontStyles.Bold;
-            Anchor(value.rectTransform, new Vector2(0.75f, 0f), new Vector2(0.97f, 1f), Vector2.zero, Vector2.zero);
+            Anchor(value.rectTransform, new Vector2(0.70f, 0f), new Vector2(0.97f, 1f), Vector2.zero, Vector2.zero);
 
             return new StatRowView(row, value, fill.rectTransform);
         }
