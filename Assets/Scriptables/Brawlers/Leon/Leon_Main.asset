@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Leon_Main
   m_EditorClassIdentifier:
   OptionName: Leon Main Attack
-  Description: Four long-range ninja stars fired one after another in a narrow Bow-style angle sequence.
+  Description: Four shadow-charged blaster bolts fired in a rapid, narrow burst.
   AllowedBuildSlotTypes:
-  AbilityName: Spinner Blades
+  AbilityName: Shadow Burst
   Icon: {fileID: 0}
   SlotType: 0
   TargetingType: 1

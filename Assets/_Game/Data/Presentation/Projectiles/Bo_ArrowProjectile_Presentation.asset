@@ -12,12 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d4d7476af0334c89ba9613aa4565986, type: 3}
   m_Name: Bo_ArrowProjectile_Presentation
   m_EditorClassIdentifier:
-  VisualPrefab: {fileID: 884401930100000001, guid: cc7c96f534c84e0b901505296dff3d7e, type: 3}
+  VisualPrefab: {fileID: 0}
   LocalPosition: {x: 0, y: 0, z: 0}
   LocalRotationEuler: {x: 0, y: 0, z: 0}
-  LocalScale: {x: 1.20, y: 1.20, z: 1.20}
-  PreferRuntimeShape: 0
-  RuntimeShape: 7
+  LocalScale: {x: 1, y: 1, z: 1}
+  PreferRuntimeShape: 1
+  RuntimeShape: 9
+  ElementType: 4
+  BoltLength: 0.8
+  BoltWidth: 0.14
   FaceMovementDirection: 1
   UseSpin: 0
   SpinEulerPerSecond: {x: 0, y: 0, z: 0}

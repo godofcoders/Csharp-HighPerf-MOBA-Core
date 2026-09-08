@@ -12,7 +12,8 @@ namespace MOBA.Core.Definitions
         Bowl = 5,
         Disc = 6,
         Bullet = 7,
-        NinjaStar = 8
+        NinjaStar = 8,
+        BlasterBolt = 9
     }
 
     [CreateAssetMenu(fileName = "ProjectilePresentationProfile", menuName = "MOBA/Presentation/Projectile Presentation Profile")]
@@ -27,6 +28,11 @@ namespace MOBA.Core.Definitions
         [Header("Runtime Shape")]
         public bool PreferRuntimeShape = false;
         public ProjectileRuntimeShape RuntimeShape = ProjectileRuntimeShape.Sphere;
+
+        [Header("Elemental Blaster")]
+        public BrawlerElementType ElementType = BrawlerElementType.None;
+        [Min(0.1f)] public float BoltLength = 0.65f;
+        [Min(0.02f)] public float BoltWidth = 0.16f;
 
         [Header("Orientation")]
         public bool FaceMovementDirection = true;

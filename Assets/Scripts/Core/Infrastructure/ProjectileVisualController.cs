@@ -36,6 +36,7 @@ namespace MOBA.Core.Infrastructure
         private ParticleSystem _sparkParticles;
         private ParticleSystemRenderer _sparkParticleRenderer;
         private ProjectileVisualStyle _currentStyle;
+        private ElementalProjectileView _elementalView;
 
         private Vector3 _spinEulerPerSecond;
         private bool _useSpin;
@@ -66,6 +67,27 @@ namespace MOBA.Core.Infrastructure
             _useSpin = false;
 
             ClearVisual();
+
+            if (profile != null && profile.RuntimeShape == ProjectileRuntimeShape.BlasterBolt)
+            {
+                if (_trailRenderer != null)
+                {
+                    _trailRenderer.emitting = false;
+                    _trailRenderer.Clear();
+                }
+                if (_sparkParticles != null)
+                    _sparkParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                if (_elementalView == null)
+                {
+                    var elementalRoot = new GameObject("ElementalBlasterVisual");
+                    elementalRoot.layer = gameObject.layer;
+                    elementalRoot.transform.SetParent(_visualRoot, false);
+                    _elementalView = elementalRoot.AddComponent<ElementalProjectileView>();
+                }
+                _elementalView.Configure(profile, isHypercharged ? 1.22f : (isSuper ? 1.12f : 1f));
+                return;
+            }
+
             ConfigureTrail(_currentProfile, _currentStyle);
 
             if (ShouldUseRuntimeShape(_currentProfile))
@@ -92,6 +114,8 @@ namespace MOBA.Core.Infrastructure
 
         public void TickVisual(float deltaTime)
         {
+            if (_elementalView != null)
+                _elementalView.TickVisual(deltaTime);
             if (_useSpin && _currentVisualInstance != null)
             {
                 _currentVisualInstance.transform.Rotate(_spinEulerPerSecond * deltaTime, Space.Self);
@@ -397,9 +421,13 @@ namespace MOBA.Core.Infrastructure
 
         public void ClearVisual()
         {
+            if (_elementalView != null)
+                _elementalView.Clear();
             for (int i = _visualRoot.childCount - 1; i >= 0; i--)
             {
                 GameObject child = _visualRoot.GetChild(i).gameObject;
+                if (_elementalView != null && child == _elementalView.gameObject)
+                    continue;
                 child.SetActive(false);
                 Destroy(child);
             }

@@ -15,12 +15,15 @@ MonoBehaviour:
   VisualPrefab: {fileID: 0}
   LocalPosition: {x: 0, y: 0, z: 0}
   LocalRotationEuler: {x: 0, y: 0, z: 0}
-  LocalScale: {x: 0.32, y: 0.32, z: 0.50}
+  LocalScale: {x: 1, y: 1, z: 1}
   PreferRuntimeShape: 1
-  RuntimeShape: 1
+  RuntimeShape: 9
+  ElementType: 7
+  BoltLength: 0.6
+  BoltWidth: 0.24
   FaceMovementDirection: 1
-  UseSpin: 1
-  SpinEulerPerSecond: {x: 150, y: 110, z: 70}
+  UseSpin: 0
+  SpinEulerPerSecond: {x: 0, y: 0, z: 0}
   MinimumVisualDiameter: 0.30
   UseRuntimeTrail: 1
   TrailTime: 0.082
