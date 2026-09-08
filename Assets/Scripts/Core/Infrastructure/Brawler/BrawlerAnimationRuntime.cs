@@ -274,6 +274,7 @@ namespace MOBA.Core.Infrastructure
         private void UpdateStride(float deltaTime)
         {
             float strideRate = Mathf.Lerp(1.8f, 10.6f, Mathf.Sqrt(Move01));
+            strideRate *= Mathf.Lerp(1f, 1.20f, Run01);
             StridePhase += strideRate * deltaTime;
             StrideSin = Mathf.Sin(StridePhase);
             StrideCos = Mathf.Cos(StridePhase);
