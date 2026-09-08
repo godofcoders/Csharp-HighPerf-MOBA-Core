@@ -150,8 +150,13 @@ namespace MOBA.Core.Infrastructure
             {
                 case CombatPresentationEventType.ProjectileImpacted:
                     float impactScale = ResolveImpactScale(evt.IsSuper, evt.IsHypercharged);
-                    Color impactColor = ResolveImpactColor(evt.IsSuper, evt.IsHypercharged);
+                    Color impactColor = ResolveImpactColor(evt);
                     float durationScale = Mathf.Lerp(1f, impactScale, 0.24f);
+                    if (evt.ElementType != BrawlerElementType.None)
+                    {
+                        SpawnElementalImpact(evt, impactColor, impactScale);
+                        break;
+                    }
                     SpawnPulse(
                         evt.Position,
                         ResolveRadius(evt.Value) * impactScale,
@@ -181,6 +186,41 @@ namespace MOBA.Core.Infrastructure
                     else if (evt.AbilityDefinition is BombLeapAbilityDefinition bombLeap)
                         SpawnBombLeapExplosion(evt, bombLeap);
                     break;
+            }
+        }
+
+        private void SpawnElementalImpact(CombatPresentationEvent evt, Color color, float powerScale)
+        {
+            float radius = ResolveRadius(evt.Value) * powerScale;
+            bool water = evt.ElementType == BrawlerElementType.Water;
+            bool air = evt.ElementType == BrawlerElementType.Air;
+            bool lightning = evt.ElementType == BrawlerElementType.Lightning;
+            bool fire = evt.ElementType == BrawlerElementType.Fire;
+            bool shadow = evt.ElementType == BrawlerElementType.Shadow;
+            bool nature = evt.ElementType == BrawlerElementType.Nature;
+            float duration = water || shadow || nature ? 0.26f : 0.18f;
+            SpawnPulse(evt.Position, radius * 2.2f, color, duration,
+                fire || shadow || nature ? _expiredPulseMaterial : _impactPulseMaterial);
+            SpawnSpark(evt.Position, evt.Direction, Color.Lerp(color, Color.white, 0.45f),
+                lightning ? 0.10f : 0.14f, powerScale * (lightning ? 1.5f : 1f));
+
+            if (air || water || shadow)
+            {
+                SpawnPulse(evt.Position + Vector3.up * 0.035f, radius * 3.2f,
+                    new Color(color.r, color.g, color.b, 0.55f), duration * 1.25f, _impactPulseMaterial);
+            }
+
+            // Small radial splashes/shards stay within the existing bounded impact pools.
+            int count = fire || lightning ? 3 : 4;
+            for (int i = 0; i < count; i++)
+            {
+                float angle = i * Mathf.PI * 2f / count;
+                Vector3 offset = new Vector3(Mathf.Cos(angle), 0.08f, Mathf.Sin(angle)) * radius * 0.48f;
+                if (water || nature || shadow)
+                    SpawnPulse(evt.Position + offset, radius * 0.8f, color, duration,
+                        water ? _impactPulseMaterial : _expiredPulseMaterial);
+                else
+                    SpawnSpark(evt.Position + offset, offset.normalized, color, 0.12f, powerScale * 0.65f);
             }
         }
 
@@ -412,12 +452,18 @@ namespace MOBA.Core.Infrastructure
             return spark;
         }
 
-        private Color ResolveImpactColor(bool isSuper, bool isHypercharged)
+        private Color ResolveImpactColor(CombatPresentationEvent evt)
         {
-            if (isHypercharged)
+            if (evt.ElementType != BrawlerElementType.None)
+            {
+                Color elementColor = BrawlerElementUtility.ToColor(evt.ElementType);
+                return Color.Lerp(elementColor, Color.white, evt.IsHypercharged ? 0.22f : 0.06f);
+            }
+
+            if (evt.IsHypercharged)
                 return _hyperImpactColor;
 
-            return isSuper ? _superImpactColor : _impactColor;
+            return evt.IsSuper ? _superImpactColor : _impactColor;
         }
 
         private static float ResolveImpactScale(bool isSuper, bool isHypercharged)

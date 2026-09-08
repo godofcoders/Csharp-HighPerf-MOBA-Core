@@ -137,6 +137,8 @@ namespace MOBA.Core.Infrastructure
                 AbilityDefinition = context.SourceAbility,
                 SlotType = context.SlotType,
                 Position = context.Origin,
+                ElementType = context.PresentationProfile != null
+                    ? context.PresentationProfile.ElementType : BrawlerElementType.None,
                 Direction = context.Direction,
                 Value = context.Damage,
                 IsSuper = context.IsSuper,
@@ -892,6 +894,8 @@ namespace MOBA.Core.Infrastructure
                 AbilityDefinition = projectile.SourceAbility,
                 SlotType = projectile.SlotType,
                 Position = position,
+                ElementType = projectile.PresentationProfile != null
+                    ? projectile.PresentationProfile.ElementType : BrawlerElementType.None,
                 Direction = projectile.Direction,
                 Value = ResolveImpactFeedbackRadius(projectile),
                 IsSuper = projectile.IsSuper,

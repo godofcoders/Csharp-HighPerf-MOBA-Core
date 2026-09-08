@@ -13,6 +13,7 @@ namespace MOBA.Core.Simulation
 
         public AbilityDefinition AbilityDefinition;
         public AbilitySlotType SlotType;
+        public BrawlerElementType ElementType;
 
         public Vector3 Position;
         public Vector3 Direction;
