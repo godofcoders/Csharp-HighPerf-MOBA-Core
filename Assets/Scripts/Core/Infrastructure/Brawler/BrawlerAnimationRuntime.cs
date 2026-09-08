@@ -64,6 +64,7 @@ namespace MOBA.Core.Infrastructure
         private float _gadgetAgeSeconds = EventAgeCapSeconds;
         private bool _hyperchargeActive;
         private int _lastTickFrame = -1;
+        private BrawlerIdleGesture _idleGesture;
 
         private bool _parametersCached;
         private int _cachedControllerId;
@@ -115,6 +116,8 @@ namespace MOBA.Core.Infrastructure
         public Vector3 FacingDirection => _facingDirection;
         public Vector3 AimDirection => _aimDirection;
         public string LastEventDebug => _debugLastEvent;
+        public BrawlerIdleGesture IdleGesture =>
+            _idleGesture ?? (_idleGesture = new BrawlerIdleGesture(GetInstanceID()));
 
         public static BrawlerAnimationRuntime Ensure(GameObject root, BrawlerController owner)
         {
@@ -198,6 +201,9 @@ namespace MOBA.Core.Infrastructure
             UpdateStride(deltaTime);
             AdvanceEventAges(deltaTime);
             DecayWeights(deltaTime);
+            IdleGesture.Tick(deltaTime,
+                IsMoving || IsDead || DeathWeight > 0.01f || ActionWeight > 0.01f ||
+                HitReactWeight > 0.01f || HealWeight > 0.01f || IsHypercharged);
             DriveAnimatorParameters();
             RefreshDebugFields();
         }

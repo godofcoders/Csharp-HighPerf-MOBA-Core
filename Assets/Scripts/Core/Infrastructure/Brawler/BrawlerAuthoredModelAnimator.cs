@@ -900,6 +900,7 @@ namespace MOBA.Core.Infrastructure
                 up,
                 aim,
                 weight);
+            ApplyIdleGestureAccent(weight);
             UpdateRuntimePalmAnchors();
             ApplyAttachmentFollowersNow();
             ApplyAuthoredHandPoseTargets(ready, attack, super, weight);
@@ -980,7 +981,8 @@ namespace MOBA.Core.Infrastructure
             if (idle01 <= 0.001f)
                 return;
 
-            float pulse = ResolveShowcaseInspectPulse(time);
+            float pulse = _runtime != null && _runtime.IdleGesture.Variant == 2
+                ? _runtime.IdleGesture.Weight : 0f;
             float inspect =
                 pulse *
                 idle01 *
@@ -1015,7 +1017,7 @@ namespace MOBA.Core.Infrastructure
                 -look * 0.38f,
                 weight * idle01);
 
-            if (inspect <= 0.001f)
+            if (inspect <= 0.001f || _rightLowerArm == null)
                 return;
 
             Vector3 showcaseAim = ResolveShowcaseCameraAim(aim);
@@ -1164,12 +1166,37 @@ namespace MOBA.Core.Infrastructure
             return toCamera.normalized;
         }
 
-        private float ResolveShowcaseInspectPulse(float time)
+        private void ApplyIdleGestureAccent(float weight)
         {
-            float phase = time * 0.82f * _showcaseTempoScale + _gaitPhaseOffset;
-            float wave = Mathf.Sin(phase) * 0.5f + 0.5f;
-            float pulse = Mathf.SmoothStep(0.54f, 1f, wave);
-            return pulse * pulse;
+            BrawlerIdleGesture gesture = _runtime != null ? _runtime.IdleGesture : null;
+            if (gesture == null || gesture.Weight <= 0f)
+                return;
+
+            float blend = weight * gesture.Weight * (1f - Mathf.Clamp01(
+                _smoothedMove01 * 3f + _smoothedAction + _smoothedHit + _smoothedHyper));
+            float side = gesture.Direction;
+            switch (gesture.Variant)
+            {
+                case 0:
+                    AddLocal(_head, LocalRotation(_head), -3f, side * 22f, side * 3f, blend);
+                    AddLocal(_spine, LocalRotation(_spine), 0f, side * 5f, 0f, blend);
+                    break;
+                case 1:
+                    AddLocal(_spine, LocalRotation(_spine), -3f, side * 4f, side * 5f, blend);
+                    AddLocal(_head, LocalRotation(_head), 3f, -side * 6f, -side * 4f, blend);
+                    AddLocal(_rightUpperArm, LocalRotation(_rightUpperArm), -8f, 0f, 7f, blend);
+                    AddLocal(_leftUpperArm, LocalRotation(_leftUpperArm), -8f, 0f, -7f, blend);
+                    break;
+                case 2:
+                    // Rigid mini arms carry their palm sockets and weapons through this pose.
+                    // Humanoid showcase inspection already has its own hand IK above.
+                    if (_rightLowerArm == null || !_useShowcasePose)
+                    {
+                        AddLocal(_rightUpperArm, LocalRotation(_rightUpperArm), -24f, 12f, 28f, blend);
+                        AddLocal(_head, LocalRotation(_head), 10f, 15f, -5f, blend);
+                    }
+                    break;
+            }
         }
 
         private void ApplyAttachmentFollowersNow()
