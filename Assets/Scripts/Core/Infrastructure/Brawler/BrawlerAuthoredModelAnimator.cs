@@ -808,6 +808,8 @@ namespace MOBA.Core.Infrastructure
             float leftReady = ResolveArmReady(gripPose, side: -1f, ready);
             float rightAttack = ResolveArmAction(gripPose, side: 1f, attack);
             float leftAttack = ResolveArmAction(gripPose, side: -1f, attack * 0.65f);
+            float armMove01 = gaitMove01 * _armSwingScale *
+                (1f - Mathf.Clamp01(action + super + hit));
 
             PoseArm(
                 _rightUpperArm,
@@ -818,7 +820,7 @@ namespace MOBA.Core.Infrastructure
                 rightAttack,
                 super,
                 strideSin,
-                gaitMove01 * _armSwingScale,
+                armMove01,
                 forward,
                 right,
                 up,
@@ -834,7 +836,7 @@ namespace MOBA.Core.Infrastructure
                 leftAttack,
                 super,
                 -strideSin,
-                gaitMove01 * _armSwingScale,
+                armMove01,
                 forward,
                 right,
                 up,
@@ -2049,7 +2051,7 @@ namespace MOBA.Core.Infrastructure
             Vector3 desiredUpper = Vector3.Slerp(relaxedUpper, readyUpper, ready);
             desiredUpper = Vector3.Slerp(desiredUpper, aim, attack * 0.92f + super * 0.66f);
             ApplyGripActionBias(gripPose, side, action, aim, right, up, ref desiredUpper);
-            desiredUpper = (desiredUpper + forward * swing * move01 * 0.13f * runSwing).normalized;
+            desiredUpper = (desiredUpper + forward * swing * move01 * 0.24f * runSwing).normalized;
             RotateBoneToward(upper, lower, desiredUpper, weight);
 
             if (hand == null)
@@ -2086,7 +2088,8 @@ namespace MOBA.Core.Infrastructure
             float weight)
         {
             float action = Mathf.Clamp01(attack + super);
-            float runSwing = swing * move01 * Mathf.Lerp(5.0f, 12.0f, _smoothedRun01);
+            float runSwing = swing * move01 * Mathf.Lerp(9.0f, 26.0f, _smoothedRun01);
+            float runLift = Mathf.Abs(swing) * move01 * _smoothedRun01 * 4f;
             float idleBreath = (1f - move01) *
                 Mathf.Sin((_runtime != null ? _runtime.PoseTime : Time.unscaledTime) * 1.45f);
             float baseDrop = ResolveSparseArmDrop(gripPose, side, ready, action);
@@ -2097,7 +2100,7 @@ namespace MOBA.Core.Infrastructure
                 baseRotation,
                 runSwing + action * -8.0f + idleBreath * 1.5f,
                 side * (ready * 16.0f + action * 6.0f),
-                baseDrop,
+                baseDrop + side * runLift,
                 weight);
         }
 
