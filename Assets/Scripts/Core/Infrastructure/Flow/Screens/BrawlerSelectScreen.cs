@@ -90,6 +90,7 @@ namespace MOBA.Core.Infrastructure
         private Button _skillTreeButton;
         private GameObject _skillTreePanel;
         private Transform _skillTreeGrid;
+        private Transform _skillTreeConnections;
         private TMP_Text _skillTreeTitleText;
         private TMP_Text _skillTreeStatusText;
         private readonly List<GameObject> _skillTreeRows = new List<GameObject>(12);
@@ -596,19 +597,23 @@ namespace MOBA.Core.Infrastructure
             grid.transform.SetParent(_skillTreePanel.transform, false);
             _skillTreeGrid = grid.transform;
 
-            GridLayoutGroup gridLayout = grid.AddComponent<GridLayoutGroup>();
-            gridLayout.cellSize = new Vector2(220f, 76f);
-            gridLayout.spacing = new Vector2(8f, 8f);
-            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-            gridLayout.constraintCount = 3;
-            gridLayout.childAlignment = TextAnchor.UpperCenter;
-
             Anchor(
                 grid.GetComponent<RectTransform>(),
                 new Vector2(0.035f, 0.06f),
                 new Vector2(0.965f, 0.80f),
                 Vector2.zero,
                 Vector2.zero);
+
+            GameObject connections = new GameObject("SkillTreeConnections", typeof(RectTransform));
+            connections.transform.SetParent(_skillTreePanel.transform, false);
+            _skillTreeConnections = connections.transform;
+            Anchor(
+                connections.GetComponent<RectTransform>(),
+                new Vector2(0.035f, 0.06f),
+                new Vector2(0.965f, 0.80f),
+                Vector2.zero,
+                Vector2.zero);
+            connections.transform.SetSiblingIndex(grid.transform.GetSiblingIndex());
 
             _skillTreePanel.SetActive(false);
         }
@@ -660,6 +665,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             _skillTreeRows.Clear();
+            ClearSkillTreeConnections();
 
             BrawlerSkillTreeDefinition tree = _previewed != null ? _previewed.SkillTree : null;
             if (tree == null)
@@ -687,6 +693,47 @@ namespace MOBA.Core.Infrastructure
 
             if (tree.Nodes == null)
                 return;
+
+            Canvas.ForceUpdateCanvases();
+            Dictionary<string, Vector2> positions = BuildSkillTreeNodePositions(tree, out int maxNodesInLevel);
+            RectTransform graphRect = _skillTreeGrid as RectTransform;
+            float graphWidth = graphRect != null && graphRect.rect.width > 0f
+                ? graphRect.rect.width
+                : 720f;
+            float nodeWidth = Mathf.Clamp(
+                (graphWidth * 0.94f / Mathf.Max(1, maxNodesInLevel)) - 8f,
+                98f,
+                148f);
+            Vector2 nodeSize = new Vector2(nodeWidth, 78f);
+
+            for (int i = 0; i < tree.Nodes.Length; i++)
+            {
+                BrawlerSkillTreeNodeDefinition node = tree.Nodes[i];
+                if (node == null || !positions.TryGetValue(node.EffectiveId, out Vector2 end))
+                    continue;
+
+                if (node.PrerequisiteNodeIds == null)
+                    continue;
+
+                for (int p = 0; p < node.PrerequisiteNodeIds.Length; p++)
+                {
+                    string prerequisiteId = node.PrerequisiteNodeIds[p];
+                    if (string.IsNullOrWhiteSpace(prerequisiteId) ||
+                        !positions.TryGetValue(prerequisiteId, out Vector2 start))
+                    {
+                        continue;
+                    }
+
+                    bool activeConnection = active.Contains(prerequisiteId) && active.Contains(node.EffectiveId);
+                    CreateSkillTreeConnection(
+                        _skillTreeConnections,
+                        start,
+                        end,
+                        ResolveSkillTreeConnectionColor(tree, activeConnection),
+                        activeConnection ? 4f : 2f,
+                        $"SkillConnection_{prerequisiteId}_{node.EffectiveId}");
+                }
+            }
 
             for (int i = 0; i < tree.Nodes.Length; i++)
             {
@@ -724,20 +771,191 @@ namespace MOBA.Core.Infrastructure
                     () => OnSkillTreeNodeClicked(capturedNode));
                 button.interactable = isActive ? canDeactivate : isUnlocked ? canActivate : canUnlock;
 
+                Image rectangularBackground = button.GetComponent<Image>();
+                if (rectangularBackground != null)
+                    rectangularBackground.enabled = false;
+
+                SkillTreeNodeGraphic hexBackground = button.gameObject.AddComponent<SkillTreeNodeGraphic>();
+                hexBackground.color = color;
+                button.targetGraphic = hexBackground;
+
+                Outline outline = button.gameObject.AddComponent<Outline>();
+                outline.effectColor = isActive
+                    ? new Color(1f, 0.9f, 0.55f, 0.95f)
+                    : new Color(0.2f, 0.28f, 0.4f, 0.85f);
+                outline.effectDistance = new Vector2(2f, 2f);
+
+                RectTransform buttonRect = button.GetComponent<RectTransform>();
+                buttonRect.anchorMin = positions[nodeId];
+                buttonRect.anchorMax = positions[nodeId];
+                buttonRect.pivot = new Vector2(0.5f, 0.5f);
+                buttonRect.anchoredPosition = Vector2.zero;
+                buttonRect.sizeDelta = nodeSize;
+
                 TMP_Text buttonLabel = button.GetComponentInChildren<TMP_Text>();
                 if (buttonLabel != null)
                 {
-                    buttonLabel.fontSize = 12f;
+                    buttonLabel.fontSize = 11f;
                     buttonLabel.enableWordWrapping = true;
                     buttonLabel.overflowMode = TextOverflowModes.Ellipsis;
                 }
 
-                LayoutElement layout = button.gameObject.AddComponent<LayoutElement>();
-                layout.preferredHeight = 76f;
-                layout.preferredWidth = 220f;
-                layout.flexibleWidth = 1f;
                 _skillTreeRows.Add(button.gameObject);
             }
+        }
+
+        private void ClearSkillTreeConnections()
+        {
+            if (_skillTreeConnections == null)
+                return;
+
+            for (int i = _skillTreeConnections.childCount - 1; i >= 0; i--)
+            {
+                Transform child = _skillTreeConnections.GetChild(i);
+                if (child != null)
+                    Destroy(child.gameObject);
+            }
+        }
+
+        private static Dictionary<string, Vector2> BuildSkillTreeNodePositions(
+            BrawlerSkillTreeDefinition tree,
+            out int maxNodesInLevel)
+        {
+            Dictionary<string, Vector2> positions = new Dictionary<string, Vector2>();
+            Dictionary<string, int> depths = new Dictionary<string, int>();
+            Dictionary<int, List<BrawlerSkillTreeNodeDefinition>> levels =
+                new Dictionary<int, List<BrawlerSkillTreeNodeDefinition>>();
+            maxNodesInLevel = 1;
+
+            if (tree == null || tree.Nodes == null)
+                return positions;
+
+            for (int i = 0; i < tree.Nodes.Length; i++)
+            {
+                BrawlerSkillTreeNodeDefinition node = tree.Nodes[i];
+                if (node == null)
+                    continue;
+
+                int depth = ResolveSkillTreeNodeDepth(
+                    node,
+                    tree,
+                    depths,
+                    new HashSet<string>());
+                if (!levels.TryGetValue(depth, out List<BrawlerSkillTreeNodeDefinition> level))
+                {
+                    level = new List<BrawlerSkillTreeNodeDefinition>(4);
+                    levels.Add(depth, level);
+                }
+
+                level.Add(node);
+                maxNodesInLevel = Mathf.Max(maxNodesInLevel, level.Count);
+            }
+
+            int maxDepth = 0;
+            foreach (KeyValuePair<int, List<BrawlerSkillTreeNodeDefinition>> entry in levels)
+                maxDepth = Mathf.Max(maxDepth, entry.Key);
+
+            foreach (KeyValuePair<int, List<BrawlerSkillTreeNodeDefinition>> entry in levels)
+            {
+                List<BrawlerSkillTreeNodeDefinition> level = entry.Value;
+                level.Sort((left, right) =>
+                    string.Compare(
+                        left.EffectiveDisplayName,
+                        right.EffectiveDisplayName,
+                        System.StringComparison.Ordinal));
+
+                float y = maxDepth == 0
+                    ? 0.5f
+                    : Mathf.Lerp(0.10f, 0.86f, entry.Key / (float)maxDepth);
+                for (int i = 0; i < level.Count; i++)
+                {
+                    float x = (i + 1f) / (level.Count + 1f);
+                    positions[level[i].EffectiveId] = new Vector2(x, y);
+                }
+            }
+
+            return positions;
+        }
+
+        private static int ResolveSkillTreeNodeDepth(
+            BrawlerSkillTreeNodeDefinition node,
+            BrawlerSkillTreeDefinition tree,
+            Dictionary<string, int> depths,
+            HashSet<string> visiting)
+        {
+            if (node == null)
+                return 0;
+
+            string nodeId = node.EffectiveId;
+            if (depths.TryGetValue(nodeId, out int savedDepth))
+                return savedDepth;
+
+            if (!visiting.Add(nodeId))
+                return 0;
+
+            int depth = 0;
+            if (node.PrerequisiteNodeIds != null)
+            {
+                for (int i = 0; i < node.PrerequisiteNodeIds.Length; i++)
+                {
+                    if (tree.TryGetNode(node.PrerequisiteNodeIds[i], out BrawlerSkillTreeNodeDefinition prerequisite))
+                    {
+                        depth = Mathf.Max(
+                            depth,
+                            ResolveSkillTreeNodeDepth(prerequisite, tree, depths, visiting) + 1);
+                    }
+                }
+            }
+
+            visiting.Remove(nodeId);
+            depths[nodeId] = depth;
+            return depth;
+        }
+
+        private static void CreateSkillTreeConnection(
+            Transform parent,
+            Vector2 start,
+            Vector2 end,
+            Color color,
+            float thickness,
+            string name)
+        {
+            if (parent == null)
+                return;
+
+            RectTransform parentRect = parent as RectTransform;
+            if (parentRect == null)
+                return;
+
+            RectTransform line = CreatePanel(name, parent, color).GetComponent<RectTransform>();
+            Image lineImage = line.GetComponent<Image>();
+            if (lineImage != null)
+                lineImage.raycastTarget = false;
+
+            Vector2 parentSize = parentRect.rect.size;
+            Vector2 delta = new Vector2(
+                (end.x - start.x) * parentSize.x,
+                (end.y - start.y) * parentSize.y);
+            float length = delta.magnitude;
+            if (length <= 0.1f)
+                return;
+
+            line.anchorMin = start;
+            line.anchorMax = start;
+            line.pivot = new Vector2(0f, 0.5f);
+            line.anchoredPosition = Vector2.zero;
+            line.sizeDelta = new Vector2(length, thickness);
+            line.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+        }
+
+        private static Color ResolveSkillTreeConnectionColor(
+            BrawlerSkillTreeDefinition tree,
+            bool active)
+        {
+            if (active)
+                return tree != null ? tree.AccentColor : MenuUITheme.Gold;
+
+            return new Color(0.18f, 0.25f, 0.36f, 0.9f);
         }
 
         private void OnSkillTreeNodeClicked(BrawlerSkillTreeNodeDefinition node)
@@ -2386,6 +2604,37 @@ namespace MOBA.Core.Infrastructure
                 Root = root;
                 ValueText = valueText;
                 FillRect = fillRect;
+            }
+        }
+
+        private sealed class SkillTreeNodeGraphic : MaskableGraphic
+        {
+            protected override void OnPopulateMesh(VertexHelper vertexHelper)
+            {
+                vertexHelper.Clear();
+
+                Rect rect = GetPixelAdjustedRect();
+                Vector2 center = rect.center;
+                float radiusX = rect.width * 0.5f;
+                float radiusY = rect.height * 0.5f;
+
+                vertexHelper.AddVert(center, color, new Vector2(0.5f, 0.5f));
+                for (int i = 0; i < 6; i++)
+                {
+                    float angle = (30f + (i * 60f)) * Mathf.Deg2Rad;
+                    Vector2 point = center + new Vector2(
+                        Mathf.Cos(angle) * radiusX,
+                        Mathf.Sin(angle) * radiusY);
+                    vertexHelper.AddVert(point, color, new Vector2(
+                        (point.x - rect.xMin) / Mathf.Max(1f, rect.width),
+                        (point.y - rect.yMin) / Mathf.Max(1f, rect.height)));
+                }
+
+                for (int i = 0; i < 6; i++)
+                {
+                    int next = i == 5 ? 1 : i + 2;
+                    vertexHelper.AddTriangle(0, i + 1, next);
+                }
             }
         }
     }
