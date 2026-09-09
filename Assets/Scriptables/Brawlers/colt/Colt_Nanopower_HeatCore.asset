@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b8e994b90d84eccabc55c785f05bea5, type: 3}
+  m_Name: Colt_Nanopower_HeatCore
+  m_EditorClassIdentifier:
+  OptionName: Heat Core
+  Description: Ember energy makes Colt's shots hit harder and keeps him moving.
+  AllowedBuildSlotTypes: []
+  PassiveName: Heat Core
+  Category: 3
+  AllowedSlotTypes: []
+  Family: {fileID: 0}
+  IsUniqueInFamily: 0
+  IncompatiblePassives: []
+  AccentColor: {r: 1, g: 0.25, b: 0.05, a: 1}
+  OutgoingDamageBonusPercent: 0.05
+  DamageStatBonusPercent: 0
+  MoveSpeedBonusPercent: 0.05
+  BonusMaxHealth: 0
+  IncomingDamageReductionPercent: 0
