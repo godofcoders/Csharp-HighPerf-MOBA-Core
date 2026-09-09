@@ -277,6 +277,30 @@ namespace MOBA.Core.Infrastructure
         /// </summary>
         private void ResolveAndApplyCurrentBuild()
         {
+            if (_definition != null && _definition.SkillTree != null)
+            {
+                List<string> activeNodeIds = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(
+                    _definition,
+                    _definition.SkillTree);
+
+                if (BrawlerSkillTreeResolver.TryResolve(
+                    _definition,
+                    _definition.SkillTree,
+                    State.CurrentPowerLevel,
+                    activeNodeIds,
+                    out ResolvedBrawlerBuild skillTreeBuild,
+                    out string skillTreeError))
+                {
+                    _resolvedBuildSource = null;
+                    ApplyResolvedBuild(skillTreeBuild);
+                    State.RefreshGadgetChargesFromRuntimeKit();
+                    return;
+                }
+
+                Debug.LogWarning(
+                    $"[SkillTree] Failed to resolve '{_definition.SkillTree.name}' for '{_definition.name}': {skillTreeError}. Falling back to the authored build.");
+            }
+
             BrawlerBuildDefinition buildToUse = GetBuildToUse();
             if (buildToUse != null)
             {
@@ -392,13 +416,18 @@ namespace MOBA.Core.Infrastructure
             _equippedHypercharge = resolved.Hypercharge;
             State.SetEquippedHypercharge(_equippedHypercharge);
 
+            AbilityDefinition mainAttackDefinition = resolved.MainAttack ?? _definition.MainAttack;
+            AbilityDefinition superDefinition = resolved.SuperAbility ?? _definition.SuperAbility;
+            _mainAttack = mainAttackDefinition?.CreateLogic();
+            _superAbility = superDefinition?.CreateLogic();
+
             GadgetDefinition activeGadget = GetActiveGadgetDefinition();
             _gadgetLogic = activeGadget?.CreateLogic();
 
             State.SetPassiveLoadout(BuildPassiveLoadoutWithActiveNanopower(resolved.PassiveOptions), false);
 
-            State.RuntimeKit.SetMainAttack(_definition.MainAttack, _mainAttack);
-            State.RuntimeKit.SetSuper(_definition.SuperAbility, _superAbility);
+            State.RuntimeKit.SetMainAttack(mainAttackDefinition, _mainAttack);
+            State.RuntimeKit.SetSuper(superDefinition, _superAbility);
             State.RuntimeKit.SetGadget(activeGadget, _gadgetLogic);
             State.RuntimeKit.SetHypercharge(_equippedHypercharge);
 

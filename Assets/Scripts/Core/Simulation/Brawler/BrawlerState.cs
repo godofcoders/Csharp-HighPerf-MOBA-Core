@@ -25,6 +25,7 @@ namespace MOBA.Core.Simulation
         public ModifiableStat MaxHealth => Stats.MaxHealth;
         public ModifiableStat MoveSpeed => Stats.MoveSpeed;
         public ModifiableStat Damage => Stats.Damage;
+        public ModifiableStat AttackSpeed => Stats.AttackSpeed;
 
         // Session 3 refactor: ammo + super charge + hypercharge meter + gadget
         // charges live in this substate. Pass-through getters keep the public
@@ -1216,23 +1217,32 @@ namespace MOBA.Core.Simulation
 
         public float GetCooldownSecondsForAction(BrawlerActionRequestType actionType)
         {
+            float cooldown;
             switch (actionType)
             {
                 case BrawlerActionRequestType.MainAttack:
-                    return GetCurrentMainAttackDefinition()?.Cooldown ?? 0f;
+                    cooldown = GetCurrentMainAttackDefinition()?.Cooldown ?? 0f;
+                    break;
 
                 case BrawlerActionRequestType.Gadget:
-                    return GetCurrentGadgetDefinition()?.Cooldown ?? 0f;
+                    cooldown = GetCurrentGadgetDefinition()?.Cooldown ?? 0f;
+                    break;
 
                 case BrawlerActionRequestType.Super:
-                    return GetCurrentSuperDefinition()?.Cooldown ?? 0f;
+                    cooldown = GetCurrentSuperDefinition()?.Cooldown ?? 0f;
+                    break;
 
                 case BrawlerActionRequestType.Hypercharge:
-                    return 0f;
+                    cooldown = 0f;
+                    break;
 
                 default:
-                    return 0f;
+                    cooldown = 0f;
+                    break;
             }
+
+            float attackSpeed = AttackSpeed.Value;
+            return attackSpeed > 0f ? cooldown / attackSpeed : cooldown;
         }
 
         public bool DoesActionUseCooldown(BrawlerActionRequestType actionType)

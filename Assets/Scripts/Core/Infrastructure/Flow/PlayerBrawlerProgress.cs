@@ -16,8 +16,14 @@ namespace MOBA.Core.Infrastructure
             new Dictionary<BrawlerDefinition, int>(8);
         private static readonly Dictionary<string, string> _loadoutSelections =
             new Dictionary<string, string>(16);
+        private static readonly Dictionary<string, string> _skillTreeActiveSelections =
+            new Dictionary<string, string>(8);
+        private static readonly Dictionary<string, string> _skillTreeUnlockedSelections =
+            new Dictionary<string, string>(8);
         private const string LevelKeyPrefix = "MOBA.BrawlerPowerLevel.";
         private const string LoadoutKeyPrefix = "MOBA.BrawlerLoadout.";
+        private const string SkillTreeActiveKeyPrefix = "MOBA.BrawlerSkillTree.Active.";
+        private const string SkillTreeUnlockedKeyPrefix = "MOBA.BrawlerSkillTree.Unlocked.";
         private const string SelectedBrawlerKey = "MOBA.SelectedBrawler";
 
         private static bool _hasLoadedSelectedBrawler;
@@ -167,6 +173,85 @@ namespace MOBA.Core.Infrastructure
             SetSelectedLoadoutOption(def, slotId, null);
         }
 
+        public static List<string> GetActiveSkillTreeNodeIds(
+            BrawlerDefinition def,
+            BrawlerSkillTreeDefinition tree)
+        {
+            List<string> defaults = BuildDefaultSkillTreeNodeIds(tree);
+            if (def == null || tree == null)
+                return defaults;
+
+            string key = BuildSkillTreeKey(SkillTreeActiveKeyPrefix, def);
+            string serialized = GetCachedPlayerPref(_skillTreeActiveSelections, key);
+            return string.IsNullOrWhiteSpace(serialized)
+                ? defaults
+                : DeserializeIds(serialized);
+        }
+
+        public static void SetActiveSkillTreeNodeIds(
+            BrawlerDefinition def,
+            IEnumerable<string> nodeIds)
+        {
+            SetSkillTreeNodeIds(def, nodeIds, SkillTreeActiveKeyPrefix, _skillTreeActiveSelections);
+        }
+
+        public static List<string> GetUnlockedSkillTreeNodeIds(
+            BrawlerDefinition def,
+            BrawlerSkillTreeDefinition tree)
+        {
+            List<string> defaults = new List<string>(BuildDefaultSkillTreeNodeIds(tree));
+            if (tree?.Nodes != null)
+            {
+                for (int i = 0; i < tree.Nodes.Length; i++)
+                {
+                    BrawlerSkillTreeNodeDefinition node = tree.Nodes[i];
+                    if (node != null && node.StartsUnlocked && !defaults.Contains(node.EffectiveId))
+                        defaults.Add(node.EffectiveId);
+                }
+            }
+
+            if (def == null || tree == null)
+                return defaults;
+
+            string key = BuildSkillTreeKey(SkillTreeUnlockedKeyPrefix, def);
+            string serialized = GetCachedPlayerPref(_skillTreeUnlockedSelections, key);
+            return string.IsNullOrWhiteSpace(serialized)
+                ? defaults
+                : DeserializeIds(serialized);
+        }
+
+        public static void SetUnlockedSkillTreeNodeIds(
+            BrawlerDefinition def,
+            IEnumerable<string> nodeIds)
+        {
+            SetSkillTreeNodeIds(def, nodeIds, SkillTreeUnlockedKeyPrefix, _skillTreeUnlockedSelections);
+        }
+
+        public static bool IsSkillTreeNodeUnlocked(
+            BrawlerDefinition def,
+            BrawlerSkillTreeDefinition tree,
+            string nodeId)
+        {
+            return GetUnlockedSkillTreeNodeIds(def, tree).Contains(nodeId);
+        }
+
+        public static bool UnlockSkillTreeNode(
+            BrawlerDefinition def,
+            BrawlerSkillTreeDefinition tree,
+            string nodeId)
+        {
+            if (def == null || tree == null || !tree.TryGetNode(nodeId, out BrawlerSkillTreeNodeDefinition node))
+                return false;
+
+            List<string> unlocked = GetUnlockedSkillTreeNodeIds(def, tree);
+            if (unlocked.Contains(node.EffectiveId))
+                return false;
+
+            unlocked.Add(node.EffectiveId);
+            SetUnlockedSkillTreeNodeIds(def, unlocked);
+            return true;
+        }
+
         public static string BuildOptionPersistenceId(BrawlerBuildOptionDefinition option)
         {
             if (option == null)
@@ -295,6 +380,85 @@ namespace MOBA.Core.Infrastructure
                 ? def.name
                 : "Unknown";
             return $"{LoadoutKeyPrefix}{brawlerId}.{slotId}";
+        }
+
+        private static List<string> BuildDefaultSkillTreeNodeIds(BrawlerSkillTreeDefinition tree)
+        {
+            List<string> ids = new List<string>(8);
+            if (tree == null)
+                return ids;
+
+            List<BrawlerSkillTreeNodeDefinition> nodes = tree.BuildDefaultActiveNodes();
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                BrawlerSkillTreeNodeDefinition node = nodes[i];
+                if (node != null && !ids.Contains(node.EffectiveId))
+                    ids.Add(node.EffectiveId);
+            }
+
+            return ids;
+        }
+
+        private static void SetSkillTreeNodeIds(
+            BrawlerDefinition def,
+            IEnumerable<string> nodeIds,
+            string keyPrefix,
+            Dictionary<string, string> cache)
+        {
+            if (def == null)
+                return;
+
+            List<string> ids = new List<string>(8);
+            if (nodeIds != null)
+            {
+                foreach (string nodeId in nodeIds)
+                {
+                    if (!string.IsNullOrWhiteSpace(nodeId) && !ids.Contains(nodeId))
+                        ids.Add(nodeId);
+                }
+            }
+
+            string key = BuildSkillTreeKey(keyPrefix, def);
+            string serialized = string.Join("|", ids);
+            cache[key] = serialized;
+
+            if (ids.Count == 0)
+                PlayerPrefs.DeleteKey(key);
+            else
+                PlayerPrefs.SetString(key, serialized);
+
+            PlayerPrefs.Save();
+        }
+
+        private static string GetCachedPlayerPref(Dictionary<string, string> cache, string key)
+        {
+            if (cache.TryGetValue(key, out string cached))
+                return cached;
+
+            string loaded = PlayerPrefs.GetString(key, string.Empty);
+            cache[key] = loaded;
+            return loaded;
+        }
+
+        private static List<string> DeserializeIds(string serialized)
+        {
+            string[] parts = serialized.Split('|');
+            List<string> ids = new List<string>(parts.Length);
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(parts[i]) && !ids.Contains(parts[i]))
+                    ids.Add(parts[i]);
+            }
+
+            return ids;
+        }
+
+        private static string BuildSkillTreeKey(string prefix, BrawlerDefinition def)
+        {
+            string brawlerId = def != null && !string.IsNullOrWhiteSpace(def.name)
+                ? def.name
+                : "Unknown";
+            return prefix + brawlerId;
         }
     }
 }

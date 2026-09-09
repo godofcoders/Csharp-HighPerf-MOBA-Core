@@ -30,6 +30,10 @@ namespace MOBA.Core.Definitions
         [Header("Progression")]
         public BrawlerProgressionBonus[] ProgressionBonuses;
 
+        [Header("Skill Tree")]
+        [Tooltip("Optional unified progression tree. Nodes can grant abilities, gadgets, hypercharge, passives, nanopowers, and stat upgrades.")]
+        public BrawlerSkillTreeDefinition SkillTree;
+
         [Header("Abilities")]
         public AbilityDefinition MainAttack;
         public AbilityDefinition SuperAbility;

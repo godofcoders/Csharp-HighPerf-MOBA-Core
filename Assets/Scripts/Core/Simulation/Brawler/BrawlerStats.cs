@@ -22,6 +22,7 @@ namespace MOBA.Core.Simulation
         public ModifiableStat MaxHealth { get; }
         public ModifiableStat MoveSpeed { get; }
         public ModifiableStat Damage { get; }
+        public ModifiableStat AttackSpeed { get; }
 
         // Current health and shield pool. Setters are private — all mutations go
         // through the methods below, which enforce invariants like
@@ -42,6 +43,7 @@ namespace MOBA.Core.Simulation
             MaxHealth = new ModifiableStat(0f);
             MoveSpeed = new ModifiableStat(0f);
             Damage = new ModifiableStat(0f);
+            AttackSpeed = new ModifiableStat(1f);
 
             IncomingDamageModifiers = new DamageModifierCollection();
             OutgoingDamageModifiers = new DamageModifierCollection();
@@ -171,6 +173,7 @@ namespace MOBA.Core.Simulation
             MaxHealth.RemoveModifiersFromSource(source);
             MoveSpeed.RemoveModifiersFromSource(source);
             Damage.RemoveModifiersFromSource(source);
+            AttackSpeed.RemoveModifiersFromSource(source);
         }
 
         /// <summary>
