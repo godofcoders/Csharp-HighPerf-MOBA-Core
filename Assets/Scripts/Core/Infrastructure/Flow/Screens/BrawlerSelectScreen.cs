@@ -87,6 +87,12 @@ namespace MOBA.Core.Infrastructure
         private TMP_Text _superDetailText;
         private GameObject _superAbilityBox;
         private GameObject _nanopowerSection;
+        private Button _skillTreeButton;
+        private GameObject _skillTreePanel;
+        private Transform _skillTreeGrid;
+        private TMP_Text _skillTreeTitleText;
+        private TMP_Text _skillTreeStatusText;
+        private readonly List<GameObject> _skillTreeRows = new List<GameObject>(12);
         private readonly GameObject[] _nanopowerRows = new GameObject[3];
         private readonly Image[] _nanopowerAccents = new Image[3];
         private readonly TMP_Text[] _nanopowerNameTexts = new TMP_Text[3];
@@ -193,6 +199,7 @@ namespace MOBA.Core.Infrastructure
                 _detailPanel.Bind(def);
 
             SeedSelectedLoadout(def);
+            SetSkillTreePanelVisible(false);
             RefreshLoadoutUI();
             RefreshRuntimePreview();
             UpdateConfirmButtonInteractable();
@@ -284,6 +291,7 @@ namespace MOBA.Core.Infrastructure
             BuildStatsPanel(_runtimeRoot);
             BuildLoadoutBar(_runtimeRoot);
             BuildActionButtons(_runtimeRoot);
+            BuildSkillTreePanel(_runtimeRoot);
         }
 
         private void HideLegacySceneWidgets(Transform runtimeRoot)
@@ -516,6 +524,16 @@ namespace MOBA.Core.Infrastructure
             statusLayout.preferredWidth = 170f;
             statusLayout.flexibleWidth = 0f;
 
+            _skillTreeButton = CreateButton(
+                panel.transform,
+                "SkillTreeButton",
+                "SKILL TREE",
+                MenuUITheme.SecondaryButton,
+                ToggleSkillTreePanel);
+            LayoutElement skillTreeLayout = _skillTreeButton.gameObject.AddComponent<LayoutElement>();
+            skillTreeLayout.preferredWidth = 132f;
+            skillTreeLayout.flexibleWidth = 0f;
+
             _loadoutContainer = panel.transform;
         }
 
@@ -536,6 +554,437 @@ namespace MOBA.Core.Infrastructure
                 MenuUITheme.PrimaryButton,
                 null);
             Anchor(_confirmButton.GetComponent<RectTransform>(), new Vector2(0.16f, 0.025f), new Vector2(0.32f, 0.105f), Vector2.zero, Vector2.zero);
+        }
+
+        private void BuildSkillTreePanel(Transform parent)
+        {
+            _skillTreePanel = CreatePanel("SkillTreePanel", parent, _panelColor);
+            RectTransform panelRect = _skillTreePanel.GetComponent<RectTransform>();
+            Anchor(panelRect, new Vector2(0.335f, 0.14f), new Vector2(0.98f, 0.88f), Vector2.zero, Vector2.zero);
+
+            Image accent = CreatePanel("SkillTreeAccent", _skillTreePanel.transform, _goldColor).GetComponent<Image>();
+            Anchor(accent.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0.018f), Vector2.zero, Vector2.zero);
+
+            _skillTreeTitleText = CreateText(
+                _skillTreePanel.transform,
+                "Title",
+                "SKILL TREE",
+                24,
+                TextAlignmentOptions.Left,
+                Color.white);
+            _skillTreeTitleText.fontStyle = FontStyles.Bold;
+            Anchor(_skillTreeTitleText.rectTransform, new Vector2(0.035f, 0.89f), new Vector2(0.70f, 0.98f), Vector2.zero, Vector2.zero);
+
+            _skillTreeStatusText = CreateText(
+                _skillTreePanel.transform,
+                "Status",
+                "",
+                13,
+                TextAlignmentOptions.Left,
+                MenuUITheme.TextSoft);
+            Anchor(_skillTreeStatusText.rectTransform, new Vector2(0.035f, 0.82f), new Vector2(0.76f, 0.90f), Vector2.zero, Vector2.zero);
+
+            Button closeButton = CreateButton(
+                _skillTreePanel.transform,
+                "CloseSkillTreeButton",
+                "CLOSE",
+                MenuUITheme.SecondaryButton,
+                () => SetSkillTreePanelVisible(false));
+            Anchor(closeButton.GetComponent<RectTransform>(), new Vector2(0.82f, 0.89f), new Vector2(0.96f, 0.98f), Vector2.zero, Vector2.zero);
+
+            GameObject grid = new GameObject("SkillTreeGrid", typeof(RectTransform));
+            grid.transform.SetParent(_skillTreePanel.transform, false);
+            _skillTreeGrid = grid.transform;
+
+            GridLayoutGroup gridLayout = grid.AddComponent<GridLayoutGroup>();
+            gridLayout.cellSize = new Vector2(220f, 76f);
+            gridLayout.spacing = new Vector2(8f, 8f);
+            gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            gridLayout.constraintCount = 3;
+            gridLayout.childAlignment = TextAnchor.UpperCenter;
+
+            Anchor(
+                grid.GetComponent<RectTransform>(),
+                new Vector2(0.035f, 0.06f),
+                new Vector2(0.965f, 0.80f),
+                Vector2.zero,
+                Vector2.zero);
+
+            _skillTreePanel.SetActive(false);
+        }
+
+        private void ToggleSkillTreePanel()
+        {
+            if (_skillTreePanel == null || _previewed == null || _previewed.SkillTree == null)
+                return;
+
+            SetSkillTreePanelVisible(!_skillTreePanel.activeSelf);
+        }
+
+        private void SetSkillTreePanelVisible(bool visible)
+        {
+            if (_skillTreePanel == null)
+                return;
+
+            bool canShow = visible && _previewed != null && _previewed.SkillTree != null;
+            _skillTreePanel.SetActive(canShow);
+
+            if (canShow)
+                RefreshSkillTreeUI();
+        }
+
+        private void RefreshSkillTreeButton()
+        {
+            if (_skillTreeButton == null)
+                return;
+
+            bool available = _previewed != null && _previewed.SkillTree != null;
+            _skillTreeButton.interactable = available;
+
+            TMP_Text label = _skillTreeButton.GetComponentInChildren<TMP_Text>();
+            if (label != null)
+                label.text = available ? "SKILL TREE" : "NO SKILL TREE";
+        }
+
+        private void RefreshSkillTreeUI()
+        {
+            RefreshSkillTreeButton();
+
+            if (_skillTreeGrid == null)
+                return;
+
+            for (int i = 0; i < _skillTreeRows.Count; i++)
+            {
+                if (_skillTreeRows[i] != null)
+                    Destroy(_skillTreeRows[i]);
+            }
+
+            _skillTreeRows.Clear();
+
+            BrawlerSkillTreeDefinition tree = _previewed != null ? _previewed.SkillTree : null;
+            if (tree == null)
+            {
+                if (_skillTreeTitleText != null)
+                    _skillTreeTitleText.text = "SKILL TREE";
+                if (_skillTreeStatusText != null)
+                    _skillTreeStatusText.text = "Select a brawler with an authored skill tree.";
+                return;
+            }
+
+            int powerLevel = ResolvePreviewPowerLevel(_previewed);
+            List<string> unlocked = PlayerBrawlerProgress.GetUnlockedSkillTreeNodeIds(_previewed, tree);
+            List<string> active = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(_previewed, tree);
+
+            if (_skillTreeTitleText != null)
+                _skillTreeTitleText.text = string.IsNullOrWhiteSpace(tree.DisplayName)
+                    ? "SKILL TREE"
+                    : tree.DisplayName.ToUpperInvariant();
+            if (_skillTreeStatusText != null)
+            {
+                _skillTreeStatusText.text =
+                    $"POWER {powerLevel}  |  ACTIVE {active.Count}/{tree.MaxActiveNodes}  |  Click a node to unlock or equip it.";
+            }
+
+            if (tree.Nodes == null)
+                return;
+
+            for (int i = 0; i < tree.Nodes.Length; i++)
+            {
+                BrawlerSkillTreeNodeDefinition node = tree.Nodes[i];
+                if (node == null)
+                    continue;
+
+                string nodeId = node.EffectiveId;
+                bool isActive = active.Contains(nodeId);
+                bool isUnlocked = unlocked.Contains(nodeId) || isActive || node.StartsUnlocked;
+                bool canUnlock = !isUnlocked && CanUnlockSkillTreeNode(node, tree, powerLevel, unlocked, out _);
+                bool canActivate = isUnlocked && !isActive && CanActivateSkillTreeNode(node, tree, powerLevel, active, out _);
+                bool canDeactivate = isActive && CanDeactivateSkillTreeNode(node, tree, active, out _);
+
+                string state = isActive
+                    ? "ACTIVE"
+                    : isUnlocked
+                        ? (canActivate ? "EQUIP" : "READY")
+                        : (canUnlock ? "UNLOCK" : $"{LockIcon} P{node.UnlockPowerLevel}");
+                string label = $"{state}\n{node.EffectiveDisplayName}\n{ResolveSkillTreeNodeType(node.NodeType)}";
+                Color color = isActive
+                    ? ResolveSkillTreeNodeColor(node, tree)
+                    : isUnlocked
+                        ? MenuUITheme.SecondaryButton
+                        : canUnlock
+                            ? MenuUITheme.PositiveButton
+                            : MenuUITheme.DisabledButton;
+
+                BrawlerSkillTreeNodeDefinition capturedNode = node;
+                Button button = CreateButton(
+                    _skillTreeGrid,
+                    $"SkillNode_{nodeId}",
+                    label,
+                    color,
+                    () => OnSkillTreeNodeClicked(capturedNode));
+                button.interactable = isActive ? canDeactivate : isUnlocked ? canActivate : canUnlock;
+
+                TMP_Text buttonLabel = button.GetComponentInChildren<TMP_Text>();
+                if (buttonLabel != null)
+                {
+                    buttonLabel.fontSize = 12f;
+                    buttonLabel.enableWordWrapping = true;
+                    buttonLabel.overflowMode = TextOverflowModes.Ellipsis;
+                }
+
+                LayoutElement layout = button.gameObject.AddComponent<LayoutElement>();
+                layout.preferredHeight = 76f;
+                layout.preferredWidth = 220f;
+                layout.flexibleWidth = 1f;
+                _skillTreeRows.Add(button.gameObject);
+            }
+        }
+
+        private void OnSkillTreeNodeClicked(BrawlerSkillTreeNodeDefinition node)
+        {
+            if (_previewed == null || _previewed.SkillTree == null || node == null)
+                return;
+
+            BrawlerSkillTreeDefinition tree = _previewed.SkillTree;
+            int powerLevel = ResolvePreviewPowerLevel(_previewed);
+            List<string> unlocked = PlayerBrawlerProgress.GetUnlockedSkillTreeNodeIds(_previewed, tree);
+            List<string> active = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(_previewed, tree);
+            string nodeId = node.EffectiveId;
+
+            if (active.Contains(nodeId))
+            {
+                if (!CanDeactivateSkillTreeNode(node, tree, active, out string deactivateReason))
+                {
+                    SetSkillTreeStatus(deactivateReason);
+                    return;
+                }
+
+                active.Remove(nodeId);
+                PlayerBrawlerProgress.SetActiveSkillTreeNodeIds(_previewed, active);
+                SetSkillTreeStatus($"{node.EffectiveDisplayName} unequipped.");
+            }
+            else if (!unlocked.Contains(nodeId) && !node.StartsUnlocked)
+            {
+                if (!CanUnlockSkillTreeNode(node, tree, powerLevel, unlocked, out string unlockReason))
+                {
+                    SetSkillTreeStatus(unlockReason);
+                    return;
+                }
+
+                if (!PlayerBrawlerProgress.UnlockSkillTreeNode(_previewed, tree, nodeId))
+                {
+                    SetSkillTreeStatus("This node is already unlocked.");
+                    return;
+                }
+
+                SetSkillTreeStatus($"{node.EffectiveDisplayName} unlocked. Equip it when its prerequisites are active.");
+            }
+            else
+            {
+                if (!CanActivateSkillTreeNode(node, tree, powerLevel, active, out string activateReason))
+                {
+                    SetSkillTreeStatus(activateReason);
+                    return;
+                }
+
+                active.Add(nodeId);
+                PlayerBrawlerProgress.SetActiveSkillTreeNodeIds(_previewed, active);
+                SetSkillTreeStatus($"{node.EffectiveDisplayName} equipped.");
+            }
+
+            RefreshSkillTreeUI();
+            RefreshRuntimePreview();
+            UpdateConfirmButtonInteractable();
+        }
+
+        private void SetSkillTreeStatus(string message)
+        {
+            if (_skillTreeStatusText != null)
+                _skillTreeStatusText.text = message;
+        }
+
+        private static bool CanUnlockSkillTreeNode(
+            BrawlerSkillTreeNodeDefinition node,
+            BrawlerSkillTreeDefinition tree,
+            int powerLevel,
+            List<string> unlocked,
+            out string reason)
+        {
+            reason = string.Empty;
+            if (node == null || tree == null)
+            {
+                reason = "This skill node is not configured.";
+                return false;
+            }
+
+            if (powerLevel < node.UnlockPowerLevel)
+            {
+                reason = $"Requires power level {node.UnlockPowerLevel}.";
+                return false;
+            }
+
+            if (node.PrerequisiteNodeIds != null)
+            {
+                for (int i = 0; i < node.PrerequisiteNodeIds.Length; i++)
+                {
+                    string prerequisite = node.PrerequisiteNodeIds[i];
+                    if (!string.IsNullOrWhiteSpace(prerequisite) && !unlocked.Contains(prerequisite))
+                    {
+                        reason = $"Unlock {prerequisite} first.";
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool CanActivateSkillTreeNode(
+            BrawlerSkillTreeNodeDefinition node,
+            BrawlerSkillTreeDefinition tree,
+            int powerLevel,
+            List<string> active,
+            out string reason)
+        {
+            reason = string.Empty;
+            if (node == null || tree == null)
+            {
+                reason = "This skill node is not configured.";
+                return false;
+            }
+
+            if (powerLevel < node.UnlockPowerLevel)
+            {
+                reason = $"Requires power level {node.UnlockPowerLevel}.";
+                return false;
+            }
+
+            if (active.Count >= tree.MaxActiveNodes)
+            {
+                reason = $"Active node limit reached ({tree.MaxActiveNodes}).";
+                return false;
+            }
+
+            if (node.PrerequisiteNodeIds != null)
+            {
+                for (int i = 0; i < node.PrerequisiteNodeIds.Length; i++)
+                {
+                    string prerequisite = node.PrerequisiteNodeIds[i];
+                    if (!string.IsNullOrWhiteSpace(prerequisite) && !active.Contains(prerequisite))
+                    {
+                        reason = $"Equip {prerequisite} first.";
+                        return false;
+                    }
+                }
+            }
+
+            if (node.MutuallyExclusiveNodeIds != null)
+            {
+                for (int i = 0; i < node.MutuallyExclusiveNodeIds.Length; i++)
+                {
+                    string exclusive = node.MutuallyExclusiveNodeIds[i];
+                    if (!string.IsNullOrWhiteSpace(exclusive) && active.Contains(exclusive))
+                    {
+                        reason = $"Conflicts with {exclusive}.";
+                        return false;
+                    }
+                }
+            }
+
+            if (tree.Nodes != null)
+            {
+                for (int i = 0; i < tree.Nodes.Length; i++)
+                {
+                    BrawlerSkillTreeNodeDefinition other = tree.Nodes[i];
+                    if (other == null || !active.Contains(other.EffectiveId) || other.MutuallyExclusiveNodeIds == null)
+                        continue;
+
+                    for (int e = 0; e < other.MutuallyExclusiveNodeIds.Length; e++)
+                    {
+                        if (other.MutuallyExclusiveNodeIds[e] == node.EffectiveId)
+                        {
+                            reason = $"Conflicts with {other.EffectiveDisplayName}.";
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool CanDeactivateSkillTreeNode(
+            BrawlerSkillTreeNodeDefinition node,
+            BrawlerSkillTreeDefinition tree,
+            List<string> active,
+            out string reason)
+        {
+            reason = string.Empty;
+            if (node == null || tree == null)
+            {
+                reason = "This skill node is not configured.";
+                return false;
+            }
+
+            if (node.NodeType == BrawlerSkillTreeNodeType.Core)
+            {
+                reason = "Core nodes must remain active.";
+                return false;
+            }
+
+            if (tree.Nodes != null)
+            {
+                for (int i = 0; i < tree.Nodes.Length; i++)
+                {
+                    BrawlerSkillTreeNodeDefinition other = tree.Nodes[i];
+                    if (other == null || !active.Contains(other.EffectiveId) || other.PrerequisiteNodeIds == null)
+                        continue;
+
+                    for (int p = 0; p < other.PrerequisiteNodeIds.Length; p++)
+                    {
+                        if (other.PrerequisiteNodeIds[p] == node.EffectiveId)
+                        {
+                            reason = $"Unequip {other.EffectiveDisplayName} first.";
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static string ResolveSkillTreeNodeType(BrawlerSkillTreeNodeType type)
+        {
+            switch (type)
+            {
+                case BrawlerSkillTreeNodeType.MainAttack:
+                    return "MAIN ATTACK";
+                case BrawlerSkillTreeNodeType.Super:
+                    return "SUPER";
+                case BrawlerSkillTreeNodeType.Gadget:
+                    return "GADGET";
+                case BrawlerSkillTreeNodeType.StarPower:
+                    return "STAR POWER";
+                case BrawlerSkillTreeNodeType.Hypercharge:
+                    return "HYPERCHARGE";
+                case BrawlerSkillTreeNodeType.Nanopower:
+                    return "NANOPOWER";
+                case BrawlerSkillTreeNodeType.Stat:
+                    return "STAT";
+                default:
+                    return "CORE";
+            }
+        }
+
+        private static Color ResolveSkillTreeNodeColor(
+            BrawlerSkillTreeNodeDefinition node,
+            BrawlerSkillTreeDefinition tree)
+        {
+            if (node != null && node.AccentColor.a > 0.01f)
+                return node.AccentColor;
+
+            return tree != null ? tree.AccentColor : MenuUITheme.Gold;
         }
 
         private void BuildRuntimeRosterCards()
@@ -690,6 +1139,7 @@ namespace MOBA.Core.Infrastructure
             if (!_useBrawlInspiredRuntimeView)
                 return;
 
+            RefreshSkillTreeButton();
             RefreshRosterSelection();
             RefreshUpgradeButton();
 
