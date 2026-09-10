@@ -90,7 +90,7 @@ namespace MOBA.Core.Infrastructure
         private Button _skillTreeButton;
         private GameObject _skillTreePanel;
         private Transform _skillTreeGrid;
-        private SkillTreeConnectionsGraphic _skillTreeConnectionGraphic;
+        private Transform _skillTreeConnections;
         private TMP_Text _skillTreeTitleText;
         private TMP_Text _skillTreeStatusText;
         private readonly List<GameObject> _skillTreeRows = new List<GameObject>(12);
@@ -604,13 +604,9 @@ namespace MOBA.Core.Infrastructure
                 Vector2.zero,
                 Vector2.zero);
 
-            GameObject connections = new GameObject(
-                "SkillTreeConnections",
-                typeof(RectTransform),
-                typeof(SkillTreeConnectionsGraphic));
+            GameObject connections = new GameObject("SkillTreeConnections", typeof(RectTransform));
             connections.transform.SetParent(grid.transform, false);
-            _skillTreeConnectionGraphic = connections.GetComponent<SkillTreeConnectionsGraphic>();
-            _skillTreeConnectionGraphic.raycastTarget = false;
+            _skillTreeConnections = connections.transform;
             Anchor(
                 connections.GetComponent<RectTransform>(),
                 Vector2.zero,
@@ -669,7 +665,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             _skillTreeRows.Clear();
-            _skillTreeConnectionGraphic?.ClearConnections();
+            ClearSkillTreeConnections();
 
             BrawlerSkillTreeDefinition tree = _previewed != null ? _previewed.SkillTree : null;
             if (tree == null)
@@ -730,11 +726,14 @@ namespace MOBA.Core.Infrastructure
                     }
 
                     bool activeConnection = active.Contains(prerequisiteId) && active.Contains(node.EffectiveId);
-                    _skillTreeConnectionGraphic?.AddConnection(
+                    CreateSkillTreeConnection(
+                        _skillTreeConnections,
                         start,
                         end,
+                        graphSize,
                         ResolveSkillTreeConnectionColor(tree, activeConnection),
-                        activeConnection ? 4f : 2f);
+                        activeConnection ? 4f : 2f,
+                        $"SkillConnection_{prerequisiteId}_{node.EffectiveId}");
                 }
             }
 
@@ -776,11 +775,12 @@ namespace MOBA.Core.Infrastructure
 
                 Image rectangularBackground = button.GetComponent<Image>();
                 if (rectangularBackground != null)
-                    rectangularBackground.enabled = false;
-
-                SkillTreeNodeGraphic hexBackground = button.gameObject.AddComponent<SkillTreeNodeGraphic>();
-                hexBackground.color = color;
-                button.targetGraphic = hexBackground;
+                {
+                    rectangularBackground.enabled = true;
+                    rectangularBackground.color = color;
+                    rectangularBackground.raycastTarget = true;
+                    button.targetGraphic = rectangularBackground;
+                }
 
                 Outline outline = button.gameObject.AddComponent<Outline>();
                 outline.effectColor = isActive
@@ -804,6 +804,19 @@ namespace MOBA.Core.Infrastructure
                 }
 
                 _skillTreeRows.Add(button.gameObject);
+            }
+        }
+
+        private void ClearSkillTreeConnections()
+        {
+            if (_skillTreeConnections == null)
+                return;
+
+            for (int i = _skillTreeConnections.childCount - 1; i >= 0; i--)
+            {
+                Transform child = _skillTreeConnections.GetChild(i);
+                if (child != null)
+                    Destroy(child.gameObject);
             }
         }
 
@@ -910,6 +923,45 @@ namespace MOBA.Core.Infrastructure
                 return tree != null ? tree.AccentColor : MenuUITheme.Gold;
 
             return new Color(0.28f, 0.52f, 0.78f, 0.95f);
+        }
+
+        private static void CreateSkillTreeConnection(
+            Transform parent,
+            Vector2 start,
+            Vector2 end,
+            Vector2 parentSize,
+            Color color,
+            float thickness,
+            string name)
+        {
+            if (parent == null || parentSize.sqrMagnitude <= 0.01f)
+                return;
+
+            RectTransform parentRect = parent as RectTransform;
+            if (parentRect == null)
+                return;
+
+            RectTransform line = CreatePanel(name, parent, color).GetComponent<RectTransform>();
+            Image lineImage = line.GetComponent<Image>();
+            if (lineImage != null)
+                lineImage.raycastTarget = false;
+
+            Vector2 delta = new Vector2(
+                (end.x - start.x) * parentSize.x,
+                (end.y - start.y) * parentSize.y);
+            float length = delta.magnitude;
+            if (length <= 0.1f)
+                return;
+
+            line.anchorMin = new Vector2(0.5f, 0.5f);
+            line.anchorMax = new Vector2(0.5f, 0.5f);
+            line.pivot = new Vector2(0f, 0.5f);
+            line.anchoredPosition = ToGraphPixelPosition(start, parentSize);
+            line.sizeDelta = new Vector2(length, thickness);
+            line.localRotation = Quaternion.Euler(
+                0f,
+                0f,
+                Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
         }
 
         private static Vector2 ToGraphPixelPosition(Vector2 normalizedPosition, Vector2 graphSize)
@@ -2568,98 +2620,5 @@ namespace MOBA.Core.Infrastructure
             }
         }
 
-        private sealed class SkillTreeNodeGraphic : MaskableGraphic
-        {
-            protected override void OnPopulateMesh(VertexHelper vertexHelper)
-            {
-                vertexHelper.Clear();
-
-                Rect rect = GetPixelAdjustedRect();
-                Vector2 center = rect.center;
-                float radiusX = rect.width * 0.5f;
-                float radiusY = rect.height * 0.5f;
-
-                vertexHelper.AddVert(center, color, new Vector2(0.5f, 0.5f));
-                for (int i = 0; i < 6; i++)
-                {
-                    float angle = (30f + (i * 60f)) * Mathf.Deg2Rad;
-                    Vector2 point = center + new Vector2(
-                        Mathf.Cos(angle) * radiusX,
-                        Mathf.Sin(angle) * radiusY);
-                    vertexHelper.AddVert(point, color, new Vector2(
-                        (point.x - rect.xMin) / Mathf.Max(1f, rect.width),
-                        (point.y - rect.yMin) / Mathf.Max(1f, rect.height)));
-                }
-
-                for (int i = 0; i < 6; i++)
-                {
-                    int next = i == 5 ? 1 : i + 2;
-                    vertexHelper.AddTriangle(0, i + 1, next);
-                }
-            }
-        }
-
-        private sealed class SkillTreeConnectionsGraphic : MaskableGraphic
-        {
-            private readonly List<SkillTreeConnection> _connections =
-                new List<SkillTreeConnection>(16);
-
-            public void ClearConnections()
-            {
-                _connections.Clear();
-                SetVerticesDirty();
-            }
-
-            public void AddConnection(Vector2 start, Vector2 end, Color color, float thickness)
-            {
-                _connections.Add(new SkillTreeConnection(start, end, color, thickness));
-                SetVerticesDirty();
-            }
-
-            protected override void OnPopulateMesh(VertexHelper vertexHelper)
-            {
-                vertexHelper.Clear();
-
-                Rect rect = GetPixelAdjustedRect();
-                for (int i = 0; i < _connections.Count; i++)
-                {
-                    SkillTreeConnection connection = _connections[i];
-                    Vector2 start = new Vector2(
-                        Mathf.Lerp(rect.xMin, rect.xMax, connection.Start.x),
-                        Mathf.Lerp(rect.yMin, rect.yMax, connection.Start.y));
-                    Vector2 end = new Vector2(
-                        Mathf.Lerp(rect.xMin, rect.xMax, connection.End.x),
-                        Mathf.Lerp(rect.yMin, rect.yMax, connection.End.y));
-                    Vector2 delta = end - start;
-                    if (delta.sqrMagnitude <= 0.01f)
-                        continue;
-
-                    Vector2 normal = new Vector2(-delta.y, delta.x).normalized * (connection.Thickness * 0.5f);
-                    int vertexIndex = vertexHelper.currentVertCount;
-                    vertexHelper.AddVert(start + normal, connection.Color, Vector2.zero);
-                    vertexHelper.AddVert(start - normal, connection.Color, Vector2.zero);
-                    vertexHelper.AddVert(end - normal, connection.Color, Vector2.zero);
-                    vertexHelper.AddVert(end + normal, connection.Color, Vector2.zero);
-                    vertexHelper.AddTriangle(vertexIndex, vertexIndex + 1, vertexIndex + 2);
-                    vertexHelper.AddTriangle(vertexIndex, vertexIndex + 2, vertexIndex + 3);
-                }
-            }
-
-            private readonly struct SkillTreeConnection
-            {
-                public readonly Vector2 Start;
-                public readonly Vector2 End;
-                public readonly Color Color;
-                public readonly float Thickness;
-
-                public SkillTreeConnection(Vector2 start, Vector2 end, Color color, float thickness)
-                {
-                    Start = start;
-                    End = end;
-                    Color = color;
-                    Thickness = thickness;
-                }
-            }
-        }
     }
 }
