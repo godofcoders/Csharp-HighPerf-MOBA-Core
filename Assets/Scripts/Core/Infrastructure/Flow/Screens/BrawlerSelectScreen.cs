@@ -90,7 +90,7 @@ namespace MOBA.Core.Infrastructure
         private Button _skillTreeButton;
         private GameObject _skillTreePanel;
         private Transform _skillTreeGrid;
-        private Transform _skillTreeConnections;
+        private SkillTreeConnectionsGraphic _skillTreeConnectionGraphic;
         private TMP_Text _skillTreeTitleText;
         private TMP_Text _skillTreeStatusText;
         private readonly List<GameObject> _skillTreeRows = new List<GameObject>(12);
@@ -604,16 +604,20 @@ namespace MOBA.Core.Infrastructure
                 Vector2.zero,
                 Vector2.zero);
 
-            GameObject connections = new GameObject("SkillTreeConnections", typeof(RectTransform));
-            connections.transform.SetParent(_skillTreePanel.transform, false);
-            _skillTreeConnections = connections.transform;
+            GameObject connections = new GameObject(
+                "SkillTreeConnections",
+                typeof(RectTransform),
+                typeof(SkillTreeConnectionsGraphic));
+            connections.transform.SetParent(grid.transform, false);
+            _skillTreeConnectionGraphic = connections.GetComponent<SkillTreeConnectionsGraphic>();
+            _skillTreeConnectionGraphic.raycastTarget = false;
             Anchor(
                 connections.GetComponent<RectTransform>(),
-                new Vector2(0.035f, 0.06f),
-                new Vector2(0.965f, 0.80f),
+                Vector2.zero,
+                Vector2.one,
                 Vector2.zero,
                 Vector2.zero);
-            connections.transform.SetSiblingIndex(grid.transform.GetSiblingIndex());
+            connections.transform.SetAsFirstSibling();
 
             _skillTreePanel.SetActive(false);
         }
@@ -665,7 +669,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             _skillTreeRows.Clear();
-            ClearSkillTreeConnections();
+            _skillTreeConnectionGraphic?.ClearConnections();
 
             BrawlerSkillTreeDefinition tree = _previewed != null ? _previewed.SkillTree : null;
             if (tree == null)
@@ -726,14 +730,11 @@ namespace MOBA.Core.Infrastructure
                     }
 
                     bool activeConnection = active.Contains(prerequisiteId) && active.Contains(node.EffectiveId);
-                    CreateSkillTreeConnection(
-                        _skillTreeConnections,
+                    _skillTreeConnectionGraphic?.AddConnection(
                         start,
                         end,
-                        graphSize,
                         ResolveSkillTreeConnectionColor(tree, activeConnection),
-                        activeConnection ? 4f : 2f,
-                        $"SkillConnection_{prerequisiteId}_{node.EffectiveId}");
+                        activeConnection ? 4f : 2f);
                 }
             }
 
@@ -803,19 +804,6 @@ namespace MOBA.Core.Infrastructure
                 }
 
                 _skillTreeRows.Add(button.gameObject);
-            }
-        }
-
-        private void ClearSkillTreeConnections()
-        {
-            if (_skillTreeConnections == null)
-                return;
-
-            for (int i = _skillTreeConnections.childCount - 1; i >= 0; i--)
-            {
-                Transform child = _skillTreeConnections.GetChild(i);
-                if (child != null)
-                    Destroy(child.gameObject);
             }
         }
 
@@ -914,49 +902,6 @@ namespace MOBA.Core.Infrastructure
             return depth;
         }
 
-        private static void CreateSkillTreeConnection(
-            Transform parent,
-            Vector2 start,
-            Vector2 end,
-            Vector2 parentSize,
-            Color color,
-            float thickness,
-            string name)
-        {
-            if (parent == null)
-                return;
-
-            RectTransform parentRect = parent as RectTransform;
-            if (parentRect == null)
-                return;
-
-            RectTransform line = CreatePanel(name, parent, color).GetComponent<RectTransform>();
-            Image lineImage = line.GetComponent<Image>();
-            if (lineImage != null)
-                lineImage.raycastTarget = false;
-
-            Vector2 delta = new Vector2(
-                (end.x - start.x) * parentSize.x,
-                (end.y - start.y) * parentSize.y);
-            float length = delta.magnitude;
-            if (length <= 0.1f)
-                return;
-
-            line.anchorMin = new Vector2(0.5f, 0.5f);
-            line.anchorMax = new Vector2(0.5f, 0.5f);
-            line.pivot = new Vector2(0f, 0.5f);
-            line.anchoredPosition = ToGraphPixelPosition(start, parentSize);
-            line.sizeDelta = new Vector2(length, thickness);
-            line.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
-        }
-
-        private static Vector2 ToGraphPixelPosition(Vector2 normalizedPosition, Vector2 graphSize)
-        {
-            return new Vector2(
-                (normalizedPosition.x - 0.5f) * graphSize.x,
-                (normalizedPosition.y - 0.5f) * graphSize.y);
-        }
-
         private static Color ResolveSkillTreeConnectionColor(
             BrawlerSkillTreeDefinition tree,
             bool active)
@@ -964,7 +909,7 @@ namespace MOBA.Core.Infrastructure
             if (active)
                 return tree != null ? tree.AccentColor : MenuUITheme.Gold;
 
-            return new Color(0.18f, 0.25f, 0.36f, 0.9f);
+            return new Color(0.28f, 0.52f, 0.78f, 0.95f);
         }
 
         private void OnSkillTreeNodeClicked(BrawlerSkillTreeNodeDefinition node)
@@ -2643,6 +2588,69 @@ namespace MOBA.Core.Infrastructure
                 {
                     int next = i == 5 ? 1 : i + 2;
                     vertexHelper.AddTriangle(0, i + 1, next);
+                }
+            }
+        }
+
+        private sealed class SkillTreeConnectionsGraphic : MaskableGraphic
+        {
+            private readonly List<SkillTreeConnection> _connections =
+                new List<SkillTreeConnection>(16);
+
+            public void ClearConnections()
+            {
+                _connections.Clear();
+                SetVerticesDirty();
+            }
+
+            public void AddConnection(Vector2 start, Vector2 end, Color color, float thickness)
+            {
+                _connections.Add(new SkillTreeConnection(start, end, color, thickness));
+                SetVerticesDirty();
+            }
+
+            protected override void OnPopulateMesh(VertexHelper vertexHelper)
+            {
+                vertexHelper.Clear();
+
+                Rect rect = GetPixelAdjustedRect();
+                for (int i = 0; i < _connections.Count; i++)
+                {
+                    SkillTreeConnection connection = _connections[i];
+                    Vector2 start = new Vector2(
+                        Mathf.Lerp(rect.xMin, rect.xMax, connection.Start.x),
+                        Mathf.Lerp(rect.yMin, rect.yMax, connection.Start.y));
+                    Vector2 end = new Vector2(
+                        Mathf.Lerp(rect.xMin, rect.xMax, connection.End.x),
+                        Mathf.Lerp(rect.yMin, rect.yMax, connection.End.y));
+                    Vector2 delta = end - start;
+                    if (delta.sqrMagnitude <= 0.01f)
+                        continue;
+
+                    Vector2 normal = new Vector2(-delta.y, delta.x).normalized * (connection.Thickness * 0.5f);
+                    int vertexIndex = vertexHelper.currentVertCount;
+                    vertexHelper.AddVert(start + normal, connection.Color, Vector2.zero);
+                    vertexHelper.AddVert(start - normal, connection.Color, Vector2.zero);
+                    vertexHelper.AddVert(end - normal, connection.Color, Vector2.zero);
+                    vertexHelper.AddVert(end + normal, connection.Color, Vector2.zero);
+                    vertexHelper.AddTriangle(vertexIndex, vertexIndex + 1, vertexIndex + 2);
+                    vertexHelper.AddTriangle(vertexIndex, vertexIndex + 2, vertexIndex + 3);
+                }
+            }
+
+            private readonly struct SkillTreeConnection
+            {
+                public readonly Vector2 Start;
+                public readonly Vector2 End;
+                public readonly Color Color;
+                public readonly float Thickness;
+
+                public SkillTreeConnection(Vector2 start, Vector2 end, Color color, float thickness)
+                {
+                    Start = start;
+                    End = end;
+                    Color = color;
+                    Thickness = thickness;
                 }
             }
         }
