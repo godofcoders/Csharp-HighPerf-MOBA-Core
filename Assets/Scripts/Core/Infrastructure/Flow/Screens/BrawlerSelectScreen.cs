@@ -697,9 +697,10 @@ namespace MOBA.Core.Infrastructure
             Canvas.ForceUpdateCanvases();
             Dictionary<string, Vector2> positions = BuildSkillTreeNodePositions(tree, out int maxNodesInLevel);
             RectTransform graphRect = _skillTreeGrid as RectTransform;
-            float graphWidth = graphRect != null && graphRect.rect.width > 0f
-                ? graphRect.rect.width
-                : 720f;
+            Vector2 graphSize = graphRect != null && graphRect.rect.size.sqrMagnitude > 0.01f
+                ? graphRect.rect.size
+                : new Vector2(720f, 480f);
+            float graphWidth = graphSize.x;
             float nodeWidth = Mathf.Clamp(
                 (graphWidth * 0.94f / Mathf.Max(1, maxNodesInLevel)) - 8f,
                 98f,
@@ -729,6 +730,7 @@ namespace MOBA.Core.Infrastructure
                         _skillTreeConnections,
                         start,
                         end,
+                        graphSize,
                         ResolveSkillTreeConnectionColor(tree, activeConnection),
                         activeConnection ? 4f : 2f,
                         $"SkillConnection_{prerequisiteId}_{node.EffectiveId}");
@@ -786,10 +788,10 @@ namespace MOBA.Core.Infrastructure
                 outline.effectDistance = new Vector2(2f, 2f);
 
                 RectTransform buttonRect = button.GetComponent<RectTransform>();
-                buttonRect.anchorMin = positions[nodeId];
-                buttonRect.anchorMax = positions[nodeId];
+                buttonRect.anchorMin = new Vector2(0.5f, 0.5f);
+                buttonRect.anchorMax = new Vector2(0.5f, 0.5f);
                 buttonRect.pivot = new Vector2(0.5f, 0.5f);
-                buttonRect.anchoredPosition = Vector2.zero;
+                buttonRect.anchoredPosition = ToGraphPixelPosition(positions[nodeId], graphSize);
                 buttonRect.sizeDelta = nodeSize;
 
                 TMP_Text buttonLabel = button.GetComponentInChildren<TMP_Text>();
@@ -916,6 +918,7 @@ namespace MOBA.Core.Infrastructure
             Transform parent,
             Vector2 start,
             Vector2 end,
+            Vector2 parentSize,
             Color color,
             float thickness,
             string name)
@@ -932,7 +935,6 @@ namespace MOBA.Core.Infrastructure
             if (lineImage != null)
                 lineImage.raycastTarget = false;
 
-            Vector2 parentSize = parentRect.rect.size;
             Vector2 delta = new Vector2(
                 (end.x - start.x) * parentSize.x,
                 (end.y - start.y) * parentSize.y);
@@ -940,12 +942,19 @@ namespace MOBA.Core.Infrastructure
             if (length <= 0.1f)
                 return;
 
-            line.anchorMin = start;
-            line.anchorMax = start;
+            line.anchorMin = new Vector2(0.5f, 0.5f);
+            line.anchorMax = new Vector2(0.5f, 0.5f);
             line.pivot = new Vector2(0f, 0.5f);
-            line.anchoredPosition = Vector2.zero;
+            line.anchoredPosition = ToGraphPixelPosition(start, parentSize);
             line.sizeDelta = new Vector2(length, thickness);
             line.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+        }
+
+        private static Vector2 ToGraphPixelPosition(Vector2 normalizedPosition, Vector2 graphSize)
+        {
+            return new Vector2(
+                (normalizedPosition.x - 0.5f) * graphSize.x,
+                (normalizedPosition.y - 0.5f) * graphSize.y);
         }
 
         private static Color ResolveSkillTreeConnectionColor(
