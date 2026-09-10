@@ -912,6 +912,13 @@ namespace MOBA.Core.Infrastructure
             return new Color(0.28f, 0.52f, 0.78f, 0.95f);
         }
 
+        private static Vector2 ToGraphPixelPosition(Vector2 normalizedPosition, Vector2 graphSize)
+        {
+            return new Vector2(
+                (normalizedPosition.x - 0.5f) * graphSize.x,
+                (normalizedPosition.y - 0.5f) * graphSize.y);
+        }
+
         private void OnSkillTreeNodeClicked(BrawlerSkillTreeNodeDefinition node)
         {
             if (_previewed == null || _previewed.SkillTree == null || node == null)
