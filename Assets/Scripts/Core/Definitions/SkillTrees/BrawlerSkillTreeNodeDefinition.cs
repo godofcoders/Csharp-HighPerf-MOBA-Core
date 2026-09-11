@@ -32,6 +32,16 @@ namespace MOBA.Core.Definitions
         public string[] PrerequisiteNodeIds;
         public string[] MutuallyExclusiveNodeIds;
 
+        [Header("Choice Path")]
+        [Tooltip("Optional group id such as colt_starpower or colt_gadget.")]
+        public string ChoiceGroupId;
+        [Tooltip("Optional permanent path id. Unlocking a node commits the player to this path.")]
+        public string BranchId;
+
+        [Header("Graph Layout")]
+        public bool UseAuthoredGraphPosition;
+        public Vector2 GraphPosition = new Vector2(0.5f, 0.5f);
+
         [Header("Granted Content")]
         public AbilityDefinition GrantedMainAttack;
         public AbilityDefinition GrantedSuper;

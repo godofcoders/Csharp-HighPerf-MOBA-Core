@@ -30,9 +30,13 @@ MonoBehaviour:
   StartsUnlocked: 0
   ActiveByDefault: 0
   PrerequisiteNodeIds:
-  - colt_core
+  - colt_heat_shield
   MutuallyExclusiveNodeIds:
   - colt_ember_step
+  ChoiceGroupId: colt_gadgets
+  BranchId: furnace
+  UseAuthoredGraphPosition: 1
+  GraphPosition: {x: 0.84, y: 0.5}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 11400000, guid: dae6b2c45f708b7dde9a1b4c6d8e2f5a, type: 2}

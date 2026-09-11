@@ -32,6 +32,10 @@ MonoBehaviour:
   PrerequisiteNodeIds:
   - colt_super
   MutuallyExclusiveNodeIds: []
+  ChoiceGroupId: ""
+  BranchId: ""
+  UseAuthoredGraphPosition: 1
+  GraphPosition: {x: 0.5, y: 0.91}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}

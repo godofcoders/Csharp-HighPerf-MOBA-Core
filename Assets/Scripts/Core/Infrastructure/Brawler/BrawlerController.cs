@@ -282,6 +282,9 @@ namespace MOBA.Core.Infrastructure
                 List<string> activeNodeIds = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(
                     _definition,
                     _definition.SkillTree);
+                List<string> unlockedNodeIds = PlayerBrawlerProgress.GetUnlockedSkillTreeNodeIds(
+                    _definition,
+                    _definition.SkillTree);
 
                 if (BrawlerSkillTreeResolver.TryResolve(
                     _definition,
@@ -289,7 +292,8 @@ namespace MOBA.Core.Infrastructure
                     State.CurrentPowerLevel,
                     activeNodeIds,
                     out ResolvedBrawlerBuild skillTreeBuild,
-                    out string skillTreeError))
+                    out string skillTreeError,
+                    unlockedNodeIds))
                 {
                     _resolvedBuildSource = null;
                     ApplyResolvedBuild(skillTreeBuild);

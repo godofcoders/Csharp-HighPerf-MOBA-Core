@@ -30,9 +30,13 @@ MonoBehaviour:
   StartsUnlocked: 0
   ActiveByDefault: 0
   PrerequisiteNodeIds:
-  - colt_core
+  - colt_furnace_reload
   MutuallyExclusiveNodeIds:
   - colt_ember_stride
+  ChoiceGroupId: colt_starpower
+  BranchId: furnace
+  UseAuthoredGraphPosition: 1
+  GraphPosition: {x: 0.75, y: 0.73}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}

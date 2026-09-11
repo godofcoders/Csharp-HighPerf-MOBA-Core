@@ -10,7 +10,8 @@ namespace MOBA.Core.Definitions
             int powerLevel,
             IEnumerable<string> activeNodeIds,
             out ResolvedBrawlerBuild resolved,
-            out string error)
+            out string error,
+            IEnumerable<string> unlockedNodeIds = null)
         {
             resolved = null;
             error = string.Empty;
@@ -50,59 +51,24 @@ namespace MOBA.Core.Definitions
                 }
             }
 
-            if (requested.Count > tree.MaxActiveNodes)
+            List<string> requestedIds = new List<string>(requested.Count);
+            for (int i = 0; i < requested.Count; i++)
             {
-                error = $"Skill tree '{tree.name}' allows {tree.MaxActiveNodes} active nodes, but {requested.Count} were selected.";
+                if (requested[i] != null)
+                    requestedIds.Add(requested[i].EffectiveId);
+            }
+
+            IList<string> unlockedIds = unlockedNodeIds == null
+                ? null
+                : new List<string>(unlockedNodeIds);
+            if (!BrawlerSkillTreeRules.ValidateActiveNodes(
+                    tree,
+                    powerLevel,
+                    requestedIds,
+                    unlockedIds,
+                    out error))
+            {
                 return false;
-            }
-
-            HashSet<string> selectedIds = new HashSet<string>();
-            for (int i = 0; i < requested.Count; i++)
-            {
-                BrawlerSkillTreeNodeDefinition node = requested[i];
-                if (node == null)
-                    continue;
-
-                if (node.UnlockPowerLevel > powerLevel)
-                {
-                    error = $"Skill node '{node.EffectiveDisplayName}' unlocks at power level {node.UnlockPowerLevel}.";
-                    return false;
-                }
-
-                selectedIds.Add(node.EffectiveId);
-            }
-
-            for (int i = 0; i < requested.Count; i++)
-            {
-                BrawlerSkillTreeNodeDefinition node = requested[i];
-                if (node == null)
-                    continue;
-
-                if (node.PrerequisiteNodeIds != null)
-                {
-                    for (int p = 0; p < node.PrerequisiteNodeIds.Length; p++)
-                    {
-                        string prerequisite = node.PrerequisiteNodeIds[p];
-                        if (!string.IsNullOrWhiteSpace(prerequisite) && !selectedIds.Contains(prerequisite))
-                        {
-                            error = $"Skill node '{node.EffectiveDisplayName}' requires '{prerequisite}'.";
-                            return false;
-                        }
-                    }
-                }
-
-                if (node.MutuallyExclusiveNodeIds != null)
-                {
-                    for (int e = 0; e < node.MutuallyExclusiveNodeIds.Length; e++)
-                    {
-                        string exclusive = node.MutuallyExclusiveNodeIds[e];
-                        if (!string.IsNullOrWhiteSpace(exclusive) && selectedIds.Contains(exclusive))
-                        {
-                            error = $"Skill node '{node.EffectiveDisplayName}' conflicts with '{exclusive}'.";
-                            return false;
-                        }
-                    }
-                }
             }
 
             resolved = new ResolvedBrawlerBuild

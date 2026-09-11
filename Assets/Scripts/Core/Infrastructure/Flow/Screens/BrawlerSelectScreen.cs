@@ -688,7 +688,7 @@ namespace MOBA.Core.Infrastructure
             if (_skillTreeStatusText != null)
             {
                 _skillTreeStatusText.text =
-                    $"POWER {powerLevel}  |  ACTIVE {active.Count}/{tree.MaxActiveNodes}  |  Click a node to unlock or equip it.";
+                    $"POWER {powerLevel}  |  ACTIVE {active.Count}/{tree.MaxActiveNodes}  |  UNLOCKED {unlocked.Count}  |  Click a node to unlock or equip it.";
             }
 
             if (tree.Nodes == null)
@@ -701,10 +701,12 @@ namespace MOBA.Core.Infrastructure
                 ? graphRect.rect.size
                 : new Vector2(720f, 480f);
             float graphWidth = graphSize.x;
-            float nodeWidth = Mathf.Clamp(
-                (graphWidth * 0.94f / Mathf.Max(1, maxNodesInLevel)) - 8f,
-                98f,
-                148f);
+            float nodeWidth = HasAuthoredSkillTreePositions(tree)
+                ? Mathf.Clamp(graphWidth * 0.145f, 96f, 132f)
+                : Mathf.Clamp(
+                    (graphWidth * 0.94f / Mathf.Max(1, maxNodesInLevel)) - 8f,
+                    98f,
+                    148f);
             Vector2 nodeSize = new Vector2(nodeWidth, 78f);
 
             for (int i = 0; i < tree.Nodes.Length; i++)
@@ -746,15 +748,16 @@ namespace MOBA.Core.Infrastructure
                 string nodeId = node.EffectiveId;
                 bool isActive = active.Contains(nodeId);
                 bool isUnlocked = unlocked.Contains(nodeId) || isActive || node.StartsUnlocked;
-                bool canUnlock = !isUnlocked && CanUnlockSkillTreeNode(node, tree, powerLevel, unlocked, out _);
-                bool canActivate = isUnlocked && !isActive && CanActivateSkillTreeNode(node, tree, powerLevel, active, out _);
+                string unlockReason = string.Empty;
+                bool canUnlock = !isUnlocked && CanUnlockSkillTreeNode(node, tree, powerLevel, unlocked, out unlockReason);
+                bool canActivate = isUnlocked && !isActive && CanActivateSkillTreeNode(node, tree, powerLevel, active, unlocked, out _);
                 bool canDeactivate = isActive && CanDeactivateSkillTreeNode(node, tree, active, out _);
 
                 string state = isActive
                     ? "ACTIVE"
                     : isUnlocked
                         ? (canActivate ? "EQUIP" : "READY")
-                        : (canUnlock ? "UNLOCK" : $"{LockIcon} P{node.UnlockPowerLevel}");
+                        : (canUnlock ? "UNLOCK" : ResolveSkillTreeLockedState(node, powerLevel, unlockReason));
                 string label = $"{state}\n{node.EffectiveDisplayName}\n{ResolveSkillTreeNodeType(node.NodeType)}";
                 Color color = isActive
                     ? ResolveSkillTreeNodeColor(node, tree)
@@ -877,7 +880,32 @@ namespace MOBA.Core.Infrastructure
                 }
             }
 
+            for (int i = 0; i < tree.Nodes.Length; i++)
+            {
+                BrawlerSkillTreeNodeDefinition node = tree.Nodes[i];
+                if (node == null || !node.UseAuthoredGraphPosition)
+                    continue;
+
+                positions[node.EffectiveId] = new Vector2(
+                    Mathf.Clamp01(node.GraphPosition.x),
+                    Mathf.Clamp01(node.GraphPosition.y));
+            }
+
             return positions;
+        }
+
+        private static bool HasAuthoredSkillTreePositions(BrawlerSkillTreeDefinition tree)
+        {
+            if (tree == null || tree.Nodes == null)
+                return false;
+
+            for (int i = 0; i < tree.Nodes.Length; i++)
+            {
+                if (tree.Nodes[i] != null && tree.Nodes[i].UseAuthoredGraphPosition)
+                    return true;
+            }
+
+            return false;
         }
 
         private static int ResolveSkillTreeNodeDepth(
@@ -1002,9 +1030,16 @@ namespace MOBA.Core.Infrastructure
                     return;
                 }
 
-                if (!PlayerBrawlerProgress.UnlockSkillTreeNode(_previewed, tree, nodeId))
+                if (!PlayerBrawlerProgress.TryUnlockSkillTreeNode(
+                        _previewed,
+                        tree,
+                        powerLevel,
+                        nodeId,
+                        out string persistedUnlockReason))
                 {
-                    SetSkillTreeStatus("This node is already unlocked.");
+                    SetSkillTreeStatus(string.IsNullOrWhiteSpace(persistedUnlockReason)
+                        ? "This node cannot be unlocked."
+                        : persistedUnlockReason);
                     return;
                 }
 
@@ -1012,7 +1047,7 @@ namespace MOBA.Core.Infrastructure
             }
             else
             {
-                if (!CanActivateSkillTreeNode(node, tree, powerLevel, active, out string activateReason))
+                if (!CanActivateSkillTreeNode(node, tree, powerLevel, active, unlocked, out string activateReason))
                 {
                     SetSkillTreeStatus(activateReason);
                     return;
@@ -1041,33 +1076,7 @@ namespace MOBA.Core.Infrastructure
             List<string> unlocked,
             out string reason)
         {
-            reason = string.Empty;
-            if (node == null || tree == null)
-            {
-                reason = "This skill node is not configured.";
-                return false;
-            }
-
-            if (powerLevel < node.UnlockPowerLevel)
-            {
-                reason = $"Requires power level {node.UnlockPowerLevel}.";
-                return false;
-            }
-
-            if (node.PrerequisiteNodeIds != null)
-            {
-                for (int i = 0; i < node.PrerequisiteNodeIds.Length; i++)
-                {
-                    string prerequisite = node.PrerequisiteNodeIds[i];
-                    if (!string.IsNullOrWhiteSpace(prerequisite) && !unlocked.Contains(prerequisite))
-                    {
-                        reason = $"Unlock {prerequisite} first.";
-                        return false;
-                    }
-                }
-            }
-
-            return true;
+            return BrawlerSkillTreeRules.CanUnlockNode(node, tree, powerLevel, unlocked, out reason);
         }
 
         private static bool CanActivateSkillTreeNode(
@@ -1075,73 +1084,10 @@ namespace MOBA.Core.Infrastructure
             BrawlerSkillTreeDefinition tree,
             int powerLevel,
             List<string> active,
+            List<string> unlocked,
             out string reason)
         {
-            reason = string.Empty;
-            if (node == null || tree == null)
-            {
-                reason = "This skill node is not configured.";
-                return false;
-            }
-
-            if (powerLevel < node.UnlockPowerLevel)
-            {
-                reason = $"Requires power level {node.UnlockPowerLevel}.";
-                return false;
-            }
-
-            if (active.Count >= tree.MaxActiveNodes)
-            {
-                reason = $"Active node limit reached ({tree.MaxActiveNodes}).";
-                return false;
-            }
-
-            if (node.PrerequisiteNodeIds != null)
-            {
-                for (int i = 0; i < node.PrerequisiteNodeIds.Length; i++)
-                {
-                    string prerequisite = node.PrerequisiteNodeIds[i];
-                    if (!string.IsNullOrWhiteSpace(prerequisite) && !active.Contains(prerequisite))
-                    {
-                        reason = $"Equip {prerequisite} first.";
-                        return false;
-                    }
-                }
-            }
-
-            if (node.MutuallyExclusiveNodeIds != null)
-            {
-                for (int i = 0; i < node.MutuallyExclusiveNodeIds.Length; i++)
-                {
-                    string exclusive = node.MutuallyExclusiveNodeIds[i];
-                    if (!string.IsNullOrWhiteSpace(exclusive) && active.Contains(exclusive))
-                    {
-                        reason = $"Conflicts with {exclusive}.";
-                        return false;
-                    }
-                }
-            }
-
-            if (tree.Nodes != null)
-            {
-                for (int i = 0; i < tree.Nodes.Length; i++)
-                {
-                    BrawlerSkillTreeNodeDefinition other = tree.Nodes[i];
-                    if (other == null || !active.Contains(other.EffectiveId) || other.MutuallyExclusiveNodeIds == null)
-                        continue;
-
-                    for (int e = 0; e < other.MutuallyExclusiveNodeIds.Length; e++)
-                    {
-                        if (other.MutuallyExclusiveNodeIds[e] == node.EffectiveId)
-                        {
-                            reason = $"Conflicts with {other.EffectiveDisplayName}.";
-                            return false;
-                        }
-                    }
-                }
-            }
-
-            return true;
+            return BrawlerSkillTreeRules.CanActivateNode(node, tree, powerLevel, active, unlocked, out reason);
         }
 
         private static bool CanDeactivateSkillTreeNode(
@@ -1216,6 +1162,23 @@ namespace MOBA.Core.Infrastructure
                 return node.AccentColor;
 
             return tree != null ? tree.AccentColor : MenuUITheme.Gold;
+        }
+
+        private static string ResolveSkillTreeLockedState(
+            BrawlerSkillTreeNodeDefinition node,
+            int powerLevel,
+            string reason)
+        {
+            if (node != null && powerLevel < node.UnlockPowerLevel)
+                return $"{LockIcon} P{node.UnlockPowerLevel}";
+
+            if (!string.IsNullOrWhiteSpace(reason) && reason.Contains("path"))
+                return $"{LockIcon} PATH";
+
+            if (!string.IsNullOrWhiteSpace(reason) && reason.Contains("limit"))
+                return $"{LockIcon} LIMIT";
+
+            return $"{LockIcon} LOCKED";
         }
 
         private void BuildRuntimeRosterCards()

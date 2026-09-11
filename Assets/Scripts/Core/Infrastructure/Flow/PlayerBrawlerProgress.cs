@@ -240,11 +240,36 @@ namespace MOBA.Core.Infrastructure
             BrawlerSkillTreeDefinition tree,
             string nodeId)
         {
+            return TryUnlockSkillTreeNode(
+                def,
+                tree,
+                GetLevel(def),
+                nodeId,
+                out _);
+        }
+
+        public static bool TryUnlockSkillTreeNode(
+            BrawlerDefinition def,
+            BrawlerSkillTreeDefinition tree,
+            int powerLevel,
+            string nodeId,
+            out string reason)
+        {
+            reason = string.Empty;
             if (def == null || tree == null || !tree.TryGetNode(nodeId, out BrawlerSkillTreeNodeDefinition node))
+            {
+                reason = "This skill node is not configured.";
                 return false;
+            }
 
             List<string> unlocked = GetUnlockedSkillTreeNodeIds(def, tree);
             if (unlocked.Contains(node.EffectiveId))
+            {
+                reason = "This node is already unlocked.";
+                return false;
+            }
+
+            if (!BrawlerSkillTreeRules.CanUnlockNode(node, tree, powerLevel, unlocked, out reason))
                 return false;
 
             unlocked.Add(node.EffectiveId);
