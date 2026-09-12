@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14c636de3e5c4767917e819efeb67a63, type: 3}
+  m_Name: Byron_SkillNode_Hypercharge
+  m_EditorClassIdentifier:
+  OptionName: Homeopathic Shock
+  Description: Unlocks Tide's water-aligned hypercharge.
+  AllowedBuildSlotTypes: []
+  PassiveName: Homeopathic Shock
+  Category: 3
+  AllowedSlotTypes: []
+  Family: {fileID: 0}
+  IsUniqueInFamily: 0
+  IncompatiblePassives: []
+  NodeId: byron_homeopathic_shock
+  DisplayName: Homeopathic Shock
+  DisplayDescription: Unlocks Tide's water-aligned hypercharge.
+  NodeType: 6
+  AccentColor: {r: 0.2, g: 0.72, b: 1, a: 1}
+  UnlockPowerLevel: 11
+  StartsUnlocked: 0
+  ActiveByDefault: 1
+  PrerequisiteNodeIds:
+  - byron_super
+  MutuallyExclusiveNodeIds: []
+  ChoiceGroupId: ""
+  BranchId: ""
+  UseAuthoredGraphPosition: 1
+  GraphPosition: {x: 0.5, y: 0.91}
+  GrantedMainAttack: {fileID: 0}
+  GrantedSuper: {fileID: 0}
+  GrantedGadget: {fileID: 0}
+  GrantedPassive: {fileID: 0}
+  GrantedHypercharge: {fileID: 11400000, guid: a6f7e8d9c0b1ca9c5df6071829304b5c, type: 2}
+  GrantedNanopower: {fileID: 0}
+  BonusMaxHealth: 0
+  MoveSpeedBonusPercent: 0
+  DamageBonusPercent: 0
+  AttackSpeedBonusPercent: 0
