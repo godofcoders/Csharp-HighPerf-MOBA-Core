@@ -10,27 +10,27 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 14c636de3e5c4767917e819efeb67a63, type: 3}
-  m_Name: Byron_SkillNode_TideReserve
+  m_Name: Colt_SkillNode_KevlarPlating
   m_EditorClassIdentifier:
-  OptionName: Triage Coat
-  Description: Unlocks Tide's final nanopower reward.
+  OptionName: Kevlar Plating
+  Description: Unlocks Colt's final nanopower reward.
   AllowedBuildSlotTypes: []
-  PassiveName: Triage Coat
+  PassiveName: Kevlar Plating
   Category: 3
   AllowedSlotTypes: []
   Family: {fileID: 0}
   IsUniqueInFamily: 0
   IncompatiblePassives: []
-  NodeId: byron_tide_reserve
-  DisplayName: Triage Coat
-  DisplayDescription: Unlocks Tide's final nanopower reward.
+  NodeId: colt_kevlar_plating
+  DisplayName: Kevlar Plating
+  DisplayDescription: Unlocks Colt's final nanopower reward.
   NodeType: 7
-  AccentColor: {r: 0.48, g: 0.94, b: 0.36, a: 1}
+  AccentColor: {r: 0.64, g: 0.82, b: 0.26, a: 1}
   UnlockPowerLevel: 7
   StartsUnlocked: 0
   ActiveByDefault: 0
   PrerequisiteNodeIds:
-  - byron_swift_serum
+  - colt_quickdraw_boots
   MutuallyExclusiveNodeIds: []
   ChoiceGroupId: ""
   BranchId: ""
@@ -41,7 +41,7 @@ MonoBehaviour:
   GrantedGadget: {fileID: 0}
   GrantedPassive: {fileID: 0}
   GrantedHypercharge: {fileID: 0}
-  GrantedNanopower: {fileID: 11400000, guid: 14bc9212223543c6b97ee489ff8ba30a, type: 2}
+  GrantedNanopower: {fileID: 11400000, guid: a89588d8c2234ce4b97def9b0bd44454, type: 2}
   BonusMaxHealth: 0
   MoveSpeedBonusPercent: 0
   DamageBonusPercent: 0

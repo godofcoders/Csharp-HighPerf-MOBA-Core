@@ -192,7 +192,10 @@ namespace MOBA.Core.Infrastructure
                 yield break;
             }
 
-            NanopowerCatalog.BuildOptions(_localPlayer.Definition, _optionsBuffer);
+            BuildNanopowerOptionsForBrawler(
+                _localPlayer.Definition,
+                _localPlayer.State.CurrentPowerLevel,
+                _optionsBuffer);
             if (_optionsBuffer.Count == 0)
                 yield break;
 
@@ -238,13 +241,37 @@ namespace MOBA.Core.Infrastructure
                     continue;
                 }
 
-                NanopowerCatalog.BuildOptions(brawler.Definition, _botOptionsBuffer);
+                BuildNanopowerOptionsForBrawler(
+                    brawler.Definition,
+                    brawler.State.CurrentPowerLevel,
+                    _botOptionsBuffer);
                 if (_botOptionsBuffer.Count == 0)
                     continue;
 
                 int selectedIndex = UnityEngine.Random.Range(0, _botOptionsBuffer.Count);
                 brawler.SetActiveNanopower(_botOptionsBuffer[selectedIndex], true);
             }
+        }
+
+        private static void BuildNanopowerOptionsForBrawler(
+            BrawlerDefinition definition,
+            int powerLevel,
+            List<NanopowerDefinition> output)
+        {
+            if (output == null)
+                return;
+
+            if (definition != null && definition.SkillTree != null)
+            {
+                PlayerBrawlerProgress.BuildUnlockedSkillTreeNanopowerOptions(
+                    definition,
+                    definition.SkillTree,
+                    powerLevel,
+                    output);
+                return;
+            }
+
+            NanopowerCatalog.BuildOptions(definition, output);
         }
 
         private void PickOffers(List<NanopowerDefinition> options)

@@ -12,30 +12,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 14c636de3e5c4767917e819efeb67a63, type: 3}
   m_Name: Colt_SkillNode_HeatCore
   m_EditorClassIdentifier:
-  OptionName: Heat Core
-  Description: Colt's nanopower capstone grants damage and movement momentum.
+  OptionName: High-Caliber Core
+  Description: Unlocks Colt's first nanopower reward.
   AllowedBuildSlotTypes: []
-  PassiveName: Heat Core
+  PassiveName: High-Caliber Core
   Category: 3
   AllowedSlotTypes: []
   Family: {fileID: 0}
   IsUniqueInFamily: 0
   IncompatiblePassives: []
   NodeId: colt_heat_core
-  DisplayName: Heat Core
-  DisplayDescription: Colt's nanopower capstone grants damage and movement momentum.
+  DisplayName: High-Caliber Core
+  DisplayDescription: Unlocks Colt's first nanopower reward.
   NodeType: 7
-  AccentColor: {r: 1, g: 0.25, b: 0.05, a: 1}
-  UnlockPowerLevel: 5
+  AccentColor: {r: 1, g: 0.58, b: 0.16, a: 1}
+  UnlockPowerLevel: 3
   StartsUnlocked: 0
-  ActiveByDefault: 1
+  ActiveByDefault: 0
   PrerequisiteNodeIds:
-  - colt_core
+  - colt_super
   MutuallyExclusiveNodeIds: []
   ChoiceGroupId: ""
   BranchId: ""
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.39, y: 0.5}
+  GraphPosition: {x: 0.42, y: 0.5}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}

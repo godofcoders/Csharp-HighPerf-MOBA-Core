@@ -54,7 +54,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private int _previewPowerLevel = PlayerBrawlerProgress.MaxLevel;
         [Tooltip("One-time local progression reset for the skill-tree loadout migration.")]
         [SerializeField] private bool _resetProgressForSkillTreeMigration = true;
-        [SerializeField] private string _skillTreeProgressResetId = "skill_tree_loadouts_v1";
+        [SerializeField] private string _skillTreeProgressResetId = "skill_tree_nanopower_paths_v1";
         [SerializeField] private bool _createRuntimeLoadoutPanelWhenMissing = true;
         [SerializeField] private bool _autoSelectFirstOptionPerSlot = true;
 
@@ -754,8 +754,9 @@ namespace MOBA.Core.Infrastructure
                 bool isUnlocked = unlocked.Contains(nodeId) || isActive || node.StartsUnlocked;
                 string unlockReason = string.Empty;
                 bool canUnlock = !isUnlocked && CanUnlockSkillTreeNode(node, tree, powerLevel, unlocked, out unlockReason);
-                bool canActivate = isUnlocked && !isActive && CanActivateSkillTreeNode(node, tree, powerLevel, active, unlocked, out _);
-                bool canDeactivate = isActive && CanDeactivateSkillTreeNode(node, tree, active, out _);
+                bool isNanopower = node.NodeType == BrawlerSkillTreeNodeType.Nanopower;
+                bool canActivate = !isNanopower && isUnlocked && !isActive && CanActivateSkillTreeNode(node, tree, powerLevel, active, unlocked, out _);
+                bool canDeactivate = !isNanopower && isActive && CanDeactivateSkillTreeNode(node, tree, active, out _);
 
                 string state = isActive
                     ? "ACTIVE"
@@ -1016,6 +1017,12 @@ namespace MOBA.Core.Infrastructure
 
             if (active.Contains(nodeId))
             {
+                if (node.NodeType == BrawlerSkillTreeNodeType.Nanopower)
+                {
+                    SetSkillTreeStatus($"{node.EffectiveDisplayName} is already unlocked for match selection.");
+                    return;
+                }
+
                 if (!CanDeactivateSkillTreeNode(node, tree, active, out string deactivateReason))
                 {
                     SetSkillTreeStatus(deactivateReason);
@@ -1047,10 +1054,18 @@ namespace MOBA.Core.Infrastructure
                     return;
                 }
 
-                SetSkillTreeStatus($"{node.EffectiveDisplayName} unlocked. Equip it when its prerequisites are active.");
+                SetSkillTreeStatus(node.NodeType == BrawlerSkillTreeNodeType.Nanopower
+                    ? $"{node.EffectiveDisplayName} unlocked for match selection."
+                    : $"{node.EffectiveDisplayName} unlocked. Equip it when its prerequisites are active.");
             }
             else
             {
+                if (node.NodeType == BrawlerSkillTreeNodeType.Nanopower)
+                {
+                    SetSkillTreeStatus($"{node.EffectiveDisplayName} is unlocked for match selection.");
+                    return;
+                }
+
                 if (!CanActivateSkillTreeNode(node, tree, powerLevel, active, unlocked, out string activateReason))
                 {
                     SetSkillTreeStatus(activateReason);
@@ -1427,7 +1442,7 @@ namespace MOBA.Core.Infrastructure
             if (_nanopowerSection == null)
                 return;
 
-            NanopowerCatalog.BuildOptions(def, _nanopowerPreviewOptions);
+            BuildNanopowerOptionsForBrawler(def, _nanopowerPreviewOptions);
             _nanopowerSection.SetActive(true);
 
             for (int i = 0; i < _nanopowerRows.Length; i++)
@@ -2146,6 +2161,26 @@ namespace MOBA.Core.Infrastructure
                 default:
                     return null;
             }
+        }
+
+        private void BuildNanopowerOptionsForBrawler(
+            BrawlerDefinition def,
+            List<NanopowerDefinition> output)
+        {
+            if (output == null)
+                return;
+
+            if (def != null && def.SkillTree != null)
+            {
+                PlayerBrawlerProgress.BuildUnlockedSkillTreeNanopowerOptions(
+                    def,
+                    def.SkillTree,
+                    ResolvePreviewPowerLevel(def),
+                    output);
+                return;
+            }
+
+            NanopowerCatalog.BuildOptions(def, output);
         }
 
         private List<BrawlerBuildOptionDefinition> BuildOptionsForSlot(

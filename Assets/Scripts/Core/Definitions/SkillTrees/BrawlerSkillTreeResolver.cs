@@ -100,8 +100,11 @@ namespace MOBA.Core.Definitions
                 if (node.GrantedPassive != null && !resolved.PassiveOptions.Contains(node.GrantedPassive))
                     resolved.PassiveOptions.Add(node.GrantedPassive);
 
-                if (!resolved.PassiveOptions.Contains(node))
+                if (node.NodeType != BrawlerSkillTreeNodeType.Nanopower &&
+                    !resolved.PassiveOptions.Contains(node))
+                {
                     resolved.PassiveOptions.Add(node);
+                }
             }
 
             return true;

@@ -10,19 +10,19 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2b8e994b90d84eccabc55c785f05bea5, type: 3}
-  m_Name: Colt_Nanopower_HeatCore
+  m_Name: Byron_Nanopower_PotentDose
   m_EditorClassIdentifier:
-  OptionName: High-Caliber Core
-  Description: +12% damage. Colt's bullets hit harder for the whole match.
+  OptionName: Potent Dose
+  Description: +11% damage. Byron's pressure becomes more punishing when enemies ignore his lane.
   AllowedBuildSlotTypes: []
-  PassiveName: High-Caliber Core
+  PassiveName: Potent Dose
   Category: 3
   AllowedSlotTypes: []
   Family: {fileID: 0}
   IsUniqueInFamily: 0
   IncompatiblePassives: []
-  AccentColor: {r: 1, g: 0.58, b: 0.16, a: 1}
-  OutgoingDamageBonusPercent: 0.12
+  AccentColor: {r: 0.7, g: 0.34, b: 1, a: 1}
+  OutgoingDamageBonusPercent: 0.11
   DamageStatBonusPercent: 0
   MoveSpeedBonusPercent: 0
   BonusMaxHealth: 0

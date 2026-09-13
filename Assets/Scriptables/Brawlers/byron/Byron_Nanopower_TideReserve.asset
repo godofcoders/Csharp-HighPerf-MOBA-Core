@@ -12,18 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b8e994b90d84eccabc55c785f05bea5, type: 3}
   m_Name: Byron_Nanopower_TideReserve
   m_EditorClassIdentifier:
-  OptionName: Tide Reserve
-  Description: Water resonance gives Tide steadier survivability and sharper treatment windows.
+  OptionName: Triage Coat
+  Description: +300 health and 7% damage reduction. Keeps Byron alive while supporting from mid range.
   AllowedBuildSlotTypes: []
-  PassiveName: Tide Reserve
+  PassiveName: Triage Coat
   Category: 3
   AllowedSlotTypes: []
   Family: {fileID: 0}
   IsUniqueInFamily: 0
   IncompatiblePassives: []
-  AccentColor: {r: 0.2, g: 0.72, b: 1, a: 1}
+  AccentColor: {r: 0.48, g: 0.94, b: 0.36, a: 1}
   OutgoingDamageBonusPercent: 0
   DamageStatBonusPercent: 0
-  MoveSpeedBonusPercent: 0.03
-  BonusMaxHealth: 200
-  IncomingDamageReductionPercent: 0.04
+  MoveSpeedBonusPercent: 0
+  BonusMaxHealth: 300
+  IncomingDamageReductionPercent: 0.07

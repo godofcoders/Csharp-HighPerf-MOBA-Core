@@ -337,6 +337,44 @@ namespace MOBA.Core.Infrastructure
             return true;
         }
 
+        public static void BuildUnlockedSkillTreeNanopowerOptions(
+            BrawlerDefinition def,
+            BrawlerSkillTreeDefinition tree,
+            int powerLevel,
+            List<NanopowerDefinition> output)
+        {
+            if (output == null)
+                return;
+
+            output.Clear();
+            if (def == null || tree == null || tree.Nodes == null)
+                return;
+
+            List<string> unlocked = GetUnlockedSkillTreeNodeIds(def, tree);
+            List<string> active = GetActiveSkillTreeNodeIds(def, tree);
+
+            for (int i = 0; i < tree.Nodes.Length; i++)
+            {
+                BrawlerSkillTreeNodeDefinition node = tree.Nodes[i];
+                if (node == null || node.GrantedNanopower == null)
+                    continue;
+
+                if (powerLevel < node.UnlockPowerLevel)
+                    continue;
+
+                string nodeId = node.EffectiveId;
+                if (!node.StartsUnlocked &&
+                    !unlocked.Contains(nodeId) &&
+                    !active.Contains(nodeId))
+                {
+                    continue;
+                }
+
+                if (!output.Contains(node.GrantedNanopower))
+                    output.Add(node.GrantedNanopower);
+            }
+        }
+
         public static string BuildOptionPersistenceId(BrawlerBuildOptionDefinition option)
         {
             if (option == null)
