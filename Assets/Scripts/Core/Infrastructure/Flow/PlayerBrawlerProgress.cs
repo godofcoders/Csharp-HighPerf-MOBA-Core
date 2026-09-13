@@ -24,6 +24,7 @@ namespace MOBA.Core.Infrastructure
         private const string LoadoutKeyPrefix = "MOBA.BrawlerLoadout.";
         private const string SkillTreeActiveKeyPrefix = "MOBA.BrawlerSkillTree.Active.";
         private const string SkillTreeUnlockedKeyPrefix = "MOBA.BrawlerSkillTree.Unlocked.";
+        private const string ProgressResetKeyPrefix = "MOBA.BrawlerProgressReset.";
         private const string SelectedBrawlerKey = "MOBA.SelectedBrawler";
 
         private static bool _hasLoadedSelectedBrawler;
@@ -73,6 +74,65 @@ namespace MOBA.Core.Infrastructure
             int next = ClampLevel(GetLevel(def) + 1);
             SetLevel(def, next);
             return next;
+        }
+
+        public static bool ResetProgressForBrawlersOnce(
+            IEnumerable<BrawlerDefinition> brawlers,
+            string resetId)
+        {
+            if (string.IsNullOrWhiteSpace(resetId))
+                return false;
+
+            string key = ProgressResetKeyPrefix + resetId;
+            if (PlayerPrefs.GetInt(key, 0) != 0)
+                return false;
+
+            ResetProgressForBrawlers(brawlers);
+            PlayerPrefs.SetInt(key, 1);
+            PlayerPrefs.Save();
+            return true;
+        }
+
+        public static void ResetProgressForBrawlers(IEnumerable<BrawlerDefinition> brawlers)
+        {
+            if (brawlers == null)
+                return;
+
+            foreach (BrawlerDefinition brawler in brawlers)
+                ResetProgressForBrawler(brawler);
+
+            PlayerPrefs.Save();
+        }
+
+        public static void ResetProgressForBrawler(BrawlerDefinition def)
+        {
+            if (def == null)
+                return;
+
+            _levels.Remove(def);
+            PlayerPrefs.DeleteKey(BuildLevelKey(def));
+
+            if (def.BuildLayout?.Slots != null)
+            {
+                for (int i = 0; i < def.BuildLayout.Slots.Length; i++)
+                {
+                    string slotId = def.BuildLayout.Slots[i].SlotId;
+                    if (string.IsNullOrWhiteSpace(slotId))
+                        continue;
+
+                    string loadoutKey = BuildLoadoutKey(def, slotId);
+                    _loadoutSelections.Remove(loadoutKey);
+                    PlayerPrefs.DeleteKey(loadoutKey);
+                }
+            }
+
+            string activeKey = BuildSkillTreeKey(SkillTreeActiveKeyPrefix, def);
+            _skillTreeActiveSelections.Remove(activeKey);
+            PlayerPrefs.DeleteKey(activeKey);
+
+            string unlockedKey = BuildSkillTreeKey(SkillTreeUnlockedKeyPrefix, def);
+            _skillTreeUnlockedSelections.Remove(unlockedKey);
+            PlayerPrefs.DeleteKey(unlockedKey);
         }
 
         public static void SetSelectedBrawler(BrawlerDefinition def)

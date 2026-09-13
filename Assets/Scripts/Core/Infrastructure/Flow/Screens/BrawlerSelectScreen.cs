@@ -52,6 +52,9 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Fallback power level used when progression preview is disabled.")]
         [Range(1, 11)]
         [SerializeField] private int _previewPowerLevel = PlayerBrawlerProgress.MaxLevel;
+        [Tooltip("One-time local progression reset for the skill-tree loadout migration.")]
+        [SerializeField] private bool _resetProgressForSkillTreeMigration = true;
+        [SerializeField] private string _skillTreeProgressResetId = "skill_tree_loadouts_v1";
         [SerializeField] private bool _createRuntimeLoadoutPanelWhenMissing = true;
         [SerializeField] private bool _autoSelectFirstOptionPerSlot = true;
 
@@ -108,6 +111,7 @@ namespace MOBA.Core.Infrastructure
         private void Start()
         {
             ApplyRuntimeTheme();
+            ResetProgressForSkillTreeMigrationIfNeeded();
 
             if (_useBrawlInspiredRuntimeView)
             {
@@ -1059,6 +1063,8 @@ namespace MOBA.Core.Infrastructure
             }
 
             RefreshSkillTreeUI();
+            SeedSelectedLoadout(_previewed);
+            RefreshLoadoutUI();
             RefreshRuntimePreview();
             UpdateConfirmButtonInteractable();
         }
@@ -1622,12 +1628,14 @@ namespace MOBA.Core.Infrastructure
                     if (!IsSlotUnlocked(slot, powerLevel))
                         continue;
 
-                    if (IsOptionAvailableForSlot(def, slot, selection.SelectedOption))
+                    if (IsOptionSelectableForSlot(def, slot, selection.SelectedOption, powerLevel))
                         _selectedOptions[selection.SlotId] = selection.SelectedOption;
                 }
             }
 
             ApplySavedLoadoutSelections(def, powerLevel);
+            ClearSkillTreeGatedLoadoutSelections(def);
+            ApplyActiveSkillTreeLoadoutSelections(def, powerLevel);
 
             if (_autoSelectFirstOptionPerSlot || _useBrawlInspiredRuntimeView)
                 EnsureUnlockedSlotsHaveSelection(def, powerLevel);
@@ -1642,6 +1650,9 @@ namespace MOBA.Core.Infrastructure
                     continue;
 
                 if (_selectedOptions.ContainsKey(slot.SlotId))
+                    continue;
+
+                if (RequiresSkillTreeUnlock(slot.SlotType) && def != null && def.SkillTree != null)
                     continue;
 
                 List<BrawlerBuildOptionDefinition> options = BuildValidOptionsForSlot(def, slot);
@@ -1660,6 +1671,9 @@ namespace MOBA.Core.Infrastructure
             {
                 BrawlerBuildSlotDefinition slot = _previewSlots[i];
                 if (!IsSlotUnlocked(slot, powerLevel))
+                    continue;
+
+                if (RequiresSkillTreeUnlock(slot.SlotType) && def != null && def.SkillTree != null)
                     continue;
 
                 string savedOptionId = PlayerBrawlerProgress.GetSelectedLoadoutOptionId(def, slot.SlotId);
@@ -1686,10 +1700,54 @@ namespace MOBA.Core.Infrastructure
                 if (!savedCandidates.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition savedOption))
                     continue;
 
+                if (!IsOptionSelectableForSlot(def, slot, savedOption, powerLevel))
+                {
+                    PlayerBrawlerProgress.ClearSelectedLoadoutOption(def, slot.SlotId);
+                    continue;
+                }
+
                 if (WouldViolateDuplicateRule(slot, savedOption))
                     continue;
 
                 _selectedOptions[slot.SlotId] = savedOption;
+            }
+        }
+
+        private void ClearSkillTreeGatedLoadoutSelections(BrawlerDefinition def)
+        {
+            if (def == null || def.SkillTree == null)
+                return;
+
+            for (int i = 0; i < _previewSlots.Count; i++)
+            {
+                BrawlerBuildSlotDefinition slot = _previewSlots[i];
+                if (RequiresSkillTreeUnlock(slot.SlotType))
+                    _selectedOptions.Remove(slot.SlotId);
+            }
+        }
+
+        private void ApplyActiveSkillTreeLoadoutSelections(BrawlerDefinition def, int powerLevel)
+        {
+            if (def == null || def.SkillTree == null || def.SkillTree.Nodes == null)
+                return;
+
+            List<string> active = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(def, def.SkillTree);
+            for (int i = 0; i < def.SkillTree.Nodes.Length; i++)
+            {
+                BrawlerSkillTreeNodeDefinition node = def.SkillTree.Nodes[i];
+                if (node == null || !active.Contains(node.EffectiveId))
+                    continue;
+
+                for (int s = 0; s < _previewSlots.Count; s++)
+                {
+                    BrawlerBuildSlotDefinition slot = _previewSlots[s];
+                    if (!IsSlotUnlocked(slot, powerLevel))
+                        continue;
+
+                    BrawlerBuildOptionDefinition option = ResolveGrantedOptionForSlot(node, slot.SlotType);
+                    if (option != null && IsOptionSelectableForSlot(def, slot, option, powerLevel))
+                        _selectedOptions[slot.SlotId] = option;
+                }
             }
         }
 
@@ -1705,8 +1763,13 @@ namespace MOBA.Core.Infrastructure
                 if (!IsSlotUnlocked(slot, powerLevel))
                     continue;
 
-                if (_selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition option))
-                    PlayerBrawlerProgress.SetSelectedLoadoutOption(def, slot.SlotId, option);
+                if (!_selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition option))
+                    continue;
+
+                if (!IsOptionSelectableForSlot(def, slot, option, powerLevel))
+                    continue;
+
+                PlayerBrawlerProgress.SetSelectedLoadoutOption(def, slot.SlotId, option);
             }
         }
 
@@ -1741,6 +1804,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             int powerLevel = ResolvePreviewPowerLevel(_previewed);
+            PruneUnselectableSelections(_previewed, powerLevel);
             EnsureUnlockedSlotsHaveSelection(_previewed, powerLevel);
 
             for (int i = 0; i < _previewSlots.Count; i++)
@@ -1748,18 +1812,21 @@ namespace MOBA.Core.Infrastructure
                 BrawlerBuildSlotDefinition slot = _previewSlots[i];
                 bool locked = !IsSlotUnlocked(slot, powerLevel);
                 List<BrawlerBuildOptionDefinition> options = BuildValidOptionsForSlot(_previewed, slot);
+                bool gatedBySkillTree = !locked && IsSlotWaitingForSkillTreeUnlock(_previewed, slot, options);
                 _selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition selected);
                 string label = locked
                     ? $"{ResolveSlotDisplayName(slot)}\n{LockIcon} UNLOCKS P{slot.UnlockPowerLevel}"
-                    : ResolveLoadoutSlotLabel(slot, selected, options.Count);
+                    : gatedBySkillTree
+                        ? $"{ResolveSlotDisplayName(slot)}\n{LockIcon} SKILL TREE"
+                        : ResolveLoadoutSlotLabel(slot, selected, options.Count);
 
                 Button button = CreateButton(
                     _loadoutContainer,
                     $"LoadoutSlot_{slot.SlotId}",
                     label,
-                    locked ? MenuUITheme.DisabledButton : ResolveSlotColor(slot.SlotType),
+                    locked || gatedBySkillTree ? MenuUITheme.DisabledButton : ResolveSlotColor(slot.SlotType),
                     () => CycleSlot(slot));
-                button.interactable = !locked && options.Count > 0;
+                button.interactable = !locked && !gatedBySkillTree && options.Count > 0;
 
                 LayoutElement layout = button.gameObject.AddComponent<LayoutElement>();
                 layout.preferredHeight = _useBrawlInspiredRuntimeView ? 68f : 42f;
@@ -1769,6 +1836,22 @@ namespace MOBA.Core.Infrastructure
             }
 
             UpdateLoadoutStatus();
+        }
+
+        private void PruneUnselectableSelections(BrawlerDefinition def, int powerLevel)
+        {
+            for (int i = _previewSlots.Count - 1; i >= 0; i--)
+            {
+                BrawlerBuildSlotDefinition slot = _previewSlots[i];
+                if (!_selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition option))
+                    continue;
+
+                if (IsSlotUnlocked(slot, powerLevel) && IsOptionSelectableForSlot(def, slot, option, powerLevel))
+                    continue;
+
+                _selectedOptions.Remove(slot.SlotId);
+                PlayerBrawlerProgress.ClearSelectedLoadoutOption(def, slot.SlotId);
+            }
         }
 
         private GameObject CreateLoadoutRow(string text, UnityAction action)
@@ -1810,6 +1893,9 @@ namespace MOBA.Core.Infrastructure
                     continue;
 
                 if (WouldViolateDuplicateRule(slot, candidate))
+                    continue;
+
+                if (!TryActivateSkillTreeNodeForLoadoutOption(_previewed, slot, candidate))
                     continue;
 
                 _selectedOptions[slot.SlotId] = candidate;
@@ -1878,11 +1964,22 @@ namespace MOBA.Core.Infrastructure
             BrawlerBuildSlotDefinition slot,
             BrawlerBuildOptionDefinition option)
         {
+            return IsOptionSelectableForSlot(def, slot, option, ResolvePreviewPowerLevel(def));
+        }
+
+        private bool IsOptionSelectableForSlot(
+            BrawlerDefinition def,
+            BrawlerBuildSlotDefinition slot,
+            BrawlerBuildOptionDefinition option,
+            int powerLevel)
+        {
             if (def == null || option == null || !option.CanEquipInBuildSlot(slot.SlotType))
                 return false;
 
-            List<BrawlerBuildOptionDefinition> options = BuildValidOptionsForSlot(def, slot);
-            return options.Contains(option);
+            if (!BuildOptionsForSlot(def, slot).Contains(option))
+                return false;
+
+            return IsOptionUnlockedFromSkillTree(def, slot.SlotType, option, powerLevel);
         }
 
         private List<BrawlerBuildOptionDefinition> BuildValidOptionsForSlot(
@@ -1894,11 +1991,161 @@ namespace MOBA.Core.Infrastructure
             for (int i = options.Count - 1; i >= 0; i--)
             {
                 BrawlerBuildOptionDefinition option = options[i];
-                if (option == null || !option.CanEquipInBuildSlot(slot.SlotType))
+                if (option == null ||
+                    !option.CanEquipInBuildSlot(slot.SlotType) ||
+                    !IsOptionUnlockedFromSkillTree(def, slot.SlotType, option, ResolvePreviewPowerLevel(def)))
+                {
                     options.RemoveAt(i);
+                }
             }
 
             return options;
+        }
+
+        private bool IsOptionUnlockedFromSkillTree(
+            BrawlerDefinition def,
+            BrawlerBuildSlotType slotType,
+            BrawlerBuildOptionDefinition option,
+            int powerLevel)
+        {
+            if (!RequiresSkillTreeUnlock(slotType) || def == null || def.SkillTree == null)
+                return true;
+
+            if (!TryGetSkillTreeNodeForLoadoutOption(def.SkillTree, slotType, option, out BrawlerSkillTreeNodeDefinition node))
+                return false;
+
+            if (powerLevel < node.UnlockPowerLevel)
+                return false;
+
+            string nodeId = node.EffectiveId;
+            List<string> unlocked = PlayerBrawlerProgress.GetUnlockedSkillTreeNodeIds(def, def.SkillTree);
+            if (unlocked.Contains(nodeId) || node.StartsUnlocked)
+                return true;
+
+            List<string> active = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(def, def.SkillTree);
+            return active.Contains(nodeId);
+        }
+
+        private bool TryActivateSkillTreeNodeForLoadoutOption(
+            BrawlerDefinition def,
+            BrawlerBuildSlotDefinition slot,
+            BrawlerBuildOptionDefinition option)
+        {
+            if (!RequiresSkillTreeUnlock(slot.SlotType) || def == null || def.SkillTree == null)
+                return true;
+
+            if (!TryGetSkillTreeNodeForLoadoutOption(def.SkillTree, slot.SlotType, option, out BrawlerSkillTreeNodeDefinition node))
+                return false;
+
+            int powerLevel = ResolvePreviewPowerLevel(def);
+            if (!IsOptionUnlockedFromSkillTree(def, slot.SlotType, option, powerLevel))
+                return false;
+
+            List<string> unlocked = PlayerBrawlerProgress.GetUnlockedSkillTreeNodeIds(def, def.SkillTree);
+            List<string> active = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(def, def.SkillTree);
+            string nodeId = node.EffectiveId;
+            if (active.Contains(nodeId))
+                return true;
+
+            RemoveActiveLoadoutOptionForSlot(def.SkillTree, slot.SlotType, active, node);
+            if (!BrawlerSkillTreeRules.CanActivateNode(node, def.SkillTree, powerLevel, active, unlocked, out _))
+                return false;
+
+            active.Add(nodeId);
+            PlayerBrawlerProgress.SetActiveSkillTreeNodeIds(def, active);
+            return true;
+        }
+
+        private void RemoveActiveLoadoutOptionForSlot(
+            BrawlerSkillTreeDefinition tree,
+            BrawlerBuildSlotType slotType,
+            List<string> active,
+            BrawlerSkillTreeNodeDefinition replacingNode)
+        {
+            if (tree == null || tree.Nodes == null || active == null)
+                return;
+
+            for (int i = 0; i < tree.Nodes.Length; i++)
+            {
+                BrawlerSkillTreeNodeDefinition node = tree.Nodes[i];
+                if (node == null ||
+                    node == replacingNode ||
+                    !active.Contains(node.EffectiveId) ||
+                    ResolveGrantedOptionForSlot(node, slotType) == null)
+                {
+                    continue;
+                }
+
+                if (CanDeactivateSkillTreeNode(node, tree, active, out _))
+                    active.Remove(node.EffectiveId);
+            }
+        }
+
+        private bool IsSlotWaitingForSkillTreeUnlock(
+            BrawlerDefinition def,
+            BrawlerBuildSlotDefinition slot,
+            List<BrawlerBuildOptionDefinition> validOptions)
+        {
+            if (def == null ||
+                def.SkillTree == null ||
+                !RequiresSkillTreeUnlock(slot.SlotType) ||
+                validOptions == null ||
+                validOptions.Count > 0)
+            {
+                return false;
+            }
+
+            return BuildOptionsForSlot(def, slot).Count > 0;
+        }
+
+        private static bool RequiresSkillTreeUnlock(BrawlerBuildSlotType slotType)
+        {
+            return slotType == BrawlerBuildSlotType.Gadget ||
+                   slotType == BrawlerBuildSlotType.StarPower ||
+                   slotType == BrawlerBuildSlotType.Hypercharge;
+        }
+
+        private static bool TryGetSkillTreeNodeForLoadoutOption(
+            BrawlerSkillTreeDefinition tree,
+            BrawlerBuildSlotType slotType,
+            BrawlerBuildOptionDefinition option,
+            out BrawlerSkillTreeNodeDefinition node)
+        {
+            node = null;
+            if (tree == null || tree.Nodes == null || option == null)
+                return false;
+
+            for (int i = 0; i < tree.Nodes.Length; i++)
+            {
+                BrawlerSkillTreeNodeDefinition candidate = tree.Nodes[i];
+                if (ResolveGrantedOptionForSlot(candidate, slotType) == option)
+                {
+                    node = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static BrawlerBuildOptionDefinition ResolveGrantedOptionForSlot(
+            BrawlerSkillTreeNodeDefinition node,
+            BrawlerBuildSlotType slotType)
+        {
+            if (node == null)
+                return null;
+
+            switch (slotType)
+            {
+                case BrawlerBuildSlotType.Gadget:
+                    return node.GrantedGadget;
+                case BrawlerBuildSlotType.StarPower:
+                    return node.GrantedPassive as BrawlerBuildOptionDefinition;
+                case BrawlerBuildSlotType.Hypercharge:
+                    return node.GrantedHypercharge;
+                default:
+                    return null;
+            }
         }
 
         private List<BrawlerBuildOptionDefinition> BuildOptionsForSlot(
@@ -2080,6 +2327,7 @@ namespace MOBA.Core.Infrastructure
             BrawlerBuildDefinition build = ScriptableObject.CreateInstance<BrawlerBuildDefinition>();
             build.name = $"{def.name}_RuntimeSelectedBuild";
             build.hideFlags = HideFlags.DontSave;
+            int powerLevel = ResolvePreviewPowerLevel(def);
 
             List<BrawlerBuildSlotSelection> selections =
                 new List<BrawlerBuildSlotSelection>(_previewSlots.Count);
@@ -2087,10 +2335,13 @@ namespace MOBA.Core.Infrastructure
             for (int i = 0; i < _previewSlots.Count; i++)
             {
                 BrawlerBuildSlotDefinition slot = _previewSlots[i];
-                if (!IsSlotUnlocked(slot, ResolvePreviewPowerLevel(def)))
+                if (!IsSlotUnlocked(slot, powerLevel))
                     continue;
 
                 if (!_selectedOptions.TryGetValue(slot.SlotId, out BrawlerBuildOptionDefinition option))
+                    continue;
+
+                if (!IsOptionSelectableForSlot(def, slot, option, powerLevel))
                     continue;
 
                 selections.Add(new BrawlerBuildSlotSelection
@@ -2290,6 +2541,20 @@ namespace MOBA.Core.Infrastructure
             Vector2 offsetMax)
         {
             MenuUITheme.Anchor(rect, anchorMin, anchorMax, offsetMin, offsetMax);
+        }
+
+        private void ResetProgressForSkillTreeMigrationIfNeeded()
+        {
+            if (!_resetProgressForSkillTreeMigration)
+                return;
+
+            if (PlayerBrawlerProgress.ResetProgressForBrawlersOnce(
+                    _availableBrawlers,
+                    _skillTreeProgressResetId))
+            {
+                _selectedOptions.Clear();
+                SceneSelection.SelectedBuildPowerLevel = PlayerBrawlerProgress.MinLevel;
+            }
         }
 
         private int ResolvePreviewPowerLevel(BrawlerDefinition brawler)
