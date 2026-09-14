@@ -35,7 +35,7 @@ MonoBehaviour:
   ChoiceGroupId: byron_stats
   BranchId: ""
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.28, y: 0.29}
+  GraphPosition: {x: 0.18, y: 0.34}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}

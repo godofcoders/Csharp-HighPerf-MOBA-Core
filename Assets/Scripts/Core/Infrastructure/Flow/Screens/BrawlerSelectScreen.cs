@@ -563,7 +563,9 @@ namespace MOBA.Core.Infrastructure
 
         private void BuildSkillTreePanel(Transform parent)
         {
-            _skillTreePanel = CreatePanel("SkillTreePanel", parent, _panelColor);
+            Color skillTreePanelColor = _panelColor;
+            skillTreePanelColor.a = Mathf.Max(skillTreePanelColor.a, 0.96f);
+            _skillTreePanel = CreatePanel("SkillTreePanel", parent, skillTreePanelColor);
             RectTransform panelRect = _skillTreePanel.GetComponent<RectTransform>();
             Anchor(panelRect, new Vector2(0.335f, 0.14f), new Vector2(0.98f, 0.88f), Vector2.zero, Vector2.zero);
 
@@ -732,13 +734,16 @@ namespace MOBA.Core.Infrastructure
                     }
 
                     bool activeConnection = active.Contains(prerequisiteId) && active.Contains(node.EffectiveId);
+                    bool rewardPathConnection = IsSkillTreeRewardPathConnection(tree, prerequisiteId, node);
                     CreateSkillTreeConnection(
                         _skillTreeConnections,
                         start,
                         end,
                         graphSize,
-                        ResolveSkillTreeConnectionColor(tree, activeConnection),
-                        activeConnection ? 4f : 2f,
+                        ResolveSkillTreeConnectionColor(tree, activeConnection, rewardPathConnection),
+                        rewardPathConnection
+                            ? (activeConnection ? 6f : 4f)
+                            : (activeConnection ? 4f : 2f),
                         $"SkillConnection_{prerequisiteId}_{node.EffectiveId}");
                 }
             }
@@ -950,12 +955,35 @@ namespace MOBA.Core.Infrastructure
 
         private static Color ResolveSkillTreeConnectionColor(
             BrawlerSkillTreeDefinition tree,
-            bool active)
+            bool active,
+            bool rewardPath)
         {
+            if (rewardPath)
+                return active
+                    ? MenuUITheme.Gold
+                    : new Color(1f, 0.72f, 0.18f, 0.95f);
+
             if (active)
                 return tree != null ? tree.AccentColor : MenuUITheme.Gold;
 
             return new Color(0.28f, 0.52f, 0.78f, 0.95f);
+        }
+
+        private static bool IsSkillTreeRewardPathConnection(
+            BrawlerSkillTreeDefinition tree,
+            string prerequisiteId,
+            BrawlerSkillTreeNodeDefinition node)
+        {
+            if (node == null || node.NodeType != BrawlerSkillTreeNodeType.Nanopower)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(prerequisiteId))
+                return false;
+
+            return tree != null &&
+                tree.TryGetNode(prerequisiteId, out BrawlerSkillTreeNodeDefinition prerequisite) &&
+                (prerequisite.NodeType == BrawlerSkillTreeNodeType.Super ||
+                 prerequisite.NodeType == BrawlerSkillTreeNodeType.Nanopower);
         }
 
         private static void CreateSkillTreeConnection(

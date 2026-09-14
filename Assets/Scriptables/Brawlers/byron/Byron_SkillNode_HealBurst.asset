@@ -36,7 +36,7 @@ MonoBehaviour:
   ChoiceGroupId: byron_gadgets
   BranchId: venom
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.84, y: 0.5}
+  GraphPosition: {x: 0.82, y: 0.54}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 11400000, guid: d3c4b5a6f7e809892ac3d4e5f6071829, type: 2}
