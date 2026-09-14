@@ -769,13 +769,12 @@ namespace MOBA.Core.Infrastructure
                         ? (canActivate ? "EQUIP" : "READY")
                         : (canUnlock ? "UNLOCK" : ResolveSkillTreeLockedState(node, powerLevel, unlockReason));
                 string label = $"{state}\n{node.EffectiveDisplayName}\n{ResolveSkillTreeNodeType(node.NodeType)}";
-                Color color = isActive
-                    ? ResolveSkillTreeNodeColor(node, tree)
-                    : isUnlocked
-                        ? MenuUITheme.SecondaryButton
-                        : canUnlock
-                            ? MenuUITheme.PositiveButton
-                            : MenuUITheme.DisabledButton;
+                Color color = ResolveSkillTreeNodeStateColor(
+                    node,
+                    tree,
+                    isActive,
+                    isUnlocked,
+                    canUnlock);
 
                 BrawlerSkillTreeNodeDefinition capturedNode = node;
                 Button button = CreateButton(
@@ -784,6 +783,7 @@ namespace MOBA.Core.Infrastructure
                     label,
                     color,
                     () => OnSkillTreeNodeClicked(capturedNode));
+                button.transition = Selectable.Transition.None;
                 button.interactable = isActive ? canDeactivate : isUnlocked ? canActivate : canUnlock;
 
                 Image rectangularBackground = button.GetComponent<Image>();
@@ -796,9 +796,7 @@ namespace MOBA.Core.Infrastructure
                 }
 
                 Outline outline = button.gameObject.AddComponent<Outline>();
-                outline.effectColor = isActive
-                    ? new Color(1f, 0.9f, 0.55f, 0.95f)
-                    : new Color(0.2f, 0.28f, 0.4f, 0.85f);
+                outline.effectColor = ResolveSkillTreeNodeOutlineColor(isActive, isUnlocked, canUnlock);
                 outline.effectDistance = new Vector2(2f, 2f);
 
                 RectTransform buttonRect = button.GetComponent<RectTransform>();
@@ -808,12 +806,20 @@ namespace MOBA.Core.Infrastructure
                 buttonRect.anchoredPosition = ToGraphPixelPosition(positions[nodeId], graphSize);
                 buttonRect.sizeDelta = nodeSize;
 
+                AddSkillTreeNodeTypeBorder(button, node.NodeType);
+
                 TMP_Text buttonLabel = button.GetComponentInChildren<TMP_Text>();
                 if (buttonLabel != null)
                 {
                     buttonLabel.fontSize = 11f;
                     buttonLabel.enableWordWrapping = true;
                     buttonLabel.overflowMode = TextOverflowModes.Ellipsis;
+                    Anchor(
+                        buttonLabel.rectTransform,
+                        Vector2.zero,
+                        Vector2.one,
+                        new Vector2(8f, 8f),
+                        new Vector2(-8f, -5f));
                 }
 
                 _skillTreeRows.Add(button.gameObject);
@@ -1213,13 +1219,94 @@ namespace MOBA.Core.Infrastructure
             return tree != null ? tree.AccentColor : MenuUITheme.Gold;
         }
 
+        private static Color ResolveSkillTreeNodeStateColor(
+            BrawlerSkillTreeNodeDefinition node,
+            BrawlerSkillTreeDefinition tree,
+            bool isActive,
+            bool isUnlocked,
+            bool canUnlock)
+        {
+            if (isActive)
+                return ResolveSkillTreeNodeColor(node, tree);
+
+            if (isUnlocked)
+                return new Color(0.12f, 0.42f, 0.78f, 1f);
+
+            if (canUnlock)
+                return new Color(0.10f, 0.58f, 0.30f, 1f);
+
+            return new Color(0.10f, 0.12f, 0.18f, 0.94f);
+        }
+
+        private static Color ResolveSkillTreeNodeOutlineColor(
+            bool isActive,
+            bool isUnlocked,
+            bool canUnlock)
+        {
+            if (isActive)
+                return new Color(1f, 0.9f, 0.55f, 0.95f);
+
+            if (isUnlocked)
+                return new Color(0.24f, 0.78f, 1f, 0.9f);
+
+            if (canUnlock)
+                return new Color(0.3f, 0.95f, 0.52f, 0.9f);
+
+            return new Color(0.2f, 0.24f, 0.32f, 0.85f);
+        }
+
+        private static Color ResolveSkillTreeNodeTypeColor(BrawlerSkillTreeNodeType type)
+        {
+            switch (type)
+            {
+                case BrawlerSkillTreeNodeType.MainAttack:
+                    return new Color(1f, 0.46f, 0.16f, 1f);
+                case BrawlerSkillTreeNodeType.Super:
+                    return new Color(0.18f, 0.78f, 1f, 1f);
+                case BrawlerSkillTreeNodeType.Gadget:
+                    return new Color(0.1f, 0.86f, 0.72f, 1f);
+                case BrawlerSkillTreeNodeType.StarPower:
+                    return new Color(0.96f, 0.36f, 1f, 1f);
+                case BrawlerSkillTreeNodeType.Hypercharge:
+                    return new Color(0.62f, 0.42f, 1f, 1f);
+                case BrawlerSkillTreeNodeType.Nanopower:
+                    return new Color(1f, 0.68f, 0.12f, 1f);
+                case BrawlerSkillTreeNodeType.Stat:
+                    return new Color(0.42f, 0.9f, 0.44f, 1f);
+                default:
+                    return new Color(0.86f, 0.92f, 1f, 1f);
+            }
+        }
+
+        private static void AddSkillTreeNodeTypeBorder(
+            Button button,
+            BrawlerSkillTreeNodeType nodeType)
+        {
+            if (button == null)
+                return;
+
+            Image border = CreatePanel(
+                "SkillNodeTypeBorder",
+                button.transform,
+                ResolveSkillTreeNodeTypeColor(nodeType)).GetComponent<Image>();
+            border.raycastTarget = false;
+
+            Anchor(
+                border.rectTransform,
+                Vector2.zero,
+                new Vector2(1f, 0f),
+                Vector2.zero,
+                new Vector2(0f, 6f));
+            border.transform.SetSiblingIndex(Mathf.Min(1, button.transform.childCount - 1));
+        }
+
         private static string ResolveSkillTreeLockedState(
             BrawlerSkillTreeNodeDefinition node,
             int powerLevel,
             string reason)
         {
             if (node != null && powerLevel < node.UnlockPowerLevel)
-                return $"{LockIcon} P{node.UnlockPowerLevel}";
+                return $"{LockIcon} POWER {node.UnlockPowerLevel}";
 
             if (!string.IsNullOrWhiteSpace(reason) && reason.Contains("path"))
                 return $"{LockIcon} PATH";
