@@ -735,16 +735,40 @@ namespace MOBA.Core.Infrastructure
 
                     bool activeConnection = active.Contains(prerequisiteId) && active.Contains(node.EffectiveId);
                     bool rewardPathConnection = IsSkillTreeRewardPathConnection(tree, prerequisiteId, node);
-                    CreateSkillTreeConnection(
-                        _skillTreeConnections,
-                        start,
-                        end,
-                        graphSize,
-                        ResolveSkillTreeConnectionColor(tree, activeConnection, rewardPathConnection),
-                        rewardPathConnection
-                            ? (activeConnection ? 6f : 4f)
-                            : (activeConnection ? 4f : 2f),
-                        $"SkillConnection_{prerequisiteId}_{node.EffectiveId}");
+                    bool ultimateConnection = IsSkillTreeUltimateConnection(tree, prerequisiteId, node);
+                    Color connectionColor = ResolveSkillTreeConnectionColor(
+                        tree,
+                        activeConnection,
+                        rewardPathConnection,
+                        ultimateConnection);
+                    float connectionThickness = ResolveSkillTreeConnectionThickness(
+                        activeConnection,
+                        rewardPathConnection,
+                        ultimateConnection);
+                    string connectionName = $"SkillConnection_{prerequisiteId}_{node.EffectiveId}";
+
+                    if (ultimateConnection)
+                    {
+                        CreateSkillTreeRoutedConnection(
+                            _skillTreeConnections,
+                            start,
+                            end,
+                            graphSize,
+                            connectionColor,
+                            connectionThickness,
+                            connectionName);
+                    }
+                    else
+                    {
+                        CreateSkillTreeConnection(
+                            _skillTreeConnections,
+                            start,
+                            end,
+                            graphSize,
+                            connectionColor,
+                            connectionThickness,
+                            connectionName);
+                    }
                 }
             }
 
@@ -962,8 +986,14 @@ namespace MOBA.Core.Infrastructure
         private static Color ResolveSkillTreeConnectionColor(
             BrawlerSkillTreeDefinition tree,
             bool active,
-            bool rewardPath)
+            bool rewardPath,
+            bool ultimatePath)
         {
+            if (ultimatePath)
+                return active
+                    ? ResolveSkillTreeNodeTypeColor(BrawlerSkillTreeNodeType.Hypercharge)
+                    : new Color(0.62f, 0.42f, 1f, 0.8f);
+
             if (rewardPath)
                 return active
                     ? MenuUITheme.Gold
@@ -973,6 +1003,20 @@ namespace MOBA.Core.Infrastructure
                 return tree != null ? tree.AccentColor : MenuUITheme.Gold;
 
             return new Color(0.28f, 0.52f, 0.78f, 0.95f);
+        }
+
+        private static float ResolveSkillTreeConnectionThickness(
+            bool active,
+            bool rewardPath,
+            bool ultimatePath)
+        {
+            if (rewardPath)
+                return active ? 6f : 4f;
+
+            if (ultimatePath)
+                return active ? 5f : 3f;
+
+            return active ? 4f : 2f;
         }
 
         private static bool IsSkillTreeRewardPathConnection(
@@ -990,6 +1034,60 @@ namespace MOBA.Core.Infrastructure
                 tree.TryGetNode(prerequisiteId, out BrawlerSkillTreeNodeDefinition prerequisite) &&
                 (prerequisite.NodeType == BrawlerSkillTreeNodeType.Super ||
                  prerequisite.NodeType == BrawlerSkillTreeNodeType.Nanopower);
+        }
+
+        private static bool IsSkillTreeUltimateConnection(
+            BrawlerSkillTreeDefinition tree,
+            string prerequisiteId,
+            BrawlerSkillTreeNodeDefinition node)
+        {
+            if (node == null || node.NodeType != BrawlerSkillTreeNodeType.Hypercharge)
+                return false;
+
+            if (string.IsNullOrWhiteSpace(prerequisiteId) || tree == null)
+                return false;
+
+            return tree.TryGetNode(prerequisiteId, out BrawlerSkillTreeNodeDefinition prerequisite) &&
+                prerequisite.NodeType == BrawlerSkillTreeNodeType.Super;
+        }
+
+        private static void CreateSkillTreeRoutedConnection(
+            Transform parent,
+            Vector2 start,
+            Vector2 end,
+            Vector2 parentSize,
+            Color color,
+            float thickness,
+            string name)
+        {
+            float routeX = Mathf.Clamp(Mathf.Max(start.x, end.x) + 0.045f, 0.05f, 0.975f);
+            Vector2 lowerCorner = new Vector2(routeX, start.y);
+            Vector2 upperCorner = new Vector2(routeX, end.y);
+
+            CreateSkillTreeConnection(
+                parent,
+                start,
+                lowerCorner,
+                parentSize,
+                color,
+                thickness,
+                name + "_Out");
+            CreateSkillTreeConnection(
+                parent,
+                lowerCorner,
+                upperCorner,
+                parentSize,
+                color,
+                thickness,
+                name + "_Rise");
+            CreateSkillTreeConnection(
+                parent,
+                upperCorner,
+                end,
+                parentSize,
+                color,
+                thickness,
+                name + "_In");
         }
 
         private static void CreateSkillTreeConnection(

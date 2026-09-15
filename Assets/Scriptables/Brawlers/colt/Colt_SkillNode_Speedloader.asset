@@ -36,7 +36,7 @@ MonoBehaviour:
   ChoiceGroupId: colt_gadgets
   BranchId: furnace
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.82, y: 0.54}
+  GraphPosition: {x: 0.7, y: 0.54}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 11400000, guid: dae6b2c45f708b7dde9a1b4c6d8e2f5a, type: 2}

@@ -34,7 +34,7 @@ MonoBehaviour:
   MutuallyExclusiveNodeIds: []
   ChoiceGroupId: colt_stats
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.82, y: 0.34}
+  GraphPosition: {x: 0.7, y: 0.34}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}
