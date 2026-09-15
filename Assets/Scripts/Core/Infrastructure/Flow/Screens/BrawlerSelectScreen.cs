@@ -109,6 +109,35 @@ namespace MOBA.Core.Infrastructure
         private StatRowView _rangeStat;
         private StatRowView _speedStat;
 
+        private struct SkillTreeLaneBounds
+        {
+            public bool HasValue;
+            public float MinX;
+            public float MaxX;
+            public float MinY;
+            public float MaxY;
+
+            public float CenterX => (MinX + MaxX) * 0.5f;
+
+            public void Encapsulate(Vector2 position)
+            {
+                if (!HasValue)
+                {
+                    HasValue = true;
+                    MinX = position.x;
+                    MaxX = position.x;
+                    MinY = position.y;
+                    MaxY = position.y;
+                    return;
+                }
+
+                MinX = Mathf.Min(MinX, position.x);
+                MaxX = Mathf.Max(MaxX, position.x);
+                MinY = Mathf.Min(MinY, position.y);
+                MaxY = Mathf.Max(MaxY, position.y);
+            }
+        }
+
         private void Start()
         {
             ApplyRuntimeTheme();
@@ -718,7 +747,7 @@ namespace MOBA.Core.Infrastructure
                     148f);
             Vector2 nodeSize = new Vector2(nodeWidth, 78f);
 
-            CreateSkillTreeBackdrop(_skillTreeConnections, tree);
+            CreateSkillTreeBackdrop(_skillTreeConnections, tree, positions, nodeSize, graphSize);
 
             for (int i = 0; i < tree.Nodes.Length; i++)
             {
@@ -886,46 +915,117 @@ namespace MOBA.Core.Infrastructure
 
         private static void CreateSkillTreeBackdrop(
             Transform parent,
-            BrawlerSkillTreeDefinition tree)
+            BrawlerSkillTreeDefinition tree,
+            Dictionary<string, Vector2> positions,
+            Vector2 nodeSize,
+            Vector2 graphSize)
         {
             if (parent == null)
                 return;
 
             BrawlerElementType element = ResolveSkillTreeElement(tree);
             Color elementColor = BrawlerElementUtility.ToColor(element);
+            float horizontalPadding = ResolveSkillTreeLaneHorizontalPadding(nodeSize, graphSize);
+            float verticalPadding = ResolveSkillTreeLaneVerticalPadding(nodeSize, graphSize);
+
+            SkillTreeLaneBounds leftBuildLane = new SkillTreeLaneBounds();
+            SkillTreeLaneBounds rewardLane = new SkillTreeLaneBounds();
+            SkillTreeLaneBounds rightBuildLane = new SkillTreeLaneBounds();
+            SkillTreeLaneBounds ultimateLane = new SkillTreeLaneBounds();
+
+            if (tree != null && tree.Nodes != null && positions != null)
+            {
+                for (int i = 0; i < tree.Nodes.Length; i++)
+                {
+                    BrawlerSkillTreeNodeDefinition node = tree.Nodes[i];
+                    if (node == null || !positions.TryGetValue(node.EffectiveId, out Vector2 position))
+                        continue;
+
+                    if (node.NodeType == BrawlerSkillTreeNodeType.Hypercharge || position.x >= 0.84f)
+                    {
+                        ultimateLane.Encapsulate(position);
+                    }
+                    else if (node.NodeType == BrawlerSkillTreeNodeType.Core ||
+                             node.NodeType == BrawlerSkillTreeNodeType.Super ||
+                             node.NodeType == BrawlerSkillTreeNodeType.Nanopower)
+                    {
+                        rewardLane.Encapsulate(position);
+                    }
+                    else if (position.x < 0.35f)
+                    {
+                        leftBuildLane.Encapsulate(position);
+                    }
+                    else
+                    {
+                        rightBuildLane.Encapsulate(position);
+                    }
+                }
+            }
 
             CreateSkillTreeBackdropBand(
                 parent,
                 "LeftBuildLane",
-                new Vector2(0.015f, 0.04f),
-                new Vector2(0.25f, 0.96f),
-                new Color(0.18f, 0.26f, 0.38f, 0.22f));
+                leftBuildLane,
+                horizontalPadding,
+                verticalPadding,
+                new Color(0.18f, 0.26f, 0.38f, 0.14f));
             CreateSkillTreeBackdropBand(
                 parent,
                 "NanopowerRewardLane",
-                new Vector2(0.34f, 0.04f),
-                new Vector2(0.57f, 0.96f),
-                new Color(elementColor.r, elementColor.g, elementColor.b, 0.16f));
+                rewardLane,
+                horizontalPadding * 1.06f,
+                verticalPadding,
+                new Color(elementColor.r, elementColor.g, elementColor.b, 0.15f));
             CreateSkillTreeBackdropBand(
                 parent,
                 "RightBuildLane",
-                new Vector2(0.61f, 0.04f),
-                new Vector2(0.80f, 0.96f),
-                new Color(0.18f, 0.26f, 0.38f, 0.20f));
+                rightBuildLane,
+                horizontalPadding,
+                verticalPadding,
+                new Color(0.18f, 0.26f, 0.38f, 0.14f));
             CreateSkillTreeBackdropBand(
                 parent,
                 "UltimateLane",
-                new Vector2(0.84f, 0.04f),
-                new Vector2(0.985f, 0.96f),
-                new Color(0.38f, 0.24f, 0.78f, 0.20f));
+                ultimateLane,
+                horizontalPadding,
+                verticalPadding,
+                new Color(0.38f, 0.24f, 0.78f, 0.14f));
+
+            if (rewardLane.HasValue)
+            {
+                float spineX = rewardLane.CenterX;
+                CreateSkillTreeBackdropBand(
+                    parent,
+                    "RewardSpineGlow",
+                    new Vector2(spineX - 0.006f, rewardLane.MinY - verticalPadding),
+                    new Vector2(spineX + 0.006f, rewardLane.MaxY + verticalPadding),
+                    new Color(elementColor.r, elementColor.g, elementColor.b, 0.28f));
+            }
+
+            CreateSkillTreeElementMotif(parent, element, elementColor, rewardLane);
+        }
+
+        private static void CreateSkillTreeBackdropBand(
+            Transform parent,
+            string name,
+            SkillTreeLaneBounds bounds,
+            float horizontalPadding,
+            float verticalPadding,
+            Color color)
+        {
+            if (!bounds.HasValue)
+                return;
+
             CreateSkillTreeBackdropBand(
                 parent,
-                "RewardSpineGlow",
-                new Vector2(0.445f, 0.05f),
-                new Vector2(0.455f, 0.95f),
-                new Color(elementColor.r, elementColor.g, elementColor.b, 0.34f));
-
-            CreateSkillTreeElementMotif(parent, element, elementColor);
+                name,
+                new Vector2(
+                    Mathf.Clamp01(bounds.MinX - horizontalPadding),
+                    Mathf.Clamp01(bounds.MinY - verticalPadding)),
+                new Vector2(
+                    Mathf.Clamp01(bounds.MaxX + horizontalPadding),
+                    Mathf.Clamp01(bounds.MaxY + verticalPadding)),
+                color);
         }
 
         private static void CreateSkillTreeBackdropBand(
@@ -943,59 +1043,86 @@ namespace MOBA.Core.Infrastructure
         private static void CreateSkillTreeElementMotif(
             Transform parent,
             BrawlerElementType element,
-            Color elementColor)
+            Color elementColor,
+            SkillTreeLaneBounds rewardLane)
         {
+            if (!rewardLane.HasValue)
+                return;
+
+            Vector2 rewardMin = new Vector2(
+                Mathf.Clamp01(rewardLane.MinX - 0.06f),
+                Mathf.Clamp01(rewardLane.MinY - 0.08f));
+            Vector2 rewardMax = new Vector2(
+                Mathf.Clamp01(rewardLane.MaxX + 0.06f),
+                Mathf.Clamp01(rewardLane.MaxY + 0.08f));
+
             switch (element)
             {
                 case BrawlerElementType.Fire:
                     CreateSkillTreeBackdropBand(
                         parent,
                         "FireHeatLow",
-                        new Vector2(0.34f, 0.04f),
-                        new Vector2(0.57f, 0.08f),
-                        new Color(1f, 0.28f, 0.08f, 0.34f));
+                        new Vector2(rewardMin.x, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.05f)),
+                        new Vector2(rewardMax.x, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.09f)),
+                        new Color(1f, 0.28f, 0.08f, 0.22f));
                     CreateSkillTreeBackdropBand(
                         parent,
                         "FireHeatMid",
-                        new Vector2(0.37f, 0.36f),
-                        new Vector2(0.54f, 0.39f),
-                        new Color(1f, 0.58f, 0.12f, 0.24f));
+                        new Vector2(rewardMin.x + 0.025f, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.48f)),
+                        new Vector2(rewardMax.x - 0.025f, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.52f)),
+                        new Color(1f, 0.58f, 0.12f, 0.18f));
                     CreateSkillTreeBackdropBand(
                         parent,
                         "FireHeatHigh",
-                        new Vector2(0.39f, 0.68f),
-                        new Vector2(0.52f, 0.71f),
-                        new Color(1f, 0.36f, 0.14f, 0.28f));
+                        new Vector2(rewardMin.x + 0.04f, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.86f)),
+                        new Vector2(rewardMax.x - 0.04f, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.90f)),
+                        new Color(1f, 0.36f, 0.14f, 0.20f));
                     break;
                 case BrawlerElementType.Water:
                     CreateSkillTreeBackdropBand(
                         parent,
                         "WaterRippleLow",
-                        new Vector2(0.34f, 0.16f),
-                        new Vector2(0.57f, 0.18f),
-                        new Color(0.2f, 0.72f, 1f, 0.28f));
+                        new Vector2(rewardMin.x, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.15f)),
+                        new Vector2(rewardMax.x, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.18f)),
+                        new Color(0.2f, 0.72f, 1f, 0.20f));
                     CreateSkillTreeBackdropBand(
                         parent,
                         "WaterRippleMid",
-                        new Vector2(0.36f, 0.47f),
-                        new Vector2(0.55f, 0.49f),
-                        new Color(0.42f, 0.92f, 1f, 0.24f));
+                        new Vector2(rewardMin.x + 0.02f, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.50f)),
+                        new Vector2(rewardMax.x - 0.02f, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.53f)),
+                        new Color(0.42f, 0.92f, 1f, 0.18f));
                     CreateSkillTreeBackdropBand(
                         parent,
                         "WaterRippleHigh",
-                        new Vector2(0.34f, 0.78f),
-                        new Vector2(0.57f, 0.80f),
-                        new Color(0.2f, 0.72f, 1f, 0.26f));
+                        new Vector2(rewardMin.x, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.82f)),
+                        new Vector2(rewardMax.x, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.85f)),
+                        new Color(0.2f, 0.72f, 1f, 0.18f));
                     break;
                 default:
                     CreateSkillTreeBackdropBand(
                         parent,
                         "ElementPulse",
-                        new Vector2(0.36f, 0.46f),
-                        new Vector2(0.55f, 0.50f),
-                        new Color(elementColor.r, elementColor.g, elementColor.b, 0.20f));
+                        new Vector2(rewardMin.x, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.48f)),
+                        new Vector2(rewardMax.x, Mathf.Lerp(rewardMin.y, rewardMax.y, 0.52f)),
+                        new Color(elementColor.r, elementColor.g, elementColor.b, 0.16f));
                     break;
             }
+        }
+
+        private static float ResolveSkillTreeLaneHorizontalPadding(Vector2 nodeSize, Vector2 graphSize)
+        {
+            if (graphSize.x <= 0.01f)
+                return 0.08f;
+
+            return Mathf.Clamp((nodeSize.x / graphSize.x * 0.5f) + 0.018f, 0.055f, 0.085f);
+        }
+
+        private static float ResolveSkillTreeLaneVerticalPadding(Vector2 nodeSize, Vector2 graphSize)
+        {
+            if (graphSize.y <= 0.01f)
+                return 0.08f;
+
+            return Mathf.Clamp((nodeSize.y / graphSize.y * 0.5f) + 0.018f, 0.07f, 0.105f);
         }
 
         private static Dictionary<string, Vector2> BuildSkillTreeNodePositions(
