@@ -36,7 +36,7 @@ MonoBehaviour:
   ChoiceGroupId: colt_starpower
   BranchId: ember
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.18, y: 0.52}
+  GraphPosition: {x: 0.11, y: 0.56}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}

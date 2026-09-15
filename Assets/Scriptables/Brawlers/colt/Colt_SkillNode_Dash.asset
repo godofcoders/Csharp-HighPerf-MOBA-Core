@@ -36,7 +36,7 @@ MonoBehaviour:
   ChoiceGroupId: colt_gadgets
   BranchId: ember
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.18, y: 0.7}
+  GraphPosition: {x: 0.11, y: 0.8}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 11400000, guid: c9d5a1b34e6f7a6ccd8f0a3b5c7d1e49, type: 2}

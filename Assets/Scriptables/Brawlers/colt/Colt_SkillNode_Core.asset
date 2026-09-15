@@ -34,7 +34,7 @@ MonoBehaviour:
   ChoiceGroupId: ""
   BranchId: ""
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.5, y: 0.08}
+  GraphPosition: {x: 0.45, y: 0.08}
   GrantedMainAttack: {fileID: 11400000, guid: 1cbd4ca6ad2d946478f8ab943b63b364, type: 2}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}

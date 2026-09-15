@@ -92,6 +92,7 @@ namespace MOBA.Core.Infrastructure
         private GameObject _nanopowerSection;
         private Button _skillTreeButton;
         private GameObject _skillTreePanel;
+        private Image _skillTreeAccentImage;
         private Transform _skillTreeGrid;
         private Transform _skillTreeConnections;
         private TMP_Text _skillTreeTitleText;
@@ -569,8 +570,8 @@ namespace MOBA.Core.Infrastructure
             RectTransform panelRect = _skillTreePanel.GetComponent<RectTransform>();
             Anchor(panelRect, new Vector2(0.335f, 0.14f), new Vector2(0.98f, 0.88f), Vector2.zero, Vector2.zero);
 
-            Image accent = CreatePanel("SkillTreeAccent", _skillTreePanel.transform, _goldColor).GetComponent<Image>();
-            Anchor(accent.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0.018f), Vector2.zero, Vector2.zero);
+            _skillTreeAccentImage = CreatePanel("SkillTreeAccent", _skillTreePanel.transform, _goldColor).GetComponent<Image>();
+            Anchor(_skillTreeAccentImage.rectTransform, new Vector2(0f, 0f), new Vector2(1f, 0.018f), Vector2.zero, Vector2.zero);
 
             _skillTreeTitleText = CreateText(
                 _skillTreePanel.transform,
@@ -697,6 +698,8 @@ namespace MOBA.Core.Infrastructure
                     $"POWER {powerLevel}  |  ACTIVE {active.Count}/{tree.MaxActiveNodes}  |  UNLOCKED {unlocked.Count}  |  Click a node to unlock or equip it.";
             }
 
+            ApplySkillTreeElementStyle(tree);
+
             if (tree.Nodes == null)
                 return;
 
@@ -714,6 +717,8 @@ namespace MOBA.Core.Infrastructure
                     98f,
                     148f);
             Vector2 nodeSize = new Vector2(nodeWidth, 78f);
+
+            CreateSkillTreeBackdrop(_skillTreeConnections, tree);
 
             for (int i = 0; i < tree.Nodes.Length; i++)
             {
@@ -831,6 +836,7 @@ namespace MOBA.Core.Infrastructure
                 buttonRect.sizeDelta = nodeSize;
 
                 AddSkillTreeNodeTypeBorder(button, node.NodeType);
+                AddSkillTreeNodeElementRail(button, tree);
 
                 TMP_Text buttonLabel = button.GetComponentInChildren<TMP_Text>();
                 if (buttonLabel != null)
@@ -860,6 +866,135 @@ namespace MOBA.Core.Infrastructure
                 Transform child = _skillTreeConnections.GetChild(i);
                 if (child != null)
                     Destroy(child.gameObject);
+            }
+        }
+
+        private void ApplySkillTreeElementStyle(BrawlerSkillTreeDefinition tree)
+        {
+            BrawlerElementType element = ResolveSkillTreeElement(tree);
+            Color elementColor = BrawlerElementUtility.ToColor(element);
+
+            Image panelImage = _skillTreePanel != null
+                ? _skillTreePanel.GetComponent<Image>()
+                : null;
+            if (panelImage != null)
+                panelImage.color = ResolveSkillTreePanelColor(element, _panelColor);
+
+            if (_skillTreeAccentImage != null)
+                _skillTreeAccentImage.color = elementColor;
+        }
+
+        private static void CreateSkillTreeBackdrop(
+            Transform parent,
+            BrawlerSkillTreeDefinition tree)
+        {
+            if (parent == null)
+                return;
+
+            BrawlerElementType element = ResolveSkillTreeElement(tree);
+            Color elementColor = BrawlerElementUtility.ToColor(element);
+
+            CreateSkillTreeBackdropBand(
+                parent,
+                "LeftBuildLane",
+                new Vector2(0.015f, 0.04f),
+                new Vector2(0.25f, 0.96f),
+                new Color(0.18f, 0.26f, 0.38f, 0.22f));
+            CreateSkillTreeBackdropBand(
+                parent,
+                "NanopowerRewardLane",
+                new Vector2(0.34f, 0.04f),
+                new Vector2(0.57f, 0.96f),
+                new Color(elementColor.r, elementColor.g, elementColor.b, 0.16f));
+            CreateSkillTreeBackdropBand(
+                parent,
+                "RightBuildLane",
+                new Vector2(0.61f, 0.04f),
+                new Vector2(0.80f, 0.96f),
+                new Color(0.18f, 0.26f, 0.38f, 0.20f));
+            CreateSkillTreeBackdropBand(
+                parent,
+                "UltimateLane",
+                new Vector2(0.84f, 0.04f),
+                new Vector2(0.985f, 0.96f),
+                new Color(0.38f, 0.24f, 0.78f, 0.20f));
+            CreateSkillTreeBackdropBand(
+                parent,
+                "RewardSpineGlow",
+                new Vector2(0.445f, 0.05f),
+                new Vector2(0.455f, 0.95f),
+                new Color(elementColor.r, elementColor.g, elementColor.b, 0.34f));
+
+            CreateSkillTreeElementMotif(parent, element, elementColor);
+        }
+
+        private static void CreateSkillTreeBackdropBand(
+            Transform parent,
+            string name,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Color color)
+        {
+            Image band = CreatePanel(name, parent, color).GetComponent<Image>();
+            band.raycastTarget = false;
+            Anchor(band.rectTransform, anchorMin, anchorMax, Vector2.zero, Vector2.zero);
+        }
+
+        private static void CreateSkillTreeElementMotif(
+            Transform parent,
+            BrawlerElementType element,
+            Color elementColor)
+        {
+            switch (element)
+            {
+                case BrawlerElementType.Fire:
+                    CreateSkillTreeBackdropBand(
+                        parent,
+                        "FireHeatLow",
+                        new Vector2(0.34f, 0.04f),
+                        new Vector2(0.57f, 0.08f),
+                        new Color(1f, 0.28f, 0.08f, 0.34f));
+                    CreateSkillTreeBackdropBand(
+                        parent,
+                        "FireHeatMid",
+                        new Vector2(0.37f, 0.36f),
+                        new Vector2(0.54f, 0.39f),
+                        new Color(1f, 0.58f, 0.12f, 0.24f));
+                    CreateSkillTreeBackdropBand(
+                        parent,
+                        "FireHeatHigh",
+                        new Vector2(0.39f, 0.68f),
+                        new Vector2(0.52f, 0.71f),
+                        new Color(1f, 0.36f, 0.14f, 0.28f));
+                    break;
+                case BrawlerElementType.Water:
+                    CreateSkillTreeBackdropBand(
+                        parent,
+                        "WaterRippleLow",
+                        new Vector2(0.34f, 0.16f),
+                        new Vector2(0.57f, 0.18f),
+                        new Color(0.2f, 0.72f, 1f, 0.28f));
+                    CreateSkillTreeBackdropBand(
+                        parent,
+                        "WaterRippleMid",
+                        new Vector2(0.36f, 0.47f),
+                        new Vector2(0.55f, 0.49f),
+                        new Color(0.42f, 0.92f, 1f, 0.24f));
+                    CreateSkillTreeBackdropBand(
+                        parent,
+                        "WaterRippleHigh",
+                        new Vector2(0.34f, 0.78f),
+                        new Vector2(0.57f, 0.80f),
+                        new Color(0.2f, 0.72f, 1f, 0.26f));
+                    break;
+                default:
+                    CreateSkillTreeBackdropBand(
+                        parent,
+                        "ElementPulse",
+                        new Vector2(0.36f, 0.46f),
+                        new Vector2(0.55f, 0.50f),
+                        new Color(elementColor.r, elementColor.g, elementColor.b, 0.20f));
+                    break;
             }
         }
 
@@ -1317,6 +1452,41 @@ namespace MOBA.Core.Infrastructure
             return tree != null ? tree.AccentColor : MenuUITheme.Gold;
         }
 
+        private static BrawlerElementType ResolveSkillTreeElement(BrawlerSkillTreeDefinition tree)
+        {
+            return tree != null
+                ? tree.ElementType
+                : BrawlerElementType.None;
+        }
+
+        private static Color ResolveSkillTreePanelColor(
+            BrawlerElementType element,
+            Color fallback)
+        {
+            switch (element)
+            {
+                case BrawlerElementType.Fire:
+                    return new Color(0.13f, 0.055f, 0.045f, 0.98f);
+                case BrawlerElementType.Water:
+                    return new Color(0.035f, 0.09f, 0.16f, 0.98f);
+                case BrawlerElementType.Earth:
+                    return new Color(0.09f, 0.075f, 0.045f, 0.98f);
+                case BrawlerElementType.Air:
+                    return new Color(0.045f, 0.09f, 0.12f, 0.98f);
+                case BrawlerElementType.Lightning:
+                    return new Color(0.10f, 0.085f, 0.035f, 0.98f);
+                case BrawlerElementType.Ice:
+                    return new Color(0.035f, 0.09f, 0.13f, 0.98f);
+                case BrawlerElementType.Nature:
+                    return new Color(0.045f, 0.10f, 0.06f, 0.98f);
+                case BrawlerElementType.Shadow:
+                    return new Color(0.065f, 0.045f, 0.13f, 0.98f);
+                default:
+                    fallback.a = Mathf.Max(fallback.a, 0.96f);
+                    return fallback;
+            }
+        }
+
         private static Color ResolveSkillTreeNodeStateColor(
             BrawlerSkillTreeNodeDefinition node,
             BrawlerSkillTreeDefinition tree,
@@ -1396,6 +1566,31 @@ namespace MOBA.Core.Infrastructure
                 Vector2.zero,
                 new Vector2(0f, 6f));
             border.transform.SetSiblingIndex(Mathf.Min(1, button.transform.childCount - 1));
+        }
+
+        private static void AddSkillTreeNodeElementRail(
+            Button button,
+            BrawlerSkillTreeDefinition tree)
+        {
+            if (button == null)
+                return;
+
+            Color elementColor = BrawlerElementUtility.ToColor(ResolveSkillTreeElement(tree));
+            elementColor.a = 0.85f;
+
+            Image rail = CreatePanel(
+                "SkillNodeElementRail",
+                button.transform,
+                elementColor).GetComponent<Image>();
+            rail.raycastTarget = false;
+
+            Anchor(
+                rail.rectTransform,
+                Vector2.zero,
+                new Vector2(0f, 1f),
+                Vector2.zero,
+                new Vector2(5f, 0f));
+            rail.transform.SetSiblingIndex(Mathf.Min(1, button.transform.childCount - 1));
         }
 
         private static string ResolveSkillTreeLockedState(
