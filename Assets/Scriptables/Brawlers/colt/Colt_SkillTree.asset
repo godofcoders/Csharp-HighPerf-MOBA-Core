@@ -17,7 +17,7 @@ MonoBehaviour:
   ElementType: 1
   Description: Colt's fire-aligned progression tree. Build around rapid fire, mobility, or hotter shots.
   AccentColor: {r: 1, g: 0.25, b: 0.05, a: 1}
-  MaxActiveNodes: 8
+  MaxActiveNodes: 10
   ChoiceGroups:
   - GroupId: colt_starpower
     DisplayName: STAR POWERS
@@ -29,8 +29,8 @@ MonoBehaviour:
     MaxActive: 1
   - GroupId: colt_stats
     DisplayName: STAT BOOSTS
-    MaxUnlocked: 3
-    MaxActive: 2
+    MaxUnlocked: 5
+    MaxActive: 5
   Branches:
   - BranchId: ember
     DisplayName: EMBER PATH
@@ -43,16 +43,21 @@ MonoBehaviour:
   Nodes:
   - {fileID: 11400000, guid: 5a1e3c8d1f6247d2a6c4e9b8f7031526, type: 2}
   - {fileID: 11400000, guid: 6b2f4d9e2a7358e3b7d5fac908142637, type: 2}
-  - {fileID: 11400000, guid: 7c305eaf3b8469f4c8e6abd019253748, type: 2}
-  - {fileID: 11400000, guid: 8d416fb04c957a05d9f7bce12a364859, type: 2}
-  - {fileID: 11400000, guid: 9e5270c15da68b16e0a8cdf23b47596a, type: 2}
+  - {fileID: 11400000, guid: e3a7c516a2fb06b643fd0247609caebf, type: 2}
   - {fileID: 11400000, guid: 8c7cc6e69a0349589ef50aa0a345f00f, type: 2}
   - {fileID: 11400000, guid: 89a2ed48dfcf4e58974322d062e32e56, type: 2}
+  - {fileID: 11400000, guid: a635a5e9eab24db99c9ac2f84c1ec384, type: 2}
+  - {fileID: 11400000, guid: 7c305eaf3b8469f4c8e6abd019253748, type: 2}
+  - {fileID: 11400000, guid: 08dda20479654315905f43ac13236d7b, type: 2}
+  - {fileID: 11400000, guid: 8d416fb04c957a05d9f7bce12a364859, type: 2}
   - {fileID: 11400000, guid: af6381d26eb79c270fb9de034c586a7b, type: 2}
-  - {fileID: 11400000, guid: b07492e37fc88d3810caef145d697b8c, type: 2}
+  - {fileID: 11400000, guid: fb773eb4ba3f489bb45cfabb73952836, type: 2}
   - {fileID: 11400000, guid: c185a3f480d99e4921dbf0254e7a8c9d, type: 2}
+  - {fileID: 11400000, guid: 60e97f58528640b8bcf1abb1aab41434, type: 2}
+  - {fileID: 11400000, guid: b07492e37fc88d3810caef145d697b8c, type: 2}
+  - {fileID: 11400000, guid: 9e5270c15da68b16e0a8cdf23b47596a, type: 2}
+  - {fileID: 11400000, guid: e8fcb83193684024a2558c34276f1888, type: 2}
   - {fileID: 11400000, guid: d296b40591eaaf5a32ecf1365f8b9dae, type: 2}
-  - {fileID: 11400000, guid: e3a7c516a2fb06b643fd0247609caebf, type: 2}
   DefaultActiveNodes:
   - {fileID: 11400000, guid: 5a1e3c8d1f6247d2a6c4e9b8f7031526, type: 2}
   - {fileID: 11400000, guid: 6b2f4d9e2a7358e3b7d5fac908142637, type: 2}

@@ -350,8 +350,7 @@ namespace MOBA.Core.Definitions
                 for (int i = 0; i < node.PrerequisiteNodeIds.Length; i++)
                 {
                     string prerequisite = node.PrerequisiteNodeIds[i];
-                    if (!string.IsNullOrWhiteSpace(prerequisite) &&
-                        (active == null || !active.Contains(prerequisite)))
+                    if (!IsActivationPrerequisiteSatisfied(tree, prerequisite, active, unlocked))
                     {
                         reason = $"Equip {prerequisite} first.";
                         return false;
@@ -440,7 +439,7 @@ namespace MOBA.Core.Definitions
                     for (int p = 0; p < node.PrerequisiteNodeIds.Length; p++)
                     {
                         string prerequisite = node.PrerequisiteNodeIds[p];
-                        if (!string.IsNullOrWhiteSpace(prerequisite) && !ids.Contains(prerequisite))
+                        if (!IsActivationPrerequisiteSatisfied(tree, prerequisite, ids, unlockedNodeIds))
                         {
                             error = $"Skill node '{node.EffectiveDisplayName}' requires '{prerequisite}'.";
                             return false;
@@ -469,6 +468,25 @@ namespace MOBA.Core.Definitions
             }
 
             return true;
+        }
+
+        private static bool IsActivationPrerequisiteSatisfied(
+            BrawlerSkillTreeDefinition tree,
+            string prerequisite,
+            ICollection<string> active,
+            IList<string> unlocked)
+        {
+            if (string.IsNullOrWhiteSpace(prerequisite))
+                return true;
+
+            if (active != null && active.Contains(prerequisite))
+                return true;
+
+            return unlocked != null &&
+                unlocked.Contains(prerequisite) &&
+                tree != null &&
+                tree.TryGetNode(prerequisite, out BrawlerSkillTreeNodeDefinition prerequisiteNode) &&
+                prerequisiteNode.NodeType == BrawlerSkillTreeNodeType.Nanopower;
         }
 
         private static bool TryGetGroupLimit(

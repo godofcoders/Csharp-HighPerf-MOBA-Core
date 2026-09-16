@@ -30,12 +30,12 @@ MonoBehaviour:
   StartsUnlocked: 0
   ActiveByDefault: 1
   PrerequisiteNodeIds:
-  - colt_super
+  - colt_overheated_barrel
   MutuallyExclusiveNodeIds: []
   ChoiceGroupId: ""
   BranchId: ""
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.92, y: 0.92}
+  GraphPosition: {x: 0.94, y: 0.94}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}

@@ -947,7 +947,8 @@ namespace MOBA.Core.Infrastructure
                     }
                     else if (node.NodeType == BrawlerSkillTreeNodeType.Core ||
                              node.NodeType == BrawlerSkillTreeNodeType.Super ||
-                             node.NodeType == BrawlerSkillTreeNodeType.Nanopower)
+                             node.NodeType == BrawlerSkillTreeNodeType.Nanopower ||
+                             (position.x >= 0.35f && position.x <= 0.56f))
                     {
                         rewardLane.Encapsulate(position);
                     }

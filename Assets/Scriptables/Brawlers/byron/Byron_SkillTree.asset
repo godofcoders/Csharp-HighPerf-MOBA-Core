@@ -17,7 +17,7 @@ MonoBehaviour:
   ElementType: 2
   Description: Byron's water-aligned progression tree. Build around ally sustain, personal survival, or sharper poison pressure.
   AccentColor: {r: 0.2, g: 0.72, b: 1, a: 1}
-  MaxActiveNodes: 8
+  MaxActiveNodes: 10
   ChoiceGroups:
   - GroupId: byron_starpower
     DisplayName: STAR POWERS
@@ -29,8 +29,8 @@ MonoBehaviour:
     MaxActive: 1
   - GroupId: byron_stats
     DisplayName: STAT BOOSTS
-    MaxUnlocked: 3
-    MaxActive: 2
+    MaxUnlocked: 5
+    MaxActive: 5
   Branches:
   - BranchId: remedy
     DisplayName: REMEDY PATH
@@ -42,16 +42,21 @@ MonoBehaviour:
     - remedy
   Nodes:
   - {fileID: 11400000, guid: f12c2f39239745268b8500544e6ec171, type: 2}
-  - {fileID: 11400000, guid: 443a6f5d33af4a198334d09f68e14078, type: 2}
-  - {fileID: 11400000, guid: 0fa7265be309497483c9695fb4201a64, type: 2}
   - {fileID: 11400000, guid: f4d61f6e36f740c3b5b1191f2d5d771b, type: 2}
-  - {fileID: 11400000, guid: bc3833395adf44669db9ceff29bac83d, type: 2}
   - {fileID: 11400000, guid: 8e81973bd8544a9196ff33b58b38b5fd, type: 2}
   - {fileID: 11400000, guid: 307adf9eb4d74e61af8dcc3f3a6d674a, type: 2}
+  - {fileID: 11400000, guid: bc3833395adf44669db9ceff29bac83d, type: 2}
+  - {fileID: 11400000, guid: 668be2bc053048c5aa0ea287cb9ff7d5, type: 2}
+  - {fileID: 11400000, guid: 443a6f5d33af4a198334d09f68e14078, type: 2}
+  - {fileID: 11400000, guid: cd78506a7e3345a583ae09b6729b3ee0, type: 2}
   - {fileID: 11400000, guid: d4d10c9f284544eab2e340eca490e88b, type: 2}
-  - {fileID: 11400000, guid: 13b43b0873114a9e9203d8d892ce9099, type: 2}
   - {fileID: 11400000, guid: 40d92ec79582405491b15f3fe1747570, type: 2}
+  - {fileID: 11400000, guid: b0c4f007e9b14597a7cca883eafa4c24, type: 2}
+  - {fileID: 11400000, guid: 0fa7265be309497483c9695fb4201a64, type: 2}
+  - {fileID: 11400000, guid: ab1b4ee08ba84fb5a25a9a1ea7e87a25, type: 2}
+  - {fileID: 11400000, guid: 13b43b0873114a9e9203d8d892ce9099, type: 2}
   - {fileID: 11400000, guid: 016ead906b704f5c9acaf8cc3f78c46d, type: 2}
+  - {fileID: 11400000, guid: eddefd65477b401faba43e2158266893, type: 2}
   - {fileID: 11400000, guid: a495308c1636422ab30504bdb20dfe2e, type: 2}
   DefaultActiveNodes:
   - {fileID: 11400000, guid: f12c2f39239745268b8500544e6ec171, type: 2}

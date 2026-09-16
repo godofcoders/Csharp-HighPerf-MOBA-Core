@@ -30,13 +30,13 @@ MonoBehaviour:
   StartsUnlocked: 0
   ActiveByDefault: 1
   PrerequisiteNodeIds:
-  - byron_tide_reserve
+  - byron_soothing_current
   MutuallyExclusiveNodeIds:
   - byron_emergency_dose
   ChoiceGroupId: byron_gadgets
   BranchId: remedy
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.11, y: 0.6}
+  GraphPosition: {x: 0.08, y: 0.56}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 11400000, guid: e2d3c4b5a6f7098819b2c3d4e5f60708, type: 2}

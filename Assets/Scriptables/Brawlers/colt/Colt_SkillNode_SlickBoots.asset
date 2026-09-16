@@ -30,13 +30,13 @@ MonoBehaviour:
   StartsUnlocked: 0
   ActiveByDefault: 1
   PrerequisiteNodeIds:
-  - colt_quick_draw
+  - colt_flame_step
   MutuallyExclusiveNodeIds:
   - colt_magnum
   ChoiceGroupId: colt_starpower
   BranchId: ember
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.11, y: 0.56}
+  GraphPosition: {x: 0.08, y: 0.56}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}

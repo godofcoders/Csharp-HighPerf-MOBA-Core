@@ -36,7 +36,7 @@ MonoBehaviour:
   ChoiceGroupId: byron_starpower
   BranchId: venom
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.72, y: 0.8}
+  GraphPosition: {x: 0.62, y: 0.7}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
   GrantedGadget: {fileID: 0}

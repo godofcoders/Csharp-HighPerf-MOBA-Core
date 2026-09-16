@@ -10,40 +10,39 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 14c636de3e5c4767917e819efeb67a63, type: 3}
-  m_Name: Colt_SkillNode_Dash
+  m_Name: Colt_SkillNode_ScorchMark
   m_EditorClassIdentifier:
-  OptionName: Ember Step
-  Description: Unlocks Colt's movement gadget.
+  OptionName: Scorch Mark
+  Description: Adds 5 percent damage to Colt after finishing the Ember branch.
   AllowedBuildSlotTypes: []
-  PassiveName: Ember Step
+  PassiveName: Scorch Mark
   Category: 3
   AllowedSlotTypes: []
   Family: {fileID: 0}
   IsUniqueInFamily: 0
   IncompatiblePassives: []
-  NodeId: colt_ember_step
-  DisplayName: Ember Step
-  DisplayDescription: Unlocks Colt's movement gadget.
-  NodeType: 4
+  NodeId: colt_scorch_mark
+  DisplayName: Scorch Mark
+  DisplayDescription: Adds 5 percent damage to Colt after finishing the Ember branch.
+  NodeType: 1
   AccentColor: {r: 1, g: 0.25, b: 0.05, a: 1}
-  UnlockPowerLevel: 7
+  UnlockPowerLevel: 9
   StartsUnlocked: 0
-  ActiveByDefault: 1
+  ActiveByDefault: 0
   PrerequisiteNodeIds:
-  - colt_ember_stride
-  MutuallyExclusiveNodeIds:
-  - colt_speedloader
-  ChoiceGroupId: colt_gadgets
+  - colt_ember_step
+  MutuallyExclusiveNodeIds: []
+  ChoiceGroupId: colt_stats
   BranchId: ember
   UseAuthoredGraphPosition: 1
-  GraphPosition: {x: 0.25, y: 0.7}
+  GraphPosition: {x: 0.08, y: 0.86}
   GrantedMainAttack: {fileID: 0}
   GrantedSuper: {fileID: 0}
-  GrantedGadget: {fileID: 11400000, guid: c9d5a1b34e6f7a6ccd8f0a3b5c7d1e49, type: 2}
+  GrantedGadget: {fileID: 0}
   GrantedPassive: {fileID: 0}
   GrantedHypercharge: {fileID: 0}
   GrantedNanopower: {fileID: 0}
   BonusMaxHealth: 0
   MoveSpeedBonusPercent: 0
-  DamageBonusPercent: 0
+  DamageBonusPercent: 0.05
   AttackSpeedBonusPercent: 0
