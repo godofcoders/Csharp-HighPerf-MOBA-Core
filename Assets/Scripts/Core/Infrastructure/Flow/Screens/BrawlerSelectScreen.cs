@@ -491,10 +491,13 @@ namespace MOBA.Core.Infrastructure
                 panel.transform,
                 "HeroSummary",
                 "",
-                17,
-                TextAlignmentOptions.Center,
+                12,
+                TextAlignmentOptions.Left,
                 MenuUITheme.TextSoft);
-            Anchor(_heroSummaryText.rectTransform, new Vector2(0.08f, 0.04f), new Vector2(0.92f, 0.13f), Vector2.zero, Vector2.zero);
+            _heroSummaryText.fontStyle = FontStyles.Bold;
+            _heroSummaryText.enableWordWrapping = true;
+            _heroSummaryText.overflowMode = TextOverflowModes.Ellipsis;
+            Anchor(_heroSummaryText.rectTransform, new Vector2(0.07f, 0.025f), new Vector2(0.93f, 0.14f), Vector2.zero, Vector2.zero);
         }
 
         private void BuildStatsPanel(Transform parent)
@@ -537,7 +540,7 @@ namespace MOBA.Core.Infrastructure
         {
             GameObject panel = CreatePanel("LoadoutPanel", parent, MenuUITheme.ActionRail);
             RectTransform rect = panel.GetComponent<RectTransform>();
-            Anchor(rect, new Vector2(0.34f, 0.025f), new Vector2(0.975f, 0.125f), Vector2.zero, Vector2.zero);
+            Anchor(rect, new Vector2(0.34f, 0.025f), new Vector2(0.975f, 0.145f), Vector2.zero, Vector2.zero);
 
             HorizontalLayoutGroup layout = panel.AddComponent<HorizontalLayoutGroup>();
             layout.padding = new RectOffset(12, 12, 10, 10);
@@ -684,7 +687,20 @@ namespace MOBA.Core.Infrastructure
 
             TMP_Text label = _skillTreeButton.GetComponentInChildren<TMP_Text>();
             if (label != null)
-                label.text = available ? "SKILL TREE" : "NO SKILL TREE";
+            {
+                if (!available)
+                {
+                    label.text = "NO SKILL TREE";
+                    return;
+                }
+
+                BuildSkillTreeOverview(
+                    _previewed,
+                    ResolvePreviewPowerLevel(_previewed),
+                    out int selectedCount,
+                    out int availableCount);
+                label.text = $"SKILL TREE\n{selectedCount} SELECTED / {availableCount} AVAILABLE";
+            }
         }
 
         private void RefreshSkillTreeUI()
@@ -1946,10 +1962,21 @@ namespace MOBA.Core.Infrastructure
                 _heroPowerText.text = $"POWER {powerLevel}";
             if (_heroSummaryText != null)
             {
-                string mainName = ResolveAbilityName(previewMainAttack);
-                _heroSummaryText.text = HasAbility(previewSuper)
-                    ? $"{mainName} / {ResolveAbilityName(previewSuper)}"
-                    : mainName;
+                if (_previewed.SkillTree != null)
+                {
+                    _heroSummaryText.text = BuildSkillTreeOverview(
+                        _previewed,
+                        powerLevel,
+                        out _,
+                        out _);
+                }
+                else
+                {
+                    string mainName = ResolveAbilityName(previewMainAttack);
+                    _heroSummaryText.text = HasAbility(previewSuper)
+                        ? $"{mainName} / {ResolveAbilityName(previewSuper)}"
+                        : mainName;
+                }
             }
 
             if (_heroPortraitImage != null && _heroInitialText != null)
@@ -2406,7 +2433,7 @@ namespace MOBA.Core.Infrastructure
                     ? $"{ResolveSlotDisplayName(slot)}\n{LockIcon} UNLOCKS P{slot.UnlockPowerLevel}"
                     : gatedBySkillTree
                         ? $"{ResolveSlotDisplayName(slot)}\n{LockIcon} SKILL TREE"
-                        : ResolveLoadoutSlotLabel(slot, selected, options.Count);
+                        : ResolveLoadoutSlotLabel(slot, selected, options);
 
                 Button button = CreateButton(
                     _loadoutContainer,
@@ -2416,8 +2443,17 @@ namespace MOBA.Core.Infrastructure
                     () => CycleSlot(slot));
                 button.interactable = !locked && !gatedBySkillTree && options.Count > 0;
 
+                TMP_Text buttonLabel = button.GetComponentInChildren<TMP_Text>();
+                if (buttonLabel != null)
+                {
+                    buttonLabel.fontSizeMax = 13f;
+                    buttonLabel.fontSizeMin = 9f;
+                    buttonLabel.enableWordWrapping = true;
+                    buttonLabel.overflowMode = TextOverflowModes.Ellipsis;
+                }
+
                 LayoutElement layout = button.gameObject.AddComponent<LayoutElement>();
-                layout.preferredHeight = _useBrawlInspiredRuntimeView ? 68f : 42f;
+                layout.preferredHeight = _useBrawlInspiredRuntimeView ? 92f : 42f;
                 layout.preferredWidth = _useBrawlInspiredRuntimeView ? 140f : 0f;
                 layout.flexibleWidth = 1f;
                 _loadoutRows.Add(button.gameObject);
@@ -3195,15 +3231,100 @@ namespace MOBA.Core.Infrastructure
         private static string ResolveLoadoutSlotLabel(
             BrawlerBuildSlotDefinition slot,
             BrawlerBuildOptionDefinition selected,
-            int optionCount)
+            List<BrawlerBuildOptionDefinition> options)
         {
             string slotName = ResolveSlotDisplayName(slot);
             if (selected != null)
-                return $"{slotName}\n{ResolveOptionDisplayName(selected)}";
+            {
+                string alternatives = BuildOptionSummary(options, selected);
+                return $"{slotName}\nEQUIPPED: {ResolveOptionDisplayName(selected)}\nAVAILABLE: {alternatives}";
+            }
 
-            return optionCount > 0
-                ? $"{slotName}\nSELECT"
+            return options != null && options.Count > 0
+                ? $"{slotName}\nSELECT\nAVAILABLE: {BuildOptionSummary(options, null)}"
                 : $"{slotName}\nNO {ResolveSlotTypeName(slot.SlotType)}";
+        }
+
+        private static string BuildOptionSummary(
+            List<BrawlerBuildOptionDefinition> options,
+            BrawlerBuildOptionDefinition selected)
+        {
+            if (options == null || options.Count == 0)
+                return "NONE";
+
+            List<string> names = new List<string>(options.Count);
+            for (int i = 0; i < options.Count; i++)
+            {
+                BrawlerBuildOptionDefinition option = options[i];
+                if (option == null || option == selected)
+                    continue;
+
+                names.Add(ResolveOptionDisplayName(option));
+            }
+
+            return BuildNameSummary(names, 2, "NONE");
+        }
+
+        private static string BuildSkillTreeOverview(
+            BrawlerDefinition brawler,
+            int powerLevel,
+            out int selectedCount,
+            out int availableCount)
+        {
+            selectedCount = 0;
+            availableCount = 0;
+            if (brawler == null || brawler.SkillTree == null || brawler.SkillTree.Nodes == null)
+                return "NO SKILL TREE";
+
+            BrawlerSkillTreeDefinition tree = brawler.SkillTree;
+            List<string> active = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(brawler, tree);
+            List<string> unlocked = PlayerBrawlerProgress.GetUnlockedSkillTreeNodeIds(brawler, tree);
+            List<string> selectedNames = new List<string>(active.Count);
+            List<string> availableNames = new List<string>(tree.Nodes.Length);
+
+            for (int i = 0; i < tree.Nodes.Length; i++)
+            {
+                BrawlerSkillTreeNodeDefinition node = tree.Nodes[i];
+                if (node == null)
+                    continue;
+
+                string nodeId = node.EffectiveId;
+                if (active.Contains(nodeId))
+                {
+                    selectedNames.Add(node.EffectiveDisplayName.ToUpperInvariant());
+                    continue;
+                }
+
+                bool isUnlocked = node.StartsUnlocked || unlocked.Contains(nodeId);
+                bool canUnlock = !isUnlocked && BrawlerSkillTreeRules.CanUnlockNode(
+                    node,
+                    tree,
+                    powerLevel,
+                    unlocked,
+                    out _);
+                if (isUnlocked || canUnlock)
+                    availableNames.Add(node.EffectiveDisplayName.ToUpperInvariant());
+            }
+
+            selectedCount = selectedNames.Count;
+            availableCount = availableNames.Count;
+            string selected = BuildNameSummary(selectedNames, 6, "NONE");
+            string available = BuildNameSummary(availableNames, 5, "NONE");
+            return $"SELECTED ({selectedCount}): {selected}\nAVAILABLE ({availableCount}): {available}";
+        }
+
+        private static string BuildNameSummary(
+            List<string> names,
+            int visibleNameLimit,
+            string emptyLabel)
+        {
+            if (names == null || names.Count == 0)
+                return emptyLabel;
+
+            int visibleCount = Mathf.Min(Mathf.Max(1, visibleNameLimit), names.Count);
+            string result = string.Join(" / ", names.GetRange(0, visibleCount));
+            int hiddenCount = names.Count - visibleCount;
+            return hiddenCount > 0 ? $"{result} / +{hiddenCount} MORE" : result;
         }
 
         private static string ResolveSlotTypeName(BrawlerBuildSlotType slotType)
