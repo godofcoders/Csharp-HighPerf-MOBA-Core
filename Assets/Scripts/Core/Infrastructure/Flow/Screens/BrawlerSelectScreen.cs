@@ -1898,6 +1898,42 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             Color archetypeColor = ResolveArchetypeColor(_previewed.Archetype);
+            int powerLevel = Mathf.Clamp(
+                ResolvePreviewPowerLevel(_previewed),
+                PlayerBrawlerProgress.MinLevel,
+                PlayerBrawlerProgress.MaxLevel);
+            BrawlerProgressionBonus bonus = _previewed.GetProgressionBonus(powerLevel);
+
+            AbilityDefinition previewMainAttack = _previewed.MainAttack;
+            AbilityDefinition previewSuper = _previewed.SuperAbility;
+            float skillHealthBonus = 0f;
+            float skillMoveSpeedBonusPercent = 0f;
+            float skillDamageBonusPercent = 0f;
+            float skillAttackSpeedBonusPercent = 0f;
+
+            if (_previewed.SkillTree != null && _previewed.SkillTree.Nodes != null)
+            {
+                List<string> activeNodeIds = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(
+                    _previewed,
+                    _previewed.SkillTree);
+
+                for (int i = 0; i < _previewed.SkillTree.Nodes.Length; i++)
+                {
+                    BrawlerSkillTreeNodeDefinition node = _previewed.SkillTree.Nodes[i];
+                    if (node == null || !activeNodeIds.Contains(node.EffectiveId))
+                        continue;
+
+                    if (node.GrantedMainAttack != null)
+                        previewMainAttack = node.GrantedMainAttack;
+                    if (node.GrantedSuper != null)
+                        previewSuper = node.GrantedSuper;
+
+                    skillHealthBonus += node.BonusMaxHealth;
+                    skillMoveSpeedBonusPercent += node.MoveSpeedBonusPercent;
+                    skillDamageBonusPercent += node.DamageBonusPercent;
+                    skillAttackSpeedBonusPercent += node.AttackSpeedBonusPercent;
+                }
+            }
 
             if (_heroNameText != null)
                 _heroNameText.text = ResolveBrawlerName(_previewed).ToUpperInvariant();
@@ -1907,12 +1943,12 @@ namespace MOBA.Core.Infrastructure
                 _heroRoleText.color = BrawlerElementUtility.ToColor(_previewed.ElementType);
             }
             if (_heroPowerText != null)
-                _heroPowerText.text = $"POWER {ResolvePreviewPowerLevel(_previewed)}";
+                _heroPowerText.text = $"POWER {powerLevel}";
             if (_heroSummaryText != null)
             {
-                string mainName = ResolveAbilityName(_previewed.MainAttack);
-                _heroSummaryText.text = HasAbility(_previewed.SuperAbility)
-                    ? $"{mainName} / {ResolveAbilityName(_previewed.SuperAbility)}"
+                string mainName = ResolveAbilityName(previewMainAttack);
+                _heroSummaryText.text = HasAbility(previewSuper)
+                    ? $"{mainName} / {ResolveAbilityName(previewSuper)}"
                     : mainName;
             }
 
@@ -1936,39 +1972,40 @@ namespace MOBA.Core.Infrastructure
                 }
             }
 
-            int powerLevel = Mathf.Clamp(
-                ResolvePreviewPowerLevel(_previewed),
-                PlayerBrawlerProgress.MinLevel,
-                PlayerBrawlerProgress.MaxLevel);
-            BrawlerProgressionBonus bonus = _previewed.GetProgressionBonus(powerLevel);
-
-            float health = Mathf.Max(1f, _previewed.BaseHealth + bonus.BonusHealth);
-            float moveSpeed = Mathf.Max(0f, _previewed.BaseMoveSpeed + bonus.BonusMoveSpeed);
-            float mainDamage = Mathf.Max(0f, ResolveAbilityDamageTotal(_previewed.MainAttack, _previewed.BaseDamage + bonus.BonusDamage));
-            float superDamage = Mathf.Max(0f, ResolveAbilityDamageTotal(_previewed.SuperAbility, 0f));
-            float range = Mathf.Max(0f, ResolveAbilityRange(_previewed.MainAttack));
-            bool hasSuper = HasAbility(_previewed.SuperAbility);
+            float health = Mathf.Max(1f, _previewed.BaseHealth + bonus.BonusHealth + skillHealthBonus);
+            float moveSpeed = Mathf.Max(
+                0f,
+                (_previewed.BaseMoveSpeed + bonus.BonusMoveSpeed) * (1f + skillMoveSpeedBonusPercent));
+            float runtimeDamage = Mathf.Max(
+                0f,
+                (_previewed.BaseDamage + bonus.BonusDamage) * (1f + skillDamageBonusPercent));
+            float damageScale = runtimeDamage / Mathf.Max(1f, _previewed.BaseDamage);
+            float attackSpeed = 1f + skillAttackSpeedBonusPercent;
+            float mainDamage = Mathf.Max(0f, ResolveAbilityDamageTotal(previewMainAttack, runtimeDamage, damageScale));
+            float superDamage = Mathf.Max(0f, ResolveAbilityDamageTotal(previewSuper, 0f, damageScale));
+            float range = Mathf.Max(0f, ResolveAbilityRange(previewMainAttack));
+            bool hasSuper = HasAbility(previewSuper);
 
             SetStat(_typeStat, BrawlerElementUtility.ToDisplayName(_previewed.ElementType).ToUpperInvariant(), 1f);
             SetStatColor(_typeStat, BrawlerElementUtility.ToColor(_previewed.ElementType));
             SetStat(_healthStat, Mathf.RoundToInt(health).ToString(), Mathf.InverseLerp(2500f, 9000f, health));
-            SetStat(_attackStat, ResolveAbilityDamageText(_previewed.MainAttack, _previewed.BaseDamage + bonus.BonusDamage), Mathf.InverseLerp(300f, 3200f, mainDamage));
+            SetStat(_attackStat, ResolveAbilityDamageText(previewMainAttack, runtimeDamage, damageScale), Mathf.InverseLerp(300f, 3200f, mainDamage));
             SetStatVisible(_superStat, hasSuper);
             if (hasSuper)
-                SetStat(_superStat, ResolveAbilityDamageText(_previewed.SuperAbility, 0f), Mathf.InverseLerp(0f, 4200f, superDamage));
+                SetStat(_superStat, ResolveAbilityDamageText(previewSuper, 0f, damageScale), Mathf.InverseLerp(0f, 4200f, superDamage));
             SetStat(_rangeStat, range.ToString("0.0"), Mathf.Clamp01(range / 12f));
             SetStat(_speedStat, moveSpeed.ToString("0.0"), Mathf.Clamp01(moveSpeed / 8f));
 
             if (_attackTitleText != null)
-                _attackTitleText.text = ResolveAbilityName(_previewed.MainAttack).ToUpperInvariant();
+                _attackTitleText.text = ResolveAbilityName(previewMainAttack).ToUpperInvariant();
             if (_attackDetailText != null)
-                _attackDetailText.text = ResolveAbilityDetail(_previewed.MainAttack, _previewed.BaseDamage + bonus.BonusDamage);
+                _attackDetailText.text = ResolveAbilityDetail(previewMainAttack, runtimeDamage, damageScale, attackSpeed);
             if (_superAbilityBox != null)
                 _superAbilityBox.SetActive(hasSuper);
             if (hasSuper && _superTitleText != null)
-                _superTitleText.text = ResolveAbilityName(_previewed.SuperAbility).ToUpperInvariant();
+                _superTitleText.text = ResolveAbilityName(previewSuper).ToUpperInvariant();
             if (hasSuper && _superDetailText != null)
-                _superDetailText.text = ResolveAbilityDetail(_previewed.SuperAbility, 0f);
+                _superDetailText.text = ResolveAbilityDetail(previewSuper, 0f, damageScale, attackSpeed);
 
             RefreshNanopowerPreview(_previewed);
         }
@@ -3236,111 +3273,122 @@ namespace MOBA.Core.Infrastructure
             return ability != null;
         }
 
-        private static string ResolveAbilityDetail(AbilityDefinition ability, float fallbackDamage)
+        private static string ResolveAbilityDetail(
+            AbilityDefinition ability,
+            float fallbackDamage,
+            float damageScale = 1f,
+            float attackSpeed = 1f)
         {
             if (ability == null)
                 return "No ability equipped";
 
-            string damage = ResolveAbilityDamageText(ability, fallbackDamage);
+            string damage = ResolveAbilityDamageText(ability, fallbackDamage, damageScale);
             float range = ResolveAbilityRange(ability);
-            string cooldown = ability.Cooldown > 0f ? $"{ability.Cooldown:0.0}s" : "Ready";
+            float cooldownSeconds = attackSpeed > 0f ? ability.Cooldown / attackSpeed : ability.Cooldown;
+            string cooldown = cooldownSeconds > 0f ? $"{cooldownSeconds:0.0}s" : "Ready";
             return $"DMG {damage}   RNG {range:0.0}   CD {cooldown}";
         }
 
-        private static string ResolveAbilityDamageText(AbilityDefinition ability, float fallbackDamage)
+        private static string ResolveAbilityDamageText(
+            AbilityDefinition ability,
+            float fallbackDamage,
+            float damageScale = 1f)
         {
             if (ability == null)
                 return "-";
 
             if (ability is ProjectileAbilityDefinition projectile)
                 return projectile.ProjectileCount > 1
-                    ? $"{Mathf.RoundToInt(projectile.Damage)} x {projectile.ProjectileCount}"
-                    : Mathf.RoundToInt(projectile.Damage).ToString();
+                    ? $"{Mathf.RoundToInt(projectile.Damage * damageScale)} x {projectile.ProjectileCount}"
+                    : Mathf.RoundToInt(projectile.Damage * damageScale).ToString();
 
             if (ability is BasicProjectileAttackDefinition basic)
-                return Mathf.RoundToInt(basic.Damage).ToString();
+                return Mathf.RoundToInt(basic.Damage * damageScale).ToString();
 
             if (ability is VolleyProjectileAbilityDefinition volley)
                 return volley.ProjectileCount > 1
-                    ? $"{Mathf.RoundToInt(volley.Damage)} x {volley.ProjectileCount}"
-                    : Mathf.RoundToInt(volley.Damage).ToString();
+                    ? $"{Mathf.RoundToInt(volley.Damage * damageScale)} x {volley.ProjectileCount}"
+                    : Mathf.RoundToInt(volley.Damage * damageScale).ToString();
 
             if (ability is ChainProjectileAbilityDefinition chain)
-                return Mathf.RoundToInt(chain.Damage).ToString();
+                return Mathf.RoundToInt(chain.Damage * damageScale).ToString();
 
             if (ability is MeleeConeAbilityDefinition melee)
-                return Mathf.RoundToInt(melee.Damage).ToString();
+                return Mathf.RoundToInt(melee.Damage * damageScale).ToString();
 
             if (ability is LeapAbilityDefinition leap)
-                return Mathf.RoundToInt(leap.Damage).ToString();
+                return Mathf.RoundToInt(leap.Damage * damageScale).ToString();
 
             if (ability is MinefieldAbilityDefinition minefield)
                 return minefield.MineCount > 1
-                    ? $"{Mathf.RoundToInt(minefield.Damage)} x {minefield.MineCount}"
-                    : Mathf.RoundToInt(minefield.Damage).ToString();
+                    ? $"{Mathf.RoundToInt(minefield.Damage * damageScale)} x {minefield.MineCount}"
+                    : Mathf.RoundToInt(minefield.Damage * damageScale).ToString();
 
             if (ability is AoEAbilityDefinition aoe)
-                return Mathf.RoundToInt(aoe.Damage).ToString();
+                return Mathf.RoundToInt(aoe.Damage * damageScale).ToString();
 
             if (ability is BasicSuperDefinition super)
-                return Mathf.RoundToInt(super.Damage).ToString();
+                return Mathf.RoundToInt(super.Damage * damageScale).ToString();
 
             if (ability is ThrownVolleyAoEAbilityDefinition thrownVolley)
                 return thrownVolley.ProjectileCount > 1
-                    ? $"{Mathf.RoundToInt(thrownVolley.EnemyDamage)} x {thrownVolley.ProjectileCount}"
-                    : Mathf.RoundToInt(thrownVolley.EnemyDamage).ToString();
+                    ? $"{Mathf.RoundToInt(thrownVolley.EnemyDamage * damageScale)} x {thrownVolley.ProjectileCount}"
+                    : Mathf.RoundToInt(thrownVolley.EnemyDamage * damageScale).ToString();
 
             if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
-                return Mathf.RoundToInt(thrownHybrid.EnemyDamage).ToString();
+                return Mathf.RoundToInt(thrownHybrid.EnemyDamage * damageScale).ToString();
 
             if (ability is HybridAoEAbilityDefinition hybrid)
-                return Mathf.RoundToInt(hybrid.EnemyDamage).ToString();
+                return Mathf.RoundToInt(hybrid.EnemyDamage * damageScale).ToString();
 
             return fallbackDamage > 0f
                 ? Mathf.RoundToInt(fallbackDamage).ToString()
                 : "-";
         }
 
-        private static float ResolveAbilityDamageTotal(AbilityDefinition ability, float fallbackDamage)
+        private static float ResolveAbilityDamageTotal(
+            AbilityDefinition ability,
+            float fallbackDamage,
+            float damageScale = 1f)
         {
             if (ability == null)
                 return fallbackDamage;
 
             if (ability is ProjectileAbilityDefinition projectile)
-                return projectile.Damage * Mathf.Max(1, projectile.ProjectileCount);
+                return projectile.Damage * Mathf.Max(1, projectile.ProjectileCount) * damageScale;
 
             if (ability is BasicProjectileAttackDefinition basic)
-                return basic.Damage;
+                return basic.Damage * damageScale;
 
             if (ability is VolleyProjectileAbilityDefinition volley)
-                return volley.Damage * Mathf.Max(1, volley.ProjectileCount);
+                return volley.Damage * Mathf.Max(1, volley.ProjectileCount) * damageScale;
 
             if (ability is ChainProjectileAbilityDefinition chain)
-                return chain.Damage;
+                return chain.Damage * damageScale;
 
             if (ability is MeleeConeAbilityDefinition melee)
-                return melee.Damage;
+                return melee.Damage * damageScale;
 
             if (ability is LeapAbilityDefinition leap)
-                return leap.Damage;
+                return leap.Damage * damageScale;
 
             if (ability is MinefieldAbilityDefinition minefield)
-                return minefield.Damage * Mathf.Max(1, minefield.MineCount);
+                return minefield.Damage * Mathf.Max(1, minefield.MineCount) * damageScale;
 
             if (ability is AoEAbilityDefinition aoe)
-                return aoe.Damage;
+                return aoe.Damage * damageScale;
 
             if (ability is BasicSuperDefinition super)
-                return super.Damage;
+                return super.Damage * damageScale;
 
             if (ability is ThrownVolleyAoEAbilityDefinition thrownVolley)
-                return thrownVolley.EnemyDamage * Mathf.Max(1, thrownVolley.ProjectileCount);
+                return thrownVolley.EnemyDamage * Mathf.Max(1, thrownVolley.ProjectileCount) * damageScale;
 
             if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
-                return thrownHybrid.EnemyDamage;
+                return thrownHybrid.EnemyDamage * damageScale;
 
             if (ability is HybridAoEAbilityDefinition hybrid)
-                return hybrid.EnemyDamage;
+                return hybrid.EnemyDamage * damageScale;
 
             return fallbackDamage;
         }
