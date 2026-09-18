@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Reflection;
 using MOBA.Core.Definitions;
+using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
 using NUnit.Framework;
 using UnityEditor;
@@ -12,6 +14,49 @@ namespace MOBA.Tests.EditMode
             "Assets/Scriptables/Brawlers/colt/Colt_Definition.asset";
         private const string ByronDefinition =
             "Assets/Scriptables/Brawlers/byron/Byron_definition.asset";
+
+        [TestCase(ColtDefinition, "84 x 10", 840f, "DMG 84 x 10")]
+        [TestCase(ByronDefinition, "210", 210f, "DMG 210   HEAL 350")]
+        public void DefaultSkillTreeSuper_ShowsAuthoredCombatStats(
+            string brawlerPath,
+            string expectedDamageText,
+            float expectedTotalDamage,
+            string expectedPayloadText)
+        {
+            BrawlerDefinition brawler = AssetDatabase.LoadAssetAtPath<BrawlerDefinition>(brawlerPath);
+            Assert.That(brawler, Is.Not.Null, brawlerPath);
+            Assert.That(brawler.SkillTree, Is.Not.Null, brawlerPath);
+            Assert.That(BrawlerSkillTreeResolver.TryResolve(
+                brawler,
+                brawler.SkillTree,
+                1,
+                null,
+                out ResolvedBrawlerBuild resolved,
+                out string error), Is.True, error);
+            Assert.That(resolved.SuperAbility, Is.Not.Null);
+
+            Assert.That(
+                InvokePreviewMethod<string>(
+                    "ResolveAbilityDamageText",
+                    resolved.SuperAbility,
+                    0f,
+                    1f),
+                Is.EqualTo(expectedDamageText));
+            Assert.That(
+                InvokePreviewMethod<float>(
+                    "ResolveAbilityDamageTotal",
+                    resolved.SuperAbility,
+                    0f,
+                    1f),
+                Is.EqualTo(expectedTotalDamage).Within(0.001f));
+            Assert.That(
+                InvokePreviewMethod<string>(
+                    "ResolveAbilityPayloadText",
+                    resolved.SuperAbility,
+                    0f,
+                    1f),
+                Is.EqualTo(expectedPayloadText));
+        }
 
         [TestCase(ColtDefinition, 1, 3000f, 720f)]
         [TestCase(ColtDefinition, 2, 3150f, 756f)]
@@ -202,6 +247,15 @@ namespace MOBA.Tests.EditMode
                 node.MoveSpeedBonusPercent > 0f ||
                 node.DamageBonusPercent > 0f ||
                 node.AttackSpeedBonusPercent > 0f;
+        }
+
+        private static T InvokePreviewMethod<T>(string methodName, params object[] arguments)
+        {
+            MethodInfo method = typeof(BrawlerSelectScreen).GetMethod(
+                methodName,
+                BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(method, Is.Not.Null, methodName);
+            return (T)method.Invoke(null, arguments);
         }
     }
 }

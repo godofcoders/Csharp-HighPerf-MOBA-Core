@@ -3491,6 +3491,11 @@ namespace MOBA.Core.Infrastructure
             if (ability is BasicProjectileAttackDefinition basic)
                 return Mathf.RoundToInt(basic.Damage * damageScale).ToString();
 
+            if (ability is BurstSequenceProjectileAbilityDefinition burst)
+                return burst.ProjectileCount > 1
+                    ? $"{Mathf.RoundToInt(burst.Damage * damageScale)} x {burst.ProjectileCount}"
+                    : Mathf.RoundToInt(burst.Damage * damageScale).ToString();
+
             if (ability is VolleyProjectileAbilityDefinition volley)
                 return volley.ProjectileCount > 1
                     ? $"{Mathf.RoundToInt(volley.Damage * damageScale)} x {volley.ProjectileCount}"
@@ -3548,6 +3553,9 @@ namespace MOBA.Core.Infrastructure
 
             if (ability is BasicProjectileAttackDefinition basic)
                 return basic.Damage * damageScale;
+
+            if (ability is BurstSequenceProjectileAbilityDefinition burst)
+                return burst.Damage * Mathf.Max(1, burst.ProjectileCount) * damageScale;
 
             if (ability is VolleyProjectileAbilityDefinition volley)
                 return volley.Damage * Mathf.Max(1, volley.ProjectileCount) * damageScale;
