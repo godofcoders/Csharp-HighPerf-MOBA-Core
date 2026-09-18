@@ -296,6 +296,7 @@ namespace MOBA.Core.Infrastructure
                     unlockedNodeIds))
                 {
                     _resolvedBuildSource = null;
+                    AppendSelectedGears(skillTreeBuild);
                     ApplyResolvedBuild(skillTreeBuild);
                     State.RefreshGadgetChargesFromRuntimeKit();
                     return;
@@ -322,6 +323,31 @@ namespace MOBA.Core.Infrastructure
             _resolvedBuildSource = null;
             ApplyLegacyFallbackBuild();
             State.RefreshGadgetChargesFromRuntimeKit();
+        }
+
+        private void AppendSelectedGears(ResolvedBrawlerBuild skillTreeBuild)
+        {
+            if (skillTreeBuild == null)
+                return;
+
+            BrawlerBuildDefinition selectedBuild = GetBuildToUse();
+            if (selectedBuild == null ||
+                !BrawlerBuildResolver.TryResolveUnlockedOnly(
+                    _definition,
+                    selectedBuild,
+                    State.CurrentPowerLevel,
+                    out ResolvedBrawlerBuild selected,
+                    out _))
+            {
+                return;
+            }
+
+            for (int i = 0; i < selected.PassiveOptions.Count; i++)
+            {
+                PassiveDefinition passive = selected.PassiveOptions[i];
+                if (passive is GearDefinition && !skillTreeBuild.PassiveOptions.Contains(passive))
+                    skillTreeBuild.PassiveOptions.Add(passive);
+            }
         }
 
         private void ApplyLegacyFallbackBuild()

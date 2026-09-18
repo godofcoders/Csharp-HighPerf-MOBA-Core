@@ -13,6 +13,78 @@ namespace MOBA.Tests.EditMode
         private const string ByronDefinition =
             "Assets/Scriptables/Brawlers/byron/Byron_definition.asset";
 
+        [TestCase(ColtDefinition, 1, 3000f, 720f)]
+        [TestCase(ColtDefinition, 2, 3150f, 756f)]
+        [TestCase(ColtDefinition, 11, 4500f, 1080f)]
+        [TestCase(ByronDefinition, 1, 3000f, 660f)]
+        [TestCase(ByronDefinition, 2, 3150f, 693f)]
+        [TestCase(ByronDefinition, 11, 4500f, 990f)]
+        public void PowerLevel_UpdatesDisplayedCombatStats(
+            string brawlerPath,
+            int powerLevel,
+            float expectedHealth,
+            float expectedDamage)
+        {
+            BrawlerDefinition brawler = AssetDatabase.LoadAssetAtPath<BrawlerDefinition>(brawlerPath);
+            Assert.That(brawler, Is.Not.Null, brawlerPath);
+
+            var state = new BrawlerState(brawler, TeamType.Neutral);
+            state.SetPowerLevel(powerLevel, false);
+
+            Assert.That(state.MaxHealth.Value, Is.EqualTo(expectedHealth).Within(0.001f));
+            Assert.That(state.Damage.Value, Is.EqualTo(expectedDamage).Within(0.001f));
+            Assert.That(state.MoveSpeed.Value, Is.EqualTo(4f).Within(0.001f));
+        }
+
+        [TestCase(
+            ColtDefinition,
+            "Assets/Scriptables/Brawlers/colt/Colt_SP_MagnumSpecial.asset",
+            11,
+            1080f,
+            4f,
+            1209.6f,
+            4f)]
+        [TestCase(
+            ByronDefinition,
+            "Assets/Scriptables/Brawlers/byron/Byron_SP_Malaise.asset",
+            11,
+            990f,
+            4f,
+            1089f,
+            4f)]
+        [TestCase(
+            ByronDefinition,
+            "Assets/Scriptables/Brawlers/byron/Byron_SP_Injection.asset",
+            11,
+            990f,
+            4f,
+            990f,
+            4.4f)]
+        public void EquippedStarPower_UpdatesDisplayedCombatStats(
+            string brawlerPath,
+            string passivePath,
+            int powerLevel,
+            float baseDamage,
+            float baseMoveSpeed,
+            float expectedDamage,
+            float expectedMoveSpeed)
+        {
+            BrawlerDefinition brawler = AssetDatabase.LoadAssetAtPath<BrawlerDefinition>(brawlerPath);
+            PassiveDefinition passive = AssetDatabase.LoadAssetAtPath<PassiveDefinition>(passivePath);
+            Assert.That(brawler, Is.Not.Null, brawlerPath);
+            Assert.That(passive, Is.Not.Null, passivePath);
+
+            var state = new BrawlerState(brawler, TeamType.Neutral);
+            state.SetPowerLevel(powerLevel, false);
+            Assert.That(state.Damage.Value, Is.EqualTo(baseDamage).Within(0.001f));
+            Assert.That(state.MoveSpeed.Value, Is.EqualTo(baseMoveSpeed).Within(0.001f));
+
+            state.SetPassiveLoadout(new[] { passive }, false);
+
+            Assert.That(state.Damage.Value, Is.EqualTo(expectedDamage).Within(0.001f));
+            Assert.That(state.MoveSpeed.Value, Is.EqualTo(expectedMoveSpeed).Within(0.001f));
+        }
+
         [TestCase(ColtDefinition, "Assets/Scriptables/Brawlers/colt/Colt_SkillNode_FlameStep.asset", 0f, 0.04f, 0f)]
         [TestCase(ColtDefinition, "Assets/Scriptables/Brawlers/colt/Colt_SkillNode_ScorchMark.asset", 0f, 0f, 0.05f)]
         [TestCase(ColtDefinition, "Assets/Scriptables/Brawlers/colt/Colt_SkillNode_BattleTemper.asset", 150f, 0f, 0f)]

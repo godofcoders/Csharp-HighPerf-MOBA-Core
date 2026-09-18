@@ -4,6 +4,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
 using MOBA.Core.Definitions;
+using MOBA.Core.Simulation;
 
 namespace MOBA.Core.Infrastructure
 {
@@ -1922,33 +1923,16 @@ namespace MOBA.Core.Infrastructure
 
             AbilityDefinition previewMainAttack = _previewed.MainAttack;
             AbilityDefinition previewSuper = _previewed.SuperAbility;
-            float skillHealthBonus = 0f;
-            float skillMoveSpeedBonusPercent = 0f;
-            float skillDamageBonusPercent = 0f;
-            float skillAttackSpeedBonusPercent = 0f;
-
-            if (_previewed.SkillTree != null && _previewed.SkillTree.Nodes != null)
-            {
-                List<string> activeNodeIds = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(
+            BrawlerState previewState = null;
+            if (TryCreateSkillTreePreviewState(
                     _previewed,
-                    _previewed.SkillTree);
-
-                for (int i = 0; i < _previewed.SkillTree.Nodes.Length; i++)
-                {
-                    BrawlerSkillTreeNodeDefinition node = _previewed.SkillTree.Nodes[i];
-                    if (node == null || !activeNodeIds.Contains(node.EffectiveId))
-                        continue;
-
-                    if (node.GrantedMainAttack != null)
-                        previewMainAttack = node.GrantedMainAttack;
-                    if (node.GrantedSuper != null)
-                        previewSuper = node.GrantedSuper;
-
-                    skillHealthBonus += node.BonusMaxHealth;
-                    skillMoveSpeedBonusPercent += node.MoveSpeedBonusPercent;
-                    skillDamageBonusPercent += node.DamageBonusPercent;
-                    skillAttackSpeedBonusPercent += node.AttackSpeedBonusPercent;
-                }
+                    powerLevel,
+                    out BrawlerState resolvedPreviewState,
+                    out ResolvedBrawlerBuild resolvedPreviewBuild))
+            {
+                previewState = resolvedPreviewState;
+                previewMainAttack = resolvedPreviewBuild.MainAttack ?? previewMainAttack;
+                previewSuper = resolvedPreviewBuild.SuperAbility ?? previewSuper;
             }
 
             if (_heroNameText != null)
@@ -1999,15 +1983,19 @@ namespace MOBA.Core.Infrastructure
                 }
             }
 
-            float health = Mathf.Max(1f, _previewed.BaseHealth + bonus.BonusHealth + skillHealthBonus);
-            float moveSpeed = Mathf.Max(
-                0f,
-                (_previewed.BaseMoveSpeed + bonus.BonusMoveSpeed) * (1f + skillMoveSpeedBonusPercent));
-            float runtimeDamage = Mathf.Max(
-                0f,
-                (_previewed.BaseDamage + bonus.BonusDamage) * (1f + skillDamageBonusPercent));
+            float health = previewState != null
+                ? Mathf.Max(1f, previewState.MaxHealth.Value)
+                : Mathf.Max(1f, _previewed.BaseHealth + bonus.BonusHealth);
+            float moveSpeed = previewState != null
+                ? Mathf.Max(0f, previewState.MoveSpeed.Value)
+                : Mathf.Max(0f, _previewed.BaseMoveSpeed + bonus.BonusMoveSpeed);
+            float runtimeDamage = previewState != null
+                ? Mathf.Max(0f, previewState.Damage.Value)
+                : Mathf.Max(0f, _previewed.BaseDamage + bonus.BonusDamage);
             float damageScale = runtimeDamage / Mathf.Max(1f, _previewed.BaseDamage);
-            float attackSpeed = 1f + skillAttackSpeedBonusPercent;
+            float attackSpeed = previewState != null
+                ? Mathf.Max(0.01f, previewState.AttackSpeed.Value)
+                : 1f;
             float mainDamage = Mathf.Max(0f, ResolveAbilityDamageTotal(previewMainAttack, runtimeDamage, damageScale));
             float superDamage = Mathf.Max(0f, ResolveAbilityDamageTotal(previewSuper, 0f, damageScale));
             float range = Mathf.Max(0f, ResolveAbilityRange(previewMainAttack));
@@ -3265,6 +3253,48 @@ namespace MOBA.Core.Infrastructure
             return BuildNameSummary(names, 2, "NONE");
         }
 
+        private bool TryCreateSkillTreePreviewState(
+            BrawlerDefinition brawler,
+            int powerLevel,
+            out BrawlerState state,
+            out ResolvedBrawlerBuild resolved)
+        {
+            state = null;
+            resolved = null;
+            if (brawler == null || brawler.SkillTree == null)
+                return false;
+
+            List<string> active = PlayerBrawlerProgress.GetActiveSkillTreeNodeIds(
+                brawler,
+                brawler.SkillTree);
+            List<string> unlocked = PlayerBrawlerProgress.GetUnlockedSkillTreeNodeIds(
+                brawler,
+                brawler.SkillTree);
+            if (!BrawlerSkillTreeResolver.TryResolve(
+                    brawler,
+                    brawler.SkillTree,
+                    powerLevel,
+                    active,
+                    out resolved,
+                    out _,
+                    unlocked))
+            {
+                return false;
+            }
+
+            List<PassiveDefinition> passives = new List<PassiveDefinition>(resolved.PassiveOptions);
+            foreach (BrawlerBuildOptionDefinition option in _selectedOptions.Values)
+            {
+                if (option is GearDefinition gear && !passives.Contains(gear))
+                    passives.Add(gear);
+            }
+
+            state = new BrawlerState(brawler, TeamType.Neutral);
+            state.SetPowerLevel(powerLevel, false);
+            state.SetPassiveLoadout(passives, false);
+            return true;
+        }
+
         private static string BuildSkillTreeOverview(
             BrawlerDefinition brawler,
             int powerLevel,
@@ -3403,11 +3433,37 @@ namespace MOBA.Core.Infrastructure
             if (ability == null)
                 return "No ability equipped";
 
-            string damage = ResolveAbilityDamageText(ability, fallbackDamage, damageScale);
+            string payload = ResolveAbilityPayloadText(ability, fallbackDamage, damageScale);
             float range = ResolveAbilityRange(ability);
             float cooldownSeconds = attackSpeed > 0f ? ability.Cooldown / attackSpeed : ability.Cooldown;
             string cooldown = cooldownSeconds > 0f ? $"{cooldownSeconds:0.0}s" : "Ready";
-            return $"DMG {damage}   RNG {range:0.0}   CD {cooldown}";
+            return $"{payload}   RNG {range:0.0}   CD {cooldown}";
+        }
+
+        private static string ResolveAbilityPayloadText(
+            AbilityDefinition ability,
+            float fallbackDamage,
+            float damageScale)
+        {
+            if (ability is HybridProjectileAbilityDefinition hybridProjectile)
+            {
+                return $"DMG {Mathf.RoundToInt(hybridProjectile.EnemyDamage * damageScale)}   " +
+                    $"HEAL {Mathf.RoundToInt(hybridProjectile.AllyHeal)}";
+            }
+
+            if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
+            {
+                return $"DMG {Mathf.RoundToInt(thrownHybrid.EnemyDamage * damageScale)}   " +
+                    $"HEAL {Mathf.RoundToInt(thrownHybrid.AllyHeal)}";
+            }
+
+            if (ability is HybridAoEAbilityDefinition hybridAoE)
+            {
+                return $"DMG {Mathf.RoundToInt(hybridAoE.EnemyDamage * damageScale)}   " +
+                    $"HEAL {Mathf.RoundToInt(hybridAoE.AllyHeal)}";
+            }
+
+            return $"DMG {ResolveAbilityDamageText(ability, fallbackDamage, damageScale)}";
         }
 
         private static string ResolveAbilityDamageText(
@@ -3417,6 +3473,15 @@ namespace MOBA.Core.Infrastructure
         {
             if (ability == null)
                 return "-";
+
+            if (ability is HybridProjectileAbilityDefinition hybridProjectile)
+                return Mathf.RoundToInt(hybridProjectile.EnemyDamage * damageScale).ToString();
+
+            if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
+                return Mathf.RoundToInt(thrownHybrid.EnemyDamage * damageScale).ToString();
+
+            if (ability is HybridAoEAbilityDefinition hybridAoE)
+                return Mathf.RoundToInt(hybridAoE.EnemyDamage * damageScale).ToString();
 
             if (ability is ProjectileAbilityDefinition projectile)
                 return projectile.ProjectileCount > 1
@@ -3456,12 +3521,6 @@ namespace MOBA.Core.Infrastructure
                     ? $"{Mathf.RoundToInt(thrownVolley.EnemyDamage * damageScale)} x {thrownVolley.ProjectileCount}"
                     : Mathf.RoundToInt(thrownVolley.EnemyDamage * damageScale).ToString();
 
-            if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
-                return Mathf.RoundToInt(thrownHybrid.EnemyDamage * damageScale).ToString();
-
-            if (ability is HybridAoEAbilityDefinition hybrid)
-                return Mathf.RoundToInt(hybrid.EnemyDamage * damageScale).ToString();
-
             return fallbackDamage > 0f
                 ? Mathf.RoundToInt(fallbackDamage).ToString()
                 : "-";
@@ -3474,6 +3533,15 @@ namespace MOBA.Core.Infrastructure
         {
             if (ability == null)
                 return fallbackDamage;
+
+            if (ability is HybridProjectileAbilityDefinition hybridProjectile)
+                return hybridProjectile.EnemyDamage * damageScale;
+
+            if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
+                return thrownHybrid.EnemyDamage * damageScale;
+
+            if (ability is HybridAoEAbilityDefinition hybridAoE)
+                return hybridAoE.EnemyDamage * damageScale;
 
             if (ability is ProjectileAbilityDefinition projectile)
                 return projectile.Damage * Mathf.Max(1, projectile.ProjectileCount) * damageScale;
@@ -3504,12 +3572,6 @@ namespace MOBA.Core.Infrastructure
 
             if (ability is ThrownVolleyAoEAbilityDefinition thrownVolley)
                 return thrownVolley.EnemyDamage * Mathf.Max(1, thrownVolley.ProjectileCount) * damageScale;
-
-            if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
-                return thrownHybrid.EnemyDamage * damageScale;
-
-            if (ability is HybridAoEAbilityDefinition hybrid)
-                return hybrid.EnemyDamage * damageScale;
 
             return fallbackDamage;
         }
