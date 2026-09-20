@@ -17,6 +17,8 @@ namespace MOBA.Core.Definitions
         [SerializeField] private float _deliveryArcHeight = 2.5f;
         [SerializeField] private float _deliveryTravelDuration = 0.35f;
 
+        public DeployableDefinition Definition => _definition;
+
         public override bool Apply(IAbilityUser source, BrawlerController target, AbilityExecutionContext context)
         {
             if (source == null || _definition == null)

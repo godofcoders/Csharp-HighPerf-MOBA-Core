@@ -3465,6 +3465,16 @@ namespace MOBA.Core.Infrastructure
                     $"HEAL {Mathf.RoundToInt(hybridAoE.AllyHeal)}";
             }
 
+            if (ability is EffectAbilityDefinition effectAbility &&
+                TryResolveDeployable(effectAbility, out DeployableDefinition deployable))
+            {
+                string damage = ResolveAbilityDamageText(
+                    deployable.AbilityDefinition,
+                    0f,
+                    damageScale);
+                return $"HP {Mathf.RoundToInt(deployable.MaxHealth)}   DMG {damage}";
+            }
+
             return $"DMG {ResolveAbilityDamageText(ability, fallbackDamage, damageScale)}";
         }
 
@@ -3539,6 +3549,12 @@ namespace MOBA.Core.Infrastructure
                     : damage;
             }
 
+            if (ability is EffectAbilityDefinition effectAbility &&
+                TryResolveDeployable(effectAbility, out DeployableDefinition deployable))
+            {
+                return ResolveAbilityDamageText(deployable.AbilityDefinition, 0f, damageScale);
+            }
+
             return fallbackDamage > 0f
                 ? Mathf.RoundToInt(fallbackDamage).ToString()
                 : "-";
@@ -3606,7 +3622,34 @@ namespace MOBA.Core.Infrastructure
                 return authoredDamage * Mathf.Max(1, thrownVolley.ProjectileCount) * damageScale;
             }
 
+            if (ability is EffectAbilityDefinition effectAbility &&
+                TryResolveDeployable(effectAbility, out DeployableDefinition deployable))
+            {
+                return ResolveAbilityDamageTotal(deployable.AbilityDefinition, 0f, damageScale);
+            }
+
             return fallbackDamage;
+        }
+
+        private static bool TryResolveDeployable(
+            EffectAbilityDefinition ability,
+            out DeployableDefinition deployable)
+        {
+            deployable = null;
+            if (ability?.Effects == null)
+                return false;
+
+            for (int i = 0; i < ability.Effects.Length; i++)
+            {
+                if (ability.Effects[i] is SpawnDeployableEffectDefinition spawn &&
+                    spawn.Definition != null)
+                {
+                    deployable = spawn.Definition;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static string ResolveThrownHybridDamageText(

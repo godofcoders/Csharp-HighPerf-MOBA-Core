@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a97d4e328f384078853a10e4cb4fa1b9, type: 3}
+  m_Name: Jessie_SkillTree
+  m_EditorClassIdentifier:
+  TreeId: jessie_volt
+  DisplayName: Volt Resonance
+  ElementType: 5
+  Description: Volt's Lightning progression tree. Choose Workshop support or Overload pressure while charging nanopowers along the central path.
+  AccentColor: {r: 1, g: 0.78, b: 0.12, a: 1}
+  MaxActiveNodes: 10
+  ChoiceGroups:
+  - GroupId: volt_starpower
+    DisplayName: STAR POWERS
+    MaxUnlocked: 2
+    MaxActive: 1
+  - GroupId: volt_gadgets
+    DisplayName: GADGETS
+    MaxUnlocked: 2
+    MaxActive: 1
+  - GroupId: volt_stats
+    DisplayName: STAT BOOSTS
+    MaxUnlocked: 7
+    MaxActive: 7
+  Branches:
+  - BranchId: workshop
+    DisplayName: WORKSHOP PATH
+    ExclusiveBranchIds:
+    - overload
+  - BranchId: overload
+    DisplayName: OVERLOAD PATH
+    ExclusiveBranchIds:
+    - workshop
+  Nodes:
+  - {fileID: 11400000, guid: 99bb5666f9ef4f758adf0ba95a5e7d25, type: 2}
+  - {fileID: 11400000, guid: 8e24e54e42f0496aa2a0c980d4dfc1eb, type: 2}
+  - {fileID: 11400000, guid: 2fca03cbb0644220aa82d7b38ad4b697, type: 2}
+  - {fileID: 11400000, guid: 5748dcacbe3e4f72b94f4e6022f688d4, type: 2}
+  - {fileID: 11400000, guid: 215f295d7056498fb68c3a3f8388af01, type: 2}
+  - {fileID: 11400000, guid: d2acae3bcaa94fb18cbc770331bdad72, type: 2}
+  - {fileID: 11400000, guid: 817b45cf25634eaf84d049965dfe473a, type: 2}
+  - {fileID: 11400000, guid: 8668b875e57043c089eb3b70cac17e70, type: 2}
+  - {fileID: 11400000, guid: 87cfd697d1a443c89ee6ffe8aa8656ec, type: 2}
+  - {fileID: 11400000, guid: 4d3184dfc1cd4c0c95bb23134a42b089, type: 2}
+  - {fileID: 11400000, guid: c33fa25c93ed41f6897dbc839aad226b, type: 2}
+  - {fileID: 11400000, guid: 4be57d46e52d480195a458464d2708b5, type: 2}
+  - {fileID: 11400000, guid: e1c5e183f39f4742b118b6afb32996a9, type: 2}
+  - {fileID: 11400000, guid: b06be55ee4e94cdfb5dffee76e7b40a9, type: 2}
+  - {fileID: 11400000, guid: 7a066ccd885249f3bf9b30fd3e9139a4, type: 2}
+  - {fileID: 11400000, guid: 8956b67af0af48879e66879eb45be92e, type: 2}
+  - {fileID: 11400000, guid: 62de424988fd464cb93136a68af5a99b, type: 2}
+  DefaultActiveNodes:
+  - {fileID: 11400000, guid: 99bb5666f9ef4f758adf0ba95a5e7d25, type: 2}
+  - {fileID: 11400000, guid: 8e24e54e42f0496aa2a0c980d4dfc1eb, type: 2}
+

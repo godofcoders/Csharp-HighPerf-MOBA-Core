@@ -16,10 +16,13 @@ namespace MOBA.Tests.EditMode
             "Assets/Scriptables/Brawlers/byron/Byron_definition.asset";
         private const string BarleyDefinition =
             "Assets/Scriptables/Brawlers/Barley/Barley_BrawlerDefinition.asset";
+        private const string JessieDefinition =
+            "Assets/Scriptables/Brawlers/Jesse/Jesse_Definition.asset";
 
         [TestCase(ColtDefinition, "84 x 10", 840f, "DMG 84 x 10")]
         [TestCase(ByronDefinition, "210", 210f, "DMG 210   HEAL 350")]
         [TestCase(BarleyDefinition, "108/tick x 6", 648f, "DMG 108/tick x 6")]
+        [TestCase(JessieDefinition, "156", 156f, "HP 3200   DMG 156")]
         public void DefaultSkillTreeSuper_ShowsAuthoredCombatStats(
             string brawlerPath,
             string expectedDamageText,
@@ -61,17 +64,22 @@ namespace MOBA.Tests.EditMode
                 Is.EqualTo(expectedPayloadText));
         }
 
-        [TestCase(ColtDefinition, 1, 3000f, 720f)]
-        [TestCase(ColtDefinition, 2, 3150f, 756f)]
-        [TestCase(ColtDefinition, 11, 4500f, 1080f)]
-        [TestCase(ByronDefinition, 1, 3000f, 660f)]
-        [TestCase(ByronDefinition, 2, 3150f, 693f)]
-        [TestCase(ByronDefinition, 11, 4500f, 990f)]
+        [TestCase(ColtDefinition, 1, 3000f, 720f, 4f)]
+        [TestCase(ColtDefinition, 2, 3150f, 756f, 4f)]
+        [TestCase(ColtDefinition, 11, 4500f, 1080f, 4f)]
+        [TestCase(ByronDefinition, 1, 3000f, 660f, 4f)]
+        [TestCase(ByronDefinition, 2, 3150f, 693f, 4f)]
+        [TestCase(ByronDefinition, 11, 4500f, 990f, 4f)]
+        [TestCase(BarleyDefinition, 1, 3600f, 840f, 5.6f)]
+        [TestCase(BarleyDefinition, 11, 5400f, 1260f, 5.6f)]
+        [TestCase(JessieDefinition, 1, 3200f, 720f, 4f)]
+        [TestCase(JessieDefinition, 11, 4800f, 1080f, 4f)]
         public void PowerLevel_UpdatesDisplayedCombatStats(
             string brawlerPath,
             int powerLevel,
             float expectedHealth,
-            float expectedDamage)
+            float expectedDamage,
+            float expectedMoveSpeed)
         {
             BrawlerDefinition brawler = AssetDatabase.LoadAssetAtPath<BrawlerDefinition>(brawlerPath);
             Assert.That(brawler, Is.Not.Null, brawlerPath);
@@ -81,7 +89,7 @@ namespace MOBA.Tests.EditMode
 
             Assert.That(state.MaxHealth.Value, Is.EqualTo(expectedHealth).Within(0.001f));
             Assert.That(state.Damage.Value, Is.EqualTo(expectedDamage).Within(0.001f));
-            Assert.That(state.MoveSpeed.Value, Is.EqualTo(4f).Within(0.001f));
+            Assert.That(state.MoveSpeed.Value, Is.EqualTo(expectedMoveSpeed).Within(0.001f));
         }
 
         [TestCase(
@@ -143,13 +151,18 @@ namespace MOBA.Tests.EditMode
         [TestCase(ByronDefinition, "Assets/Scriptables/Brawlers/byron/Byron_SkillNode_ToxinFocus.asset", 0f, 0f, 0.04f)]
         [TestCase(ByronDefinition, "Assets/Scriptables/Brawlers/byron/Byron_SkillNode_LingeringVenom.asset", 0f, 0f, 0.05f)]
         [TestCase(ByronDefinition, "Assets/Scriptables/Brawlers/byron/Byron_SkillNode_DeepReserves.asset", 0f, 0f, 0.06f)]
-        [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_QuickMix.asset", 0f, 0f, 0f)]
         [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_Barkskin.asset", 220f, 0f, 0f)]
         [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_RootRunner.asset", 0f, 0.04f, 0f)]
         [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_ToxicBloom.asset", 0f, 0f, 0.04f)]
         [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_Regrowth.asset", 250f, 0f, 0f)]
         [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_DeepFerment.asset", 0f, 0f, 0.05f)]
         [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_WildGrowth.asset", 0f, 0f, 0.06f)]
+        [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_ReinforcedFrame.asset", 200f, 0f, 0f)]
+        [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_LiveWire.asset", 0f, 0.04f, 0f)]
+        [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_ArcAmplifier.asset", 0f, 0f, 0.04f)]
+        [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_FieldRepair.asset", 250f, 0f, 0f)]
+        [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_ChainReaction.asset", 0f, 0f, 0.05f)]
+        [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_FullCircuit.asset", 0f, 0f, 0.06f)]
         public void AuthoredStatNode_ChangesLiveStatsAndCleansUpWhenUnequipped(
             string brawlerPath,
             string nodePath,
@@ -185,17 +198,19 @@ namespace MOBA.Tests.EditMode
             Assert.That(state.Damage.Value, Is.EqualTo(baseDamage).Within(0.001f));
         }
 
-        [TestCase("Assets/Scriptables/Brawlers/colt/Colt_SkillNode_QuickDraw.asset", 0.12f)]
-        [TestCase("Assets/Scriptables/Brawlers/byron/Byron_SkillNode_CarefulMixing.asset", 0.10f)]
-        [TestCase("Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_QuickMix.asset", 0.10f)]
+        [TestCase(ColtDefinition, "Assets/Scriptables/Brawlers/colt/Colt_SkillNode_QuickDraw.asset", 0.12f)]
+        [TestCase(ByronDefinition, "Assets/Scriptables/Brawlers/byron/Byron_SkillNode_CarefulMixing.asset", 0.10f)]
+        [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_QuickMix.asset", 0.10f)]
+        [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_RapidRelay.asset", 0.10f)]
         public void AuthoredAttackSpeedNode_ChangesCooldownScale(
+            string brawlerPath,
             string nodePath,
             float expectedBonus)
         {
-            BrawlerDefinition brawler = AssetDatabase.LoadAssetAtPath<BrawlerDefinition>(ColtDefinition);
+            BrawlerDefinition brawler = AssetDatabase.LoadAssetAtPath<BrawlerDefinition>(brawlerPath);
             BrawlerSkillTreeNodeDefinition node =
                 AssetDatabase.LoadAssetAtPath<BrawlerSkillTreeNodeDefinition>(nodePath);
-            Assert.That(brawler, Is.Not.Null, ColtDefinition);
+            Assert.That(brawler, Is.Not.Null, brawlerPath);
             Assert.That(node, Is.Not.Null, nodePath);
 
             var state = new BrawlerState(brawler, TeamType.Neutral);
@@ -213,6 +228,7 @@ namespace MOBA.Tests.EditMode
         [TestCase("Assets/Scriptables/Brawlers/colt/Colt_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/byron/Byron_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/Barley/Barley_SkillTree.asset")]
+        [TestCase("Assets/Scriptables/Brawlers/Jesse/Jessie_SkillTree.asset")]
         public void EveryAuthoredNode_HasARealGameplayEffect(string treePath)
         {
             BrawlerSkillTreeDefinition tree =
