@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a97d4e328f384078853a10e4cb4fa1b9, type: 3}
+  m_Name: Barley_SkillTree
+  m_EditorClassIdentifier:
+  TreeId: barley_briar
+  DisplayName: Briar Resonance
+  ElementType: 7
+  Description: Briar's Nature progression tree. Choose Grove sustain or Blight pressure while growing nanopowers along the central path.
+  AccentColor: {r: 0.35, g: 0.82, b: 0.25, a: 1}
+  MaxActiveNodes: 10
+  ChoiceGroups:
+  - GroupId: briar_starpower
+    DisplayName: STAR POWERS
+    MaxUnlocked: 2
+    MaxActive: 1
+  - GroupId: briar_gadgets
+    DisplayName: GADGETS
+    MaxUnlocked: 2
+    MaxActive: 1
+  - GroupId: briar_stats
+    DisplayName: STAT BOOSTS
+    MaxUnlocked: 7
+    MaxActive: 7
+  Branches:
+  - BranchId: grove
+    DisplayName: GROVE PATH
+    ExclusiveBranchIds:
+    - blight
+  - BranchId: blight
+    DisplayName: BLIGHT PATH
+    ExclusiveBranchIds:
+    - grove
+  Nodes:
+  - {fileID: 11400000, guid: b1228bf3e63f4bb2a6b040d4fc2e7dad, type: 2}
+  - {fileID: 11400000, guid: 775c84c0ca944fa7af67723daceae94e, type: 2}
+  - {fileID: 11400000, guid: 4564258cb8ee4f30b99704f70828bea8, type: 2}
+  - {fileID: 11400000, guid: 79def723e5f5427faa7f2e8ed0c2a115, type: 2}
+  - {fileID: 11400000, guid: 4673bd2c2d7b4fa88f0990137326f6c7, type: 2}
+  - {fileID: 11400000, guid: dfde37810fef4fc39da83959b6ff45b8, type: 2}
+  - {fileID: 11400000, guid: a70e8ebd28b74ba593d323b716b74a91, type: 2}
+  - {fileID: 11400000, guid: 8f75955d85ed4b0a80df82443d8a453b, type: 2}
+  - {fileID: 11400000, guid: d6aa3ca21ae942ce810f9996ee549e87, type: 2}
+  - {fileID: 11400000, guid: f050886a4bb4405fa042f7bb56a044c5, type: 2}
+  - {fileID: 11400000, guid: af1bc87c790e4b358649b78409717786, type: 2}
+  - {fileID: 11400000, guid: dae94ffd18c8409193e4805181914011, type: 2}
+  - {fileID: 11400000, guid: ac72b8e4971c458a8b6e463c31e7f6c8, type: 2}
+  - {fileID: 11400000, guid: 070b89c62f6d46f1bd3dc7a7012dd87d, type: 2}
+  - {fileID: 11400000, guid: a6c522503f6749f1980d0dce7250c771, type: 2}
+  - {fileID: 11400000, guid: c5aff3c881cd455d973f82176b62e544, type: 2}
+  - {fileID: 11400000, guid: e3902cfc068344839b0eba2f2c93ddae, type: 2}
+  DefaultActiveNodes:
+  - {fileID: 11400000, guid: b1228bf3e63f4bb2a6b040d4fc2e7dad, type: 2}
+  - {fileID: 11400000, guid: 775c84c0ca944fa7af67723daceae94e, type: 2}
+

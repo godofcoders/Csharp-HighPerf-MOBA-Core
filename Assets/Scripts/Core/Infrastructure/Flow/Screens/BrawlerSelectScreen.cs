@@ -3453,8 +3453,10 @@ namespace MOBA.Core.Infrastructure
 
             if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
             {
-                return $"DMG {Mathf.RoundToInt(thrownHybrid.EnemyDamage * damageScale)}   " +
-                    $"HEAL {Mathf.RoundToInt(thrownHybrid.AllyHeal)}";
+                string payload = $"DMG {ResolveThrownHybridDamageText(thrownHybrid, damageScale)}";
+                return thrownHybrid.AllyHeal > 0f
+                    ? $"{payload}   HEAL {Mathf.RoundToInt(thrownHybrid.AllyHeal)}"
+                    : payload;
             }
 
             if (ability is HybridAoEAbilityDefinition hybridAoE)
@@ -3478,7 +3480,7 @@ namespace MOBA.Core.Infrastructure
                 return Mathf.RoundToInt(hybridProjectile.EnemyDamage * damageScale).ToString();
 
             if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
-                return Mathf.RoundToInt(thrownHybrid.EnemyDamage * damageScale).ToString();
+                return ResolveThrownHybridDamageText(thrownHybrid, damageScale);
 
             if (ability is HybridAoEAbilityDefinition hybridAoE)
                 return Mathf.RoundToInt(hybridAoE.EnemyDamage * damageScale).ToString();
@@ -3522,9 +3524,20 @@ namespace MOBA.Core.Infrastructure
                 return Mathf.RoundToInt(super.Damage * damageScale).ToString();
 
             if (ability is ThrownVolleyAoEAbilityDefinition thrownVolley)
+            {
+                float authoredDamage = thrownVolley.EnemyDamage > 0f
+                    ? thrownVolley.EnemyDamage
+                    : thrownVolley.LingeringHazard != null
+                        ? thrownVolley.LingeringHazard.DamagePerTick
+                        : 0f;
+                string damage = Mathf.RoundToInt(authoredDamage * damageScale).ToString();
+                if (thrownVolley.EnemyDamage <= 0f && thrownVolley.LingeringHazard != null)
+                    damage += "/tick";
+
                 return thrownVolley.ProjectileCount > 1
-                    ? $"{Mathf.RoundToInt(thrownVolley.EnemyDamage * damageScale)} x {thrownVolley.ProjectileCount}"
-                    : Mathf.RoundToInt(thrownVolley.EnemyDamage * damageScale).ToString();
+                    ? $"{damage} x {thrownVolley.ProjectileCount}"
+                    : damage;
+            }
 
             return fallbackDamage > 0f
                 ? Mathf.RoundToInt(fallbackDamage).ToString()
@@ -3543,7 +3556,12 @@ namespace MOBA.Core.Infrastructure
                 return hybridProjectile.EnemyDamage * damageScale;
 
             if (ability is ThrownHybridAoEAbilityDefinition thrownHybrid)
-                return thrownHybrid.EnemyDamage * damageScale;
+            {
+                float hazardDamage = thrownHybrid.LingeringHazard != null
+                    ? thrownHybrid.LingeringHazard.DamagePerTick
+                    : 0f;
+                return (thrownHybrid.EnemyDamage + hazardDamage) * damageScale;
+            }
 
             if (ability is HybridAoEAbilityDefinition hybridAoE)
                 return hybridAoE.EnemyDamage * damageScale;
@@ -3579,9 +3597,30 @@ namespace MOBA.Core.Infrastructure
                 return super.Damage * damageScale;
 
             if (ability is ThrownVolleyAoEAbilityDefinition thrownVolley)
-                return thrownVolley.EnemyDamage * Mathf.Max(1, thrownVolley.ProjectileCount) * damageScale;
+            {
+                float authoredDamage = thrownVolley.EnemyDamage > 0f
+                    ? thrownVolley.EnemyDamage
+                    : thrownVolley.LingeringHazard != null
+                        ? thrownVolley.LingeringHazard.DamagePerTick
+                        : 0f;
+                return authoredDamage * Mathf.Max(1, thrownVolley.ProjectileCount) * damageScale;
+            }
 
             return fallbackDamage;
+        }
+
+        private static string ResolveThrownHybridDamageText(
+            ThrownHybridAoEAbilityDefinition ability,
+            float damageScale)
+        {
+            int impactDamage = Mathf.RoundToInt(ability.EnemyDamage * damageScale);
+            if (ability.LingeringHazard == null || ability.LingeringHazard.DamagePerTick <= 0f)
+                return impactDamage.ToString();
+
+            int tickDamage = Mathf.RoundToInt(ability.LingeringHazard.DamagePerTick * damageScale);
+            return impactDamage > 0
+                ? $"{impactDamage} + {tickDamage}/tick"
+                : $"{tickDamage}/tick";
         }
 
         private static float ResolveAbilityRange(AbilityDefinition ability)

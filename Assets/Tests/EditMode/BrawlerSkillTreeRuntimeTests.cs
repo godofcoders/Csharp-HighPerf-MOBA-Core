@@ -14,9 +14,12 @@ namespace MOBA.Tests.EditMode
             "Assets/Scriptables/Brawlers/colt/Colt_Definition.asset";
         private const string ByronDefinition =
             "Assets/Scriptables/Brawlers/byron/Byron_definition.asset";
+        private const string BarleyDefinition =
+            "Assets/Scriptables/Brawlers/Barley/Barley_BrawlerDefinition.asset";
 
         [TestCase(ColtDefinition, "84 x 10", 840f, "DMG 84 x 10")]
         [TestCase(ByronDefinition, "210", 210f, "DMG 210   HEAL 350")]
+        [TestCase(BarleyDefinition, "108/tick x 6", 648f, "DMG 108/tick x 6")]
         public void DefaultSkillTreeSuper_ShowsAuthoredCombatStats(
             string brawlerPath,
             string expectedDamageText,
@@ -140,6 +143,13 @@ namespace MOBA.Tests.EditMode
         [TestCase(ByronDefinition, "Assets/Scriptables/Brawlers/byron/Byron_SkillNode_ToxinFocus.asset", 0f, 0f, 0.04f)]
         [TestCase(ByronDefinition, "Assets/Scriptables/Brawlers/byron/Byron_SkillNode_LingeringVenom.asset", 0f, 0f, 0.05f)]
         [TestCase(ByronDefinition, "Assets/Scriptables/Brawlers/byron/Byron_SkillNode_DeepReserves.asset", 0f, 0f, 0.06f)]
+        [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_QuickMix.asset", 0f, 0f, 0f)]
+        [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_Barkskin.asset", 220f, 0f, 0f)]
+        [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_RootRunner.asset", 0f, 0.04f, 0f)]
+        [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_ToxicBloom.asset", 0f, 0f, 0.04f)]
+        [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_Regrowth.asset", 250f, 0f, 0f)]
+        [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_DeepFerment.asset", 0f, 0f, 0.05f)]
+        [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_WildGrowth.asset", 0f, 0f, 0.06f)]
         public void AuthoredStatNode_ChangesLiveStatsAndCleansUpWhenUnequipped(
             string brawlerPath,
             string nodePath,
@@ -175,8 +185,34 @@ namespace MOBA.Tests.EditMode
             Assert.That(state.Damage.Value, Is.EqualTo(baseDamage).Within(0.001f));
         }
 
+        [TestCase("Assets/Scriptables/Brawlers/colt/Colt_SkillNode_QuickDraw.asset", 0.12f)]
+        [TestCase("Assets/Scriptables/Brawlers/byron/Byron_SkillNode_CarefulMixing.asset", 0.10f)]
+        [TestCase("Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_QuickMix.asset", 0.10f)]
+        public void AuthoredAttackSpeedNode_ChangesCooldownScale(
+            string nodePath,
+            float expectedBonus)
+        {
+            BrawlerDefinition brawler = AssetDatabase.LoadAssetAtPath<BrawlerDefinition>(ColtDefinition);
+            BrawlerSkillTreeNodeDefinition node =
+                AssetDatabase.LoadAssetAtPath<BrawlerSkillTreeNodeDefinition>(nodePath);
+            Assert.That(brawler, Is.Not.Null, ColtDefinition);
+            Assert.That(node, Is.Not.Null, nodePath);
+
+            var state = new BrawlerState(brawler, TeamType.Neutral);
+            float baseAttackSpeed = state.AttackSpeed.Value;
+            state.SetPassiveLoadout(new PassiveDefinition[] { node }, false);
+
+            Assert.That(
+                state.AttackSpeed.Value,
+                Is.EqualTo(baseAttackSpeed * (1f + expectedBonus)).Within(0.001f));
+
+            state.SetPassiveLoadout(null, false);
+            Assert.That(state.AttackSpeed.Value, Is.EqualTo(baseAttackSpeed).Within(0.001f));
+        }
+
         [TestCase("Assets/Scriptables/Brawlers/colt/Colt_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/byron/Byron_SkillTree.asset")]
+        [TestCase("Assets/Scriptables/Brawlers/Barley/Barley_SkillTree.asset")]
         public void EveryAuthoredNode_HasARealGameplayEffect(string treePath)
         {
             BrawlerSkillTreeDefinition tree =
