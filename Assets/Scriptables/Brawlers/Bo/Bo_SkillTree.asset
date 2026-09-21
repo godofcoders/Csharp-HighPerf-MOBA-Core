@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a97d4e328f384078853a10e4cb4fa1b9, type: 3}
+  m_Name: Bo_SkillTree
+  m_EditorClassIdentifier:
+  TreeId: gale
+  DisplayName: Gale Resonance
+  ElementType: 4
+  Description: Gale's Air progression tree. Choose Updraft mobility or Tempest control while charging nanopowers along the central path.
+  AccentColor: {r: 0.26, g: 0.78, b: 0.92, a: 1}
+  MaxActiveNodes: 10
+  ChoiceGroups:
+  - GroupId: gale_starpower
+    DisplayName: STAR POWERS
+    MaxUnlocked: 2
+    MaxActive: 1
+  - GroupId: gale_gadgets
+    DisplayName: GADGETS
+    MaxUnlocked: 2
+    MaxActive: 1
+  - GroupId: gale_stats
+    DisplayName: STAT BOOSTS
+    MaxUnlocked: 7
+    MaxActive: 7
+  Branches:
+  - BranchId: updraft
+    DisplayName: UPDRAFT PATH
+    ExclusiveBranchIds:
+    - tempest
+  - BranchId: tempest
+    DisplayName: TEMPEST PATH
+    ExclusiveBranchIds:
+    - updraft
+  Nodes:
+  - {fileID: 11400000, guid: 07ea4f3b8e8e591c7930eafbd9a0f2dc, type: 2}
+  - {fileID: 11400000, guid: 7597ffa3f70a0848b26ebf133ad8c891, type: 2}
+  - {fileID: 11400000, guid: 37ba7d9c7f35213fc8a1aa9a211c9b58, type: 2}
+  - {fileID: 11400000, guid: 3a30358042cd609c4637de21b15f26da, type: 2}
+  - {fileID: 11400000, guid: e45b4d53e70623389e09f6311a1ccc7d, type: 2}
+  - {fileID: 11400000, guid: 98c5180337d5dad0f0276aaf3d1c9910, type: 2}
+  - {fileID: 11400000, guid: c83927aa58b5deea526685d41ae0334f, type: 2}
+  - {fileID: 11400000, guid: 7d4acf1b184a323db69a0ec81d6fddea, type: 2}
+  - {fileID: 11400000, guid: b84b4b72156e6b95010d44622d5b6c0d, type: 2}
+  - {fileID: 11400000, guid: f94b963453ed6e8265a0b0500e39e9de, type: 2}
+  - {fileID: 11400000, guid: f1e97c93064b74d5aedae45a3f9db079, type: 2}
+  - {fileID: 11400000, guid: 73a54fc4130762bb7a639c440bc3bed0, type: 2}
+  - {fileID: 11400000, guid: a6fc135ba04b785d983f09c876a28633, type: 2}
+  - {fileID: 11400000, guid: b3b362a3fc1b43619d7ca5ff3595dddb, type: 2}
+  - {fileID: 11400000, guid: db6778884b27fc676e5cffeac31e0af6, type: 2}
+  - {fileID: 11400000, guid: 3f87e4cb8550d974394d0b05b51e91db, type: 2}
+  - {fileID: 11400000, guid: 1b7dd55c748648900f378c0e84ba7a71, type: 2}
+  DefaultActiveNodes:
+  - {fileID: 11400000, guid: 07ea4f3b8e8e591c7930eafbd9a0f2dc, type: 2}
+  - {fileID: 11400000, guid: 7597ffa3f70a0848b26ebf133ad8c891, type: 2}

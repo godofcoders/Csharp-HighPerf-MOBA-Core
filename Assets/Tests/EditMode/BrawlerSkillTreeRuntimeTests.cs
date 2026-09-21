@@ -18,11 +18,14 @@ namespace MOBA.Tests.EditMode
             "Assets/Scriptables/Brawlers/Barley/Barley_BrawlerDefinition.asset";
         private const string JessieDefinition =
             "Assets/Scriptables/Brawlers/Jesse/Jesse_Definition.asset";
+        private const string BoDefinition =
+            "Assets/Scriptables/Brawlers/Bo/Bo_Definition.asset";
 
         [TestCase(ColtDefinition, "84 x 10", 840f, "DMG 84 x 10")]
         [TestCase(ByronDefinition, "210", 210f, "DMG 210   HEAL 350")]
         [TestCase(BarleyDefinition, "108/tick x 6", 648f, "DMG 108/tick x 6")]
         [TestCase(JessieDefinition, "156", 156f, "HP 3200   DMG 156")]
+        [TestCase(BoDefinition, "1080 x 3", 3240f, "DMG 1080 x 3")]
         public void DefaultSkillTreeSuper_ShowsAuthoredCombatStats(
             string brawlerPath,
             string expectedDamageText,
@@ -74,6 +77,8 @@ namespace MOBA.Tests.EditMode
         [TestCase(BarleyDefinition, 11, 5400f, 1260f, 5.6f)]
         [TestCase(JessieDefinition, 1, 3200f, 720f, 4f)]
         [TestCase(JessieDefinition, 11, 4800f, 1080f, 4f)]
+        [TestCase(BoDefinition, 1, 3900f, 432f, 4f)]
+        [TestCase(BoDefinition, 11, 5850f, 648f, 4f)]
         public void PowerLevel_UpdatesDisplayedCombatStats(
             string brawlerPath,
             int powerLevel,
@@ -163,6 +168,12 @@ namespace MOBA.Tests.EditMode
         [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_FieldRepair.asset", 250f, 0f, 0f)]
         [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_ChainReaction.asset", 0f, 0f, 0.05f)]
         [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_FullCircuit.asset", 0f, 0f, 0.06f)]
+        [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_LightArmor.asset", 220f, 0f, 0f)]
+        [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_Slipstream.asset", 0f, 0.04f, 0f)]
+        [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_GaleForce.asset", 0f, 0f, 0.04f)]
+        [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_HighAltitude.asset", 260f, 0f, 0f)]
+        [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_Tempest.asset", 0f, 0f, 0.05f)]
+        [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_Jetstream.asset", 0f, 0f, 0.06f)]
         public void AuthoredStatNode_ChangesLiveStatsAndCleansUpWhenUnequipped(
             string brawlerPath,
             string nodePath,
@@ -202,6 +213,7 @@ namespace MOBA.Tests.EditMode
         [TestCase(ByronDefinition, "Assets/Scriptables/Brawlers/byron/Byron_SkillNode_CarefulMixing.asset", 0.10f)]
         [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_QuickMix.asset", 0.10f)]
         [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_RapidRelay.asset", 0.10f)]
+        [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_QuickFletching.asset", 0.10f)]
         public void AuthoredAttackSpeedNode_ChangesCooldownScale(
             string brawlerPath,
             string nodePath,
@@ -229,6 +241,7 @@ namespace MOBA.Tests.EditMode
         [TestCase("Assets/Scriptables/Brawlers/byron/Byron_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/Barley/Barley_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/Jesse/Jessie_SkillTree.asset")]
+        [TestCase("Assets/Scriptables/Brawlers/Bo/Bo_SkillTree.asset")]
         public void EveryAuthoredNode_HasARealGameplayEffect(string treePath)
         {
             BrawlerSkillTreeDefinition tree =
@@ -242,6 +255,35 @@ namespace MOBA.Tests.EditMode
                 Assert.That(node, Is.Not.Null, treePath);
                 Assert.That(HasGameplayEffect(node), Is.True,
                     $"{node.EffectiveDisplayName} is selectable but has no configured gameplay effect.");
+            }
+        }
+
+        [TestCase("Assets/Scriptables/Brawlers/Bo/Bo_SkillTree.asset")]
+        public void Nanopowers_FormASequentialPowerPath(string treePath)
+        {
+            BrawlerSkillTreeDefinition tree =
+                AssetDatabase.LoadAssetAtPath<BrawlerSkillTreeDefinition>(treePath);
+            Assert.That(tree, Is.Not.Null, treePath);
+
+            var nanopowers = new List<BrawlerSkillTreeNodeDefinition>();
+            foreach (BrawlerSkillTreeNodeDefinition node in tree.Nodes)
+            {
+                if (node != null && node.NodeType == BrawlerSkillTreeNodeType.Nanopower)
+                    nanopowers.Add(node);
+            }
+
+            Assert.That(nanopowers, Has.Count.EqualTo(3));
+            for (int i = 0; i < nanopowers.Count; i++)
+            {
+                Assert.That(nanopowers[i].GrantedNanopower, Is.Not.Null);
+                if (i == 0)
+                    continue;
+
+                Assert.That(nanopowers[i].UnlockPowerLevel,
+                    Is.GreaterThan(nanopowers[i - 1].UnlockPowerLevel));
+                CollectionAssert.Contains(
+                    nanopowers[i].PrerequisiteNodeIds,
+                    nanopowers[i - 1].EffectiveId);
             }
         }
 
