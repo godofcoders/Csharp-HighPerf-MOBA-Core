@@ -20,12 +20,15 @@ namespace MOBA.Tests.EditMode
             "Assets/Scriptables/Brawlers/Jesse/Jesse_Definition.asset";
         private const string BoDefinition =
             "Assets/Scriptables/Brawlers/Bo/Bo_Definition.asset";
+        private const string ElPrimoDefinition =
+            "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_Definition.asset";
 
         [TestCase(ColtDefinition, "84 x 10", 840f, "DMG 84 x 10")]
         [TestCase(ByronDefinition, "210", 210f, "DMG 210   HEAL 350")]
         [TestCase(BarleyDefinition, "108/tick x 6", 648f, "DMG 108/tick x 6")]
         [TestCase(JessieDefinition, "156", 156f, "HP 3200   DMG 156")]
         [TestCase(BoDefinition, "1080 x 3", 3240f, "DMG 1080 x 3")]
+        [TestCase(ElPrimoDefinition, "990", 990f, "DMG 990")]
         public void DefaultSkillTreeSuper_ShowsAuthoredCombatStats(
             string brawlerPath,
             string expectedDamageText,
@@ -79,6 +82,8 @@ namespace MOBA.Tests.EditMode
         [TestCase(JessieDefinition, 11, 4800f, 1080f, 4f)]
         [TestCase(BoDefinition, 1, 3900f, 432f, 4f)]
         [TestCase(BoDefinition, 11, 5850f, 648f, 4f)]
+        [TestCase(ElPrimoDefinition, 1, 6200f, 930f, 4.2f)]
+        [TestCase(ElPrimoDefinition, 11, 9300f, 1395f, 4.2f)]
         public void PowerLevel_UpdatesDisplayedCombatStats(
             string brawlerPath,
             int powerLevel,
@@ -174,6 +179,12 @@ namespace MOBA.Tests.EditMode
         [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_HighAltitude.asset", 260f, 0f, 0f)]
         [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_Tempest.asset", 0f, 0f, 0.05f)]
         [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_Jetstream.asset", 0f, 0f, 0.06f)]
+        [TestCase(ElPrimoDefinition, "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillNode_Stonehide.asset", 300f, 0f, 0f)]
+        [TestCase(ElPrimoDefinition, "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillNode_Grounded.asset", 0f, 0.04f, 0f)]
+        [TestCase(ElPrimoDefinition, "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillNode_CrushingForce.asset", 0f, 0f, 0.04f)]
+        [TestCase(ElPrimoDefinition, "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillNode_Unshaken.asset", 350f, 0f, 0f)]
+        [TestCase(ElPrimoDefinition, "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillNode_TectonicPower.asset", 0f, 0f, 0.05f)]
+        [TestCase(ElPrimoDefinition, "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillNode_FaultLine.asset", 0f, 0f, 0.06f)]
         public void AuthoredStatNode_ChangesLiveStatsAndCleansUpWhenUnequipped(
             string brawlerPath,
             string nodePath,
@@ -214,6 +225,7 @@ namespace MOBA.Tests.EditMode
         [TestCase(BarleyDefinition, "Assets/Scriptables/Brawlers/Barley/Barley_SkillNode_QuickMix.asset", 0.10f)]
         [TestCase(JessieDefinition, "Assets/Scriptables/Brawlers/Jesse/Jessie_SkillNode_RapidRelay.asset", 0.10f)]
         [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_QuickFletching.asset", 0.10f)]
+        [TestCase(ElPrimoDefinition, "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillNode_QuickCombo.asset", 0.10f)]
         public void AuthoredAttackSpeedNode_ChangesCooldownScale(
             string brawlerPath,
             string nodePath,
@@ -242,6 +254,7 @@ namespace MOBA.Tests.EditMode
         [TestCase("Assets/Scriptables/Brawlers/Barley/Barley_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/Jesse/Jessie_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/Bo/Bo_SkillTree.asset")]
+        [TestCase("Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillTree.asset")]
         public void EveryAuthoredNode_HasARealGameplayEffect(string treePath)
         {
             BrawlerSkillTreeDefinition tree =
@@ -259,6 +272,7 @@ namespace MOBA.Tests.EditMode
         }
 
         [TestCase("Assets/Scriptables/Brawlers/Bo/Bo_SkillTree.asset")]
+        [TestCase("Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillTree.asset")]
         public void Nanopowers_FormASequentialPowerPath(string treePath)
         {
             BrawlerSkillTreeDefinition tree =

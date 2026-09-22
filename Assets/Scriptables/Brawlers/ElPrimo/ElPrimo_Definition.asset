@@ -21,6 +21,7 @@ MonoBehaviour:
   BaseMoveSpeed: 4.2
   BaseDamage: 930
   ProgressionBonuses: []
+  SkillTree: {fileID: 11400000, guid: affc4078418516d7c66af8550de03b1a, type: 2}
   MainAttack: {fileID: 11400000, guid: 71293d42d2ef4eb7a18703030c876ca7, type: 2}
   SuperAbility: {fileID: 11400000, guid: 2a669188ea6345459b6092a242406947, type: 2}
   Gadget: {fileID: 11400000, guid: d63393b1b547476aaf68d299713ff952, type: 2}
@@ -40,6 +41,7 @@ MonoBehaviour:
   BuildLayout: {fileID: 11400000, guid: e7eb581d16fba44e382042c75204d09c, type: 2}
   GadgetOptions:
   - {fileID: 11400000, guid: d63393b1b547476aaf68d299713ff952, type: 2}
+  - {fileID: 11400000, guid: cdb04bd65eb5fc549d37399e616ff237, type: 2}
   StarPowerOptions:
   - {fileID: 11400000, guid: b9e81420b278424d9b17dc8efcab7d82, type: 2}
   - {fileID: 11400000, guid: 8215df5e133243f7a90ac70e7791f6b3, type: 2}
