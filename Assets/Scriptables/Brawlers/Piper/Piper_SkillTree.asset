@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a97d4e328f384078853a10e4cb4fa1b9, type: 3}
+  m_Name: Piper_SkillTree
+  m_EditorClassIdentifier:
+  TreeId: frost
+  DisplayName: Frost Resonance
+  ElementType: 6
+  Description: Frost's Ice progression tree. Choose Escape mobility or Deadeye pressure while charging nanopowers along the central path.
+  AccentColor: {r: 0.30, g: 0.72, b: 1, a: 1}
+  MaxActiveNodes: 10
+  ChoiceGroups:
+  - GroupId: frost_starpower
+    DisplayName: STAR POWERS
+    MaxUnlocked: 2
+    MaxActive: 1
+  - GroupId: frost_gadgets
+    DisplayName: GADGETS
+    MaxUnlocked: 2
+    MaxActive: 1
+  - GroupId: frost_stats
+    DisplayName: STAT BOOSTS
+    MaxUnlocked: 7
+    MaxActive: 7
+  Branches:
+  - BranchId: escape
+    DisplayName: ESCAPE PATH
+    ExclusiveBranchIds:
+    - deadeye
+  - BranchId: deadeye
+    DisplayName: DEADEYE PATH
+    ExclusiveBranchIds:
+    - escape
+  Nodes:
+  - {fileID: 11400000, guid: 7e8c52893c9caa87d70ee7ca06d16da7, type: 2}
+  - {fileID: 11400000, guid: e7b26f96ac3677c0d035e02611dabdd6, type: 2}
+  - {fileID: 11400000, guid: cf5f2e3dd8ef2ea895b8cd7142371c6a, type: 2}
+  - {fileID: 11400000, guid: acc91c08d809d49e71ffb2aab0f1e02d, type: 2}
+  - {fileID: 11400000, guid: 786377e203f006fd9cc208e0b6e4c278, type: 2}
+  - {fileID: 11400000, guid: e06ed9fd9591ec071089167dc4b9c996, type: 2}
+  - {fileID: 11400000, guid: 2a49208d9eaf6baf849ef1f63bd28e43, type: 2}
+  - {fileID: 11400000, guid: ed45b70a8ec20b8abfd17028f12b8c1e, type: 2}
+  - {fileID: 11400000, guid: 52c17cf1dd14214621c9af2a41216d3d, type: 2}
+  - {fileID: 11400000, guid: a478e3399af3f1e56ad15903f1c3a99a, type: 2}
+  - {fileID: 11400000, guid: 21ee126fcf6d4a09038d8c034f0a8bdd, type: 2}
+  - {fileID: 11400000, guid: 4f006417fa7154f1b9069d3efc8b9aae, type: 2}
+  - {fileID: 11400000, guid: 54cc03dfe887f8018d15c56aefa73851, type: 2}
+  - {fileID: 11400000, guid: d425b0f44e287b8745cf5258c6906110, type: 2}
+  - {fileID: 11400000, guid: 200e94b82f8c1735073d70452e293007, type: 2}
+  - {fileID: 11400000, guid: 3b0e0765ee783016bbc7ab454135ceab, type: 2}
+  - {fileID: 11400000, guid: 00286ddaa2fab937c69f5be90837c40b, type: 2}
+  DefaultActiveNodes:
+  - {fileID: 11400000, guid: 7e8c52893c9caa87d70ee7ca06d16da7, type: 2}
+  - {fileID: 11400000, guid: e7b26f96ac3677c0d035e02611dabdd6, type: 2}

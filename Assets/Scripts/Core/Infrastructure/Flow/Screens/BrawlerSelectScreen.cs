@@ -3522,6 +3522,11 @@ namespace MOBA.Core.Infrastructure
             if (ability is LeapAbilityDefinition leap)
                 return Mathf.RoundToInt(leap.Damage * damageScale).ToString();
 
+            if (ability is BombLeapAbilityDefinition bombLeap)
+                return bombLeap.BombCount > 1
+                    ? $"{Mathf.RoundToInt(bombLeap.BombDamage * damageScale)} x {bombLeap.BombCount}"
+                    : Mathf.RoundToInt(bombLeap.BombDamage * damageScale).ToString();
+
             if (ability is MinefieldAbilityDefinition minefield)
                 return minefield.MineCount > 1
                     ? $"{Mathf.RoundToInt(minefield.Damage * damageScale)} x {minefield.MineCount}"
@@ -3602,6 +3607,9 @@ namespace MOBA.Core.Infrastructure
 
             if (ability is LeapAbilityDefinition leap)
                 return leap.Damage * damageScale;
+
+            if (ability is BombLeapAbilityDefinition bombLeap)
+                return bombLeap.BombDamage * Mathf.Max(1, bombLeap.BombCount) * damageScale;
 
             if (ability is MinefieldAbilityDefinition minefield)
                 return minefield.Damage * Mathf.Max(1, minefield.MineCount) * damageScale;
