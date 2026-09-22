@@ -22,6 +22,7 @@ MonoBehaviour:
   BaseMoveSpeed: 4.12
   BaseDamage: 310
   ProgressionBonuses: []
+  SkillTree: {fileID: 11400000, guid: 45d0e4d9f74c3dfb79edce47b39a15e6, type: 2}
   MainAttack: {fileID: 11400000, guid: ad10359e457f4155bd25b687db1854a2, type: 2}
   SuperAbility: {fileID: 11400000, guid: e219662641074dffa77d05162bac3b21, type: 2}
   Gadget: {fileID: 11400000, guid: bc90906066004691862cb2fbbe365984, type: 2}

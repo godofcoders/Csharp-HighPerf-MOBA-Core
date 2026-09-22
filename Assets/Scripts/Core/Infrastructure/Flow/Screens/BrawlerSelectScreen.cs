@@ -3475,6 +3475,9 @@ namespace MOBA.Core.Infrastructure
                 return $"HP {Mathf.RoundToInt(deployable.MaxHealth)}   DMG {damage}";
             }
 
+            if (ability is EffectAbilityDefinition)
+                return "UTILITY";
+
             return $"DMG {ResolveAbilityDamageText(ability, fallbackDamage, damageScale)}";
         }
 

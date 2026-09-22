@@ -24,6 +24,8 @@ namespace MOBA.Tests.EditMode
             "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_Definition.asset";
         private const string PiperDefinition =
             "Assets/Scriptables/Brawlers/Piper/Piper_Definition.asset";
+        private const string LeonDefinition =
+            "Assets/Scriptables/Brawlers/Leon/Leon_Definition.asset";
 
         [TestCase(ColtDefinition, "84 x 10", 840f, "DMG 84 x 10")]
         [TestCase(ByronDefinition, "210", 210f, "DMG 210   HEAL 350")]
@@ -32,6 +34,7 @@ namespace MOBA.Tests.EditMode
         [TestCase(BoDefinition, "1080 x 3", 3240f, "DMG 1080 x 3")]
         [TestCase(ElPrimoDefinition, "990", 990f, "DMG 990")]
         [TestCase(PiperDefinition, "720 x 4", 2880f, "DMG 720 x 4")]
+        [TestCase(LeonDefinition, "-", 0f, "UTILITY")]
         public void DefaultSkillTreeSuper_ShowsAuthoredCombatStats(
             string brawlerPath,
             string expectedDamageText,
@@ -89,6 +92,8 @@ namespace MOBA.Tests.EditMode
         [TestCase(ElPrimoDefinition, 11, 9300f, 1395f, 4.2f)]
         [TestCase(PiperDefinition, 1, 3150f, 1500f, 4f)]
         [TestCase(PiperDefinition, 11, 4725f, 2250f, 4f)]
+        [TestCase(LeonDefinition, 1, 3600f, 310f, 4.12f)]
+        [TestCase(LeonDefinition, 11, 5400f, 465f, 4.12f)]
         public void PowerLevel_UpdatesDisplayedCombatStats(
             string brawlerPath,
             int powerLevel,
@@ -196,6 +201,12 @@ namespace MOBA.Tests.EditMode
         [TestCase(PiperDefinition, "Assets/Scriptables/Brawlers/Piper/Piper_SkillNode_Snowbound.asset", 220f, 0f, 0f)]
         [TestCase(PiperDefinition, "Assets/Scriptables/Brawlers/Piper/Piper_SkillNode_AbsoluteZero.asset", 0f, 0f, 0.05f)]
         [TestCase(PiperDefinition, "Assets/Scriptables/Brawlers/Piper/Piper_SkillNode_DeepFreeze.asset", 0f, 0f, 0.06f)]
+        [TestCase(LeonDefinition, "Assets/Scriptables/Brawlers/Leon/Leon_SkillNode_DarkMantle.asset", 180f, 0f, 0f)]
+        [TestCase(LeonDefinition, "Assets/Scriptables/Brawlers/Leon/Leon_SkillNode_ShadowGlide.asset", 0f, 0.04f, 0f)]
+        [TestCase(LeonDefinition, "Assets/Scriptables/Brawlers/Leon/Leon_SkillNode_Ambush.asset", 0f, 0f, 0.04f)]
+        [TestCase(LeonDefinition, "Assets/Scriptables/Brawlers/Leon/Leon_SkillNode_SecondWind.asset", 220f, 0f, 0f)]
+        [TestCase(LeonDefinition, "Assets/Scriptables/Brawlers/Leon/Leon_SkillNode_FinalMark.asset", 0f, 0f, 0.05f)]
+        [TestCase(LeonDefinition, "Assets/Scriptables/Brawlers/Leon/Leon_SkillNode_UmbralEdge.asset", 0f, 0f, 0.06f)]
         public void AuthoredStatNode_ChangesLiveStatsAndCleansUpWhenUnequipped(
             string brawlerPath,
             string nodePath,
@@ -238,6 +249,7 @@ namespace MOBA.Tests.EditMode
         [TestCase(BoDefinition, "Assets/Scriptables/Brawlers/Bo/Bo_SkillNode_QuickFletching.asset", 0.10f)]
         [TestCase(ElPrimoDefinition, "Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillNode_QuickCombo.asset", 0.10f)]
         [TestCase(PiperDefinition, "Assets/Scriptables/Brawlers/Piper/Piper_SkillNode_QuickChamber.asset", 0.10f)]
+        [TestCase(LeonDefinition, "Assets/Scriptables/Brawlers/Leon/Leon_SkillNode_QuickHands.asset", 0.10f)]
         public void AuthoredAttackSpeedNode_ChangesCooldownScale(
             string brawlerPath,
             string nodePath,
@@ -268,6 +280,7 @@ namespace MOBA.Tests.EditMode
         [TestCase("Assets/Scriptables/Brawlers/Bo/Bo_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/Piper/Piper_SkillTree.asset")]
+        [TestCase("Assets/Scriptables/Brawlers/Leon/Leon_SkillTree.asset")]
         public void EveryAuthoredNode_HasARealGameplayEffect(string treePath)
         {
             BrawlerSkillTreeDefinition tree =
@@ -287,6 +300,7 @@ namespace MOBA.Tests.EditMode
         [TestCase("Assets/Scriptables/Brawlers/Bo/Bo_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/ElPrimo/ElPrimo_SkillTree.asset")]
         [TestCase("Assets/Scriptables/Brawlers/Piper/Piper_SkillTree.asset")]
+        [TestCase("Assets/Scriptables/Brawlers/Leon/Leon_SkillTree.asset")]
         public void Nanopowers_FormASequentialPowerPath(string treePath)
         {
             BrawlerSkillTreeDefinition tree =
