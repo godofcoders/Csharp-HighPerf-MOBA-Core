@@ -95,7 +95,8 @@ namespace MOBA.Core.Simulation
             PowerCubeEventBus.OnPowerCubePickedUpAt?.Invoke(pickupFeedbackPosition, _value);
 
             gameObject.SetActive(false);
-            Destroy(gameObject);
+            if (Application.isPlaying)
+                Destroy(gameObject);
             return true;
         }
 

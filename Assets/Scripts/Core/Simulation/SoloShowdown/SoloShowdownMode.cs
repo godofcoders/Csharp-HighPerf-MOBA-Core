@@ -72,8 +72,11 @@ namespace MOBA.Core.Simulation
             if (_autoDiscoverContestants)
                 DiscoverContestants();
 
-            EnsurePowerCubeSpawner();
-            _powerCubeSpawner?.SpawnInitialCrates();
+            if (_enablePowerCubeCrates)
+            {
+                EnsurePowerCubeSpawner();
+                _powerCubeSpawner?.SpawnInitialCrates();
+            }
         }
 
         private void Update()
@@ -346,10 +349,10 @@ namespace MOBA.Core.Simulation
 
         private void DropPowerCubesFrom(BrawlerController dying)
         {
-            if (dying == null || dying.State == null || dying.State.PowerCubeCount <= 0)
+            if (dying == null || dying.State == null)
                 return;
 
-            EnsurePowerCubeSpawner();
+            EnsurePowerCubeSpawner(true);
 
             int dropped = dying.State.CalculateDroppedPowerCubesOnDeath();
             if (dropped > 0)
@@ -546,9 +549,9 @@ namespace MOBA.Core.Simulation
                    !contestant.State.IsDead;
         }
 
-        private void EnsurePowerCubeSpawner()
+        private void EnsurePowerCubeSpawner(bool requiredForDefeatDrop = false)
         {
-            if (!_enablePowerCubeCrates)
+            if (!_enablePowerCubeCrates && !requiredForDefeatDrop)
                 return;
 
             if (_powerCubeSpawner == null)

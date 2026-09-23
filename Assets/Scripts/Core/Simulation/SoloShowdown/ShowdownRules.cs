@@ -42,5 +42,13 @@ namespace MOBA.Core.Simulation
         {
             return livingMembers <= 0;
         }
+
+        public static int CalculatePowerCubeDropsOnDefeat(int carriedCubeCount)
+        {
+            if (carriedCubeCount <= 1)
+                return 1;
+
+            return UnityEngine.Mathf.Max(1, carriedCubeCount / 2);
+        }
     }
 }

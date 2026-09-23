@@ -380,7 +380,7 @@ namespace MOBA.Core.Simulation
 
         public int CalculateDroppedPowerCubesOnDeath()
         {
-            return PowerCubeCount > 0 ? PowerCubeCount / 2 : 0;
+            return ShowdownRules.CalculatePowerCubeDropsOnDefeat(PowerCubeCount);
         }
 
         private void ClearPowerCubes()

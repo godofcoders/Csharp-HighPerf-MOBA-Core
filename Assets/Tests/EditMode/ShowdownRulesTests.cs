@@ -1,5 +1,7 @@
+using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace MOBA.Tests.EditMode
 {
@@ -40,6 +42,53 @@ namespace MOBA.Tests.EditMode
             Assert.IsFalse(ShowdownRules.IsTeamEliminated(2));
             Assert.IsFalse(ShowdownRules.IsTeamEliminated(1));
             Assert.IsTrue(ShowdownRules.IsTeamEliminated(0));
+        }
+
+        [TestCase(0, 1)]
+        [TestCase(1, 1)]
+        [TestCase(2, 1)]
+        [TestCase(3, 1)]
+        [TestCase(4, 2)]
+        [TestCase(9, 4)]
+        public void DefeatDrop_GuaranteesOneThenDropsHalfCarriedCubes(
+            int carriedCubeCount,
+            int expectedDropCount)
+        {
+            Assert.AreEqual(
+                expectedDropCount,
+                ShowdownRules.CalculatePowerCubeDropsOnDefeat(carriedCubeCount));
+        }
+
+        [Test]
+        public void PowerCubePickup_WorksForAnyTeamAndUpdatesStatsAndCountEvent()
+        {
+            BrawlerDefinition definition = ScriptableObject.CreateInstance<BrawlerDefinition>();
+            definition.BaseHealth = 2000f;
+            definition.BaseDamage = 400f;
+            definition.BaseMoveSpeed = 5f;
+            definition.ProgressionBonuses = null;
+            definition.SuperChargeSources = null;
+
+            GameObject cubeObject = new GameObject("PowerCubeTest");
+            try
+            {
+                PowerCube cube = cubeObject.AddComponent<PowerCube>();
+                BrawlerState carrier = new BrawlerState(definition, TeamType.Solo4);
+                int reportedCount = -1;
+                carrier.OnPowerCubeCountChanged += count => reportedCount = count;
+
+                Assert.IsTrue(cube.TryPickupBy(carrier));
+                Assert.AreEqual(1, carrier.PowerCubeCount);
+                Assert.AreEqual(1, reportedCount);
+                Assert.AreEqual(2100f, carrier.MaxHealth.Value, 0.001f);
+                Assert.AreEqual(420f, carrier.Damage.Value, 0.001f);
+            }
+            finally
+            {
+                if (cubeObject != null)
+                    Object.DestroyImmediate(cubeObject);
+                Object.DestroyImmediate(definition);
+            }
         }
     }
 }
