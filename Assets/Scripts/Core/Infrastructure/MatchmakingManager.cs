@@ -126,7 +126,8 @@ namespace MOBA.Core.Infrastructure
                 TeamType team = ResolveParticipantTeam(_roster.Count);
                 BrawlerDefinition botBrawler;
                 string pickReason;
-                if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
+                if (SceneSelection.SelectedMode == GameModeId.SoloShowdown &&
+                    SceneSelection.SelectedShowdownVariant == ShowdownVariant.Solo)
                     botBrawler = PickSoloBotBrawler(botPool, out pickReason);
                 else
                     botBrawler = PickBotBrawler(botPool, team, out pickReason);
@@ -153,6 +154,9 @@ namespace MOBA.Core.Infrastructure
         {
             if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
             {
+                if (SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo)
+                    return ShowdownRules.DuoContestantCount;
+
                 return Mathf.Clamp(
                     _soloShowdownContestantCount,
                     2,
@@ -165,7 +169,11 @@ namespace MOBA.Core.Infrastructure
         private TeamType ResolveParticipantTeam(int rosterIndex)
         {
             if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
-                return TeamRelationshipUtility.GetSoloTeam(rosterIndex);
+            {
+                return SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo
+                    ? ShowdownRules.GetDuoTeamForRosterIndex(rosterIndex)
+                    : TeamRelationshipUtility.GetSoloTeam(rosterIndex);
+            }
 
             return rosterIndex < _teamSize ? TeamType.Blue : TeamType.Red;
         }

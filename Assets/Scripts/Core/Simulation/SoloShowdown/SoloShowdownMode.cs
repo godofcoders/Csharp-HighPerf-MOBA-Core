@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
@@ -24,8 +25,12 @@ namespace MOBA.Core.Simulation
 
         private readonly List<BrawlerController> _contestants =
             new List<BrawlerController>(TeamRelationshipUtility.MaxSoloTeams);
-        private readonly Dictionary<int, int> _placementsByEntityId =
-            new Dictionary<int, int>(TeamRelationshipUtility.MaxSoloTeams);
+        private readonly Dictionary<TeamType, int> _placementsByTeam =
+            new Dictionary<TeamType, int>(TeamRelationshipUtility.MaxSoloTeams);
+        private readonly HashSet<TeamType> _eliminatedTeams =
+            new HashSet<TeamType>();
+        private readonly Dictionary<BrawlerController, Coroutine> _pendingDuoRespawns =
+            new Dictionary<BrawlerController, Coroutine>();
 
         private int _nextPlacement = 1;
         private bool _matchEnding;
@@ -33,6 +38,10 @@ namespace MOBA.Core.Simulation
         public GameModeId ModeId => GameModeId.SoloShowdown;
         public int RegisteredCount => _contestants.Count;
         public int AliveCount => CountAlive();
+        public int RemainingTeamCount => CountRemainingTeams();
+        public bool IsDuoShowdown =>
+            SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo;
+        public float RespawnDelaySeconds => ShowdownRules.DuoRespawnDelaySeconds;
         public TeamType WinningTeam { get; private set; } = TeamType.Neutral;
 
         private void Awake()
@@ -82,6 +91,7 @@ namespace MOBA.Core.Simulation
 
         private void OnDisable()
         {
+            CancelAllDuoRespawns();
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
@@ -102,13 +112,15 @@ namespace MOBA.Core.Simulation
         {
             if (brawler == null ||
                 !TeamRelationshipUtility.IsSoloTeam(brawler.Team) ||
+                (IsDuoShowdown && !ShowdownRules.IsDuoTeam(brawler.Team)) ||
+                (IsDuoShowdown && GetRegisteredCount(brawler.Team) >= ShowdownRules.DuoPlayersPerTeam) ||
                 _contestants.Contains(brawler))
             {
                 return;
             }
 
             _contestants.Add(brawler);
-            _nextPlacement = Mathf.Max(_nextPlacement, _contestants.Count);
+            _nextPlacement = Mathf.Max(_nextPlacement, CountRegisteredTeams());
 
             if (brawler.State != null)
             {
@@ -119,13 +131,27 @@ namespace MOBA.Core.Simulation
 
         public int GetPlacement(TeamType team)
         {
-            BrawlerController contestant = FindContestant(team);
-            if (contestant == null)
-                return 0;
-
-            return _placementsByEntityId.TryGetValue(contestant.EntityID, out int placement)
+            return _placementsByTeam.TryGetValue(team, out int placement)
                 ? placement
                 : 0;
+        }
+
+        public int GetRegisteredCount(TeamType team)
+        {
+            int count = 0;
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant != null && contestant.Team == team)
+                    count++;
+            }
+
+            return count;
+        }
+
+        public bool IsRespawnPending(BrawlerController brawler)
+        {
+            return brawler != null && _pendingDuoRespawns.ContainsKey(brawler);
         }
 
         public int GetAliveOpponentCount(TeamType team)
@@ -148,8 +174,7 @@ namespace MOBA.Core.Simulation
 
         public bool IsTeamAlive(TeamType team)
         {
-            BrawlerController contestant = FindContestant(team);
-            return IsAliveContestant(contestant);
+            return CountAlive(team) > 0;
         }
 
         public bool TryResolveMacroState(
@@ -160,8 +185,8 @@ namespace MOBA.Core.Simulation
             if (!TeamRelationshipUtility.IsSoloTeam(team))
                 return false;
 
-            BrawlerController self = FindContestant(team);
-            int ownAlive = IsAliveContestant(self) ? 1 : 0;
+            BrawlerController self = FindLivingContestant(team) ?? FindContestant(team);
+            int ownAlive = CountAlive(team);
             int aliveOpponents = GetAliveOpponentCount(team);
             int totalAlive = ownAlive + aliveOpponents;
             bool outsideSafeZone = false;
@@ -233,10 +258,90 @@ namespace MOBA.Core.Simulation
 
             DropPowerCubesFrom(dying);
 
-            if (!_placementsByEntityId.ContainsKey(dying.EntityID))
-                _placementsByEntityId[dying.EntityID] = Mathf.Max(1, _nextPlacement--);
+            if (IsDuoShowdown)
+                HandleDuoDeath(dying);
+            else if (!_placementsByTeam.ContainsKey(dying.Team))
+                _placementsByTeam[dying.Team] = Mathf.Max(1, _nextPlacement--);
 
             CheckEndCondition();
+        }
+
+        private void HandleDuoDeath(BrawlerController dying)
+        {
+            if (_eliminatedTeams.Contains(dying.Team))
+                return;
+
+            if (!ShowdownRules.IsTeamEliminated(CountAlive(dying.Team)))
+            {
+                QueueDuoRespawn(dying);
+                return;
+            }
+
+            _eliminatedTeams.Add(dying.Team);
+            CancelTeamRespawns(dying.Team);
+            if (!_placementsByTeam.ContainsKey(dying.Team))
+                _placementsByTeam[dying.Team] = Mathf.Max(1, _nextPlacement--);
+        }
+
+        private void QueueDuoRespawn(BrawlerController brawler)
+        {
+            CancelDuoRespawn(brawler);
+            _pendingDuoRespawns[brawler] = StartCoroutine(DuoRespawnRoutine(brawler));
+        }
+
+        private IEnumerator DuoRespawnRoutine(BrawlerController brawler)
+        {
+            yield return new WaitForSeconds(ShowdownRules.DuoRespawnDelaySeconds);
+
+            _pendingDuoRespawns.Remove(brawler);
+            if (brawler == null ||
+                _matchEnding ||
+                _eliminatedTeams.Contains(brawler.Team) ||
+                !IsTeamAlive(brawler.Team) ||
+                SpawnManager.Instance == null)
+            {
+                yield break;
+            }
+
+            int memberIndex = GetTeamMemberIndex(brawler);
+            int spawnOrdinal = ShowdownRules.GetDuoSpawnOrdinal(
+                brawler.Team,
+                memberIndex);
+            SpawnManager.Instance.ForceRespawn(
+                brawler,
+                brawler.Team,
+                spawnOrdinal);
+        }
+
+        private void CancelTeamRespawns(TeamType team)
+        {
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant != null && contestant.Team == team)
+                    CancelDuoRespawn(contestant);
+            }
+        }
+
+        private void CancelDuoRespawn(BrawlerController brawler)
+        {
+            if (brawler == null ||
+                !_pendingDuoRespawns.TryGetValue(brawler, out Coroutine routine))
+            {
+                return;
+            }
+
+            if (routine != null)
+                StopCoroutine(routine);
+            _pendingDuoRespawns.Remove(brawler);
+        }
+
+        private void CancelAllDuoRespawns()
+        {
+            for (int i = 0; i < _contestants.Count; i++)
+                CancelDuoRespawn(_contestants[i]);
+
+            _pendingDuoRespawns.Clear();
         }
 
         private void DropPowerCubesFrom(BrawlerController dying)
@@ -255,8 +360,14 @@ namespace MOBA.Core.Simulation
 
         private void CheckEndCondition()
         {
-            if (_matchEnding || _contestants.Count < 2)
+            if (_matchEnding || CountRegisteredTeams() < 2)
                 return;
+
+            if (IsDuoShowdown)
+            {
+                CheckDuoEndCondition();
+                return;
+            }
 
             int alive = 0;
             BrawlerController winner = null;
@@ -275,8 +386,45 @@ namespace MOBA.Core.Simulation
 
             _matchEnding = true;
             WinningTeam = winner != null ? winner.Team : TeamType.Neutral;
-            if (winner != null && !_placementsByEntityId.ContainsKey(winner.EntityID))
-                _placementsByEntityId[winner.EntityID] = 1;
+            if (winner != null && !_placementsByTeam.ContainsKey(winner.Team))
+                _placementsByTeam[winner.Team] = 1;
+
+            ScheduleMatchEnd();
+        }
+
+        private void CheckDuoEndCondition()
+        {
+            TeamType survivingTeam = TeamType.Neutral;
+            int teamsRemaining = 0;
+            HashSet<TeamType> counted = new HashSet<TeamType>();
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant == null ||
+                    !counted.Add(contestant.Team) ||
+                    _eliminatedTeams.Contains(contestant.Team))
+                {
+                    continue;
+                }
+
+                teamsRemaining++;
+                survivingTeam = contestant.Team;
+            }
+
+            if (teamsRemaining > 1)
+                return;
+
+            _matchEnding = true;
+            WinningTeam = teamsRemaining == 1 ? survivingTeam : TeamType.Neutral;
+            if (WinningTeam != TeamType.Neutral && !_placementsByTeam.ContainsKey(WinningTeam))
+                _placementsByTeam[WinningTeam] = 1;
+
+            ScheduleMatchEnd();
+        }
+
+        private void ScheduleMatchEnd()
+        {
+            CancelAllDuoRespawns();
 
             if (_endMatchDelaySeconds > 0f)
                 Invoke(nameof(EndMatchNow), _endMatchDelaySeconds);
@@ -301,6 +449,52 @@ namespace MOBA.Core.Simulation
             return count;
         }
 
+        private int CountAlive(TeamType team)
+        {
+            int count = 0;
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant != null &&
+                    contestant.Team == team &&
+                    IsAliveContestant(contestant))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private int CountRegisteredTeams()
+        {
+            HashSet<TeamType> teams = new HashSet<TeamType>();
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant != null)
+                    teams.Add(contestant.Team);
+            }
+
+            return teams.Count;
+        }
+
+        private int CountRemainingTeams()
+        {
+            if (!IsDuoShowdown)
+                return CountAlive();
+
+            HashSet<TeamType> teams = new HashSet<TeamType>();
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant != null && !_eliminatedTeams.Contains(contestant.Team))
+                    teams.Add(contestant.Team);
+            }
+
+            return teams.Count;
+        }
+
         private BrawlerController FindContestant(TeamType team)
         {
             for (int i = 0; i < _contestants.Count; i++)
@@ -311,6 +505,38 @@ namespace MOBA.Core.Simulation
             }
 
             return null;
+        }
+
+        private BrawlerController FindLivingContestant(TeamType team)
+        {
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant != null &&
+                    contestant.Team == team &&
+                    IsAliveContestant(contestant))
+                {
+                    return contestant;
+                }
+            }
+
+            return null;
+        }
+
+        private int GetTeamMemberIndex(BrawlerController brawler)
+        {
+            int memberIndex = 0;
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant == brawler)
+                    return memberIndex;
+
+                if (contestant != null && contestant.Team == brawler.Team)
+                    memberIndex++;
+            }
+
+            return 0;
         }
 
         private static bool IsAliveContestant(BrawlerController contestant)

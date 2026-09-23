@@ -184,6 +184,11 @@ namespace MOBA.Core.Infrastructure
             float respawnDelay = SpawnManager.Instance != null
                 ? SpawnManager.Instance.RespawnDelaySeconds
                 : 5f;
+            if (SoloShowdownMode.Instance != null &&
+                SoloShowdownMode.Instance.IsDuoShowdown)
+            {
+                respawnDelay = SoloShowdownMode.Instance.RespawnDelaySeconds;
+            }
             float elapsed = Time.time - _deathTime;
             float remaining = respawnDelay - elapsed;
             if (remaining < 0f) remaining = 0f;
@@ -203,8 +208,14 @@ namespace MOBA.Core.Infrastructure
             AutoDiscoverBrawler();
         }
 
-        private static bool ShouldShowRespawnCountdown()
+        private bool ShouldShowRespawnCountdown()
         {
+            if (SoloShowdownMode.Instance != null &&
+                SoloShowdownMode.Instance.IsDuoShowdown)
+            {
+                return SoloShowdownMode.Instance.IsRespawnPending(_localBrawler);
+            }
+
             return SpawnManager.Instance == null || SpawnManager.Instance.AllowAutoRespawn;
         }
 

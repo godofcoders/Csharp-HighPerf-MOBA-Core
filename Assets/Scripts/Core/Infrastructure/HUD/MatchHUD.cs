@@ -257,10 +257,15 @@ namespace MOBA.Core.Infrastructure
             if (soloShowdown != null && (mm == null || mm.CurrentState != MatchState.Ended))
             {
                 ApplyTopModeLayout(showBlue: true, showRed: false, showTimer: false, showStatus: false);
-                SetText(_blueGemTmp, _blueGemLegacy, soloShowdown.AliveCount.ToString());
+                int remaining = soloShowdown.IsDuoShowdown
+                    ? soloShowdown.RemainingTeamCount
+                    : soloShowdown.AliveCount;
+                SetText(_blueGemTmp, _blueGemLegacy, remaining.ToString());
                 SetText(_redGemTmp, _redGemLegacy, string.Empty);
                 SetText(_matchTimerTmp, _matchTimerLegacy, string.Empty);
-                SetLabel(_blueScoreLabelLegacy, "BRAWLERS LEFT");
+                SetLabel(
+                    _blueScoreLabelLegacy,
+                    soloShowdown.IsDuoShowdown ? "TEAMS LEFT" : "BRAWLERS LEFT");
                 SetLabel(_redScoreLabelLegacy, string.Empty);
                 SetActive(_blueLeaderHighlight, false);
                 SetActive(_redLeaderHighlight, false);

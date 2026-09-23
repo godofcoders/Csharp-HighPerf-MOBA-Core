@@ -172,6 +172,8 @@ namespace MOBA.Core.Infrastructure
             int blueIdx = 0;
             int redIdx = 0;
             int soloIdx = 0;
+            Dictionary<TeamType, int> duoMemberIndices =
+                new Dictionary<TeamType, int>(ShowdownRules.DuoTeamCount);
             List<Transform> blueSpawnPoints = _preparedBlueSpawnPoints.Count > 0
                 ? _preparedBlueSpawnPoints
                 : _blueSpawnPoints;
@@ -197,6 +199,7 @@ namespace MOBA.Core.Infrastructure
                 int teamOrdinal;
                 List<Transform> spawnList;
                 bool[] spawnClaims;
+                bool preserveOrdinal = false;
 
                 if (participant.Team == TeamType.Blue)
                 {
@@ -212,7 +215,20 @@ namespace MOBA.Core.Infrastructure
                 }
                 else
                 {
-                    teamOrdinal = soloIdx++;
+                    if (ShowdownRules.IsDuoSelected)
+                    {
+                        duoMemberIndices.TryGetValue(participant.Team, out int memberIndex);
+                        teamOrdinal = ShowdownRules.GetDuoSpawnOrdinal(
+                            participant.Team,
+                            memberIndex);
+                        duoMemberIndices[participant.Team] = memberIndex + 1;
+                        preserveOrdinal = true;
+                    }
+                    else
+                    {
+                        teamOrdinal = soloIdx++;
+                    }
+
                     spawnList = soloSpawnPoints;
                     spawnClaims = soloSpawnClaims;
                 }
@@ -221,7 +237,8 @@ namespace MOBA.Core.Infrastructure
                     participant,
                     spawnList,
                     spawnClaims,
-                    teamOrdinal);
+                    teamOrdinal,
+                    preserveOrdinal);
 
                 if (spawnPoint == null)
                 {
@@ -1033,15 +1050,18 @@ namespace MOBA.Core.Infrastructure
             MatchParticipant participant,
             List<Transform> spawnList,
             bool[] spawnClaims,
-            int teamOrdinal)
+            int teamOrdinal,
+            bool preserveOrdinal = false)
         {
             if (spawnList == null || spawnList.Count == 0)
                 return null;
 
-            int preferredIndex = AITeamCompositionPlanner.GetPreferredSpawnIndex(
-                participant != null ? participant.SelectedBrawler : null,
-                spawnList.Count,
-                teamOrdinal);
+            int preferredIndex = preserveOrdinal
+                ? Mathf.Max(0, teamOrdinal) % spawnList.Count
+                : AITeamCompositionPlanner.GetPreferredSpawnIndex(
+                    participant != null ? participant.SelectedBrawler : null,
+                    spawnList.Count,
+                    teamOrdinal);
 
             int selectedIndex = FindNearestFreeSpawnIndex(
                 spawnList,
