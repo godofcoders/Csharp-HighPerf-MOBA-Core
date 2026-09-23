@@ -18,6 +18,7 @@ namespace MOBA.Core.Infrastructure
         public static BrawlerBuildDefinition SelectedBuild;
         public static int SelectedBuildPowerLevel = PlayerBrawlerProgress.MinLevel;
         public static GameModeId SelectedMode = GameModeId.GemGrab;
+        public static ShowdownVariant SelectedShowdownVariant = ShowdownVariant.Solo;
         /// <summary>Picked on the map-select UI. MapLoader prefers this
         /// over its inspector _mapPrefab fallback when set.</summary>
         public static MapDefinition SelectedMap;
@@ -40,6 +41,7 @@ namespace MOBA.Core.Infrastructure
             // between menu hops. Only mode is wiped so post-match flow
             // re-asks rather than auto-rematching.
             SelectedMode = GameModeId.GemGrab;
+            SelectedShowdownVariant = ShowdownVariant.Solo;
             MapSelectReturnScene = SceneId.MainMenu;
             PickerReturnsToMainMenu = false;
         }
@@ -55,5 +57,11 @@ namespace MOBA.Core.Infrastructure
         BrawlBall = 2,
         HotZone = 3,
         SoloShowdown = 4,
+    }
+
+    public enum ShowdownVariant
+    {
+        Solo = 0,
+        Duo = 1,
     }
 }
