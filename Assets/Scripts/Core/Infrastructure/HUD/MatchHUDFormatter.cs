@@ -7,13 +7,22 @@ namespace MOBA.Core.Infrastructure
     {
         public static string FormatModeMapPrefix(GameModeId mode, string mapName)
         {
-            string modeName = FormatModeName(mode);
+            string modeName = FormatModeName(
+                mode,
+                SceneSelection.SelectedShowdownVariant);
             return string.IsNullOrWhiteSpace(mapName)
                 ? modeName
                 : $"{modeName} - {mapName}";
         }
 
         public static string FormatModeName(GameModeId mode)
+        {
+            return FormatModeName(mode, ShowdownVariant.Solo);
+        }
+
+        public static string FormatModeName(
+            GameModeId mode,
+            ShowdownVariant showdownVariant)
         {
             switch (mode)
             {
@@ -26,7 +35,7 @@ namespace MOBA.Core.Infrastructure
                 case GameModeId.HotZone:
                     return "Hot Zone";
                 case GameModeId.SoloShowdown:
-                    return "Solo Showdown";
+                    return ShowdownRules.GetDisplayName(showdownVariant);
                 default:
                     return mode.ToString();
             }

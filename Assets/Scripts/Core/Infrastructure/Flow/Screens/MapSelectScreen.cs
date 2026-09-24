@@ -4,6 +4,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using TMPro;
 using MOBA.Core.Definitions;
+using MOBA.Core.Simulation;
 
 namespace MOBA.Core.Infrastructure
 {
@@ -673,7 +674,8 @@ namespace MOBA.Core.Infrastructure
                 case GameModeId.HotZone:
                     return "HOT ZONE";
                 case GameModeId.SoloShowdown:
-                    return "SOLO SHOWDOWN";
+                    return ShowdownRules.GetDisplayName(
+                        SceneSelection.SelectedShowdownVariant).ToUpperInvariant();
                 default:
                     return mode.ToString().ToUpperInvariant();
             }

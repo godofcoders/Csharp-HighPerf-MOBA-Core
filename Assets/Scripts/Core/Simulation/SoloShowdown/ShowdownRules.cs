@@ -13,6 +13,13 @@ namespace MOBA.Core.Simulation
             SceneSelection.SelectedMode == GameModeId.SoloShowdown &&
             SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo;
 
+        public static string GetDisplayName(ShowdownVariant variant)
+        {
+            return variant == ShowdownVariant.Duo
+                ? "Duo Showdown"
+                : "Solo Showdown";
+        }
+
         public static TeamType GetDuoTeamForRosterIndex(int rosterIndex)
         {
             int safeIndex = UnityEngine.Mathf.Clamp(rosterIndex, 0, DuoContestantCount - 1);

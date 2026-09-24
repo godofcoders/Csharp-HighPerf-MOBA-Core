@@ -34,6 +34,8 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(15f, ShowdownRules.DuoRespawnDelaySeconds);
             Assert.IsTrue(ShowdownRules.IsDuoTeam(TeamType.Solo5));
             Assert.IsFalse(ShowdownRules.IsDuoTeam(TeamType.Solo6));
+            Assert.AreEqual("Solo Showdown", ShowdownRules.GetDisplayName(ShowdownVariant.Solo));
+            Assert.AreEqual("Duo Showdown", ShowdownRules.GetDisplayName(ShowdownVariant.Duo));
         }
 
         [Test]

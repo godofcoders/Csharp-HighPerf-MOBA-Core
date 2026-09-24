@@ -162,14 +162,79 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
-            CreateTeamPanel(
-                "SoloRoster",
-                "SOLO SHOWDOWN",
-                solo,
-                new Vector2(0.08f, 0.30f),
-                new Vector2(0.92f, 0.62f),
-                new Color(0.76f, 0.26f, 1f, 0.84f),
-                false);
+            CreateShowdownRoster(solo);
+        }
+
+        private void CreateShowdownRoster(List<BrawlerController> roster)
+        {
+            bool duo = SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo;
+            SortShowdownRoster(roster, duo);
+
+            Transform versusTransform = _root.transform.Find("Versus");
+            if (versusTransform != null)
+                versusTransform.gameObject.SetActive(false);
+
+            GameObject panel = CreatePanel(
+                _root.transform,
+                "ShowdownRoster",
+                new Color(0.025f, 0.035f, 0.085f, 0.94f));
+            Anchor(
+                panel.GetComponent<RectTransform>(),
+                new Vector2(0.045f, 0.08f),
+                new Vector2(0.955f, 0.90f));
+
+            Text title = CreateText(
+                panel.transform,
+                "Header",
+                ShowdownRules.GetDisplayName(SceneSelection.SelectedShowdownVariant).ToUpperInvariant(),
+                38,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                FontStyle.Bold);
+            AddShadow(title.gameObject, new Vector2(3f, -3f), 0.65f);
+            Anchor(title.rectTransform, new Vector2(0.14f, 0.88f), new Vector2(0.86f, 0.98f));
+
+            int count = Mathf.Min(
+                roster != null ? roster.Count : 0,
+                ShowdownRules.DuoContestantCount);
+            for (int i = 0; i < count; i++)
+            {
+                BrawlerController brawler = roster[i];
+                int column = duo ? i / ShowdownRules.DuoPlayersPerTeam : i % 5;
+                int row = duo ? i % ShowdownRules.DuoPlayersPerTeam : i / 5;
+                float x = (column - 2f) * 188f;
+                float y = row == 0 ? 145f : -145f;
+                Color accent = duo
+                    ? ResolveShowdownTeamColor(brawler != null ? brawler.Team : TeamType.Neutral)
+                    : new Color(0.76f, 0.26f, 1f, 0.95f);
+
+                CreateBrawlerCard(
+                    panel.transform,
+                    brawler,
+                    new Vector2(x, y - 12f),
+                    new Vector2(154f, 238f),
+                    accent);
+
+                if (duo && row == 0)
+                {
+                    Text teamLabel = CreateText(
+                        panel.transform,
+                        $"TeamLabel_{column + 1}",
+                        brawler != null && brawler.GetComponent<PlayerCommandSource>() != null
+                            ? "YOUR TEAM"
+                            : $"TEAM {column + 1}",
+                        16,
+                        TextAnchor.MiddleCenter,
+                        accent,
+                        FontStyle.Bold);
+                    RectTransform labelRect = teamLabel.rectTransform;
+                    labelRect.anchorMin = new Vector2(0.5f, 0.5f);
+                    labelRect.anchorMax = new Vector2(0.5f, 0.5f);
+                    labelRect.pivot = new Vector2(0.5f, 0.5f);
+                    labelRect.anchoredPosition = new Vector2(x, 292f);
+                    labelRect.sizeDelta = new Vector2(170f, 30f);
+                }
+            }
         }
 
         private void CreateTeamPanel(
@@ -354,6 +419,65 @@ namespace MOBA.Core.Infrastructure
 
                 return string.CompareOrdinal(ResolveName(a), ResolveName(b));
             });
+        }
+
+        private static void SortShowdownRoster(
+            List<BrawlerController> roster,
+            bool duo)
+        {
+            if (!duo)
+            {
+                SortRoster(roster);
+                return;
+            }
+
+            TeamType localTeam = TeamType.Neutral;
+            for (int i = 0; i < roster.Count; i++)
+            {
+                BrawlerController candidate = roster[i];
+                if (candidate != null && candidate.GetComponent<PlayerCommandSource>() != null)
+                {
+                    localTeam = candidate.Team;
+                    break;
+                }
+            }
+
+            roster.Sort((a, b) =>
+            {
+                bool aLocalTeam = a != null && a.Team == localTeam;
+                bool bLocalTeam = b != null && b.Team == localTeam;
+                if (aLocalTeam != bLocalTeam)
+                    return aLocalTeam ? -1 : 1;
+
+                int teamComparison = (a != null ? a.Team : TeamType.Neutral)
+                    .CompareTo(b != null ? b.Team : TeamType.Neutral);
+                if (teamComparison != 0)
+                    return teamComparison;
+
+                bool aLocal = a != null && a.GetComponent<PlayerCommandSource>() != null;
+                bool bLocal = b != null && b.GetComponent<PlayerCommandSource>() != null;
+                if (aLocal != bLocal)
+                    return aLocal ? -1 : 1;
+
+                return string.CompareOrdinal(ResolveName(a), ResolveName(b));
+            });
+        }
+
+        private static Color ResolveShowdownTeamColor(TeamType team)
+        {
+            int teamIndex = Mathf.Clamp(
+                (int)team - (int)TeamType.Solo1,
+                0,
+                ShowdownRules.DuoTeamCount - 1);
+            Color[] colors =
+            {
+                new Color(0.16f, 0.72f, 1f, 1f),
+                new Color(1f, 0.38f, 0.30f, 1f),
+                new Color(0.30f, 0.86f, 0.42f, 1f),
+                new Color(1f, 0.72f, 0.18f, 1f),
+                new Color(0.72f, 0.34f, 1f, 1f),
+            };
+            return colors[teamIndex];
         }
 
         private static GameObject CreatePanel(Transform parent, string name, Color color)

@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using MOBA.Core.Definitions;
+using MOBA.Core.Simulation;
 
 namespace MOBA.Core.Infrastructure
 {
@@ -601,7 +602,8 @@ namespace MOBA.Core.Infrastructure
                 case GameModeId.BrawlBall:
                     return "Brawl Ball";
                 case GameModeId.SoloShowdown:
-                    return "Solo Showdown";
+                    return ShowdownRules.GetDisplayName(
+                        SceneSelection.SelectedShowdownVariant);
                 default:
                     return mode.ToString();
             }
