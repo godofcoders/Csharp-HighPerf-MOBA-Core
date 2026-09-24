@@ -97,13 +97,14 @@ namespace MOBA.Core.Infrastructure
 
             if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
             {
+                bool duo = SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo;
                 CreateTeamPanel(
                     parent,
                     MatchResultBoard.LocalPlayerTeam,
-                    CollectSoloEntries(entries),
+                    CollectShowdownEntries(entries),
                     new Vector2(0f, -142f),
                     MatchResultBoard.LocalPlayerWon,
-                    "YOUR STATS",
+                    duo ? "YOUR TEAM" : "YOUR STATS",
                     string.Empty);
 
                 MoveButton(_continueButton, new Vector2(-165f, -458f));
@@ -224,16 +225,26 @@ namespace MOBA.Core.Infrastructure
             return result;
         }
 
-        private static List<MatchResultEntry> CollectSoloEntries(MatchResultEntry[] entries)
+        private static List<MatchResultEntry> CollectShowdownEntries(
+            MatchResultEntry[] entries)
         {
-            List<MatchResultEntry> localEntries = new List<MatchResultEntry>(1);
+            int capacity = SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo
+                ? ShowdownRules.DuoPlayersPerTeam
+                : 1;
+            List<MatchResultEntry> localEntries = new List<MatchResultEntry>(capacity);
             if (entries == null)
                 return localEntries;
 
             for (int i = 0; i < entries.Length; i++)
             {
-                if (entries[i].IsLocalPlayer)
+                if (ShowdownRules.ShouldShowResultEntry(
+                        SceneSelection.SelectedShowdownVariant,
+                        MatchResultBoard.LocalPlayerTeam,
+                        entries[i].Team,
+                        entries[i].IsLocalPlayer))
+                {
                     localEntries.Add(entries[i]);
+                }
             }
 
             if (localEntries.Count > 0)
@@ -654,7 +665,10 @@ namespace MOBA.Core.Infrastructure
         {
             if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
             {
-                SpawnTeamModels(CollectSoloEntries(entries), MatchResultBoard.LocalPlayerTeam, 0f);
+                SpawnTeamModels(
+                    CollectShowdownEntries(entries),
+                    MatchResultBoard.LocalPlayerTeam,
+                    0f);
                 return;
             }
 
@@ -912,7 +926,10 @@ namespace MOBA.Core.Infrastructure
         private static string ResolveScoreText()
         {
             if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
-                return "Solo Showdown";
+            {
+                return ShowdownRules.GetDisplayName(
+                    SceneSelection.SelectedShowdownVariant);
+            }
 
             return $"Blue {MatchResultBoard.BlueScore} — Red {MatchResultBoard.RedScore}";
         }

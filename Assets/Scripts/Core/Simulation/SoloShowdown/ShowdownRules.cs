@@ -57,5 +57,19 @@ namespace MOBA.Core.Simulation
 
             return UnityEngine.Mathf.Max(1, carriedCubeCount / 2);
         }
+
+        public static bool ShouldShowResultEntry(
+            ShowdownVariant variant,
+            TeamType localTeam,
+            TeamType candidateTeam,
+            bool isLocalPlayer)
+        {
+            if (isLocalPlayer)
+                return true;
+
+            return variant == ShowdownVariant.Duo &&
+                   localTeam != TeamType.Neutral &&
+                   candidateTeam == localTeam;
+        }
     }
 }

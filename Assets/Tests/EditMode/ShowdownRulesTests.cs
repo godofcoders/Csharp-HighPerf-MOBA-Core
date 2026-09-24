@@ -1,4 +1,5 @@
 using MOBA.Core.Definitions;
+using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
 using NUnit.Framework;
 using UnityEngine;
@@ -91,6 +92,41 @@ namespace MOBA.Tests.EditMode
                     Object.DestroyImmediate(cubeObject);
                 Object.DestroyImmediate(definition);
             }
+        }
+
+        [Test]
+        public void SoloResults_ShowOnlyTheLocalPlayer()
+        {
+            Assert.IsTrue(ShowdownRules.ShouldShowResultEntry(
+                ShowdownVariant.Solo,
+                TeamType.Solo2,
+                TeamType.Solo2,
+                true));
+            Assert.IsFalse(ShowdownRules.ShouldShowResultEntry(
+                ShowdownVariant.Solo,
+                TeamType.Solo2,
+                TeamType.Solo2,
+                false));
+        }
+
+        [Test]
+        public void DuoResults_ShowLocalPlayerAndTeammateOnly()
+        {
+            Assert.IsTrue(ShowdownRules.ShouldShowResultEntry(
+                ShowdownVariant.Duo,
+                TeamType.Solo2,
+                TeamType.Solo2,
+                true));
+            Assert.IsTrue(ShowdownRules.ShouldShowResultEntry(
+                ShowdownVariant.Duo,
+                TeamType.Solo2,
+                TeamType.Solo2,
+                false));
+            Assert.IsFalse(ShowdownRules.ShouldShowResultEntry(
+                ShowdownVariant.Duo,
+                TeamType.Solo2,
+                TeamType.Solo3,
+                false));
         }
     }
 }

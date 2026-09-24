@@ -101,14 +101,13 @@ namespace MOBA.Core.Infrastructure
 
             bool soloShowdown = SceneSelection.SelectedMode == GameModeId.SoloShowdown;
             BrawlerController localPlayer = ResolveLocalPlayerBrawler();
-            bool restrictToLocalPlayer = soloShowdown && localPlayer != null;
             BrawlerController starPlayer = null;
             float bestScore = float.NegativeInfinity;
 
             foreach (KeyValuePair<BrawlerController, MatchStats> kvp in tracker.Stats)
             {
                 BrawlerController brawler = kvp.Key;
-                if (ShouldSkipResultEntry(brawler, restrictToLocalPlayer, localPlayer))
+                if (ShouldSkipResultEntry(brawler, soloShowdown, localPlayer))
                     continue;
 
                 MatchStats stats = kvp.Value;
@@ -133,7 +132,7 @@ namespace MOBA.Core.Infrastructure
             foreach (KeyValuePair<BrawlerController, MatchStats> kvp in tracker.Stats)
             {
                 BrawlerController brawler = kvp.Key;
-                if (ShouldSkipResultEntry(brawler, restrictToLocalPlayer, localPlayer))
+                if (ShouldSkipResultEntry(brawler, soloShowdown, localPlayer))
                     continue;
 
                 MatchStats stats = kvp.Value;
@@ -193,13 +192,20 @@ namespace MOBA.Core.Infrastructure
 
         private static bool ShouldSkipResultEntry(
             BrawlerController brawler,
-            bool restrictToLocalPlayer,
+            bool showdown,
             BrawlerController localPlayer)
         {
             if (brawler == null)
                 return true;
 
-            return restrictToLocalPlayer && brawler != localPlayer;
+            if (!showdown || localPlayer == null)
+                return false;
+
+            return !ShowdownRules.ShouldShowResultEntry(
+                SceneSelection.SelectedShowdownVariant,
+                localPlayer.Team,
+                brawler.Team,
+                brawler == localPlayer);
         }
 
         private static float ComputeStarScore(
