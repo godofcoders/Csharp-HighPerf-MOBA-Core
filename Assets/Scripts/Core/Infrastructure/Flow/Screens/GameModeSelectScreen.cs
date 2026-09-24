@@ -28,6 +28,7 @@ namespace MOBA.Core.Infrastructure
         private void OnEnable()
         {
             EnsureBrawlBallButton();
+            EnsureShowdownButton();
             EnsureShowdownChoicePanel();
             SetShowdownChoiceVisible(false);
 
@@ -118,6 +119,29 @@ namespace MOBA.Core.Infrastructure
             RectTransform rect = _brawlBallButton.transform as RectTransform;
             if (rect != null)
                 rect.anchoredPosition = new Vector2(0f, -252f);
+        }
+
+        private void EnsureShowdownButton()
+        {
+            if (_soloShowdownButton == null)
+            {
+                Button template = _knockoutButton != null
+                    ? _knockoutButton
+                    : _gemGrabButton;
+                if (template == null)
+                    return;
+
+                _soloShowdownButton = Instantiate(template, template.transform.parent);
+                _soloShowdownButton.name = "ShowdownButton";
+                _soloShowdownButton.onClick.RemoveAllListeners();
+
+                RectTransform rect = _soloShowdownButton.transform as RectTransform;
+                if (rect != null)
+                    rect.anchoredPosition = new Vector2(0f, -388f);
+            }
+
+            SetButtonLabel(_soloShowdownButton, "Showdown");
+            MenuUITheme.StyleButtonLabel(_soloShowdownButton, "Showdown", 17f);
         }
 
         private static void SetButtonLabel(Button button, string label)
