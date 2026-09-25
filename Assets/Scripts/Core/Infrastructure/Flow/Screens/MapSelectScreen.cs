@@ -74,6 +74,11 @@ namespace MOBA.Core.Infrastructure
         private TMP_Text _detailSelectedText;
         private Image _detailPreviewBackground;
         private Image _detailSelectedBackground;
+        private GameObject _showdownVariantSelector;
+        private Image _soloVariantBackground;
+        private Image _duoVariantBackground;
+        private TMP_Text _soloVariantLabel;
+        private TMP_Text _duoVariantLabel;
 
         private void Start()
         {
@@ -190,7 +195,46 @@ namespace MOBA.Core.Infrastructure
                 TextAlignmentOptions.Right,
                 _goldColor);
             _modeHeaderText.fontStyle = FontStyles.Bold;
-            Anchor(_modeHeaderText.rectTransform, new Vector2(0.48f, 0f), new Vector2(0.965f, 1f), Vector2.zero, Vector2.zero);
+            Anchor(_modeHeaderText.rectTransform, new Vector2(0.79f, 0f), new Vector2(0.965f, 1f), Vector2.zero, Vector2.zero);
+
+            BuildShowdownVariantSelector(header.transform);
+        }
+
+        private void BuildShowdownVariantSelector(Transform parent)
+        {
+            _showdownVariantSelector = CreatePanel(
+                "ShowdownVariantSelector",
+                parent,
+                MenuUITheme.ActionRail);
+            RectTransform selectorRect = _showdownVariantSelector.GetComponent<RectTransform>();
+            Anchor(selectorRect, new Vector2(0.50f, 0.18f), new Vector2(0.775f, 0.82f), Vector2.zero, Vector2.zero);
+
+            HorizontalLayoutGroup layout = _showdownVariantSelector.AddComponent<HorizontalLayoutGroup>();
+            layout.padding = new RectOffset(6, 6, 6, 6);
+            layout.spacing = 6f;
+            layout.childControlWidth = true;
+            layout.childControlHeight = true;
+            layout.childForceExpandWidth = true;
+            layout.childForceExpandHeight = true;
+
+            Button soloButton = CreateButton(
+                _showdownVariantSelector.transform,
+                "SoloVariantButton",
+                "SOLO",
+                _panelColor,
+                () => SelectShowdownVariant(ShowdownVariant.Solo));
+            Button duoButton = CreateButton(
+                _showdownVariantSelector.transform,
+                "DuoVariantButton",
+                "DUO",
+                _panelColor,
+                () => SelectShowdownVariant(ShowdownVariant.Duo));
+
+            _soloVariantBackground = soloButton.targetGraphic as Image;
+            _duoVariantBackground = duoButton.targetGraphic as Image;
+            _soloVariantLabel = soloButton.GetComponentInChildren<TMP_Text>();
+            _duoVariantLabel = duoButton.GetComponentInChildren<TMP_Text>();
+            RefreshShowdownVariantSelector();
         }
 
         private void BuildModeTabs(Transform parent)
@@ -224,7 +268,8 @@ namespace MOBA.Core.Infrastructure
 
         private void CreateRuntimeModeTab(GameModeId mode)
         {
-            GameObject tab = CreatePanel("ModeTab_" + ResolveModeLabel(mode).Replace(" ", ""), _runtimeModeTabContainer, _panelColor);
+            string tabLabel = ResolveModeTabLabel(mode);
+            GameObject tab = CreatePanel("ModeTab_" + tabLabel.Replace(" ", ""), _runtimeModeTabContainer, _panelColor);
             LayoutElement layoutElement = tab.AddComponent<LayoutElement>();
             layoutElement.minHeight = 46f;
             layoutElement.flexibleWidth = 1f;
@@ -234,13 +279,13 @@ namespace MOBA.Core.Infrastructure
             GameModeId captured = mode;
             button.onClick.AddListener(() => SelectMode(captured));
 
-            TMP_Text label = CreateText(tab.transform, "Label", ResolveModeLabel(mode), 18, TextAlignmentOptions.Center, Color.white);
+            TMP_Text label = CreateText(tab.transform, "Label", tabLabel, 18, TextAlignmentOptions.Center, Color.white);
             label.fontStyle = FontStyles.Bold;
             label.enableAutoSizing = true;
             label.fontSizeMin = 12f;
             label.fontSizeMax = 18f;
             Anchor(label.rectTransform, Vector2.zero, Vector2.one, new Vector2(8f, 2f), new Vector2(-8f, -2f));
-            MenuUITheme.StyleButton(button, ResolveModeLabel(mode), _panelColor, 18f);
+            MenuUITheme.StyleButton(button, tabLabel, _panelColor, 18f);
 
             _runtimeModeTabs[mode] = new RuntimeModeTabView(tab.GetComponent<Image>(), label);
         }
@@ -260,6 +305,14 @@ namespace MOBA.Core.Infrastructure
                 BuildLegacyCards();
 
             RefreshRuntimeModeTabs();
+            RefreshShowdownVariantSelector();
+        }
+
+        private void SelectShowdownVariant(ShowdownVariant variant)
+        {
+            SceneSelection.SelectedShowdownVariant = variant;
+            RefreshShowdownVariantSelector();
+            RefreshRuntimePreview();
         }
 
         private void BuildMapListPanel(Transform parent)
@@ -442,7 +495,12 @@ namespace MOBA.Core.Infrastructure
             TMP_Text tag = CreateText(card.transform, "Tag", ResolveMapTag(map, SceneSelection.SelectedMode), 13, TextAlignmentOptions.Left, MenuUITheme.TextSoft);
             Anchor(tag.rectTransform, new Vector2(0.10f, 0.08f), new Vector2(0.94f, 0.26f), Vector2.zero, Vector2.zero);
 
-            _runtimeCards[map] = new RuntimeMapCardView(card.GetComponent<Image>(), accent, selectedOverlay, selectedLabel);
+            _runtimeCards[map] = new RuntimeMapCardView(
+                card.GetComponent<Image>(),
+                accent,
+                selectedOverlay,
+                selectedLabel,
+                mode);
         }
 
         private void BuildLegacyCards()
@@ -534,6 +592,7 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             RefreshRuntimeCardSelection();
+            RefreshShowdownVariantSelector();
 
             if (_modeHeaderText != null)
                 _modeHeaderText.text = ResolveModeLabel(SceneSelection.SelectedMode) + " MAPS";
@@ -586,7 +645,30 @@ namespace MOBA.Core.Infrastructure
                     entry.Value.SelectedOverlay.enabled = selected;
                 if (entry.Value.SelectedLabel != null)
                     entry.Value.SelectedLabel.gameObject.SetActive(selected);
+                if (entry.Value.ModeLabel != null)
+                    entry.Value.ModeLabel.text = ResolveModeLabel(SceneSelection.SelectedMode);
             }
+        }
+
+        private void RefreshShowdownVariantSelector()
+        {
+            if (_showdownVariantSelector == null)
+                return;
+
+            bool visible = SceneSelection.SelectedMode == GameModeId.SoloShowdown;
+            _showdownVariantSelector.SetActive(visible);
+            if (!visible)
+                return;
+
+            bool soloSelected = SceneSelection.SelectedShowdownVariant == ShowdownVariant.Solo;
+            if (_soloVariantBackground != null)
+                _soloVariantBackground.color = soloSelected ? _goldColor : _panelColor;
+            if (_duoVariantBackground != null)
+                _duoVariantBackground.color = soloSelected ? _panelColor : _goldColor;
+            if (_soloVariantLabel != null)
+                _soloVariantLabel.color = soloSelected ? Color.black : Color.white;
+            if (_duoVariantLabel != null)
+                _duoVariantLabel.color = soloSelected ? Color.white : Color.black;
         }
 
         private void RefreshRuntimeModeTabs()
@@ -679,6 +761,13 @@ namespace MOBA.Core.Infrastructure
                 default:
                     return mode.ToString().ToUpperInvariant();
             }
+        }
+
+        private static string ResolveModeTabLabel(GameModeId mode)
+        {
+            return mode == GameModeId.SoloShowdown
+                ? "SHOWDOWN"
+                : ResolveModeLabel(mode);
         }
 
         private static string ResolveMapTag(MapDefinition map, GameModeId mode)
@@ -795,17 +884,20 @@ namespace MOBA.Core.Infrastructure
             public readonly Image Accent;
             public readonly Image SelectedOverlay;
             public readonly TMP_Text SelectedLabel;
+            public readonly TMP_Text ModeLabel;
 
             public RuntimeMapCardView(
                 Image background,
                 Image accent,
                 Image selectedOverlay,
-                TMP_Text selectedLabel)
+                TMP_Text selectedLabel,
+                TMP_Text modeLabel)
             {
                 Background = background;
                 Accent = accent;
                 SelectedOverlay = selectedOverlay;
                 SelectedLabel = selectedLabel;
+                ModeLabel = modeLabel;
             }
         }
 
