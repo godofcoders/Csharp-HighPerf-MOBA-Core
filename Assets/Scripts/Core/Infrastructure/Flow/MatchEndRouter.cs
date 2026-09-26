@@ -24,17 +24,46 @@ namespace MOBA.Core.Infrastructure
 
         private TeamType _capturedWinner = TeamType.Neutral;
         private bool _routed;
+        private MatchManager _subscribedMatchManager;
 
         private void OnEnable()
         {
-            if (MatchManager.Instance != null)
-                MatchManager.Instance.OnStateChanged += HandleStateChanged;
+            TrySubscribeToMatchManager();
+        }
+
+        private void Start()
+        {
+            TrySubscribeToMatchManager();
+        }
+
+        private void Update()
+        {
+            if (_subscribedMatchManager == null)
+                TrySubscribeToMatchManager();
         }
 
         private void OnDisable()
         {
-            if (MatchManager.Instance != null)
-                MatchManager.Instance.OnStateChanged -= HandleStateChanged;
+            if (_subscribedMatchManager != null)
+                _subscribedMatchManager.OnStateChanged -= HandleStateChanged;
+
+            _subscribedMatchManager = null;
+        }
+
+        private void TrySubscribeToMatchManager()
+        {
+            MatchManager matchManager = MatchManager.Instance;
+            if (matchManager == null || matchManager == _subscribedMatchManager)
+                return;
+
+            if (_subscribedMatchManager != null)
+                _subscribedMatchManager.OnStateChanged -= HandleStateChanged;
+
+            _subscribedMatchManager = matchManager;
+            _subscribedMatchManager.OnStateChanged += HandleStateChanged;
+
+            if (_subscribedMatchManager.CurrentState == MatchState.Ended)
+                HandleStateChanged(MatchState.Ended);
         }
 
         private void HandleStateChanged(MatchState state)
@@ -84,6 +113,11 @@ namespace MOBA.Core.Infrastructure
 
             TeamType localPlayerTeam = ResolveLocalPlayerTeam();
             MatchResultBoard.Capture(_capturedWinner, blue, red, localPlayerTeam);
+            if (SoloShowdownMode.Instance != null &&
+                SoloShowdownMode.Instance.LocalTeamEliminated)
+            {
+                MatchResultBoard.CaptureLocalOutcome(false);
+            }
 
             CaptureMatchStats(_capturedWinner, blue, red);
 
@@ -348,7 +382,7 @@ namespace MOBA.Core.Infrastructure
 
         private static BrawlerController ResolveLocalPlayerBrawler()
         {
-            PlayerCommandSource[] sources = FindObjectsOfType<PlayerCommandSource>();
+            PlayerCommandSource[] sources = FindObjectsOfType<PlayerCommandSource>(true);
             for (int i = 0; i < sources.Length; i++)
             {
                 PlayerCommandSource source = sources[i];

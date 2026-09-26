@@ -101,6 +101,16 @@ namespace MOBA.Core.Simulation
             return livingMembers <= 0;
         }
 
+        public static bool ShouldEndLocalDuoSession(
+            ShowdownVariant variant,
+            TeamType eliminatedTeam,
+            TeamType localPlayerTeam)
+        {
+            return variant == ShowdownVariant.Duo &&
+                   localPlayerTeam != TeamType.Neutral &&
+                   eliminatedTeam == localPlayerTeam;
+        }
+
         public static int CalculatePowerCubeDropsOnDefeat(int carriedCubeCount)
         {
             if (carriedCubeCount <= 1)

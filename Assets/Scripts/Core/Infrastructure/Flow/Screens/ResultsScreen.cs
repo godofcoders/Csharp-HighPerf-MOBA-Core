@@ -1093,6 +1093,15 @@ namespace MOBA.Core.Infrastructure
             MvpStats = stats;
         }
 
+        public static void CaptureLocalOutcome(bool won)
+        {
+            if (!LocalPlayerKnown)
+                return;
+
+            LocalResultKnown = true;
+            LocalPlayerWon = won;
+        }
+
         public static void CaptureEntries(MatchResultEntry[] entries)
         {
             if (entries == null || entries.Length == 0)

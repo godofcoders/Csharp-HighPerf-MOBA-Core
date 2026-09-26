@@ -87,6 +87,46 @@ namespace MOBA.Tests.EditMode
             Assert.IsTrue(ShowdownRules.IsTeamEliminated(0));
         }
 
+        [Test]
+        public void DuoElimination_EndsSessionOnlyForTheLocalTeam()
+        {
+            Assert.IsFalse(ShowdownRules.ShouldEndLocalDuoSession(
+                ShowdownVariant.Duo,
+                TeamType.Solo3,
+                TeamType.Solo1));
+            Assert.IsFalse(ShowdownRules.ShouldEndLocalDuoSession(
+                ShowdownVariant.Solo,
+                TeamType.Solo1,
+                TeamType.Solo1));
+            Assert.IsTrue(ShowdownRules.ShouldEndLocalDuoSession(
+                ShowdownVariant.Duo,
+                TeamType.Solo1,
+                TeamType.Solo1));
+        }
+
+        [Test]
+        public void DuoLocalElimination_RecordsLossWithoutAResolvedWinner()
+        {
+            try
+            {
+                MatchResultBoard.Reset();
+                MatchResultBoard.Capture(
+                    TeamType.Neutral,
+                    0,
+                    0,
+                    TeamType.Solo1);
+
+                Assert.IsFalse(MatchResultBoard.LocalResultKnown);
+                MatchResultBoard.CaptureLocalOutcome(false);
+                Assert.IsTrue(MatchResultBoard.LocalResultKnown);
+                Assert.IsFalse(MatchResultBoard.LocalPlayerWon);
+            }
+            finally
+            {
+                MatchResultBoard.Reset();
+            }
+        }
+
         [TestCase(0, 1)]
         [TestCase(1, 1)]
         [TestCase(2, 1)]

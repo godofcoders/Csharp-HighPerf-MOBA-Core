@@ -43,6 +43,7 @@ namespace MOBA.Core.Simulation
             SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo;
         public float RespawnDelaySeconds => ShowdownRules.DuoRespawnDelaySeconds;
         public TeamType WinningTeam { get; private set; } = TeamType.Neutral;
+        public bool LocalTeamEliminated { get; private set; }
 
         private void Awake()
         {
@@ -284,6 +285,59 @@ namespace MOBA.Core.Simulation
             CancelTeamRespawns(dying.Team);
             if (!_placementsByTeam.ContainsKey(dying.Team))
                 _placementsByTeam[dying.Team] = Mathf.Max(1, _nextPlacement--);
+
+            TeamType localPlayerTeam = ResolveLocalPlayerTeam();
+            if (ShowdownRules.ShouldEndLocalDuoSession(
+                    SceneSelection.SelectedShowdownVariant,
+                    dying.Team,
+                    localPlayerTeam))
+            {
+                EndEliminatedLocalTeam(dying.Team);
+            }
+        }
+
+        private void EndEliminatedLocalTeam(TeamType eliminatedTeam)
+        {
+            if (_matchEnding)
+                return;
+
+            LocalTeamEliminated = true;
+            _matchEnding = true;
+            WinningTeam = FindRemainingOpponentTeam(eliminatedTeam);
+            ScheduleMatchEnd();
+        }
+
+        private TeamType FindRemainingOpponentTeam(TeamType eliminatedTeam)
+        {
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant == null ||
+                    contestant.Team == eliminatedTeam ||
+                    _eliminatedTeams.Contains(contestant.Team))
+                {
+                    continue;
+                }
+
+                return contestant.Team;
+            }
+
+            return TeamType.Neutral;
+        }
+
+        private TeamType ResolveLocalPlayerTeam()
+        {
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController contestant = _contestants[i];
+                if (contestant != null &&
+                    contestant.GetComponent<PlayerCommandSource>() != null)
+                {
+                    return contestant.Team;
+                }
+            }
+
+            return TeamType.Neutral;
         }
 
         private void QueueDuoRespawn(BrawlerController brawler)
