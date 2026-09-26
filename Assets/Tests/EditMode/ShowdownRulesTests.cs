@@ -29,6 +29,46 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void DuoSpawnPositions_KeepTeammatesTogetherWithoutOverlap()
+        {
+            Bounds bounds = new Bounds(Vector3.zero, new Vector3(44f, 0f, 44f));
+            Vector3[] positions = new Vector3[ShowdownRules.DuoContestantCount];
+
+            for (int teamIndex = 0; teamIndex < ShowdownRules.DuoTeamCount; teamIndex++)
+            {
+                int firstIndex = teamIndex * ShowdownRules.DuoPlayersPerTeam;
+                positions[firstIndex] = ShowdownRules.ResolveDuoSpawnPosition(
+                    bounds,
+                    teamIndex,
+                    0,
+                    3f,
+                    ShowdownRules.DuoTeammateSpawnSeparation);
+                positions[firstIndex + 1] = ShowdownRules.ResolveDuoSpawnPosition(
+                    bounds,
+                    teamIndex,
+                    1,
+                    3f,
+                    ShowdownRules.DuoTeammateSpawnSeparation);
+
+                float teammateDistance = Vector3.Distance(
+                    positions[firstIndex],
+                    positions[firstIndex + 1]);
+                Assert.That(teammateDistance, Is.GreaterThanOrEqualTo(2.2f));
+                Assert.That(teammateDistance, Is.LessThanOrEqualTo(3f));
+            }
+
+            for (int first = 0; first < positions.Length; first++)
+            {
+                for (int second = first + 1; second < positions.Length; second++)
+                {
+                    Assert.That(
+                        Vector3.Distance(positions[first], positions[second]),
+                        Is.GreaterThanOrEqualTo(2.2f));
+                }
+            }
+        }
+
+        [Test]
         public void DuoRules_UseFiveTeamsAndFifteenSecondRespawn()
         {
             Assert.AreEqual(10, ShowdownRules.DuoContestantCount);

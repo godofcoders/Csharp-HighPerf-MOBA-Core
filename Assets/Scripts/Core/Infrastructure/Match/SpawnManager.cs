@@ -19,6 +19,9 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Spawn Spacing")]
         [SerializeField, Min(0.5f)] private float _minimumInitialSpawnSeparation = 4.25f;
+        [SerializeField, Min(1.5f)] private float _duoTeammateSpawnSeparation =
+            ShowdownRules.DuoTeammateSpawnSeparation;
+        [SerializeField, Min(1f)] private float _minimumRespawnBrawlerSeparation = 1.75f;
         [SerializeField, Min(0.5f)] private float _runtimeSpawnEdgeInset = 3f;
         [SerializeField, Min(0.1f)] private float _runtimeSpawnObstacleClearanceRadius = 0.9f;
         [SerializeField, Min(1)] private int _runtimeSpawnPlacementAttempts = 120;
@@ -140,6 +143,7 @@ namespace MOBA.Core.Infrastructure
             if (brawler == null)
                 return;
 
+            position = ResolveUnoccupiedRespawnPosition(position, brawler);
             brawler.gameObject.SetActive(true);
             brawler.Respawn(position);
 
@@ -328,13 +332,115 @@ namespace MOBA.Core.Infrastructure
                 _spawnPreparationReservedPoints);
             AddSpawnPoints(_spawnPreparationReservedPoints, _preparedRedSpawnPoints);
 
-            BuildSeparatedSpawnPointList(
-                _soloSpawnPoints,
-                soloRequired,
-                TeamType.Neutral,
-                _preparedSoloSpawnPoints,
-                _spawnPreparationReservedPoints);
+            if (ShowdownRules.IsDuoSelected)
+            {
+                BuildDuoShowdownSpawnPointList(
+                    soloRequired,
+                    _preparedSoloSpawnPoints,
+                    _spawnPreparationReservedPoints);
+            }
+            else
+            {
+                BuildSeparatedSpawnPointList(
+                    _soloSpawnPoints,
+                    soloRequired,
+                    TeamType.Neutral,
+                    _preparedSoloSpawnPoints,
+                    _spawnPreparationReservedPoints);
+            }
             AddSpawnPoints(_spawnPreparationReservedPoints, _preparedSoloSpawnPoints);
+        }
+
+        private void BuildDuoShowdownSpawnPointList(
+            int requiredCount,
+            List<Transform> output,
+            List<Transform> reservedPoints)
+        {
+            output.Clear();
+            if (requiredCount <= 0)
+                return;
+
+            EnsureRuntimeSpawnRoot();
+            Bounds bounds = ResolvePlayableBounds();
+            int requiredTeams = Mathf.Min(
+                ShowdownRules.DuoTeamCount,
+                Mathf.CeilToInt(requiredCount / (float)ShowdownRules.DuoPlayersPerTeam));
+            float teammateSpacing = Mathf.Max(
+                1.5f,
+                _duoTeammateSpawnSeparation);
+            float opposingTeamSpacing = Mathf.Max(
+                _minimumInitialSpawnSeparation,
+                teammateSpacing + 1.5f);
+            float opposingTeamSpacingSq = opposingTeamSpacing * opposingTeamSpacing;
+            float teammateSpacingSq = teammateSpacing * teammateSpacing * 0.81f;
+            int attempts = Mathf.Max(12, _runtimeSpawnPlacementAttempts);
+
+            for (int teamIndex = 0; teamIndex < requiredTeams; teamIndex++)
+            {
+                Vector3 first = default;
+                Vector3 second = default;
+                bool foundPair = false;
+
+                for (int attempt = 0; attempt < attempts; attempt++)
+                {
+                    first = ResolveGroundedPosition(ShowdownRules.ResolveDuoSpawnPosition(
+                        bounds,
+                        teamIndex,
+                        0,
+                        _runtimeSpawnEdgeInset,
+                        teammateSpacing,
+                        attempt));
+                    second = ResolveGroundedPosition(ShowdownRules.ResolveDuoSpawnPosition(
+                        bounds,
+                        teamIndex,
+                        1,
+                        _runtimeSpawnEdgeInset,
+                        teammateSpacing,
+                        attempt));
+
+                    Vector3 pairDelta = second - first;
+                    pairDelta.y = 0f;
+                    if (pairDelta.sqrMagnitude < teammateSpacingSq ||
+                        IsBlockedSpawnPosition(first) ||
+                        IsBlockedSpawnPosition(second) ||
+                        IsTooCloseToExistingSpawn(first, output, opposingTeamSpacingSq) ||
+                        IsTooCloseToExistingSpawn(second, output, opposingTeamSpacingSq) ||
+                        IsTooCloseToExistingSpawn(first, reservedPoints, opposingTeamSpacingSq) ||
+                        IsTooCloseToExistingSpawn(second, reservedPoints, opposingTeamSpacingSq))
+                    {
+                        continue;
+                    }
+
+                    foundPair = true;
+                    break;
+                }
+
+                if (!foundPair)
+                {
+                    first = ResolveGroundedPosition(ShowdownRules.ResolveDuoSpawnPosition(
+                        bounds,
+                        teamIndex,
+                        0,
+                        _runtimeSpawnEdgeInset,
+                        teammateSpacing));
+                    second = ResolveGroundedPosition(ShowdownRules.ResolveDuoSpawnPosition(
+                        bounds,
+                        teamIndex,
+                        1,
+                        _runtimeSpawnEdgeInset,
+                        teammateSpacing));
+                }
+
+                int firstOrdinal = teamIndex * ShowdownRules.DuoPlayersPerTeam;
+                output.Add(CreateRuntimeSpawnPoint(TeamType.Neutral, firstOrdinal, first));
+                if (output.Count < requiredCount)
+                {
+                    output.Add(CreateRuntimeSpawnPoint(
+                        TeamType.Neutral,
+                        firstOrdinal + 1,
+                        second));
+                }
+            }
         }
 
         private void ResetRespawnCursors()
@@ -825,6 +931,63 @@ namespace MOBA.Core.Infrastructure
                 Mathf.Max(0.1f, _runtimeSpawnObstacleClearanceRadius),
                 obstacleMask,
                 QueryTriggerInteraction.Ignore);
+        }
+
+        private Vector3 ResolveUnoccupiedRespawnPosition(
+            Vector3 requestedPosition,
+            BrawlerController respawningBrawler)
+        {
+            float separation = Mathf.Max(1f, _minimumRespawnBrawlerSeparation);
+            if (IsRespawnPositionAvailable(requestedPosition, respawningBrawler, separation))
+                return requestedPosition;
+
+            Bounds bounds = ResolvePlayableBounds();
+            const int directionsPerRing = 8;
+            for (int ring = 1; ring <= 3; ring++)
+            {
+                float radius = separation * ring;
+                for (int direction = 0; direction < directionsPerRing; direction++)
+                {
+                    float angle = direction * (360f / directionsPerRing) * Mathf.Deg2Rad;
+                    Vector3 candidate = requestedPosition + new Vector3(
+                        Mathf.Cos(angle) * radius,
+                        0f,
+                        Mathf.Sin(angle) * radius);
+                    candidate.x = Mathf.Clamp(candidate.x, bounds.min.x, bounds.max.x);
+                    candidate.z = Mathf.Clamp(candidate.z, bounds.min.z, bounds.max.z);
+                    candidate = ResolveGroundedPosition(candidate);
+
+                    if (IsRespawnPositionAvailable(candidate, respawningBrawler, separation))
+                        return candidate;
+                }
+            }
+
+            return requestedPosition;
+        }
+
+        private bool IsRespawnPositionAvailable(
+            Vector3 candidate,
+            BrawlerController respawningBrawler,
+            float separation)
+        {
+            if (IsBlockedSpawnPosition(candidate))
+                return false;
+
+            float separationSq = separation * separation;
+            BrawlerController[] activeBrawlers = FindObjectsOfType<BrawlerController>(false);
+            for (int i = 0; i < activeBrawlers.Length; i++)
+            {
+                BrawlerController other = activeBrawlers[i];
+                if (other == null || other == respawningBrawler || !other.gameObject.activeInHierarchy)
+                    continue;
+
+                Vector3 delta = other.transform.position - candidate;
+                delta.y = 0f;
+                if (delta.sqrMagnitude < separationSq)
+                    return false;
+            }
+
+            return true;
         }
 
         private static bool IsTooCloseToExistingSpawn(
