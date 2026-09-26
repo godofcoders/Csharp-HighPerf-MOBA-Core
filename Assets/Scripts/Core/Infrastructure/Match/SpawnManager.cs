@@ -125,6 +125,14 @@ namespace MOBA.Core.Infrastructure
             CompleteRespawn(brawler, pt.position);
         }
 
+        public void ForceRespawnAt(BrawlerController brawler, Vector3 position)
+        {
+            if (brawler == null) return;
+
+            CancelPendingRespawn(brawler);
+            CompleteRespawn(brawler, position);
+        }
+
         private IEnumerator RespawnRoutine(BrawlerController brawler, TeamType team)
         {
             yield return new WaitForSeconds(_respawnDelay);

@@ -73,6 +73,7 @@ namespace MOBA.Tests.EditMode
         {
             Assert.AreEqual(10, ShowdownRules.DuoContestantCount);
             Assert.AreEqual(15f, ShowdownRules.DuoRespawnDelaySeconds);
+            Assert.AreEqual(2f, ShowdownRules.DuoSpawnImmunitySeconds);
             Assert.IsTrue(ShowdownRules.IsDuoTeam(TeamType.Solo5));
             Assert.IsFalse(ShowdownRules.IsDuoTeam(TeamType.Solo6));
             Assert.AreEqual("Solo Showdown", ShowdownRules.GetDisplayName(ShowdownVariant.Solo));
@@ -85,6 +86,23 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(15f, ShowdownRules.GetRespawnSecondsRemaining(25f, 10f));
             Assert.AreEqual(4.5f, ShowdownRules.GetRespawnSecondsRemaining(25f, 20.5f));
             Assert.AreEqual(0f, ShowdownRules.GetRespawnSecondsRemaining(25f, 30f));
+        }
+
+        [Test]
+        public void DuoSpawnProtection_BlocksDamageUntilItsModifierIsRemoved()
+        {
+            object source = new object();
+            DamageModifierCollection modifiers = new DamageModifierCollection();
+            modifiers.Add(new DamageModifier(
+                DamageModifierType.PercentReduction,
+                1f,
+                source));
+
+            float shield = 0f;
+            Assert.AreEqual(0f, modifiers.ApplyIncoming(500f, ref shield));
+
+            modifiers.RemoveBySource(source);
+            Assert.AreEqual(500f, modifiers.ApplyIncoming(500f, ref shield));
         }
 
         [Test]

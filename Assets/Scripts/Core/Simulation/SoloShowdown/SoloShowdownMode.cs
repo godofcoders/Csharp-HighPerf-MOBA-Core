@@ -33,6 +33,10 @@ namespace MOBA.Core.Simulation
             new Dictionary<BrawlerController, Coroutine>();
         private readonly Dictionary<BrawlerController, float> _duoRespawnReadyTimes =
             new Dictionary<BrawlerController, float>();
+        private readonly Dictionary<BrawlerController, Coroutine> _duoSpawnProtectionRoutines =
+            new Dictionary<BrawlerController, Coroutine>();
+        private readonly Dictionary<BrawlerController, object> _duoSpawnProtectionSources =
+            new Dictionary<BrawlerController, object>();
 
         private int _nextPlacement = 1;
         private bool _matchEnding;
@@ -98,6 +102,7 @@ namespace MOBA.Core.Simulation
         private void OnDisable()
         {
             CancelAllDuoRespawns();
+            ClearAllDuoSpawnProtection();
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
@@ -297,6 +302,7 @@ namespace MOBA.Core.Simulation
             if (dying == null)
                 return;
 
+            CancelDuoSpawnProtection(dying);
             DropPowerCubesFrom(dying);
 
             if (IsDuoShowdown)
@@ -400,14 +406,86 @@ namespace MOBA.Core.Simulation
                 yield break;
             }
 
-            int memberIndex = GetTeamMemberIndex(brawler);
-            int spawnOrdinal = ShowdownRules.GetDuoSpawnOrdinal(
-                brawler.Team,
-                memberIndex);
-            SpawnManager.Instance.ForceRespawn(
+            BrawlerController survivingTeammate = FindLivingContestant(brawler.Team);
+            if (survivingTeammate == null)
+                yield break;
+
+            SpawnManager.Instance.ForceRespawnAt(
                 brawler,
-                brawler.Team,
-                spawnOrdinal);
+                survivingTeammate.Position);
+            GrantDuoSpawnProtection(brawler);
+        }
+
+        private void GrantDuoSpawnProtection(BrawlerController brawler)
+        {
+            if (brawler == null || brawler.State == null)
+                return;
+
+            CancelDuoSpawnProtection(brawler);
+
+            object source = new object();
+            brawler.State.AddIncomingDamageModifier(
+                new DamageModifier(DamageModifierType.PercentReduction, 1f, source));
+            _duoSpawnProtectionSources[brawler] = source;
+            _duoSpawnProtectionRoutines[brawler] = StartCoroutine(
+                DuoSpawnProtectionRoutine(brawler, source));
+        }
+
+        private IEnumerator DuoSpawnProtectionRoutine(
+            BrawlerController brawler,
+            object source)
+        {
+            yield return new WaitForSeconds(ShowdownRules.DuoSpawnImmunitySeconds);
+
+            if (brawler != null && brawler.State != null)
+                brawler.State.RemoveIncomingDamageModifiersFromSource(source);
+
+            if (brawler != null &&
+                _duoSpawnProtectionSources.TryGetValue(brawler, out object activeSource) &&
+                ReferenceEquals(activeSource, source))
+            {
+                _duoSpawnProtectionSources.Remove(brawler);
+                _duoSpawnProtectionRoutines.Remove(brawler);
+            }
+        }
+
+        private void CancelDuoSpawnProtection(BrawlerController brawler)
+        {
+            if (brawler == null)
+                return;
+
+            if (_duoSpawnProtectionRoutines.TryGetValue(brawler, out Coroutine routine) &&
+                routine != null)
+            {
+                StopCoroutine(routine);
+            }
+
+            if (_duoSpawnProtectionSources.TryGetValue(brawler, out object source) &&
+                brawler.State != null)
+            {
+                brawler.State.RemoveIncomingDamageModifiersFromSource(source);
+            }
+
+            _duoSpawnProtectionRoutines.Remove(brawler);
+            _duoSpawnProtectionSources.Remove(brawler);
+        }
+
+        private void ClearAllDuoSpawnProtection()
+        {
+            foreach (Coroutine routine in _duoSpawnProtectionRoutines.Values)
+            {
+                if (routine != null)
+                    StopCoroutine(routine);
+            }
+
+            foreach (KeyValuePair<BrawlerController, object> entry in _duoSpawnProtectionSources)
+            {
+                if (entry.Key != null && entry.Key.State != null)
+                    entry.Key.State.RemoveIncomingDamageModifiersFromSource(entry.Value);
+            }
+
+            _duoSpawnProtectionRoutines.Clear();
+            _duoSpawnProtectionSources.Clear();
         }
 
         private void CancelTeamRespawns(TeamType team)

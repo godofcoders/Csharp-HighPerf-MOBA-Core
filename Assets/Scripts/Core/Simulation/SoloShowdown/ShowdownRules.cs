@@ -9,6 +9,7 @@ namespace MOBA.Core.Simulation
         public const int DuoPlayersPerTeam = 2;
         public const int DuoContestantCount = DuoTeamCount * DuoPlayersPerTeam;
         public const float DuoRespawnDelaySeconds = 15f;
+        public const float DuoSpawnImmunitySeconds = 2f;
         public const float DuoTeammateSpawnSeparation = 2.5f;
 
         public static bool IsDuoSelected =>
