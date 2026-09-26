@@ -171,9 +171,14 @@ namespace MOBA.Core.Infrastructure
                 return;
             }
 
+            bool duoShowdown = SoloShowdownMode.Instance != null &&
+                                SoloShowdownMode.Instance.IsDuoShowdown;
+            bool spectatingTeammate = duoShowdown && TrySpectateLivingTeammate();
             if (!ShouldShowRespawnCountdown())
             {
-                bool spectatingTeammate = TrySpectateLivingTeammate();
+                if (!duoShowdown)
+                    spectatingTeammate = TrySpectateLivingTeammate();
+
                 SetTitle(_knockoutTitleLabel);
                 SetCountdown(spectatingTeammate ? _spectatingLabel : string.Empty);
                 Show(Time.time < _knockoutNoticeUntilTime);
@@ -194,6 +199,7 @@ namespace MOBA.Core.Infrastructure
             if (remaining < 0f) remaining = 0f;
 
             string countdownStr = string.Format(_countdownFormat, Mathf.CeilToInt(remaining).ToString());
+            SetTitle(spectatingTeammate ? _spectatingLabel : _titleLabel);
             SetCountdown(countdownStr);
 
             Show(true);
