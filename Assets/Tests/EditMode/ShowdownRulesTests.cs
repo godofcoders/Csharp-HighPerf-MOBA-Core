@@ -80,6 +80,14 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void DuoRespawnCountdown_UsesAuthoritativeReadyTimeAndClampsAtZero()
+        {
+            Assert.AreEqual(15f, ShowdownRules.GetRespawnSecondsRemaining(25f, 10f));
+            Assert.AreEqual(4.5f, ShowdownRules.GetRespawnSecondsRemaining(25f, 20.5f));
+            Assert.AreEqual(0f, ShowdownRules.GetRespawnSecondsRemaining(25f, 30f));
+        }
+
+        [Test]
         public void DuoElimination_RequiresBothTeamMembersToBeDead()
         {
             Assert.IsFalse(ShowdownRules.IsTeamEliminated(2));

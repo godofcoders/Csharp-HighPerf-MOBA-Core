@@ -101,6 +101,11 @@ namespace MOBA.Core.Simulation
             return livingMembers <= 0;
         }
 
+        public static float GetRespawnSecondsRemaining(float readyAt, float currentTime)
+        {
+            return Mathf.Max(0f, readyAt - currentTime);
+        }
+
         public static bool ShouldEndLocalDuoSession(
             ShowdownVariant variant,
             TeamType eliminatedTeam,

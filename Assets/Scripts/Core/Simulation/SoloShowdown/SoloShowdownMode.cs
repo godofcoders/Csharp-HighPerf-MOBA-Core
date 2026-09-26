@@ -31,6 +31,8 @@ namespace MOBA.Core.Simulation
             new HashSet<TeamType>();
         private readonly Dictionary<BrawlerController, Coroutine> _pendingDuoRespawns =
             new Dictionary<BrawlerController, Coroutine>();
+        private readonly Dictionary<BrawlerController, float> _duoRespawnReadyTimes =
+            new Dictionary<BrawlerController, float>();
 
         private int _nextPlacement = 1;
         private bool _matchEnding;
@@ -156,6 +158,41 @@ namespace MOBA.Core.Simulation
         public bool IsRespawnPending(BrawlerController brawler)
         {
             return brawler != null && _pendingDuoRespawns.ContainsKey(brawler);
+        }
+
+        public bool TryGetPendingTeammateRespawn(
+            BrawlerController livingPlayer,
+            out BrawlerController teammate,
+            out float secondsRemaining)
+        {
+            teammate = null;
+            secondsRemaining = 0f;
+            if (!IsDuoShowdown ||
+                !IsAliveContestant(livingPlayer) ||
+                _eliminatedTeams.Contains(livingPlayer.Team))
+            {
+                return false;
+            }
+
+            foreach (KeyValuePair<BrawlerController, float> entry in _duoRespawnReadyTimes)
+            {
+                BrawlerController candidate = entry.Key;
+                if (candidate == null ||
+                    candidate == livingPlayer ||
+                    candidate.Team != livingPlayer.Team ||
+                    !_pendingDuoRespawns.ContainsKey(candidate))
+                {
+                    continue;
+                }
+
+                teammate = candidate;
+                secondsRemaining = ShowdownRules.GetRespawnSecondsRemaining(
+                    entry.Value,
+                    Time.time);
+                return true;
+            }
+
+            return false;
         }
 
         public int GetAliveOpponentCount(TeamType team)
@@ -343,6 +380,8 @@ namespace MOBA.Core.Simulation
         private void QueueDuoRespawn(BrawlerController brawler)
         {
             CancelDuoRespawn(brawler);
+            _duoRespawnReadyTimes[brawler] =
+                Time.time + ShowdownRules.DuoRespawnDelaySeconds;
             _pendingDuoRespawns[brawler] = StartCoroutine(DuoRespawnRoutine(brawler));
         }
 
@@ -351,6 +390,7 @@ namespace MOBA.Core.Simulation
             yield return new WaitForSeconds(ShowdownRules.DuoRespawnDelaySeconds);
 
             _pendingDuoRespawns.Remove(brawler);
+            _duoRespawnReadyTimes.Remove(brawler);
             if (brawler == null ||
                 _matchEnding ||
                 _eliminatedTeams.Contains(brawler.Team) ||
@@ -391,6 +431,7 @@ namespace MOBA.Core.Simulation
             if (routine != null)
                 StopCoroutine(routine);
             _pendingDuoRespawns.Remove(brawler);
+            _duoRespawnReadyTimes.Remove(brawler);
         }
 
         private void CancelAllDuoRespawns()
@@ -399,6 +440,7 @@ namespace MOBA.Core.Simulation
                 CancelDuoRespawn(_contestants[i]);
 
             _pendingDuoRespawns.Clear();
+            _duoRespawnReadyTimes.Clear();
         }
 
         private void DropPowerCubesFrom(BrawlerController dying)

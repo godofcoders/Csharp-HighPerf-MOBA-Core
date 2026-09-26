@@ -100,6 +100,7 @@ namespace MOBA.Core.Infrastructure
             CreateCombatFeed(canvasTransform);
             CreateCountdownOverlay(canvasTransform);
             CreateGemGrabCountdownOverlay(canvasTransform);
+            CreateDuoTeammateRespawnHUD(canvasTransform);
             CreateDeathOverlay(canvasTransform);
             canvasGo.AddComponent<MatchVersusScreenOverlay>();
 
@@ -890,6 +891,48 @@ namespace MOBA.Core.Infrastructure
                 countdownText,
                 null,
                 killerText);
+        }
+
+        private static void CreateDuoTeammateRespawnHUD(Transform parent)
+        {
+            GameObject controller = CreateController(parent, "DuoTeammateRespawnController");
+            GameObject root = CreateRectPanel(
+                parent,
+                "DuoTeammateRespawnHUD",
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0.5f, 1f),
+                new Vector2(0f, -150f),
+                new Vector2(470f, 62f),
+                HudPanelSolid);
+            AddPanelShadow(root, new Vector2(0f, -4f), 0.32f);
+
+            CreateRectPanel(
+                root.transform,
+                "RespawnAccent",
+                new Vector2(0f, 0f),
+                new Vector2(0.018f, 1f),
+                new Vector2(0f, 0.5f),
+                Vector2.zero,
+                Vector2.zero,
+                HudCyan);
+
+            Text countdown = CreateText(
+                root.transform,
+                "TeammateRespawnText",
+                "TEAMMATE RESPAWNING IN 15",
+                Vector2.zero,
+                Vector2.one,
+                new Vector2(0.5f, 0.5f),
+                Vector2.zero,
+                new Vector2(-28f, -8f),
+                23,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                FontStyle.Bold);
+
+            DuoTeammateRespawnHUD hud = controller.AddComponent<DuoTeammateRespawnHUD>();
+            hud.Bind(root, countdown);
         }
 
         private static GameObject CreateController(Transform parent, string name)
