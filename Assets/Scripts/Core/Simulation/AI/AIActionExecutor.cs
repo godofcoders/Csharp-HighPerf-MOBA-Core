@@ -197,7 +197,11 @@ namespace MOBA.Core.Simulation.AI
                     break;
 
                 case AIActionType.Regroup:
-                    RunRegroup(currentTick);
+                    RunRegroup(
+                        targetInfo,
+                        currentTick,
+                        attackRange,
+                        superRange);
                     break;
 
                 case AIActionType.Peel:
@@ -2690,8 +2694,21 @@ namespace MOBA.Core.Simulation.AI
             _abilityDecider.TryUseMainAttack(targetInfo.Target, currentTick, attackRange);
         }
 
-        private void RunRegroup(uint currentTick)
+        private void RunRegroup(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            float attackRange,
+            float superRange)
         {
+            if (TryRunDuoTeammateRegroup(
+                    targetInfo,
+                    currentTick,
+                    attackRange,
+                    superRange))
+            {
+                return;
+            }
+
             if (TryRunCarrierRefuge(currentTick, AIMapRouteIntent.Regroup, 0.75f))
                 return;
 
@@ -2705,6 +2722,52 @@ namespace MOBA.Core.Simulation.AI
             }
 
             RunFallbackWander(currentTick);
+        }
+
+        private bool TryRunDuoTeammateRegroup(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            float attackRange,
+            float superRange)
+        {
+            SoloShowdownMode mode = SoloShowdownMode.Instance;
+            if (mode == null ||
+                !mode.TryGetDuoCohesionAnchor(
+                    _brawler,
+                    out BrawlerController teammate))
+            {
+                return false;
+            }
+
+            if (targetInfo != null && targetInfo.HasLiveTarget)
+            {
+                _abilityDecider.TryUseMainAttack(
+                    targetInfo.Target,
+                    currentTick,
+                    attackRange);
+                _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
+                _superDecider.TryUseSuper(
+                    targetInfo.Target,
+                    currentTick,
+                    superRange);
+            }
+
+            bool hasThreat =
+                targetInfo != null &&
+                targetInfo.HasLiveTarget &&
+                targetInfo.Target != null;
+            Vector3 threatPosition = hasThreat
+                ? targetInfo.Target.Position
+                : Vector3.zero;
+
+            RequestMapAwareDestination(
+                teammate.Position,
+                ShowdownRules.DuoCohesionFollowDistance,
+                AIMapRouteIntent.Regroup,
+                hasThreat,
+                threatPosition,
+                GetTacticalPreferredRange(GetAbilityIdealRange()));
+            return true;
         }
 
         private void RunPeel(uint currentTick, float attackRange, float idealRange, float superRange)
