@@ -124,6 +124,25 @@ namespace MOBA.Core.Simulation
             return selfEntityId > teammateEntityId;
         }
 
+        public static float CalculateDuoCohesionScore(
+            float teammateDistance,
+            bool hasLiveTarget)
+        {
+            float distance = Mathf.Max(0f, teammateDistance);
+            float separation = Mathf.InverseLerp(
+                DuoCohesionFollowDistance,
+                DuoCohesionUrgentDistance,
+                distance);
+
+            if (!hasLiveTarget)
+                return Mathf.Lerp(115f, 120f, separation);
+
+            if (distance <= DuoCohesionFollowDistance)
+                return 30f;
+
+            return Mathf.Lerp(82f, 120f, separation);
+        }
+
         public static bool ShouldEndLocalDuoSession(
             ShowdownVariant variant,
             TeamType eliminatedTeam,

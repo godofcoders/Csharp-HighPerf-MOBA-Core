@@ -5310,6 +5310,25 @@ namespace MOBA.Core.Simulation.AI
      uint currentTick,
      AIGameModeMacroState macroState)
         {
+            if (SoloShowdownMode.Instance != null &&
+                SoloShowdownMode.Instance.TryGetDuoCohesionAnchor(
+                    _self,
+                    out BrawlerController duoTeammate))
+            {
+                float teammateDistance = Vector3.Distance(
+                    _self.Position,
+                    duoTeammate.Position);
+                float cohesionScore = ShowdownRules.CalculateDuoCohesionScore(
+                    teammateDistance,
+                    targetInfo.HasLiveTarget);
+
+                return MakeScore(
+                    AIActionType.Regroup,
+                    cohesionScore,
+                    Mathf.Max(1f, _profile.RegroupWeight),
+                    allowEmergencyScore: true);
+            }
+
             if (_teamCoordinator == null)
                 return new AIActionScore(AIActionType.Regroup, 0f);
 
