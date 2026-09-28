@@ -11,6 +11,8 @@ namespace MOBA.Core.Simulation
         public const float DuoRespawnDelaySeconds = 15f;
         public const float DuoSpawnImmunitySeconds = 2f;
         public const float DuoTeammateSpawnSeparation = 2.5f;
+        public const float DuoCohesionFollowDistance = 4.25f;
+        public const float DuoCohesionUrgentDistance = 10f;
 
         public static bool IsDuoSelected =>
             SceneSelection.SelectedMode == GameModeId.SoloShowdown &&
@@ -105,6 +107,21 @@ namespace MOBA.Core.Simulation
         public static float GetRespawnSecondsRemaining(float readyAt, float currentTime)
         {
             return Mathf.Max(0f, readyAt - currentTime);
+        }
+
+        public static bool ShouldUseTeammateAsCohesionAnchor(
+            bool selfIsPlayer,
+            bool teammateIsPlayer,
+            int selfEntityId,
+            int teammateEntityId)
+        {
+            if (selfIsPlayer)
+                return false;
+
+            if (teammateIsPlayer)
+                return true;
+
+            return selfEntityId > teammateEntityId;
         }
 
         public static bool ShouldEndLocalDuoSession(

@@ -165,6 +165,43 @@ namespace MOBA.Core.Simulation
             return brawler != null && _pendingDuoRespawns.ContainsKey(brawler);
         }
 
+        public bool TryGetDuoCohesionAnchor(
+            BrawlerController brawler,
+            out BrawlerController teammate)
+        {
+            teammate = null;
+            if (!IsDuoShowdown || !IsAliveContestant(brawler))
+                return false;
+
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController candidate = _contestants[i];
+                if (candidate == null ||
+                    candidate == brawler ||
+                    candidate.Team != brawler.Team ||
+                    !IsAliveContestant(candidate))
+                {
+                    continue;
+                }
+
+                bool selfIsPlayer = brawler.GetComponent<PlayerCommandSource>() != null;
+                bool teammateIsPlayer = candidate.GetComponent<PlayerCommandSource>() != null;
+                if (!ShowdownRules.ShouldUseTeammateAsCohesionAnchor(
+                        selfIsPlayer,
+                        teammateIsPlayer,
+                        brawler.EntityID,
+                        candidate.EntityID))
+                {
+                    return false;
+                }
+
+                teammate = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
         public bool TryGetPendingTeammateRespawn(
             BrawlerController livingPlayer,
             out BrawlerController teammate,

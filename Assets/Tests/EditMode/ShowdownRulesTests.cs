@@ -89,6 +89,31 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void DuoCohesion_BotFollowsPlayerAndAiPairChoosesOneFollower()
+        {
+            Assert.IsTrue(ShowdownRules.ShouldUseTeammateAsCohesionAnchor(
+                selfIsPlayer: false,
+                teammateIsPlayer: true,
+                selfEntityId: 10,
+                teammateEntityId: 20));
+            Assert.IsFalse(ShowdownRules.ShouldUseTeammateAsCohesionAnchor(
+                selfIsPlayer: true,
+                teammateIsPlayer: false,
+                selfEntityId: 10,
+                teammateEntityId: 20));
+            Assert.IsTrue(ShowdownRules.ShouldUseTeammateAsCohesionAnchor(
+                selfIsPlayer: false,
+                teammateIsPlayer: false,
+                selfEntityId: 20,
+                teammateEntityId: 10));
+            Assert.IsFalse(ShowdownRules.ShouldUseTeammateAsCohesionAnchor(
+                selfIsPlayer: false,
+                teammateIsPlayer: false,
+                selfEntityId: 10,
+                teammateEntityId: 20));
+        }
+
+        [Test]
         public void DuoSpawnProtection_BlocksDamageUntilItsModifierIsRemoved()
         {
             object source = new object();
