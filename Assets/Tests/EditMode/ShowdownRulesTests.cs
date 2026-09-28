@@ -89,6 +89,43 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void DuoCohesion_BotFollowsPlayerAndAiPairChoosesOneFollower()
+        {
+            Assert.IsTrue(ShowdownRules.ShouldUseTeammateAsCohesionAnchor(
+                selfIsPlayer: false,
+                teammateIsPlayer: true,
+                selfEntityId: 10,
+                teammateEntityId: 20));
+            Assert.IsFalse(ShowdownRules.ShouldUseTeammateAsCohesionAnchor(
+                selfIsPlayer: true,
+                teammateIsPlayer: false,
+                selfEntityId: 10,
+                teammateEntityId: 20));
+            Assert.IsTrue(ShowdownRules.ShouldUseTeammateAsCohesionAnchor(
+                selfIsPlayer: false,
+                teammateIsPlayer: false,
+                selfEntityId: 20,
+                teammateEntityId: 10));
+            Assert.IsFalse(ShowdownRules.ShouldUseTeammateAsCohesionAnchor(
+                selfIsPlayer: false,
+                teammateIsPlayer: false,
+                selfEntityId: 10,
+                teammateEntityId: 20));
+        }
+
+        [Test]
+        public void DuoCohesion_PrioritizesSeparationWithoutInterruptingCloseCombat()
+        {
+            float closeIdle = ShowdownRules.CalculateDuoCohesionScore(2.5f, false);
+            float closeCombat = ShowdownRules.CalculateDuoCohesionScore(2.5f, true);
+            float separatedCombat = ShowdownRules.CalculateDuoCohesionScore(12f, true);
+
+            Assert.That(closeIdle, Is.GreaterThanOrEqualTo(110f));
+            Assert.That(closeCombat, Is.LessThan(closeIdle));
+            Assert.That(separatedCombat, Is.GreaterThanOrEqualTo(115f));
+        }
+
+        [Test]
         public void DuoSpawnProtection_BlocksDamageUntilItsModifierIsRemoved()
         {
             object source = new object();
