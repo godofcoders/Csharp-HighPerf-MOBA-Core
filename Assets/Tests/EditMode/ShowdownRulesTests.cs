@@ -118,11 +118,13 @@ namespace MOBA.Tests.EditMode
         {
             float closeIdle = ShowdownRules.CalculateDuoCohesionScore(2.5f, false);
             float closeCombat = ShowdownRules.CalculateDuoCohesionScore(2.5f, true);
-            float separatedCombat = ShowdownRules.CalculateDuoCohesionScore(12f, true);
+            float separatedCombat = ShowdownRules.CalculateDuoCohesionScore(5f, true);
+            float urgentCombat = ShowdownRules.CalculateDuoCohesionScore(12f, true);
 
             Assert.That(closeIdle, Is.GreaterThanOrEqualTo(110f));
             Assert.That(closeCombat, Is.LessThan(closeIdle));
-            Assert.That(separatedCombat, Is.GreaterThanOrEqualTo(115f));
+            Assert.That(separatedCombat, Is.GreaterThanOrEqualTo(ShowdownRules.DuoCohesionPriorityScore));
+            Assert.That(urgentCombat, Is.GreaterThanOrEqualTo(115f));
         }
 
         [Test]

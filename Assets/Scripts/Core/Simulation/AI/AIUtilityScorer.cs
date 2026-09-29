@@ -195,6 +195,39 @@ namespace MOBA.Core.Simulation.AI
                 currentTick,
                 macroState,
                 results);
+            ApplyDuoCohesionPriority(targetInfo, results);
+        }
+
+        private void ApplyDuoCohesionPriority(
+            AITargetInfo targetInfo,
+            List<AIActionScore> results)
+        {
+            SoloShowdownMode mode = SoloShowdownMode.Instance;
+            if (mode == null ||
+                !mode.TryGetDuoCohesionAnchor(
+                    _self,
+                    out BrawlerController teammate))
+            {
+                return;
+            }
+
+            float teammateDistance = Vector3.Distance(
+                _self.Position,
+                teammate.Position);
+            float cohesionScore = ShowdownRules.CalculateDuoCohesionScore(
+                teammateDistance,
+                targetInfo != null && targetInfo.HasLiveTarget);
+            string deltaDebug = string.Empty;
+            if (RaiseActionScoreFloor(
+                    results,
+                    AIActionType.Regroup,
+                    cohesionScore,
+                    allowPriorityScore: true,
+                    "duo_cohesion",
+                    ref deltaDebug))
+            {
+                AppendObjectiveIntentDebug("DuoCohesion", deltaDebug);
+            }
         }
 
         private AIGameModeMacroState ResolveMacroState()

@@ -209,6 +209,9 @@ namespace MOBA.Core.Simulation.AI
                 case AIActionType.Peel:
                     return true;
 
+                case AIActionType.Regroup:
+                    return action.Score >= ShowdownRules.DuoCohesionPriorityScore;
+
                 case AIActionType.Search:
                 case AIActionType.Objective:
                     return action.Score >= Mathf.Max(

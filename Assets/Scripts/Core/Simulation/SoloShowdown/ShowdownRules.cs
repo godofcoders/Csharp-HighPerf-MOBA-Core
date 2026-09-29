@@ -13,6 +13,7 @@ namespace MOBA.Core.Simulation
         public const float DuoTeammateSpawnSeparation = 2.5f;
         public const float DuoCohesionFollowDistance = 4.25f;
         public const float DuoCohesionUrgentDistance = 10f;
+        public const float DuoCohesionPriorityScore = 110f;
 
         public static bool IsDuoSelected =>
             SceneSelection.SelectedMode == GameModeId.SoloShowdown &&
@@ -140,7 +141,7 @@ namespace MOBA.Core.Simulation
             if (distance <= DuoCohesionFollowDistance)
                 return 30f;
 
-            return Mathf.Lerp(82f, 120f, separation);
+            return Mathf.Lerp(DuoCohesionPriorityScore, 120f, separation);
         }
 
         public static bool ShouldEndLocalDuoSession(
