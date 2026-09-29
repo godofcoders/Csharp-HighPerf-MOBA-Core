@@ -60,8 +60,14 @@ namespace MOBA.Core.Infrastructure
 
             if (hasRuntimeEntries)
             {
+                ResultLayoutProfile layout = ResolveLayoutProfile();
                 SetLegacyScoreText(string.Empty);
-                MoveResultText(_winnerTextTmp, _winnerTextLegacy, new Vector2(0f, 422f), new Vector2(960f, 76f), 50);
+                MoveResultText(
+                    _winnerTextTmp,
+                    _winnerTextLegacy,
+                    layout.WinnerPosition,
+                    layout.WinnerSize,
+                    layout.WinnerFontSize);
             }
 
             // MVP block — show only if MatchResultBoard has a name set.
@@ -93,41 +99,48 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             Transform parent = transform;
-            BuildRuntimeModelShowcase(parent, entries);
+            ResultLayoutProfile layout = ResolveLayoutProfile();
+            BuildRuntimeModelShowcase(parent, entries, layout);
 
             if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
             {
                 bool duo = SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo;
+                List<MatchResultEntry> showdownEntries = CollectShowdownEntries(entries);
                 CreateTeamPanel(
                     parent,
                     MatchResultBoard.LocalPlayerTeam,
-                    CollectShowdownEntries(entries),
-                    new Vector2(0f, -142f),
+                    showdownEntries,
+                    layout.PrimaryPanelPosition,
+                    ResolveTeamPanelSize(layout.PanelWidth, showdownEntries.Count),
                     MatchResultBoard.LocalPlayerWon,
                     duo ? "YOUR TEAM" : "YOUR STATS",
                     string.Empty);
 
-                MoveButton(_continueButton, new Vector2(-165f, -458f));
-                MoveButton(_rematchButton, new Vector2(165f, -458f));
+                MoveButton(_continueButton, new Vector2(-165f, layout.ButtonY));
+                MoveButton(_rematchButton, new Vector2(165f, layout.ButtonY));
                 return;
             }
 
+            List<MatchResultEntry> blueEntries = CollectTeamEntries(entries, TeamType.Blue);
+            List<MatchResultEntry> redEntries = CollectTeamEntries(entries, TeamType.Red);
             CreateTeamPanel(
                 parent,
                 TeamType.Blue,
-                CollectTeamEntries(entries, TeamType.Blue),
-                new Vector2(-360f, -148f),
+                blueEntries,
+                layout.PrimaryPanelPosition,
+                ResolveTeamPanelSize(layout.PanelWidth, blueEntries.Count),
                 MatchResultBoard.WinnerKnown && MatchResultBoard.Winner == TeamType.Blue);
 
             CreateTeamPanel(
                 parent,
                 TeamType.Red,
-                CollectTeamEntries(entries, TeamType.Red),
-                new Vector2(360f, -148f),
+                redEntries,
+                layout.SecondaryPanelPosition,
+                ResolveTeamPanelSize(layout.PanelWidth, redEntries.Count),
                 MatchResultBoard.WinnerKnown && MatchResultBoard.Winner == TeamType.Red);
 
-            MoveButton(_continueButton, new Vector2(-165f, -458f));
-            MoveButton(_rematchButton, new Vector2(165f, -458f));
+            MoveButton(_continueButton, new Vector2(-165f, layout.ButtonY));
+            MoveButton(_rematchButton, new Vector2(165f, layout.ButtonY));
         }
 
         private void EnsureResultsPresentation()
@@ -261,6 +274,7 @@ namespace MOBA.Core.Infrastructure
             TeamType team,
             List<MatchResultEntry> entries,
             Vector2 anchoredPosition,
+            Vector2 panelSize,
             bool isWinner,
             string titleOverride = null,
             string scoreOverride = null)
@@ -275,9 +289,7 @@ namespace MOBA.Core.Infrastructure
             panelRect.anchorMax = new Vector2(0.5f, 0.5f);
             panelRect.pivot = new Vector2(0.5f, 0.5f);
             panelRect.anchoredPosition = anchoredPosition;
-            panelRect.sizeDelta = SceneSelection.SelectedMode == GameModeId.SoloShowdown
-                ? new Vector2(760f, 318f)
-                : new Vector2(690f, 360f);
+            panelRect.sizeDelta = panelSize;
 
             VerticalLayoutGroup layout = panel.AddComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(16, 16, 14, 14);
@@ -553,7 +565,10 @@ namespace MOBA.Core.Infrastructure
             layout.flexibleWidth = 0f;
         }
 
-        private void BuildRuntimeModelShowcase(Transform parent, MatchResultEntry[] entries)
+        private void BuildRuntimeModelShowcase(
+            Transform parent,
+            MatchResultEntry[] entries,
+            ResultLayoutProfile layout)
         {
             if (entries == null || entries.Length == 0)
                 return;
@@ -563,8 +578,8 @@ namespace MOBA.Core.Infrastructure
             frameRect.anchorMin = new Vector2(0.5f, 0.5f);
             frameRect.anchorMax = new Vector2(0.5f, 0.5f);
             frameRect.pivot = new Vector2(0.5f, 0.5f);
-            frameRect.anchoredPosition = new Vector2(0f, 188f);
-            frameRect.sizeDelta = new Vector2(1120f, 220f);
+            frameRect.anchoredPosition = layout.ShowcasePosition;
+            frameRect.sizeDelta = layout.ShowcaseSize;
 
             Text star = CreateText(
                 frame.transform,
@@ -605,6 +620,48 @@ namespace MOBA.Core.Infrastructure
             CreateModelLights(_modelStageRoot.transform);
             CreateModelStageFloor(_modelStageRoot.transform);
             SpawnResultModels(entries);
+        }
+
+        private static Vector2 ResolveTeamPanelSize(float width, int entryCount)
+        {
+            int visibleRows = Mathf.Clamp(entryCount, 1, 3);
+            return new Vector2(width, 120f + visibleRows * 80f);
+        }
+
+        private static ResultLayoutProfile ResolveLayoutProfile()
+        {
+            if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
+            {
+                if (SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo)
+                {
+                    return new ResultLayoutProfile(
+                        new Vector2(0f, 184f),
+                        new Vector2(1320f, 370f),
+                        new Vector2(0f, -160f),
+                        Vector2.zero,
+                        1120f,
+                        -458f,
+                        54);
+                }
+
+                return new ResultLayoutProfile(
+                    new Vector2(0f, 184f),
+                    new Vector2(1000f, 370f),
+                    new Vector2(0f, -120f),
+                    Vector2.zero,
+                    980f,
+                    -458f,
+                    58);
+            }
+
+            return new ResultLayoutProfile(
+                new Vector2(0f, 210f),
+                new Vector2(1600f, 320f),
+                new Vector2(-400f, -200f),
+                new Vector2(400f, -200f),
+                760f,
+                -458f,
+                52);
         }
 
         private Camera CreateModelCamera(Transform parent)
@@ -975,6 +1032,38 @@ namespace MOBA.Core.Infrastructure
             return entry.Definition != null
                 ? entry.Definition.ElementType
                 : BrawlerElementType.None;
+        }
+
+        private readonly struct ResultLayoutProfile
+        {
+            public readonly Vector2 ShowcasePosition;
+            public readonly Vector2 ShowcaseSize;
+            public readonly Vector2 PrimaryPanelPosition;
+            public readonly Vector2 SecondaryPanelPosition;
+            public readonly float PanelWidth;
+            public readonly float ButtonY;
+            public readonly int WinnerFontSize;
+
+            public Vector2 WinnerPosition => new Vector2(0f, 430f);
+            public Vector2 WinnerSize => new Vector2(1200f, 82f);
+
+            public ResultLayoutProfile(
+                Vector2 showcasePosition,
+                Vector2 showcaseSize,
+                Vector2 primaryPanelPosition,
+                Vector2 secondaryPanelPosition,
+                float panelWidth,
+                float buttonY,
+                int winnerFontSize)
+            {
+                ShowcasePosition = showcasePosition;
+                ShowcaseSize = showcaseSize;
+                PrimaryPanelPosition = primaryPanelPosition;
+                SecondaryPanelPosition = secondaryPanelPosition;
+                PanelWidth = panelWidth;
+                ButtonY = buttonY;
+                WinnerFontSize = winnerFontSize;
+            }
         }
 
         private static string SanitizeName(string value)
