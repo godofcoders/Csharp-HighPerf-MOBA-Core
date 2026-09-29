@@ -604,7 +604,12 @@ namespace MOBA.Core.Infrastructure
             rawRect.offsetMin = Vector2.zero;
             rawRect.offsetMax = Vector2.zero;
 
-            _modelRenderTexture = new RenderTexture(1400, 330, 16, RenderTextureFormat.ARGB32)
+            ResultModelProfile modelProfile = ResolveModelProfile();
+            _modelRenderTexture = new RenderTexture(
+                1600,
+                modelProfile.RenderHeight,
+                16,
+                RenderTextureFormat.ARGB32)
             {
                 name = "ResultsModelRenderTexture",
                 antiAliasing = 4
@@ -615,11 +620,19 @@ namespace MOBA.Core.Infrastructure
             _modelStageRoot = new GameObject("ResultsModelStage");
             _modelStageRoot.transform.position = new Vector3(0f, -150f, 0f);
 
-            Camera camera = CreateModelCamera(_modelStageRoot.transform);
+            Camera camera = CreateModelCamera(
+                _modelStageRoot.transform,
+                modelProfile.CameraSize);
             camera.targetTexture = _modelRenderTexture;
             CreateModelLights(_modelStageRoot.transform);
-            CreateModelStageFloor(_modelStageRoot.transform);
-            SpawnResultModels(entries);
+            CreateModelStageFloor(
+                _modelStageRoot.transform,
+                modelProfile.FloorWidth);
+            SpawnResultModels(
+                entries,
+                frame.transform,
+                layout.ShowcaseSize,
+                modelProfile);
         }
 
         private static Vector2 ResolveTeamPanelSize(float width, int entryCount)
@@ -664,7 +677,49 @@ namespace MOBA.Core.Infrastructure
                 52);
         }
 
-        private Camera CreateModelCamera(Transform parent)
+        private static ResultModelProfile ResolveModelProfile()
+        {
+            if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
+            {
+                if (SceneSelection.SelectedShowdownVariant == ShowdownVariant.Duo)
+                {
+                    return new ResultModelProfile(
+                        1.85f,
+                        2.25f,
+                        4.2f,
+                        0f,
+                        360,
+                        11f,
+                        280f,
+                        58f,
+                        25);
+                }
+
+                return new ResultModelProfile(
+                    1.68f,
+                    2.62f,
+                    0f,
+                    0f,
+                    460,
+                    7f,
+                    380f,
+                    64f,
+                    30);
+            }
+
+            return new ResultModelProfile(
+                2.10f,
+                1.86f,
+                2.80f,
+                5.20f,
+                300,
+                20f,
+                190f,
+                50f,
+                18);
+        }
+
+        private Camera CreateModelCamera(Transform parent, float orthographicSize)
         {
             GameObject cameraObject = new GameObject("ResultsModelCamera");
             cameraObject.transform.SetParent(parent, false);
@@ -675,7 +730,7 @@ namespace MOBA.Core.Infrastructure
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.025f, 0.035f, 0.075f, 1f);
             camera.orthographic = true;
-            camera.orthographicSize = 2.25f;
+            camera.orthographicSize = orthographicSize;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 40f;
             return camera;
@@ -701,13 +756,13 @@ namespace MOBA.Core.Infrastructure
             fill.color = new Color(0.55f, 0.72f, 1f, 1f);
         }
 
-        private static void CreateModelStageFloor(Transform parent)
+        private static void CreateModelStageFloor(Transform parent, float width)
         {
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             floor.name = "ResultsStageFloor";
             floor.transform.SetParent(parent, false);
             floor.transform.localPosition = new Vector3(0f, -0.08f, 0.55f);
-            floor.transform.localScale = new Vector3(10.8f, 0.08f, 2.2f);
+            floor.transform.localScale = new Vector3(width, 0.08f, 2.2f);
 
             Renderer renderer = floor.GetComponent<Renderer>();
             if (renderer != null)
@@ -718,34 +773,59 @@ namespace MOBA.Core.Infrastructure
                 collider.enabled = false;
         }
 
-        private void SpawnResultModels(MatchResultEntry[] entries)
+        private void SpawnResultModels(
+            MatchResultEntry[] entries,
+            Transform showcaseFrame,
+            Vector2 showcaseSize,
+            ResultModelProfile profile)
         {
             if (SceneSelection.SelectedMode == GameModeId.SoloShowdown)
             {
                 SpawnTeamModels(
                     CollectShowdownEntries(entries),
                     MatchResultBoard.LocalPlayerTeam,
-                    0f);
+                    0f,
+                    showcaseFrame,
+                    showcaseSize,
+                    profile);
                 return;
             }
 
             List<MatchResultEntry> blue = CollectTeamEntries(entries, TeamType.Blue);
             List<MatchResultEntry> red = CollectTeamEntries(entries, TeamType.Red);
 
-            SpawnTeamModels(blue, TeamType.Blue, -2.55f);
-            SpawnTeamModels(red, TeamType.Red, 2.55f);
+            SpawnTeamModels(
+                blue,
+                TeamType.Blue,
+                -profile.TeamCenterX,
+                showcaseFrame,
+                showcaseSize,
+                profile);
+            SpawnTeamModels(
+                red,
+                TeamType.Red,
+                profile.TeamCenterX,
+                showcaseFrame,
+                showcaseSize,
+                profile);
         }
 
-        private void SpawnTeamModels(List<MatchResultEntry> entries, TeamType team, float teamCenterX)
+        private void SpawnTeamModels(
+            List<MatchResultEntry> entries,
+            TeamType team,
+            float teamCenterX,
+            Transform showcaseFrame,
+            Vector2 showcaseSize,
+            ResultModelProfile profile)
         {
             if (entries == null || entries.Count == 0 || _modelStageRoot == null)
                 return;
 
             bool winner = MatchResultBoard.WinnerKnown && MatchResultBoard.Winner == team;
             int count = Mathf.Min(entries.Count, 3);
-            float spacing = count > 2 ? 1.72f : 1.90f;
+            float spacing = profile.Spacing;
             float firstX = teamCenterX - (count - 1) * spacing * 0.5f;
-            float modelHeight = winner ? 1.16f : 1.06f;
+            float modelHeight = profile.ModelHeight * (winner ? 1f : 0.94f);
 
             for (int i = 0; i < count; i++)
             {
@@ -766,7 +846,72 @@ namespace MOBA.Core.Infrastructure
                     Celebrating = winner,
                     Phase = i * 0.7f + (team == TeamType.Red ? 0.25f : 0f)
                 });
+
+                CreateShowcaseNameplate(
+                    showcaseFrame,
+                    showcaseSize,
+                    profile,
+                    entry,
+                    team,
+                    firstX + i * spacing);
             }
+        }
+
+        private static void CreateShowcaseNameplate(
+            Transform parent,
+            Vector2 showcaseSize,
+            ResultModelProfile profile,
+            MatchResultEntry entry,
+            TeamType team,
+            float worldX)
+        {
+            float normalizedX = 0.5f + worldX / (profile.HorizontalHalfSize * 2f);
+            float pixelX = (normalizedX - 0.5f) * showcaseSize.x * 0.96f;
+            GameObject plate = CreatePanel(
+                parent,
+                "ModelName_" + SanitizeName(entry.DisplayName),
+                ResolveNameplateColor(entry, team));
+            RectTransform plateRect = plate.GetComponent<RectTransform>();
+            plateRect.anchorMin = new Vector2(0.5f, 0.5f);
+            plateRect.anchorMax = new Vector2(0.5f, 0.5f);
+            plateRect.pivot = new Vector2(0.5f, 0.5f);
+            plateRect.anchoredPosition = new Vector2(pixelX, -showcaseSize.y * 0.38f);
+            plateRect.sizeDelta = new Vector2(profile.NameplateWidth, profile.NameplateHeight);
+
+            string displayName = string.IsNullOrWhiteSpace(entry.DisplayName)
+                ? "UNKNOWN"
+                : entry.DisplayName.ToUpperInvariant();
+            if (entry.IsLocalPlayer)
+                displayName += " (YOU)";
+
+            Text label = CreateText(
+                plate.transform,
+                "Name",
+                displayName,
+                profile.NameFontSize,
+                TextAnchor.MiddleCenter,
+                Color.white,
+                FontStyle.Bold);
+            label.resizeTextForBestFit = true;
+            label.resizeTextMinSize = 12;
+            label.resizeTextMaxSize = profile.NameFontSize;
+            RectTransform labelRect = label.GetComponent<RectTransform>();
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(8f, 2f);
+            labelRect.offsetMax = new Vector2(-8f, -2f);
+        }
+
+        private static Color ResolveNameplateColor(
+            MatchResultEntry entry,
+            TeamType team)
+        {
+            if (entry.IsLocalPlayer)
+                return new Color(0.08f, 0.55f, 0.28f, 0.96f);
+
+            Color color = ResolvePanelColor(team);
+            color.a = 0.94f;
+            return color;
         }
 
         private static GameObject CreateResultModelObject(MatchResultEntry entry, TeamType team)
@@ -1063,6 +1208,46 @@ namespace MOBA.Core.Infrastructure
                 PanelWidth = panelWidth;
                 ButtonY = buttonY;
                 WinnerFontSize = winnerFontSize;
+            }
+        }
+
+        private readonly struct ResultModelProfile
+        {
+            private const float RenderWidth = 1600f;
+
+            public readonly float CameraSize;
+            public readonly float ModelHeight;
+            public readonly float Spacing;
+            public readonly float TeamCenterX;
+            public readonly int RenderHeight;
+            public readonly float FloorWidth;
+            public readonly float NameplateWidth;
+            public readonly float NameplateHeight;
+            public readonly int NameFontSize;
+
+            public float HorizontalHalfSize =>
+                CameraSize * (RenderWidth / Mathf.Max(1f, RenderHeight));
+
+            public ResultModelProfile(
+                float cameraSize,
+                float modelHeight,
+                float spacing,
+                float teamCenterX,
+                int renderHeight,
+                float floorWidth,
+                float nameplateWidth,
+                float nameplateHeight,
+                int nameFontSize)
+            {
+                CameraSize = cameraSize;
+                ModelHeight = modelHeight;
+                Spacing = spacing;
+                TeamCenterX = teamCenterX;
+                RenderHeight = renderHeight;
+                FloorWidth = floorWidth;
+                NameplateWidth = nameplateWidth;
+                NameplateHeight = nameplateHeight;
+                NameFontSize = nameFontSize;
             }
         }
 
