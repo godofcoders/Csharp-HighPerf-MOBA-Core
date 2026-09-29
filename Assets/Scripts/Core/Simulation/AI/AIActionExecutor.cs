@@ -2752,21 +2752,22 @@ namespace MOBA.Core.Simulation.AI
                     superRange);
             }
 
-            bool hasThreat =
-                targetInfo != null &&
-                targetInfo.HasLiveTarget &&
-                targetInfo.Target != null;
-            Vector3 threatPosition = hasThreat
-                ? targetInfo.Target.Position
-                : Vector3.zero;
+            Vector3 teammateDelta = teammate.Position - _brawler.Position;
+            teammateDelta.y = 0f;
+            float followDistance = ShowdownRules.DuoCohesionFollowDistance;
+            if (teammateDelta.sqrMagnitude <= followDistance * followDistance)
+            {
+                _navAgent.Stop();
+                return true;
+            }
 
-            RequestMapAwareDestination(
+            // The teammate is a moving anchor, not a tactical cover point. Routing
+            // it through the generic map resolver can alternate between nearby cover
+            // candidates and make the follower visibly pace back and forth.
+            _navAgent.RequestDestination(
                 teammate.Position,
-                ShowdownRules.DuoCohesionFollowDistance,
-                AIMapRouteIntent.Regroup,
-                hasThreat,
-                threatPosition,
-                GetTacticalPreferredRange(GetAbilityIdealRange()));
+                followDistance,
+                highPriority: true);
             return true;
         }
 
