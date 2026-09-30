@@ -113,8 +113,7 @@ namespace MOBA.Core.Infrastructure
                     duo ? "YOUR TEAM" : "YOUR STATS",
                     string.Empty);
 
-                MoveButton(_continueButton, new Vector2(-165f, layout.ButtonY));
-                MoveButton(_rematchButton, new Vector2(165f, layout.ButtonY));
+                PositionResultActions(layout.ButtonY);
                 return;
             }
 
@@ -136,15 +135,14 @@ namespace MOBA.Core.Infrastructure
                 ResolveTeamPanelSize(layout.PanelWidth, redEntries.Count),
                 MatchResultBoard.WinnerKnown && MatchResultBoard.Winner == TeamType.Red);
 
-            MoveButton(_continueButton, new Vector2(-165f, layout.ButtonY));
-            MoveButton(_rematchButton, new Vector2(165f, layout.ButtonY));
+            PositionResultActions(layout.ButtonY);
         }
 
         private void EnsureResultsPresentation()
         {
             EnsureResultsBackground();
             StyleResultButton(_continueButton, "CONTINUE", MenuUITheme.SecondaryButton);
-            StyleResultButton(_rematchButton, "REMATCH", MenuUITheme.PrimaryButton);
+            StyleResultButton(_rematchButton, "PLAY AGAIN", MenuUITheme.PrimaryButton);
         }
 
         private void EnsureResultsBackground()
@@ -530,7 +528,7 @@ namespace MOBA.Core.Infrastructure
                         new Vector2(0f, -160f),
                         Vector2.zero,
                         1120f,
-                        -458f,
+                        32f,
                         54);
                 }
 
@@ -540,7 +538,7 @@ namespace MOBA.Core.Infrastructure
                     new Vector2(0f, -120f),
                     Vector2.zero,
                     980f,
-                    -458f,
+                    32f,
                     58);
             }
 
@@ -550,7 +548,7 @@ namespace MOBA.Core.Infrastructure
                 new Vector2(-400f, -200f),
                 new Vector2(400f, -200f),
                 760f,
-                -458f,
+                32f,
                 52);
         }
 
@@ -955,9 +953,20 @@ namespace MOBA.Core.Infrastructure
             RectTransform rect = button.GetComponent<RectTransform>();
             if (rect != null)
             {
+                rect.anchorMin = new Vector2(0.5f, 0f);
+                rect.anchorMax = new Vector2(0.5f, 0f);
+                rect.pivot = new Vector2(0.5f, 0f);
                 rect.anchoredPosition = anchoredPosition;
-                rect.sizeDelta = new Vector2(270f, 74f);
+                rect.sizeDelta = new Vector2(300f, 76f);
             }
+
+            button.transform.SetAsLastSibling();
+        }
+
+        private void PositionResultActions(float bottomInset)
+        {
+            MoveButton(_rematchButton, new Vector2(-172f, bottomInset));
+            MoveButton(_continueButton, new Vector2(172f, bottomInset));
         }
 
         private static void StyleResultButton(Button button, string label, Color color)
