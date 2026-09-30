@@ -685,7 +685,7 @@ namespace MOBA.Core.Infrastructure
                 {
                     return new ResultModelProfile(
                         1.85f,
-                        2.25f,
+                        2.48f,
                         4.2f,
                         0f,
                         360,
@@ -697,7 +697,7 @@ namespace MOBA.Core.Infrastructure
 
                 return new ResultModelProfile(
                     1.68f,
-                    2.62f,
+                    2.88f,
                     0f,
                     0f,
                     460,
@@ -709,7 +709,7 @@ namespace MOBA.Core.Infrastructure
 
             return new ResultModelProfile(
                 2.10f,
-                1.86f,
+                2.05f,
                 2.80f,
                 5.20f,
                 300,
@@ -740,20 +740,31 @@ namespace MOBA.Core.Infrastructure
         {
             GameObject keyObject = new GameObject("ResultsKeyLight");
             keyObject.transform.SetParent(parent, false);
-            keyObject.transform.localRotation = Quaternion.Euler(42f, -30f, 0f);
+            keyObject.transform.localRotation = Quaternion.Euler(24f, -24f, 0f);
             Light key = keyObject.AddComponent<Light>();
             key.type = LightType.Directional;
-            key.intensity = 1.25f;
-            key.color = new Color(1f, 0.92f, 0.80f, 1f);
+            key.intensity = 1.05f;
+            key.color = new Color(1f, 0.94f, 0.86f, 1f);
+            key.shadows = LightShadows.None;
 
             GameObject fillObject = new GameObject("ResultsFillLight");
             fillObject.transform.SetParent(parent, false);
-            fillObject.transform.localPosition = new Vector3(0f, 2.2f, -3f);
+            fillObject.transform.localPosition = new Vector3(-3.5f, 2.8f, -4.2f);
             Light fill = fillObject.AddComponent<Light>();
             fill.type = LightType.Point;
-            fill.range = 12f;
-            fill.intensity = 1.5f;
-            fill.color = new Color(0.55f, 0.72f, 1f, 1f);
+            fill.range = 18f;
+            fill.intensity = 2.2f;
+            fill.color = new Color(0.68f, 0.80f, 1f, 1f);
+            fill.shadows = LightShadows.None;
+
+            GameObject rimObject = new GameObject("ResultsRimLight");
+            rimObject.transform.SetParent(parent, false);
+            rimObject.transform.localRotation = Quaternion.Euler(28f, 156f, 0f);
+            Light rim = rimObject.AddComponent<Light>();
+            rim.type = LightType.Directional;
+            rim.intensity = 0.72f;
+            rim.color = new Color(0.42f, 0.62f, 1f, 1f);
+            rim.shadows = LightShadows.None;
         }
 
         private static void CreateModelStageFloor(Transform parent, float width)
