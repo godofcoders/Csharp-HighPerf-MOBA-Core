@@ -159,7 +159,7 @@ namespace MOBA.Core.Simulation
             }
 
             _visual = visual;
-            _visual.localScale = new Vector3(0.45f, 0.45f, 0.45f);
+            _visual.localScale = new Vector3(0.36f, 0.36f, 0.36f);
 
             _renderers = GetComponentsInChildren<Renderer>(true);
             ApplyVisualColors();
