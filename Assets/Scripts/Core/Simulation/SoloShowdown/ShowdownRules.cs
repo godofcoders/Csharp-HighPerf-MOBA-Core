@@ -13,6 +13,7 @@ namespace MOBA.Core.Simulation
         public const float DuoTeammateSpawnSeparation = 2.5f;
         public const float DuoCohesionFollowDistance = 4.25f;
         public const float DuoCohesionRegroupDistance = 6.25f;
+        public const float DuoCohesionHardLeashDistance = 9f;
         public const float DuoCohesionUrgentDistance = 12f;
         public const float DuoCohesionPriorityScore = 110f;
 
@@ -160,6 +161,26 @@ namespace MOBA.Core.Simulation
                 DuoCohesionPriorityScore,
                 120f,
                 urgentSeparation);
+        }
+
+        public static bool ShouldForceDuoRegroup(float teammateDistance)
+        {
+            return teammateDistance >= DuoCohesionHardLeashDistance;
+        }
+
+        public static Vector3 ClampDuoDestination(
+            Vector3 teammatePosition,
+            Vector3 destination)
+        {
+            Vector3 offset = destination - teammatePosition;
+            offset.y = 0f;
+            float maximumDistance = DuoCohesionHardLeashDistance;
+            if (offset.sqrMagnitude <= maximumDistance * maximumDistance)
+                return destination;
+
+            Vector3 clamped = teammatePosition + offset.normalized * maximumDistance;
+            clamped.y = destination.y;
+            return clamped;
         }
 
         public static bool ShouldEndLocalDuoSession(

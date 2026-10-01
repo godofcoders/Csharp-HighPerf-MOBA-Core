@@ -134,6 +134,39 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void DuoCohesion_OnlyForcesRegroupAtHardLeash()
+        {
+            Assert.IsFalse(ShowdownRules.ShouldForceDuoRegroup(
+                ShowdownRules.DuoCohesionHardLeashDistance - 0.01f));
+            Assert.IsTrue(ShowdownRules.ShouldForceDuoRegroup(
+                ShowdownRules.DuoCohesionHardLeashDistance));
+            Assert.IsTrue(ShowdownRules.ShouldForceDuoRegroup(30f));
+        }
+
+        [Test]
+        public void DuoCohesion_ClampsRoamingDestinationAroundTeammate()
+        {
+            Vector3 teammate = new Vector3(2f, 0f, -3f);
+            Vector3 nearby = new Vector3(5f, 1f, -1f);
+            Vector3 distant = new Vector3(30f, 2f, -3f);
+
+            Assert.AreEqual(
+                nearby,
+                ShowdownRules.ClampDuoDestination(teammate, nearby));
+
+            Vector3 clamped = ShowdownRules.ClampDuoDestination(
+                teammate,
+                distant);
+            Assert.AreEqual(distant.y, clamped.y);
+            Assert.AreEqual(
+                ShowdownRules.DuoCohesionHardLeashDistance,
+                Vector2.Distance(
+                    new Vector2(teammate.x, teammate.z),
+                    new Vector2(clamped.x, clamped.z)),
+                0.001f);
+        }
+
+        [Test]
         public void DuoSpawnProtection_BlocksDamageUntilItsModifierIsRemoved()
         {
             object source = new object();

@@ -151,6 +151,15 @@ namespace MOBA.Core.Simulation.AI
         {
             _currentExecuteTick = currentTick;
 
+            if (TryExecuteDuoCohesionOverride(
+                    targetInfo,
+                    currentTick,
+                    attackRange,
+                    superRange))
+            {
+                return;
+            }
+
             if (TryExecuteBrawlBallIntent(
                     actionType,
                     targetInfo,
@@ -296,6 +305,7 @@ namespace MOBA.Core.Simulation.AI
             float preferredThreatDistance = 0f)
         {
             ResetTacticalStop("destination_requested");
+            destination = ClampDuoRoamingDestination(destination, routeIntent);
 
             Vector3 resolvedDestination = ResolveMapAwareDestination(
                 destination,
@@ -308,6 +318,43 @@ namespace MOBA.Core.Simulation.AI
                 resolvedDestination,
                 arrivalDistance,
                 IsCriticalRoute(routeIntent));
+        }
+
+        private Vector3 ClampDuoRoamingDestination(
+            Vector3 destination,
+            AIMapRouteIntent routeIntent)
+        {
+            if (!ShouldConstrainDuoRoute(routeIntent))
+                return destination;
+
+            SoloShowdownMode mode = SoloShowdownMode.Instance;
+            if (mode == null ||
+                !mode.TryGetDuoCohesionAnchor(
+                    _brawler,
+                    out BrawlerController teammate))
+            {
+                return destination;
+            }
+
+            return ShowdownRules.ClampDuoDestination(
+                teammate.Position,
+                destination);
+        }
+
+        private static bool ShouldConstrainDuoRoute(AIMapRouteIntent routeIntent)
+        {
+            switch (routeIntent)
+            {
+                case AIMapRouteIntent.CombatAdvance:
+                case AIMapRouteIntent.CombatReposition:
+                case AIMapRouteIntent.Objective:
+                case AIMapRouteIntent.Search:
+                case AIMapRouteIntent.Wander:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
 
         private Vector3 ResolveMapAwareDestination(
@@ -2722,6 +2769,49 @@ namespace MOBA.Core.Simulation.AI
             }
 
             RunFallbackWander(currentTick);
+        }
+
+        private bool TryExecuteDuoCohesionOverride(
+            AITargetInfo targetInfo,
+            uint currentTick,
+            float attackRange,
+            float superRange)
+        {
+            SoloShowdownMode mode = SoloShowdownMode.Instance;
+            if (mode == null ||
+                !mode.TryGetDuoCohesionAnchor(
+                    _brawler,
+                    out BrawlerController teammate))
+            {
+                return false;
+            }
+
+            Vector3 teammateDelta = teammate.Position - _brawler.Position;
+            teammateDelta.y = 0f;
+            if (!ShowdownRules.ShouldForceDuoRegroup(teammateDelta.magnitude))
+                return false;
+
+            if (targetInfo != null && targetInfo.HasLiveTarget)
+            {
+                _abilityDecider.TryUseMainAttack(
+                    targetInfo.Target,
+                    currentTick,
+                    attackRange);
+                _abilityDecider.TryUseGadget(targetInfo.Target, currentTick);
+                _superDecider.TryUseSuper(
+                    targetInfo.Target,
+                    currentTick,
+                    superRange);
+            }
+
+            _lastTacticalMovementIntent = AITacticalMovementIntent.Regroup;
+            _hasMapRouteCache = false;
+            ResetTacticalStop("duo_hard_leash");
+            _navAgent.RequestDestination(
+                teammate.Position,
+                ShowdownRules.DuoCohesionFollowDistance,
+                highPriority: true);
+            return true;
         }
 
         private bool TryRunDuoTeammateRegroup(
