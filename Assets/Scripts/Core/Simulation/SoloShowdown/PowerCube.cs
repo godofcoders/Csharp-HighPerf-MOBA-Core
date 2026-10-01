@@ -19,8 +19,8 @@ namespace MOBA.Core.Simulation
         [SerializeField] private bool _useRuntimeVisual = true;
         [SerializeField] private Color _cubeColor = new Color(0.48f, 1f, 0.16f, 1f);
         [SerializeField] private Color _coreColor = new Color(0.88f, 1f, 0.32f, 1f);
-        [SerializeField, Min(0f)] private float _restHeight = 0.55f;
-        [SerializeField, Min(0f)] private float _bobHeight = 0.08f;
+        [SerializeField, Min(0f)] private float _restHeight = 0.38f;
+        [SerializeField, Min(0f)] private float _bobHeight = 0.055f;
         [SerializeField, Min(0.1f)] private float _bobSpeed = 3.2f;
 
         private Transform _visual;
@@ -159,7 +159,7 @@ namespace MOBA.Core.Simulation
             }
 
             _visual = visual;
-            _visual.localScale = new Vector3(0.7f, 0.7f, 0.7f);
+            _visual.localScale = new Vector3(0.45f, 0.45f, 0.45f);
 
             _renderers = GetComponentsInChildren<Renderer>(true);
             ApplyVisualColors();
