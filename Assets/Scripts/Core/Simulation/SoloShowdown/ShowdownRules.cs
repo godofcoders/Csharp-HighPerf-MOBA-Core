@@ -12,7 +12,8 @@ namespace MOBA.Core.Simulation
         public const float DuoSpawnImmunitySeconds = 2f;
         public const float DuoTeammateSpawnSeparation = 2.5f;
         public const float DuoCohesionFollowDistance = 4.25f;
-        public const float DuoCohesionUrgentDistance = 10f;
+        public const float DuoCohesionRegroupDistance = 6.25f;
+        public const float DuoCohesionUrgentDistance = 12f;
         public const float DuoCohesionPriorityScore = 110f;
 
         public static bool IsDuoSelected =>
@@ -130,18 +131,35 @@ namespace MOBA.Core.Simulation
             bool hasLiveTarget)
         {
             float distance = Mathf.Max(0f, teammateDistance);
-            float separation = Mathf.InverseLerp(
-                DuoCohesionFollowDistance,
-                DuoCohesionUrgentDistance,
-                distance);
+            if (distance <= DuoCohesionFollowDistance)
+                return 0f;
 
             if (!hasLiveTarget)
-                return Mathf.Lerp(115f, 120f, separation);
+            {
+                float idleSeparation = Mathf.InverseLerp(
+                    DuoCohesionFollowDistance,
+                    DuoCohesionUrgentDistance,
+                    distance);
+                return Mathf.Lerp(76f, 120f, idleSeparation);
+            }
 
-            if (distance <= DuoCohesionFollowDistance)
-                return 30f;
+            if (distance < DuoCohesionRegroupDistance)
+            {
+                float combatSeparation = Mathf.InverseLerp(
+                    DuoCohesionFollowDistance,
+                    DuoCohesionRegroupDistance,
+                    distance);
+                return Mathf.Lerp(24f, 84f, combatSeparation);
+            }
 
-            return Mathf.Lerp(DuoCohesionPriorityScore, 120f, separation);
+            float urgentSeparation = Mathf.InverseLerp(
+                DuoCohesionRegroupDistance,
+                DuoCohesionUrgentDistance,
+                distance);
+            return Mathf.Lerp(
+                DuoCohesionPriorityScore,
+                120f,
+                urgentSeparation);
         }
 
         public static bool ShouldEndLocalDuoSession(

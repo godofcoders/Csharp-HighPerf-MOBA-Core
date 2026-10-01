@@ -2757,7 +2757,7 @@ namespace MOBA.Core.Simulation.AI
             float followDistance = ShowdownRules.DuoCohesionFollowDistance;
             if (teammateDelta.sqrMagnitude <= followDistance * followDistance)
             {
-                _navAgent.Stop();
+                RunFallbackWander(currentTick);
                 return true;
             }
 

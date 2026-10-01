@@ -114,17 +114,23 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
-        public void DuoCohesion_PrioritizesSeparationWithoutInterruptingCloseCombat()
+        public void DuoCohesion_AllowsIndependentMovementInsideComfortRadius()
         {
             float closeIdle = ShowdownRules.CalculateDuoCohesionScore(2.5f, false);
             float closeCombat = ShowdownRules.CalculateDuoCohesionScore(2.5f, true);
-            float separatedCombat = ShowdownRules.CalculateDuoCohesionScore(5f, true);
+            float roamingIdle = ShowdownRules.CalculateDuoCohesionScore(5f, false);
+            float roamingCombat = ShowdownRules.CalculateDuoCohesionScore(5f, true);
+            float separatedCombat = ShowdownRules.CalculateDuoCohesionScore(7f, true);
             float urgentCombat = ShowdownRules.CalculateDuoCohesionScore(12f, true);
 
-            Assert.That(closeIdle, Is.GreaterThanOrEqualTo(110f));
-            Assert.That(closeCombat, Is.LessThan(closeIdle));
+            Assert.AreEqual(0f, closeIdle);
+            Assert.AreEqual(0f, closeCombat);
+            Assert.That(roamingIdle, Is.GreaterThan(0f));
+            Assert.That(roamingIdle, Is.LessThan(ShowdownRules.DuoCohesionPriorityScore));
+            Assert.That(roamingCombat, Is.GreaterThan(0f));
+            Assert.That(roamingCombat, Is.LessThan(ShowdownRules.DuoCohesionPriorityScore));
             Assert.That(separatedCombat, Is.GreaterThanOrEqualTo(ShowdownRules.DuoCohesionPriorityScore));
-            Assert.That(urgentCombat, Is.GreaterThanOrEqualTo(115f));
+            Assert.AreEqual(120f, urgentCombat);
         }
 
         [Test]
