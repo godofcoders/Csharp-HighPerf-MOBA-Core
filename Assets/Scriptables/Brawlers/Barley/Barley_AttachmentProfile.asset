@@ -19,6 +19,7 @@ MonoBehaviour:
     Socket: 6
     Prefab: {fileID: 919132149155446097, guid: 94fae89d351e4d69b3ebc6c4e16c6486, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Barley/blaster-d.obj
+    MaterialTexture: {fileID: 2800000, guid: b9e69877ace44d53ba992460245f8ad3, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}

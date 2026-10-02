@@ -19,6 +19,7 @@ MonoBehaviour:
     Socket: 6
     Prefab: {fileID: 919132149155446097, guid: af50090a836d497585637832f261ab3a, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Leon/blaster-c.obj
+    MaterialTexture: {fileID: 2800000, guid: 92ccddc925894412ae737cfeb72f4976, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}

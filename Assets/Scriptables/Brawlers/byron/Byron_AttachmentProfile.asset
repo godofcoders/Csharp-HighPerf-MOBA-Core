@@ -19,6 +19,7 @@ MonoBehaviour:
     Socket: 6
     Prefab: {fileID: 919132149155446097, guid: 6a9963de58a84aa98298ca6ce2a64d0f, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Byron/blaster-b.obj
+    MaterialTexture: {fileID: 2800000, guid: 8a17c7794a064e22b3ae437b4a6399f7, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}

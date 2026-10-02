@@ -19,6 +19,7 @@ MonoBehaviour:
     Socket: 6
     Prefab: {fileID: 100000, guid: 8ec23ee06bdf4c1c92e846f46dcbdd1a, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Colt/Colt_BlasterA.obj
+    MaterialTexture: {fileID: 2800000, guid: 88ef6de0303a47beb2755c8fd6c53ec1, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: 0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
@@ -36,6 +37,7 @@ MonoBehaviour:
     Socket: 7
     Prefab: {fileID: 100000, guid: 8ec23ee06bdf4c1c92e846f46dcbdd1a, type: 3}
     PrefabAssetPath: Assets/_Game/Art/Weapons/BlasterKit2/Colt/Colt_BlasterA.obj
+    MaterialTexture: {fileID: 2800000, guid: 88ef6de0303a47beb2755c8fd6c53ec1, type: 3}
     GeneratedAttachment: 0
     LocalPositionOffset: {x: -0.006, y: 0, z: 0.012}
     LocalEulerOffset: {x: 0, y: 0, z: 0}
