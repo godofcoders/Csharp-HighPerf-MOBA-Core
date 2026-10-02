@@ -16,6 +16,7 @@ namespace MOBA.Core.Infrastructure
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int MetallicId = Shader.PropertyToID("_Metallic");
         private static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness");
+        private static readonly int GlossinessId = Shader.PropertyToID("_Glossiness");
 
         public static bool RequiresReplacement(
             string shaderName,
@@ -130,7 +131,7 @@ namespace MOBA.Core.Infrastructure
             CopyTexture(source, material);
             CopyColor(source, material);
             CopyFloat(source, material, MetallicId);
-            CopyFloat(source, material, SmoothnessId);
+            CopySmoothness(source, material);
             return material;
         }
 
@@ -186,6 +187,17 @@ namespace MOBA.Core.Infrastructure
         {
             if (source.HasProperty(propertyId) && destination.HasProperty(propertyId))
                 destination.SetFloat(propertyId, source.GetFloat(propertyId));
+        }
+
+        private static void CopySmoothness(Material source, Material destination)
+        {
+            if (!destination.HasProperty(SmoothnessId))
+                return;
+
+            if (source.HasProperty(SmoothnessId))
+                destination.SetFloat(SmoothnessId, source.GetFloat(SmoothnessId));
+            else if (source.HasProperty(GlossinessId))
+                destination.SetFloat(SmoothnessId, source.GetFloat(GlossinessId));
         }
 
         private static void RegisterGeneratedMaterial(
