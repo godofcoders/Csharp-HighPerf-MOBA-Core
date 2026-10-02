@@ -1,6 +1,7 @@
 using MOBA.Core.Infrastructure;
 using NUnit.Framework;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -107,6 +108,66 @@ namespace MOBA.Tests.EditMode
 
                 Object.DestroyImmediate(source);
                 Object.DestroyImmediate(texture);
+                Object.DestroyImmediate(weapon);
+            }
+        }
+
+        [TestCase("Assets/_Game/Art/Weapons/BlasterKit2/Barley/blaster-d.obj", "Assets/_Game/Art/Weapons/BlasterKit2/Barley/Textures/colormap.png")]
+        [TestCase("Assets/_Game/Art/Weapons/BlasterKit2/Bo/blaster-e.obj", "Assets/_Game/Art/Weapons/BlasterKit2/Bo/Textures/colormap.png")]
+        [TestCase("Assets/_Game/Art/Weapons/BlasterKit2/Byron/blaster-b.obj", "Assets/_Game/Art/Weapons/BlasterKit2/Byron/Textures/colormap.png")]
+        [TestCase("Assets/_Game/Art/Weapons/BlasterKit2/Colt/Colt_BlasterA.obj", "Assets/_Game/Art/Weapons/BlasterKit2/Colt/Textures/colormap.png")]
+        [TestCase("Assets/_Game/Art/Weapons/BlasterKit2/Jessie/blaster-f.obj", "Assets/_Game/Art/Weapons/BlasterKit2/Jessie/Textures/colormap.png")]
+        [TestCase("Assets/_Game/Art/Weapons/BlasterKit2/Leon/blaster-c.obj", "Assets/_Game/Art/Weapons/BlasterKit2/Leon/Textures/colormap.png")]
+        [TestCase("Assets/_Game/Art/Weapons/BlasterKit2/Piper/blaster-g.obj", "Assets/_Game/Art/Weapons/BlasterKit2/Piper/Textures/colormap.png")]
+        public void ImportedWeapon_ResolvesToSupportedTexturedMaterial(
+            string assetPath,
+            string texturePath)
+        {
+            GameObject weaponAsset = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+            Assert.IsNotNull(weaponAsset, assetPath);
+            Texture2D fallbackTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+            Assert.IsNotNull(fallbackTexture, texturePath);
+
+            GameObject weapon = Object.Instantiate(weaponAsset);
+            List<Material> generated = new List<Material>();
+            try
+            {
+                BrawlerAttachmentMaterialUtility.RepairUnsupportedMaterials(
+                    weapon,
+                    generated,
+                    fallbackTexture);
+
+                Renderer[] renderers = weapon.GetComponentsInChildren<Renderer>(true);
+                Assert.That(renderers.Length, Is.GreaterThan(0), assetPath);
+                for (int rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex++)
+                {
+                    Material[] materials = renderers[rendererIndex].sharedMaterials;
+                    Assert.That(materials.Length, Is.GreaterThan(0), assetPath);
+                    for (int materialIndex = 0; materialIndex < materials.Length; materialIndex++)
+                    {
+                        Material material = materials[materialIndex];
+                        Assert.IsNotNull(material, assetPath);
+                        Assert.IsFalse(
+                            BrawlerAttachmentMaterialUtility.RequiresReplacement(
+                                material.shader != null ? material.shader.name : null,
+                                material.shader != null && material.shader.isSupported,
+                                hasScriptableRenderPipeline: true),
+                            assetPath);
+
+                        Texture texture = material.HasProperty("_BaseMap")
+                            ? material.GetTexture("_BaseMap")
+                            : material.HasProperty("_MainTex")
+                                ? material.GetTexture("_MainTex")
+                                : null;
+                        Assert.IsNotNull(texture, assetPath);
+                    }
+                }
+            }
+            finally
+            {
+                for (int i = 0; i < generated.Count; i++)
+                    Object.DestroyImmediate(generated[i]);
+
                 Object.DestroyImmediate(weapon);
             }
         }
