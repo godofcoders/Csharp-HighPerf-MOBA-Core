@@ -14,6 +14,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Transform _runtimeAttachmentRoot;
 
         private readonly List<GameObject> _spawnedAttachments = new List<GameObject>(4);
+        private readonly List<Material> _generatedAttachmentMaterials = new List<Material>(4);
 
         public static BrawlerAttachmentInstaller Ensure(GameObject visualRoot)
         {
@@ -38,6 +39,7 @@ namespace MOBA.Core.Infrastructure
         public void RebuildAttachments()
         {
             ClearSpawnedAttachments();
+            ClearGeneratedAttachmentMaterials();
 
             if (_definition == null ||
                 _definition.AttachmentProfile == null ||
@@ -97,6 +99,9 @@ namespace MOBA.Core.Infrastructure
                     AlignAttachmentGripPoint(binding, socket, attachment.transform);
 
                 ConfigureLayer(attachment, gameObject.layer);
+                BrawlerAttachmentMaterialUtility.RepairUnsupportedMaterials(
+                    attachment,
+                    _generatedAttachmentMaterials);
                 StripGameplayComponents(attachment);
                 InstallRuntimeGripTargets(binding, attachment.transform);
 
@@ -116,6 +121,11 @@ namespace MOBA.Core.Infrastructure
 
             ApplyPresentationAnchorOverrides(primaryFireOverride, secondaryFireOverride, castOverride);
             RefreshModelGripTargets();
+        }
+
+        private void OnDestroy()
+        {
+            ClearGeneratedAttachmentMaterials();
         }
 
         private void InstallAttachmentFollower(
@@ -376,6 +386,23 @@ namespace MOBA.Core.Infrastructure
             }
 
             _spawnedAttachments.Clear();
+        }
+
+        private void ClearGeneratedAttachmentMaterials()
+        {
+            for (int i = _generatedAttachmentMaterials.Count - 1; i >= 0; i--)
+            {
+                Material material = _generatedAttachmentMaterials[i];
+                if (material == null)
+                    continue;
+
+                if (Application.isPlaying)
+                    Destroy(material);
+                else
+                    DestroyImmediate(material);
+            }
+
+            _generatedAttachmentMaterials.Clear();
         }
 
         private void RemoveExisting(string id, Transform socket)
