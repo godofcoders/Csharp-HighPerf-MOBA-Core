@@ -39,7 +39,8 @@ namespace MOBA.Core.Infrastructure
 
         public static int RepairUnsupportedMaterials(
             GameObject attachmentRoot,
-            ICollection<Material> generatedMaterials)
+            ICollection<Material> generatedMaterials,
+            Texture fallbackTexture = null)
         {
             if (attachmentRoot == null)
                 return 0;
@@ -79,14 +80,14 @@ namespace MOBA.Core.Infrastructure
                         replacement = nullReplacement;
                         if (replacement == null)
                         {
-                            replacement = CreateCompatibleMaterial(null);
+                            replacement = CreateCompatibleMaterial(null, fallbackTexture);
                             nullReplacement = replacement;
                             RegisterGeneratedMaterial(replacement, generatedMaterials);
                         }
                     }
                     else if (!replacements.TryGetValue(source, out replacement))
                     {
-                        replacement = CreateCompatibleMaterial(source);
+                        replacement = CreateCompatibleMaterial(source, fallbackTexture);
                         replacements[source] = replacement;
                         RegisterGeneratedMaterial(replacement, generatedMaterials);
                     }
@@ -106,7 +107,9 @@ namespace MOBA.Core.Infrastructure
             return repairedSlots;
         }
 
-        public static Material CreateCompatibleMaterial(Material source)
+        public static Material CreateCompatibleMaterial(
+            Material source,
+            Texture fallbackTexture = null)
         {
             Shader shader =
                 Shader.Find(UrpLitShaderName) ??
@@ -126,16 +129,22 @@ namespace MOBA.Core.Infrastructure
             };
 
             if (source == null)
+            {
+                ApplyFallbackTexture(material, fallbackTexture);
                 return material;
+            }
 
-            CopyTexture(source, material);
+            CopyTexture(source, material, fallbackTexture);
             CopyColor(source, material);
             CopyFloat(source, material, MetallicId);
             CopySmoothness(source, material);
             return material;
         }
 
-        private static void CopyTexture(Material source, Material destination)
+        private static void CopyTexture(
+            Material source,
+            Material destination,
+            Texture fallbackTexture)
         {
             const string baseMap = "_BaseMap";
             const string mainTexture = "_MainTex";
@@ -145,13 +154,37 @@ namespace MOBA.Core.Infrastructure
                     ? mainTexture
                     : null;
             if (sourceProperty == null)
+            {
+                ApplyFallbackTexture(destination, fallbackTexture);
                 return;
+            }
 
-            Texture texture = source.GetTexture(sourceProperty);
+            Texture texture = source.GetTexture(sourceProperty) ?? fallbackTexture;
             Vector2 scale = source.GetTextureScale(sourceProperty);
             Vector2 offset = source.GetTextureOffset(sourceProperty);
             SetTexture(destination, baseMap, texture, scale, offset);
             SetTexture(destination, mainTexture, texture, scale, offset);
+        }
+
+        private static void ApplyFallbackTexture(
+            Material destination,
+            Texture fallbackTexture)
+        {
+            if (fallbackTexture == null)
+                return;
+
+            SetTexture(
+                destination,
+                "_BaseMap",
+                fallbackTexture,
+                Vector2.one,
+                Vector2.zero);
+            SetTexture(
+                destination,
+                "_MainTex",
+                fallbackTexture,
+                Vector2.one,
+                Vector2.zero);
         }
 
         private static void SetTexture(

@@ -101,7 +101,8 @@ namespace MOBA.Core.Infrastructure
                 ConfigureLayer(attachment, gameObject.layer);
                 BrawlerAttachmentMaterialUtility.RepairUnsupportedMaterials(
                     attachment,
-                    _generatedAttachmentMaterials);
+                    _generatedAttachmentMaterials,
+                    binding.MaterialTexture);
                 StripGameplayComponents(attachment);
                 InstallRuntimeGripTargets(binding, attachment.transform);
 

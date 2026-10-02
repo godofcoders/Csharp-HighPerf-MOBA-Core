@@ -56,6 +56,8 @@ namespace MOBA.Core.Definitions
         public BrawlerAttachmentSocket Socket = BrawlerAttachmentSocket.PrimaryWeapon;
         public GameObject Prefab;
         public string PrefabAssetPath;
+        [Tooltip("Texture applied when the authored model's imported material has no texture binding.")]
+        public Texture2D MaterialTexture;
         public BrawlerGeneratedAttachmentType GeneratedAttachment = BrawlerGeneratedAttachmentType.None;
         public Vector3 LocalPositionOffset;
         public Vector3 LocalEulerOffset;
