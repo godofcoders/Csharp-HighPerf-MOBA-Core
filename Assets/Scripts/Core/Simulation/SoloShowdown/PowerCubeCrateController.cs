@@ -1,3 +1,4 @@
+using System.Collections;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
 using UnityEngine;
@@ -31,6 +32,8 @@ namespace MOBA.Core.Simulation
         [SerializeField] private Color _bandColor = new Color(0.15f, 0.17f, 0.20f, 1f);
         [SerializeField] private Color _latchColor = new Color(0.96f, 0.66f, 0.12f, 1f);
         [SerializeField, Min(0f)] private float _flashSeconds = 0.08f;
+        [SerializeField, Min(0f)] private float _revealDelaySeconds = 0.10f;
+        [SerializeField, Min(0f)] private float _powerCubeSpawnDelaySeconds = 0.24f;
 
         private Renderer[] _renderers;
         private Collider[] _colliders;
@@ -170,16 +173,42 @@ namespace MOBA.Core.Simulation
             _destroyed = true;
             _lastKnownPosition = Position;
 
-            SpawnPowerCube();
             Unregister();
             TrySetNavigationBlocked(false);
             SetPresentationEnabled(false);
+
+            if (!Application.isPlaying)
+            {
+                SpawnPowerCube();
+                return;
+            }
+
+            StartCoroutine(BreakAndDropRoutine());
+        }
+
+        private IEnumerator BreakAndDropRoutine()
+        {
+            Vector3 effectPosition = _lastKnownPosition + Vector3.up * 0.28f;
+            PowerCubeCrateVfx.CreateBreakBurst(effectPosition);
+
+            float revealDelay = Mathf.Max(0f, _revealDelaySeconds);
+            if (revealDelay > 0f)
+                yield return new WaitForSeconds(revealDelay);
+
+            Vector3 dropPosition = ResolveDropPosition();
+            PowerCubeCrateVfx.CreateRevealBurst(dropPosition);
+
+            float remainingDelay = Mathf.Max(0f, _powerCubeSpawnDelaySeconds - revealDelay);
+            if (remainingDelay > 0f)
+                yield return new WaitForSeconds(remainingDelay);
+
+            SpawnPowerCube();
             Destroy(gameObject);
         }
 
         private void SpawnPowerCube()
         {
-            Vector3 dropPosition = Position + Vector3.up * Mathf.Max(0f, _dropHeightOffset);
+            Vector3 dropPosition = ResolveDropPosition();
             PowerCube cube;
             if (_powerCubePrefab != null)
             {
@@ -194,6 +223,12 @@ namespace MOBA.Core.Simulation
 
             if (cube != null)
                 cube.SetValue(_powerCubeValue);
+        }
+
+        private Vector3 ResolveDropPosition()
+        {
+            Vector3 origin = _destroyed ? _lastKnownPosition : Position;
+            return origin + Vector3.up * Mathf.Max(0f, _dropHeightOffset);
         }
 
         private int GetEntityId()
