@@ -82,12 +82,11 @@ namespace MOBA.Core.Simulation
             }
             else
             {
-                GameObject crateObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                crateObject.name = "PowerCubeCrate";
+                GameObject crateObject = new GameObject("PowerCubeChest");
                 crateObject.transform.SetParent(transform, true);
                 crateObject.transform.position = position;
-                crateObject.transform.localScale = new Vector3(1.35f, 1.1f, 1.35f);
                 crate = crateObject.AddComponent<PowerCubeCrateController>();
+                crate.BuildFallbackPresentation();
             }
 
             if (crate != null)

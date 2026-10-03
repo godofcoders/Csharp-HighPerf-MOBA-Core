@@ -6,14 +6,15 @@ namespace MOBA.Core.Simulation
 {
     public sealed class PowerCubeCrateController : MonoBehaviour, ISpatialEntity
     {
+        private const string RuntimeChestRootName = "ChestVisual";
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         [Header("Crate")]
         [SerializeField, Min(1f)] private float _maxHealth = 4000f;
-        [SerializeField, Min(0.05f)] private float _collisionRadius = 0.82f;
+        [SerializeField, Min(0.05f)] private float _collisionRadius = 0.58f;
         [SerializeField] private bool _blocksNavigation = true;
-        [SerializeField, Min(0.05f)] private float _navigationClearRadius = 0.95f;
+        [SerializeField, Min(0.05f)] private float _navigationClearRadius = 0.72f;
 
         [Header("Reward")]
         [SerializeField] private PowerCube _powerCubePrefab;
@@ -25,6 +26,10 @@ namespace MOBA.Core.Simulation
         [SerializeField] private Color _damagedColor = new Color(0.86f, 0.63f, 0.20f, 1f);
         [SerializeField] private Color _criticalColor = new Color(0.34f, 0.22f, 0.09f, 1f);
         [SerializeField] private Color _flashColor = new Color(1f, 0.95f, 0.32f, 1f);
+        [SerializeField] private Color _woodColor = new Color(0.36f, 0.16f, 0.055f, 1f);
+        [SerializeField] private Color _lidColor = new Color(0.52f, 0.25f, 0.075f, 1f);
+        [SerializeField] private Color _bandColor = new Color(0.15f, 0.17f, 0.20f, 1f);
+        [SerializeField] private Color _latchColor = new Color(0.96f, 0.66f, 0.12f, 1f);
         [SerializeField, Min(0f)] private float _flashSeconds = 0.08f;
 
         private Renderer[] _renderers;
@@ -46,6 +51,34 @@ namespace MOBA.Core.Simulation
         public float CurrentHealth => _currentHealth;
         public float MaxHealth => Mathf.Max(1f, _maxHealth);
         public bool IsDestroyed => _destroyed;
+
+        public void BuildFallbackPresentation()
+        {
+            Transform existing = transform.Find(RuntimeChestRootName);
+            if (existing == null)
+            {
+                GameObject visualObject = new GameObject(RuntimeChestRootName);
+                visualObject.layer = gameObject.layer;
+                existing = visualObject.transform;
+                existing.SetParent(transform, false);
+
+                CreateChestPart(existing, "Body", new Vector3(0f, 0.25f, 0f), new Vector3(0.86f, 0.46f, 0.68f));
+                CreateChestPart(existing, "Lid", new Vector3(0f, 0.54f, 0f), new Vector3(0.90f, 0.17f, 0.72f));
+                CreateChestPart(existing, "BandLeft", new Vector3(-0.27f, 0.39f, 0f), new Vector3(0.085f, 0.61f, 0.73f));
+                CreateChestPart(existing, "BandRight", new Vector3(0.27f, 0.39f, 0f), new Vector3(0.085f, 0.61f, 0.73f));
+                CreateChestPart(existing, "Latch", new Vector3(0f, 0.42f, 0.37f), new Vector3(0.18f, 0.24f, 0.075f));
+            }
+
+            BoxCollider rootCollider = GetComponent<BoxCollider>();
+            if (rootCollider == null)
+                rootCollider = gameObject.AddComponent<BoxCollider>();
+
+            rootCollider.center = new Vector3(0f, 0.33f, 0f);
+            rootCollider.size = new Vector3(0.90f, 0.66f, 0.72f);
+
+            CacheComponents();
+            ApplyHealthTint();
+        }
 
         private void Awake()
         {
@@ -260,21 +293,21 @@ namespace MOBA.Core.Simulation
         private void FlashHit()
         {
             _flashUntilTime = Time.time + Mathf.Max(0f, _flashSeconds);
-            ApplyTint(_flashColor);
+            ApplyTint(_flashColor, 0.68f);
         }
 
         private void ApplyHealthTint()
         {
             float healthPercent = MaxHealth > 0f ? _currentHealth / MaxHealth : 0f;
             if (healthPercent <= 0.35f)
-                ApplyTint(_criticalColor);
+                ApplyTint(_criticalColor, 0.46f);
             else if (healthPercent <= 0.72f)
-                ApplyTint(_damagedColor);
+                ApplyTint(_damagedColor, 0.34f);
             else
-                ApplyTint(_healthyColor);
+                ApplyTint(_healthyColor, 0.18f);
         }
 
-        private void ApplyTint(Color color)
+        private void ApplyTint(Color color, float blend)
         {
             if (_renderers == null)
                 return;
@@ -286,10 +319,47 @@ namespace MOBA.Core.Simulation
                     continue;
 
                 crateRenderer.GetPropertyBlock(_propertyBlock);
-                _propertyBlock.SetColor(ColorId, color);
-                _propertyBlock.SetColor(BaseColorId, color);
+                Color partColor = ResolvePartColor(crateRenderer.transform.name);
+                Color tintedColor = Color.Lerp(partColor, color, Mathf.Clamp01(blend));
+                _propertyBlock.SetColor(ColorId, tintedColor);
+                _propertyBlock.SetColor(BaseColorId, tintedColor);
                 crateRenderer.SetPropertyBlock(_propertyBlock);
             }
+        }
+
+        private Color ResolvePartColor(string partName)
+        {
+            if (partName == "Latch")
+                return _latchColor;
+
+            if (partName.StartsWith("Band", System.StringComparison.Ordinal))
+                return _bandColor;
+
+            return partName == "Lid" ? _lidColor : _woodColor;
+        }
+
+        private static void CreateChestPart(
+            Transform parent,
+            string partName,
+            Vector3 localPosition,
+            Vector3 localScale)
+        {
+            GameObject part = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            part.name = partName;
+            part.layer = parent.gameObject.layer;
+            part.transform.SetParent(parent, false);
+            part.transform.localPosition = localPosition;
+            part.transform.localScale = localScale;
+
+            Collider partCollider = part.GetComponent<Collider>();
+            if (partCollider == null)
+                return;
+
+            partCollider.enabled = false;
+            if (Application.isPlaying)
+                Destroy(partCollider);
+            else
+                DestroyImmediate(partCollider);
         }
     }
 }
