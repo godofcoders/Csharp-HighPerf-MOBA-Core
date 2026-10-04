@@ -830,7 +830,7 @@ namespace MOBA.Core.Infrastructure
                 HudPanelSolid);
             AddPanelShadow(card, new Vector2(0f, -8f), 0.38f);
 
-            CreateRectPanel(
+            GameObject accent = CreateRectPanel(
                 card.transform,
                 "DeathOverlayAccent",
                 new Vector2(0f, 1f),
@@ -890,7 +890,10 @@ namespace MOBA.Core.Infrastructure
                 null,
                 countdownText,
                 null,
-                killerText);
+                killerText,
+                card.GetComponent<RectTransform>(),
+                root.GetComponent<Image>(),
+                accent.GetComponent<Image>());
         }
 
         private static void CreateDuoTeammateRespawnHUD(Transform parent)

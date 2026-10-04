@@ -44,6 +44,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Text _countdownTextLegacy;
         [SerializeField] private TMP_Text _killerTextTmp;
         [SerializeField] private Text _killerTextLegacy;
+        [SerializeField] private RectTransform _contentCard;
+        [SerializeField] private Image _backdropImage;
+        [SerializeField] private Image _accentImage;
 
         [Header("Tuning")]
         [SerializeField] private string _titleLabel = "You died";
@@ -59,6 +62,17 @@ namespace MOBA.Core.Infrastructure
         private bool _wasDead;
         private bool _spectatingAfterDeath;
         private BrawlerController _spectatedBrawler;
+        private RectTransformState _defaultCardLayout;
+        private RectTransformState _defaultTitleLayout;
+        private RectTransformState _defaultCountdownLayout;
+        private RectTransformState _defaultKillerLayout;
+        private Color _defaultBackdropColor;
+        private Color _defaultAccentColor;
+        private float _defaultTitleFontSize;
+        private float _defaultCountdownFontSize;
+        private float _defaultKillerFontSize;
+        private bool _presentationDefaultsCaptured;
+        private bool _usingSpectatorPresentation;
 
         private void Awake()
         {
@@ -105,7 +119,10 @@ namespace MOBA.Core.Infrastructure
             TMP_Text countdownTextTmp,
             Text countdownTextLegacy,
             TMP_Text killerTextTmp,
-            Text killerTextLegacy)
+            Text killerTextLegacy,
+            RectTransform contentCard = null,
+            Image backdropImage = null,
+            Image accentImage = null)
         {
             _overlayRoot = overlayRoot;
             _titleTextTmp = titleTextTmp;
@@ -114,7 +131,11 @@ namespace MOBA.Core.Infrastructure
             _countdownTextLegacy = countdownTextLegacy;
             _killerTextTmp = killerTextTmp;
             _killerTextLegacy = killerTextLegacy;
+            _contentCard = contentCard;
+            _backdropImage = backdropImage;
+            _accentImage = accentImage;
 
+            CapturePresentationDefaults();
             SetTitle(_titleLabel);
             SetKiller(string.Empty);
             Show(false);
@@ -133,6 +154,7 @@ namespace MOBA.Core.Infrastructure
 
             if (_localBrawler == null || _localBrawler.State == null)
             {
+                SetSpectatingPresentation(false);
                 Show(false);
                 return;
             }
@@ -166,6 +188,7 @@ namespace MOBA.Core.Infrastructure
 
             if (!dead)
             {
+                SetSpectatingPresentation(false);
                 SetTitle(_titleLabel);
                 Show(false);
                 return;
@@ -179,11 +202,14 @@ namespace MOBA.Core.Infrastructure
                 if (!duoShowdown)
                     spectatingTeammate = TrySpectateLivingTeammate();
 
+                SetSpectatingPresentation(spectatingTeammate);
                 SetTitle(_knockoutTitleLabel);
                 SetCountdown(spectatingTeammate ? _spectatingLabel : string.Empty);
                 Show(Time.time < _knockoutNoticeUntilTime);
                 return;
             }
+
+            SetSpectatingPresentation(spectatingTeammate);
 
             // Compute remaining respawn time.
             float respawnDelay = SpawnManager.Instance != null
@@ -288,6 +314,7 @@ namespace MOBA.Core.Infrastructure
             _knockoutNoticeUntilTime = -1f;
             _wasDead = false;
             RestorePlayerCameraTarget(force: true);
+            SetSpectatingPresentation(false);
             SetKiller(string.Empty);
             Show(false);
         }
@@ -300,6 +327,147 @@ namespace MOBA.Core.Infrastructure
             CameraController.Instance?.SetTarget(_localBrawler.PresentationFollowTarget);
             _spectatedBrawler = null;
             _spectatingAfterDeath = false;
+        }
+
+        public void SetSpectatingPresentation(bool spectating)
+        {
+            CapturePresentationDefaults();
+            if (!_presentationDefaultsCaptured)
+                return;
+
+            if (!spectating)
+            {
+                if (_usingSpectatorPresentation)
+                    RestoreDefaultPresentation();
+                return;
+            }
+
+            Canvas canvas = _contentCard != null
+                ? _contentCard.GetComponentInParent<Canvas>()
+                : null;
+            float canvasScale = canvas != null ? canvas.scaleFactor : 1f;
+            DeathOverlaySpectatorLayout layout =
+                DeathOverlayLayoutUtility.ResolveSpectatorLayout(
+                    Screen.safeArea,
+                    new Vector2(Screen.width, Screen.height),
+                    canvasScale);
+
+            _contentCard.anchorMin = Vector2.up;
+            _contentCard.anchorMax = Vector2.up;
+            _contentCard.pivot = Vector2.up;
+            _contentCard.anchoredPosition = layout.AnchoredPosition;
+            _contentCard.sizeDelta = layout.CardSize;
+
+            float textWidth = Mathf.Max(0f, layout.CardSize.x - 40f);
+            ApplyCompactTextLayout(
+                ResolveRectTransform(_titleTextTmp, _titleTextLegacy),
+                new Vector2(0f, 33f),
+                new Vector2(textWidth, 42f));
+            ApplyCompactTextLayout(
+                ResolveRectTransform(_countdownTextTmp, _countdownTextLegacy),
+                new Vector2(0f, -8f),
+                new Vector2(textWidth, 34f));
+            ApplyCompactTextLayout(
+                ResolveRectTransform(_killerTextTmp, _killerTextLegacy),
+                new Vector2(0f, -43f),
+                new Vector2(textWidth, 26f));
+
+            SetFontSize(_titleTextTmp, _titleTextLegacy, 29f);
+            SetFontSize(_countdownTextTmp, _countdownTextLegacy, 21f);
+            SetFontSize(_killerTextTmp, _killerTextLegacy, 16f);
+
+            if (_backdropImage != null)
+            {
+                Color backdropColor = _defaultBackdropColor;
+                backdropColor.a = layout.BackdropAlpha;
+                _backdropImage.color = backdropColor;
+            }
+
+            if (_accentImage != null)
+                _accentImage.color = new Color(0.12f, 0.78f, 1f, 0.94f);
+
+            _usingSpectatorPresentation = true;
+        }
+
+        private void CapturePresentationDefaults()
+        {
+            if (_presentationDefaultsCaptured || _contentCard == null)
+                return;
+
+            _defaultCardLayout = new RectTransformState(_contentCard);
+            _defaultTitleLayout = new RectTransformState(
+                ResolveRectTransform(_titleTextTmp, _titleTextLegacy));
+            _defaultCountdownLayout = new RectTransformState(
+                ResolveRectTransform(_countdownTextTmp, _countdownTextLegacy));
+            _defaultKillerLayout = new RectTransformState(
+                ResolveRectTransform(_killerTextTmp, _killerTextLegacy));
+            _defaultTitleFontSize = ResolveFontSize(_titleTextTmp, _titleTextLegacy);
+            _defaultCountdownFontSize = ResolveFontSize(_countdownTextTmp, _countdownTextLegacy);
+            _defaultKillerFontSize = ResolveFontSize(_killerTextTmp, _killerTextLegacy);
+            _defaultBackdropColor = _backdropImage != null
+                ? _backdropImage.color
+                : Color.clear;
+            _defaultAccentColor = _accentImage != null
+                ? _accentImage.color
+                : Color.clear;
+            _presentationDefaultsCaptured = true;
+        }
+
+        private void RestoreDefaultPresentation()
+        {
+            _defaultCardLayout.Apply(_contentCard);
+            _defaultTitleLayout.Apply(ResolveRectTransform(_titleTextTmp, _titleTextLegacy));
+            _defaultCountdownLayout.Apply(ResolveRectTransform(_countdownTextTmp, _countdownTextLegacy));
+            _defaultKillerLayout.Apply(ResolveRectTransform(_killerTextTmp, _killerTextLegacy));
+            SetFontSize(_titleTextTmp, _titleTextLegacy, _defaultTitleFontSize);
+            SetFontSize(_countdownTextTmp, _countdownTextLegacy, _defaultCountdownFontSize);
+            SetFontSize(_killerTextTmp, _killerTextLegacy, _defaultKillerFontSize);
+
+            if (_backdropImage != null)
+                _backdropImage.color = _defaultBackdropColor;
+            if (_accentImage != null)
+                _accentImage.color = _defaultAccentColor;
+
+            _usingSpectatorPresentation = false;
+        }
+
+        private static void ApplyCompactTextLayout(
+            RectTransform rect,
+            Vector2 anchoredPosition,
+            Vector2 size)
+        {
+            if (rect == null)
+                return;
+
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+        }
+
+        private static RectTransform ResolveRectTransform(TMP_Text tmp, Text legacy)
+        {
+            if (tmp != null)
+                return tmp.rectTransform;
+
+            return legacy != null ? legacy.rectTransform : null;
+        }
+
+        private static float ResolveFontSize(TMP_Text tmp, Text legacy)
+        {
+            if (tmp != null)
+                return tmp.fontSize;
+
+            return legacy != null ? legacy.fontSize : 0f;
+        }
+
+        private static void SetFontSize(TMP_Text tmp, Text legacy, float size)
+        {
+            if (tmp != null)
+                tmp.fontSize = size;
+            else if (legacy != null)
+                legacy.fontSize = Mathf.Max(1, Mathf.RoundToInt(size));
         }
 
         private void Show(bool visible)
@@ -331,6 +499,38 @@ namespace MOBA.Core.Infrastructure
             {
                 _killerTextLegacy.text = s;
                 _killerTextLegacy.gameObject.SetActive(!string.IsNullOrEmpty(s));
+            }
+        }
+
+        private readonly struct RectTransformState
+        {
+            private readonly Vector2 _anchorMin;
+            private readonly Vector2 _anchorMax;
+            private readonly Vector2 _pivot;
+            private readonly Vector2 _anchoredPosition;
+            private readonly Vector2 _sizeDelta;
+            private readonly bool _isValid;
+
+            public RectTransformState(RectTransform rect)
+            {
+                _isValid = rect != null;
+                _anchorMin = rect != null ? rect.anchorMin : Vector2.zero;
+                _anchorMax = rect != null ? rect.anchorMax : Vector2.zero;
+                _pivot = rect != null ? rect.pivot : Vector2.zero;
+                _anchoredPosition = rect != null ? rect.anchoredPosition : Vector2.zero;
+                _sizeDelta = rect != null ? rect.sizeDelta : Vector2.zero;
+            }
+
+            public void Apply(RectTransform rect)
+            {
+                if (!_isValid || rect == null)
+                    return;
+
+                rect.anchorMin = _anchorMin;
+                rect.anchorMax = _anchorMax;
+                rect.pivot = _pivot;
+                rect.anchoredPosition = _anchoredPosition;
+                rect.sizeDelta = _sizeDelta;
             }
         }
     }
