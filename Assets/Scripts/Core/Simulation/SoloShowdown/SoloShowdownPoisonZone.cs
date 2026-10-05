@@ -69,6 +69,7 @@ namespace MOBA.Core.Simulation
         public float InitialSafeRadius => _initialSafeRadius;
         public float FinalSafeRadius => _finalSafeRadius;
         public Vector2 CurrentHalfExtents { get; private set; }
+        public float DangerBuffer => Mathf.Max(0f, _dangerBuffer);
         public bool IsShrinking => _elapsedActiveSeconds >= _shrinkDelaySeconds;
         public bool IsHazardActive => ShouldSimulatePoison() && IsShrinking;
         public float DamagePerTick => _damagePerTick;

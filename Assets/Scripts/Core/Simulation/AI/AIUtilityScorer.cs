@@ -56,6 +56,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastObjectiveIntentDebug = "ObjIntent=None";
         private string _lastWinConditionDebug = "Win=None";
         private string _lastBrawlerIdentityDebug = "Identity=None";
+        private string _lastPoisonAvoidanceDebug = "Poison=None";
         private uint _lastLaneEvaluationTick;
         private bool _hasLaneEvaluation;
         private bool _lastCanHoldLane;
@@ -88,6 +89,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastObjectiveIntentDebug => _lastObjectiveIntentDebug;
         public string LastWinConditionDebug => _lastWinConditionDebug;
         public string LastBrawlerIdentityDebug => _lastBrawlerIdentityDebug;
+        public string LastPoisonAvoidanceDebug => _lastPoisonAvoidanceDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -196,6 +198,52 @@ namespace MOBA.Core.Simulation.AI
                 macroState,
                 results);
             ApplyDuoCohesionPriority(targetInfo, results);
+            ApplyShowdownPoisonAvoidance(targetInfo, results);
+        }
+
+        private void ApplyShowdownPoisonAvoidance(
+            AITargetInfo targetInfo,
+            List<AIActionScore> results)
+        {
+            SoloShowdownPoisonZone zone = SoloShowdownPoisonZone.Instance;
+            if (zone == null || !zone.IsHazardActive || _self == null)
+            {
+                _lastPoisonAvoidanceDebug = "Poison=Off";
+                return;
+            }
+
+            float selfOutside = zone.GetDistanceBeyondSafeZone(_self.Position);
+            float selfEdgeDistance = zone.GetEdgeDangerDistance(_self.Position);
+            bool hasLiveTarget = targetInfo != null && targetInfo.HasLiveTarget;
+            float targetOutside = hasLiveTarget
+                ? zone.GetDistanceBeyondSafeZone(targetInfo.Target.Position)
+                : 0f;
+            int adjustedCount = 0;
+            float strongestPenalty = 0f;
+
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore action = results[i];
+                float penalty = ShowdownPoisonAvoidanceUtility.CalculateActionPenalty(
+                    action.ActionType,
+                    selfOutside,
+                    selfEdgeDistance,
+                    zone.DangerBuffer,
+                    hasLiveTarget,
+                    targetOutside);
+                if (penalty >= 0f)
+                    continue;
+
+                action.Score = Mathf.Max(MinActionScore, action.Score + penalty);
+                results[i] = action;
+                adjustedCount++;
+                strongestPenalty = Mathf.Min(strongestPenalty, penalty);
+            }
+
+            _lastPoisonAvoidanceDebug =
+                $"Poison=Risk selfOut:{selfOutside:0.0} edge:{selfEdgeDistance:0.0} " +
+                $"targetOut:{targetOutside:0.0} adjusted:{adjustedCount} " +
+                $"maxPenalty:{strongestPenalty:0.0}";
         }
 
         private void ApplyDuoCohesionPriority(
