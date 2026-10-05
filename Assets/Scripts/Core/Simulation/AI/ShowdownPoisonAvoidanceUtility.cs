@@ -4,6 +4,27 @@ namespace MOBA.Core.Simulation.AI
 {
     public static class ShowdownPoisonAvoidanceUtility
     {
+        public static Vector3 ClampDestinationToSafeZone(
+            Vector3 destination,
+            Vector3 center,
+            Vector2 halfExtents,
+            float safetyInset)
+        {
+            float inset = Mathf.Max(0f, safetyInset);
+            float safeHalfX = Mathf.Max(0.1f, Mathf.Abs(halfExtents.x) - inset);
+            float safeHalfZ = Mathf.Max(0.1f, Mathf.Abs(halfExtents.y) - inset);
+
+            destination.x = Mathf.Clamp(
+                destination.x,
+                center.x - safeHalfX,
+                center.x + safeHalfX);
+            destination.z = Mathf.Clamp(
+                destination.z,
+                center.z - safeHalfZ,
+                center.z + safeHalfZ);
+            return destination;
+        }
+
         public static float CalculateActionPenalty(
             AIActionType actionType,
             float selfDistanceBeyondSafeZone,

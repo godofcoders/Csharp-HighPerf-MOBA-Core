@@ -86,6 +86,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastTacticalMoveReason;
         private string _pendingTacticalRefreshReason;
         private string _lastMapRouteDebug;
+        private string _lastPoisonRouteDebug = "PoisonRoute=None";
         private Vector3 _lastRawMapDestination;
         private Vector3 _lastResolvedMapDestination;
         private AIMapRouteIntent _lastMapRequestIntent;
@@ -114,6 +115,7 @@ namespace MOBA.Core.Simulation.AI
         public uint NextTacticalMoveRetargetTick => _nextTacticalMoveRetargetTick;
         public string LastTacticalMoveReason => _lastTacticalMoveReason;
         public string LastMapRouteDebug => _lastMapRouteDebug;
+        public string LastPoisonRouteDebug => _lastPoisonRouteDebug;
         public string LastTacticalStopDebug => _lastTacticalStopDebug;
         public Vector3 LastRawMapDestination => _lastRawMapDestination;
         public Vector3 LastResolvedMapDestination => _lastResolvedMapDestination;
@@ -314,10 +316,50 @@ namespace MOBA.Core.Simulation.AI
                 threatPosition,
                 preferredThreatDistance);
 
-            _navAgent.RequestDestination(
+            RequestSafeDestination(
                 resolvedDestination,
                 arrivalDistance,
                 IsCriticalRoute(routeIntent));
+        }
+
+        private void RequestSafeDestination(
+            Vector3 destination,
+            float arrivalDistance,
+            bool highPriority = false)
+        {
+            Vector3 safeDestination = ResolveShowdownSafeDestination(destination);
+            _navAgent.RequestDestination(safeDestination, arrivalDistance, highPriority);
+        }
+
+        private Vector3 ResolveShowdownSafeDestination(Vector3 destination)
+        {
+            SoloShowdownPoisonZone zone = SoloShowdownPoisonZone.Instance;
+            if (zone == null || !zone.IsHazardActive || _brawler == null)
+            {
+                _lastPoisonRouteDebug = "PoisonRoute=Off";
+                return destination;
+            }
+
+            float safetyInset = Mathf.Max(0.65f, _brawler.CollisionRadius + 0.25f);
+            Vector3 safeDestination =
+                ShowdownPoisonAvoidanceUtility.ClampDestinationToSafeZone(
+                    destination,
+                    zone.Center,
+                    zone.CurrentHalfExtents,
+                    safetyInset);
+
+            if ((safeDestination - destination).sqrMagnitude > 0.0001f)
+            {
+                _lastPoisonRouteDebug =
+                    $"PoisonRoute=Clamped Raw={FormatVector(destination)} " +
+                    $"Safe={FormatVector(safeDestination)}";
+            }
+            else
+            {
+                _lastPoisonRouteDebug = "PoisonRoute=Safe";
+            }
+
+            return safeDestination;
         }
 
         private Vector3 ClampDuoRoamingDestination(
@@ -975,7 +1017,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Resolved={FormatVector(approachPosition)} " +
                 $"Score=0.0 Reason=brawl_ball_direct";
 
-            _navAgent.RequestDestination(
+            RequestSafeDestination(
                 approachPosition,
                 0.65f,
                 highPriority: true);
@@ -997,7 +1039,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Resolved={FormatVector(ballPosition)} " +
                 $"Score=0.0 Reason=brawl_ball_direct_ball";
 
-            _navAgent.RequestDestination(
+            RequestSafeDestination(
                 ballPosition,
                 arrivalDistance,
                 highPriority: true);
@@ -1860,7 +1902,7 @@ namespace MOBA.Core.Simulation.AI
             _lastObjectiveDesiredSlotRole = desiredSlotRole;
             _hasObjectiveDebug = true;
 
-            _navAgent.RequestDestination(destination, 1f);
+            RequestSafeDestination(destination, 1f);
         }
 
         private void RecordObjectiveNeglect(uint currentTick, string reason)
@@ -1904,14 +1946,14 @@ namespace MOBA.Core.Simulation.AI
                     attackRange,
                     idealRange);
 
-                _navAgent.RequestDestination(
+                RequestSafeDestination(
                     destination,
                     0.5f,
                     IsCriticalTacticalIntent(_lastTacticalMovementIntent));
             }
             else
             {
-                _navAgent.RequestDestination(
+                RequestSafeDestination(
                     _lastTacticalMoveDestination,
                     0.5f,
                     IsCriticalTacticalIntent(_lastTacticalMovementIntent));
@@ -1965,14 +2007,14 @@ namespace MOBA.Core.Simulation.AI
                         currentTick,
                         "hold_no_strafe");
 
-                    _navAgent.RequestDestination(
+                    RequestSafeDestination(
                         destination,
                         0.5f,
                         IsCriticalTacticalIntent(_lastTacticalMovementIntent));
                 }
                 else
                 {
-                    _navAgent.RequestDestination(
+                    RequestSafeDestination(
                         _lastTacticalMoveDestination,
                         0.5f,
                         IsCriticalTacticalIntent(_lastTacticalMovementIntent));
@@ -1992,14 +2034,14 @@ namespace MOBA.Core.Simulation.AI
                     currentTick,
                     idealRange);
 
-                _navAgent.RequestDestination(
+                RequestSafeDestination(
                     tacticalDestination,
                     0.4f,
                     IsCriticalTacticalIntent(_lastTacticalMovementIntent));
             }
             else
             {
-                _navAgent.RequestDestination(
+                RequestSafeDestination(
                     _lastTacticalMoveDestination,
                     0.4f,
                     IsCriticalTacticalIntent(_lastTacticalMovementIntent));
@@ -2036,14 +2078,14 @@ namespace MOBA.Core.Simulation.AI
                     attackRange,
                     idealRange);
 
-                _navAgent.RequestDestination(
+                RequestSafeDestination(
                     destination,
                     0.45f,
                     IsCriticalTacticalIntent(_lastTacticalMovementIntent));
             }
             else
             {
-                _navAgent.RequestDestination(
+                RequestSafeDestination(
                     _lastTacticalMoveDestination,
                     0.45f,
                     IsCriticalTacticalIntent(_lastTacticalMovementIntent));
@@ -2185,7 +2227,7 @@ namespace MOBA.Core.Simulation.AI
 
             if (!ShouldRefreshEvadeMove(currentTick, out string refreshReason))
             {
-                _navAgent.RequestDestination(
+                RequestSafeDestination(
                     _lastTacticalMoveDestination,
                     0.4f,
                     highPriority: true);
@@ -2227,7 +2269,7 @@ namespace MOBA.Core.Simulation.AI
 
             _nextTacticalMoveRetargetTick = currentTick + retargetTicks;
 
-            _navAgent.RequestDestination(
+            RequestSafeDestination(
                 resolvedDestination,
                 0.4f,
                 highPriority: true);
@@ -2537,7 +2579,7 @@ namespace MOBA.Core.Simulation.AI
                 $"Dest={FormatVector(validation.ResolvedDestination)} " +
                 $"Reason={validation.Reason}";
 
-            _navAgent.RequestDestination(
+            RequestSafeDestination(
                 validation.ResolvedDestination,
                 0.45f,
                 highPriority: true);
@@ -2807,7 +2849,7 @@ namespace MOBA.Core.Simulation.AI
             _lastTacticalMovementIntent = AITacticalMovementIntent.Regroup;
             _hasMapRouteCache = false;
             ResetTacticalStop("duo_hard_leash");
-            _navAgent.RequestDestination(
+            RequestSafeDestination(
                 teammate.Position,
                 ShowdownRules.DuoCohesionFollowDistance,
                 highPriority: true);
@@ -2854,7 +2896,7 @@ namespace MOBA.Core.Simulation.AI
             // The teammate is a moving anchor, not a tactical cover point. Routing
             // it through the generic map resolver can alternate between nearby cover
             // candidates and make the follower visibly pace back and forth.
-            _navAgent.RequestDestination(
+            RequestSafeDestination(
                 teammate.Position,
                 followDistance,
                 highPriority: true);

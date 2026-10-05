@@ -1,10 +1,50 @@
 using MOBA.Core.Simulation.AI;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace MOBA.Tests.EditMode
 {
     public class ShowdownPoisonAvoidanceUtilityTests
     {
+        [Test]
+        public void ClampDestinationToSafeZone_ClampsOutsidePointInsideSafetyInset()
+        {
+            Vector3 destination = ShowdownPoisonAvoidanceUtility.ClampDestinationToSafeZone(
+                new Vector3(15f, 2f, -12f),
+                new Vector3(2f, 0f, 3f),
+                new Vector2(10f, 8f),
+                safetyInset: 1f);
+
+            Assert.That(destination, Is.EqualTo(new Vector3(11f, 2f, -4f)));
+        }
+
+        [Test]
+        public void ClampDestinationToSafeZone_PreservesSafePointAndHeight()
+        {
+            Vector3 safePoint = new Vector3(4f, 1.75f, -2f);
+
+            Vector3 destination = ShowdownPoisonAvoidanceUtility.ClampDestinationToSafeZone(
+                safePoint,
+                Vector3.zero,
+                new Vector2(10f, 6f),
+                safetyInset: 0.8f);
+
+            Assert.That(destination, Is.EqualTo(safePoint));
+        }
+
+        [Test]
+        public void ClampDestinationToSafeZone_RemainsValidInVerySmallFinalZone()
+        {
+            Vector3 destination = ShowdownPoisonAvoidanceUtility.ClampDestinationToSafeZone(
+                new Vector3(20f, 0f, 20f),
+                new Vector3(5f, 0f, -3f),
+                new Vector2(0.5f, 0.5f),
+                safetyInset: 2f);
+
+            Assert.That(destination.x, Is.EqualTo(5.1f).Within(0.001f));
+            Assert.That(destination.z, Is.EqualTo(-2.9f).Within(0.001f));
+        }
+
         [Test]
         public void CalculateActionPenalty_DoesNotPenalizeSafeInteriorActions()
         {
