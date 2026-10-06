@@ -2,7 +2,8 @@
     "name": "Tests.EditMode",
     "rootNamespace": "MOBA.Tests.EditMode",
     "references": [
-        "MOBA.Core"
+        "MOBA.Core",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
