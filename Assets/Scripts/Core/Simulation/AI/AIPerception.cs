@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
 
 namespace MOBA.Core.Simulation.AI
@@ -43,6 +44,7 @@ namespace MOBA.Core.Simulation.AI
             SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(self.Position, _detectionRadius, _nearbyBuffer);
 
             CompactAndFilterTargets(self);
+            SuppressCratesUnderEnemyPressure(self);
 
             if (_logPerception)
             {
@@ -61,7 +63,8 @@ namespace MOBA.Core.Simulation.AI
                 }
 
                 memory.Remember(bestTarget, currentTick);
-                AITeamMemory.ReportEnemySighting(self.Team, bestTarget.Position, currentTick);
+                if (bestTarget is BrawlerController)
+                    AITeamMemory.ReportEnemySighting(self.Team, bestTarget.Position, currentTick);
                 return;
             }
 
@@ -106,6 +109,15 @@ namespace MOBA.Core.Simulation.AI
             if (entity.EntityID == self.EntityID)
                 return false;
 
+            if (ShowdownCrateTargetUtility.IsTargetableCrate(entity))
+            {
+                if (SoloShowdownMode.Instance == null)
+                    return false;
+
+                SoloShowdownPoisonZone zone = SoloShowdownPoisonZone.Instance;
+                return zone == null || zone.IsInsideSafeZone(entity.Position);
+            }
+
             if (!TeamRelationshipUtility.AreEnemies(entity.Team, self.Team))
                 return false;
 
@@ -119,6 +131,48 @@ namespace MOBA.Core.Simulation.AI
             }
 
             return true;
+        }
+
+        private void SuppressCratesUnderEnemyPressure(BrawlerController self)
+        {
+            float nearestEnemyDistance = float.PositiveInfinity;
+            for (int i = 0; i < _nearbyBuffer.Count; i++)
+            {
+                if (_nearbyBuffer[i] is not BrawlerController enemy)
+                    continue;
+
+                nearestEnemyDistance = Mathf.Min(
+                    nearestEnemyDistance,
+                    Vector3.Distance(self.Position, enemy.Position));
+            }
+
+            AbilityDefinition attack = self.State != null
+                ? self.State.GetCurrentMainAttackDefinition()
+                : self.Definition?.MainAttack;
+            float attackRange = attack != null
+                ? Mathf.Max(1f, attack.GetAIMaxRange())
+                : 6f;
+
+            if (!ShowdownCrateTargetUtility.ShouldSuppressForEnemyThreat(
+                    nearestEnemyDistance,
+                    attackRange))
+            {
+                return;
+            }
+
+            int writeIndex = 0;
+            for (int i = 0; i < _nearbyBuffer.Count; i++)
+            {
+                ISpatialEntity entity = _nearbyBuffer[i];
+                if (ShowdownCrateTargetUtility.IsTargetableCrate(entity))
+                    continue;
+
+                _nearbyBuffer[writeIndex] = entity;
+                writeIndex++;
+            }
+
+            if (writeIndex < _nearbyBuffer.Count)
+                _nearbyBuffer.RemoveRange(writeIndex, _nearbyBuffer.Count - writeIndex);
         }
     }
 }

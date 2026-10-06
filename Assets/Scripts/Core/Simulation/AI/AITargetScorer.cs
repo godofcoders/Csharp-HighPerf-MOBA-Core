@@ -104,6 +104,32 @@ namespace MOBA.Core.Simulation.AI
                 score += stickiness;
             }
 
+            if (target is PowerCubeCrateController crate)
+            {
+                float crateHealthRatio =
+                    crate.CurrentHealth / Mathf.Max(1f, crate.MaxHealth);
+                float selfHealthRatio = _self.State != null
+                    ? _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value)
+                    : 1f;
+                int powerCubeCount = _self.State != null
+                    ? _self.State.PowerCubeCount
+                    : 0;
+                float crateBonus = ShowdownCrateTargetUtility.CalculateAITargetBonus(
+                    distance,
+                    ownAttackRange,
+                    crateHealthRatio,
+                    selfHealthRatio,
+                    powerCubeCount,
+                    isCurrentTarget);
+
+                score += crateBonus;
+                _candidateTargetContextDebug =
+                    $"TargetCtx=PowerCubeChest range:{distance:0.0} " +
+                    $"health:{crateHealthRatio:0.00} cubes:{powerCubeCount} " +
+                    $"bonus:{crateBonus:0.0}";
+                return score;
+            }
+
             // 3. Target health / status scoring
             if (target is BrawlerController targetBrawler && targetBrawler.State != null)
             {

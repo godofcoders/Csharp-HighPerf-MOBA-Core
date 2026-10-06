@@ -67,6 +67,20 @@ namespace MOBA.Core.Simulation.AI
             if (hit.collider == null)
                 return true;
 
+            PowerCubeCrateController crate =
+                hit.collider.GetComponentInParent<PowerCubeCrateController>();
+            if (ShowdownCrateTargetUtility.IsTargetableCrate(crate))
+            {
+                if (SpatialEntityUtility.IsSameEntity(intendedTarget, crate))
+                {
+                    reason = "target_power_cube_chest";
+                    return true;
+                }
+
+                reason = "power_cube_chest_obstacle";
+                return false;
+            }
+
             BreakableObjectController breakable = hit.collider.GetComponentInParent<BreakableObjectController>();
             if (breakable == null || breakable.IsDestroyed)
             {

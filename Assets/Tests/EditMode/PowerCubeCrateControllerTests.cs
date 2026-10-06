@@ -110,6 +110,42 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void AITargetBonus_PrefersNearbyDamagedChestWhenPowerCubeCountIsLow()
+        {
+            float usefulChest = ShowdownCrateTargetUtility.CalculateAITargetBonus(
+                distance: 3f,
+                attackRange: 7f,
+                crateHealthRatio: 0.35f,
+                selfHealthRatio: 1f,
+                powerCubeCount: 0,
+                isCurrentTarget: false);
+            float lowValueChest = ShowdownCrateTargetUtility.CalculateAITargetBonus(
+                distance: 9f,
+                attackRange: 7f,
+                crateHealthRatio: 1f,
+                selfHealthRatio: 1f,
+                powerCubeCount: 6,
+                isCurrentTarget: false);
+
+            Assert.That(usefulChest, Is.GreaterThan(lowValueChest));
+        }
+
+        [Test]
+        public void EnemyThreatSuppression_InterruptsChestFarmingInsideDangerRadius()
+        {
+            Assert.That(
+                ShowdownCrateTargetUtility.ShouldSuppressForEnemyThreat(
+                    nearestEnemyDistance: 4f,
+                    attackRange: 7f),
+                Is.True);
+            Assert.That(
+                ShowdownCrateTargetUtility.ShouldSuppressForEnemyThreat(
+                    nearestEnemyDistance: 10f,
+                    attackRange: 7f),
+                Is.False);
+        }
+
+        [Test]
         public void BreakBurst_UsesWorldSpaceParticlesAndSelfCleaningStopAction()
         {
             GameObject effect = PowerCubeCrateVfx.CreateBreakBurst(new Vector3(2f, 1f, 3f));

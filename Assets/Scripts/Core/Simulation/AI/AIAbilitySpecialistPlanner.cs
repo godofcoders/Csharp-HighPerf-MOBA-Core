@@ -1059,6 +1059,9 @@ namespace MOBA.Core.Simulation.AI
 
         private float GetTargetHealthRatio(ISpatialEntity target)
         {
+            if (target is PowerCubeCrateController crate)
+                return crate.CurrentHealth / Mathf.Max(1f, crate.MaxHealth);
+
             if (target is not BrawlerController brawler || brawler.State == null)
                 return 1f;
 

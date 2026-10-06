@@ -93,6 +93,9 @@ namespace MOBA.Core.Simulation.AI
             if (!_profile.EnableGadgetUsage)
                 return;
 
+            if (ShowdownCrateTargetUtility.IsTargetableCrate(target))
+                return;
+
             if (!SpatialEntityUtility.IsAlive(target) || _self.State == null)
                 return;
 
