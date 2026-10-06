@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using MOBA.Core.Simulation;
+using MOBA.Core.Simulation.AI;
 using NUnit.Framework;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -64,6 +65,48 @@ namespace MOBA.Tests.EditMode
             Transform visual = _crateObject.transform.Find("ChestVisual");
             Assert.That(visual.childCount, Is.EqualTo(5));
             Assert.That(_crateObject.GetComponents<BoxCollider>().Length, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AimPriorityScore_PrefersNearestInRangePowerCubeChest()
+        {
+            _crateObject = new GameObject("NearPowerCubeChest");
+            _crateObject.transform.position = new Vector3(2f, 0f, 0f);
+            PowerCubeCrateController near =
+                _crateObject.AddComponent<PowerCubeCrateController>();
+
+            GameObject farObject = new GameObject("FarPowerCubeChest");
+            farObject.transform.position = new Vector3(5f, 0f, 0f);
+            _effects.Add(farObject);
+            PowerCubeCrateController far =
+                farObject.AddComponent<PowerCubeCrateController>();
+
+            float nearScore = ShowdownCrateTargetUtility.CalculateAimPriorityScore(
+                near,
+                Vector3.zero,
+                maxRange: 8f);
+            float farScore = ShowdownCrateTargetUtility.CalculateAimPriorityScore(
+                far,
+                Vector3.zero,
+                maxRange: 8f);
+
+            Assert.That(nearScore, Is.GreaterThan(farScore));
+        }
+
+        [Test]
+        public void AimPriorityScore_RejectsChestOutsideAttackRange()
+        {
+            _crateObject = new GameObject("OutOfRangePowerCubeChest");
+            _crateObject.transform.position = new Vector3(12f, 0f, 0f);
+            PowerCubeCrateController crate =
+                _crateObject.AddComponent<PowerCubeCrateController>();
+
+            float score = ShowdownCrateTargetUtility.CalculateAimPriorityScore(
+                crate,
+                Vector3.zero,
+                maxRange: 6f);
+
+            Assert.That(score, Is.EqualTo(float.MinValue));
         }
 
         [Test]

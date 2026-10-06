@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
 
@@ -8,6 +9,7 @@ namespace MOBA.Core.Simulation
     public static class AimAssistResolver
     {
         private static readonly List<BrawlerController> _buffer = new List<BrawlerController>(16);
+        private static readonly List<ISpatialEntity> _spatialBuffer = new List<ISpatialEntity>(16);
 
         public static AimAssistResult Resolve(in AimAssistRequest request)
         {
@@ -84,7 +86,9 @@ namespace MOBA.Core.Simulation
             if (_buffer.Count == 0)
             {
                 result.AimPoint = request.Origin + result.AimDirection * Mathf.Max(1f, request.Range);
-                return result;
+                return teamRule == AbilityTargetTeamRule.Enemy
+                    ? ResolvePowerCubeCrateFallback(request, result)
+                    : result;
             }
 
             for (int i = 0; i < _buffer.Count; i++)
@@ -94,7 +98,9 @@ namespace MOBA.Core.Simulation
             }
 
             result.AimPoint = request.Origin + result.AimDirection * Mathf.Max(1f, request.Range);
-            return result;
+            return teamRule == AbilityTargetTeamRule.Enemy
+                ? ResolvePowerCubeCrateFallback(request, result)
+                : result;
         }
 
         private static AimAssistResult ResolveSmartOffense(in AimAssistRequest request)
@@ -112,7 +118,7 @@ namespace MOBA.Core.Simulation
                 request.RequireAlive);
 
             if (_buffer.Count == 0)
-                return result;
+                return ResolvePowerCubeCrateFallback(request, result);
 
             BrawlerController best = null;
             BrawlerController closeBest = null;
@@ -172,7 +178,50 @@ namespace MOBA.Core.Simulation
             if (closeBest != null)
                 return BuildTargetResult(request, closeBest);
 
-            return best != null ? BuildTargetResult(request, best) : result;
+            return best != null
+                ? BuildTargetResult(request, best)
+                : ResolvePowerCubeCrateFallback(request, result);
+        }
+
+        private static AimAssistResult ResolvePowerCubeCrateFallback(
+            in AimAssistRequest request,
+            AimAssistResult fallback)
+        {
+            if (SoloShowdownMode.Instance == null ||
+                SimulationClock.Grid == null ||
+                (request.AbilityDefinition != null &&
+                 request.AbilityDefinition.SlotType != AbilitySlotType.MainAttack))
+            {
+                return fallback;
+            }
+
+            _spatialBuffer.Clear();
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                request.Origin,
+                request.Range + 1f,
+                _spatialBuffer);
+
+            PowerCubeCrateController best = null;
+            float bestScore = float.MinValue;
+            for (int i = 0; i < _spatialBuffer.Count; i++)
+            {
+                ISpatialEntity candidate = _spatialBuffer[i];
+                float score = ShowdownCrateTargetUtility.CalculateAimPriorityScore(
+                    candidate,
+                    request.Origin,
+                    request.Range);
+                if (score <= bestScore ||
+                    !(candidate is PowerCubeCrateController crate) ||
+                    !CanUseAimAssistCrate(request, crate))
+                {
+                    continue;
+                }
+
+                best = crate;
+                bestScore = score;
+            }
+
+            return best != null ? BuildCrateTargetResult(request, best) : fallback;
         }
 
         private static AimAssistResult ResolveSmartSupport(in AimAssistRequest request)
@@ -344,6 +393,38 @@ namespace MOBA.Core.Simulation
                 request.ProjectileRadius);
         }
 
+        private static bool CanUseAimAssistCrate(
+            in AimAssistRequest request,
+            PowerCubeCrateController crate)
+        {
+            if (!ShowdownCrateTargetUtility.IsTargetableCrate(crate))
+                return false;
+
+            if (!request.RequireLineOfSight)
+                return true;
+
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder == null)
+                return true;
+
+            Vector3 toCrate = crate.Position - request.Origin;
+            toCrate.y = 0f;
+            float distance = toCrate.magnitude;
+            if (distance <= 0.001f)
+                return true;
+
+            float clearance = Mathf.Max(0.1f, crate.CollisionRadius) +
+                              pathfinder.CellSize * 0.55f +
+                              Mathf.Max(0f, request.ProjectileRadius) * 0.35f;
+            Vector3 clearPoint = request.Origin +
+                                 toCrate.normalized * Mathf.Max(0f, distance - clearance);
+            return AimLineOfSightUtility.HasLineOfSight(
+                pathfinder,
+                request.Origin,
+                clearPoint,
+                request.ProjectileRadius);
+        }
+
         private static AimAssistResult BuildTargetResult(in AimAssistRequest request, BrawlerController target)
         {
             AimAssistResult result = BuildDefaultResult(request);
@@ -361,6 +442,29 @@ namespace MOBA.Core.Simulation
             result.HasResult = true;
             result.Target = target;
             result.AimDirection = dir;
+            result.AimPoint = aimPoint;
+            return result;
+        }
+
+        private static AimAssistResult BuildCrateTargetResult(
+            in AimAssistRequest request,
+            PowerCubeCrateController crate)
+        {
+            AimAssistResult result = BuildDefaultResult(request);
+            if (!ShowdownCrateTargetUtility.IsTargetableCrate(crate))
+                return result;
+
+            Vector3 aimPoint = crate.Position;
+            Vector3 direction = aimPoint - request.Origin;
+            direction.y = 0f;
+            if (direction.sqrMagnitude > 0.001f)
+                direction.Normalize();
+            else
+                direction = request.Source.transform.forward;
+
+            result.HasResult = true;
+            result.Target = null;
+            result.AimDirection = direction;
             result.AimPoint = aimPoint;
             return result;
         }
