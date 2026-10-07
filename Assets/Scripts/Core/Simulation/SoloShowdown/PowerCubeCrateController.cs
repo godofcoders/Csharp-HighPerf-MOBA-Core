@@ -23,15 +23,10 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0f)] private float _dropHeightOffset = 0.08f;
 
         [Header("Presentation")]
-        [SerializeField] private Color _healthyColor = new Color(0.50f, 0.37f, 0.18f, 1f);
-        [SerializeField] private Color _damagedColor = new Color(0.86f, 0.63f, 0.20f, 1f);
-        [SerializeField] private Color _criticalColor = new Color(0.34f, 0.22f, 0.09f, 1f);
-        [SerializeField] private Color _flashColor = new Color(1f, 0.95f, 0.32f, 1f);
         [SerializeField] private Color _woodColor = new Color(0.36f, 0.16f, 0.055f, 1f);
         [SerializeField] private Color _lidColor = new Color(0.52f, 0.25f, 0.075f, 1f);
         [SerializeField] private Color _bandColor = new Color(0.15f, 0.17f, 0.20f, 1f);
         [SerializeField] private Color _latchColor = new Color(0.96f, 0.66f, 0.12f, 1f);
-        [SerializeField, Min(0f)] private float _flashSeconds = 0.08f;
         [SerializeField, Min(0f)] private float _revealDelaySeconds = 0.10f;
         [SerializeField, Min(0f)] private float _powerCubeSpawnDelaySeconds = 0.24f;
 
@@ -41,7 +36,6 @@ namespace MOBA.Core.Simulation
         private int _entityId;
         private Vector3 _lastKnownPosition;
         private float _currentHealth;
-        private float _flashUntilTime;
         private bool _registered;
         private bool _gridRegistered;
         private bool _destroyed;
@@ -80,7 +74,7 @@ namespace MOBA.Core.Simulation
             rootCollider.size = new Vector3(0.90f, 0.66f, 0.72f);
 
             CacheComponents();
-            ApplyHealthTint();
+            ApplyBaseColors();
         }
 
         private void Awake()
@@ -89,7 +83,7 @@ namespace MOBA.Core.Simulation
             _lastKnownPosition = transform.position;
             _currentHealth = MaxHealth;
             CacheComponents();
-            ApplyHealthTint();
+            ApplyBaseColors();
         }
 
         private void OnEnable()
@@ -118,18 +112,6 @@ namespace MOBA.Core.Simulation
             TrySetNavigationBlocked(false);
         }
 
-        private void Update()
-        {
-            if (_destroyed)
-                return;
-
-            if (_flashUntilTime > 0f && Time.time >= _flashUntilTime)
-            {
-                _flashUntilTime = 0f;
-                ApplyHealthTint();
-            }
-        }
-
         public void Configure(
             PowerCube powerCubePrefab,
             float maxHealth,
@@ -143,7 +125,7 @@ namespace MOBA.Core.Simulation
             _lastKnownPosition = transform.position;
             CacheComponents();
             SetPresentationEnabled(true);
-            ApplyHealthTint();
+            ApplyBaseColors();
             Register();
             TrySetNavigationBlocked(true);
         }
@@ -157,12 +139,9 @@ namespace MOBA.Core.Simulation
                 return;
 
             _currentHealth = Mathf.Max(0f, _currentHealth - amount);
-            FlashHit();
 
             if (_currentHealth <= 0f)
                 DestroyCrate();
-            else
-                ApplyHealthTint();
         }
 
         public void DestroyCrate()
@@ -325,24 +304,7 @@ namespace MOBA.Core.Simulation
             }
         }
 
-        private void FlashHit()
-        {
-            _flashUntilTime = Time.time + Mathf.Max(0f, _flashSeconds);
-            ApplyTint(_flashColor, 0.68f);
-        }
-
-        private void ApplyHealthTint()
-        {
-            float healthPercent = MaxHealth > 0f ? _currentHealth / MaxHealth : 0f;
-            if (healthPercent <= 0.35f)
-                ApplyTint(_criticalColor, 0.46f);
-            else if (healthPercent <= 0.72f)
-                ApplyTint(_damagedColor, 0.34f);
-            else
-                ApplyTint(_healthyColor, 0.18f);
-        }
-
-        private void ApplyTint(Color color, float blend)
+        private void ApplyBaseColors()
         {
             if (_renderers == null)
                 return;
@@ -355,9 +317,8 @@ namespace MOBA.Core.Simulation
 
                 crateRenderer.GetPropertyBlock(_propertyBlock);
                 Color partColor = ResolvePartColor(crateRenderer.transform.name);
-                Color tintedColor = Color.Lerp(partColor, color, Mathf.Clamp01(blend));
-                _propertyBlock.SetColor(ColorId, tintedColor);
-                _propertyBlock.SetColor(BaseColorId, tintedColor);
+                _propertyBlock.SetColor(ColorId, partColor);
+                _propertyBlock.SetColor(BaseColorId, partColor);
                 crateRenderer.SetPropertyBlock(_propertyBlock);
             }
         }
