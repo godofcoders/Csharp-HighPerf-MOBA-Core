@@ -33,6 +33,7 @@ namespace MOBA.Core.Simulation
         private Renderer[] _renderers;
         private Collider[] _colliders;
         private MaterialPropertyBlock _propertyBlock;
+        private PowerCubeCrateHealthBarView _healthBar;
         private int _entityId;
         private Vector3 _lastKnownPosition;
         private float _currentHealth;
@@ -75,6 +76,7 @@ namespace MOBA.Core.Simulation
 
             CacheComponents();
             ApplyBaseColors();
+            EnsureHealthBar();
         }
 
         private void Awake()
@@ -84,6 +86,7 @@ namespace MOBA.Core.Simulation
             _currentHealth = MaxHealth;
             CacheComponents();
             ApplyBaseColors();
+            EnsureHealthBar();
         }
 
         private void OnEnable()
@@ -126,6 +129,7 @@ namespace MOBA.Core.Simulation
             CacheComponents();
             SetPresentationEnabled(true);
             ApplyBaseColors();
+            EnsureHealthBar();
             Register();
             TrySetNavigationBlocked(true);
         }
@@ -142,6 +146,8 @@ namespace MOBA.Core.Simulation
 
             if (_currentHealth <= 0f)
                 DestroyCrate();
+            else
+                RefreshHealthBar();
         }
 
         public void DestroyCrate()
@@ -154,6 +160,7 @@ namespace MOBA.Core.Simulation
 
             Unregister();
             TrySetNavigationBlocked(false);
+            _healthBar?.Hide();
             SetPresentationEnabled(false);
 
             if (!Application.isPlaying)
@@ -281,6 +288,21 @@ namespace MOBA.Core.Simulation
             _colliders = GetComponentsInChildren<Collider>(true);
             if (_propertyBlock == null)
                 _propertyBlock = new MaterialPropertyBlock();
+        }
+
+        private void EnsureHealthBar()
+        {
+            _healthBar = PowerCubeCrateHealthBarView.EnsureFor(this);
+            RefreshHealthBar();
+        }
+
+        private void RefreshHealthBar()
+        {
+            if (_healthBar == null)
+                return;
+
+            float ratio = _currentHealth / Mathf.Max(1f, MaxHealth);
+            _healthBar.SetHealthRatio(ratio);
         }
 
         private void SetPresentationEnabled(bool enabled)

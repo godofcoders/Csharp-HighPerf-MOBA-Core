@@ -1,8 +1,10 @@
 using System.Collections.Generic;
+using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
 using MOBA.Core.Simulation.AI;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace MOBA.Tests.EditMode
@@ -65,6 +67,48 @@ namespace MOBA.Tests.EditMode
             Transform visual = _crateObject.transform.Find("ChestVisual");
             Assert.That(visual.childCount, Is.EqualTo(5));
             Assert.That(_crateObject.GetComponents<BoxCollider>().Length, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void BuildFallbackPresentation_CreatesCompactHealthBarAboveChest()
+        {
+            _crateObject = new GameObject("PowerCubeChestTest");
+            PowerCubeCrateController crate =
+                _crateObject.AddComponent<PowerCubeCrateController>();
+
+            crate.BuildFallbackPresentation();
+
+            Transform bar = _crateObject.transform.Find(
+                PowerCubeCrateHealthBarView.RootName);
+            Assert.That(bar, Is.Not.Null);
+            Assert.That(bar.localPosition.y, Is.GreaterThan(0.75f));
+            Assert.That(bar.localScale.x, Is.LessThan(0.006f));
+            Assert.That(bar.GetComponent<Canvas>().renderMode, Is.EqualTo(RenderMode.WorldSpace));
+            Assert.That(bar.Find("Frame"), Is.Not.Null);
+            Assert.That(bar.Find("Background/Fill"), Is.Not.Null);
+        }
+
+        [Test]
+        public void HealthBar_SetHealthRatioShrinksFillAndShowsCriticalColor()
+        {
+            _crateObject = new GameObject("PowerCubeChestTest");
+            PowerCubeCrateController crate =
+                _crateObject.AddComponent<PowerCubeCrateController>();
+            crate.BuildFallbackPresentation();
+
+            PowerCubeCrateHealthBarView view =
+                _crateObject.GetComponentInChildren<PowerCubeCrateHealthBarView>(true);
+            RectTransform fill = _crateObject.transform
+                .Find("ChestHealthBar/Background/Fill")
+                .GetComponent<RectTransform>();
+            float fullWidth = fill.rect.width;
+
+            view.SetHealthRatio(0.20f);
+
+            Assert.That(view.DisplayedHealthRatio, Is.EqualTo(0.20f).Within(0.001f));
+            Assert.That(fill.rect.width, Is.EqualTo(fullWidth * 0.20f).Within(0.01f));
+            Assert.That(fill.GetComponent<Image>().color.r,
+                Is.GreaterThan(fill.GetComponent<Image>().color.g));
         }
 
         [Test]
