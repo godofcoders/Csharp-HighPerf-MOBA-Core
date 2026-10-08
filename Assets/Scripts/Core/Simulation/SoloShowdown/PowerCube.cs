@@ -76,15 +76,19 @@ namespace MOBA.Core.Simulation
 
             return TryPickupBy(
                 carrier.State,
-                ResolvePickupFeedbackPosition(carrier));
+                ResolvePickupFeedbackPosition(carrier),
+                carrier);
         }
 
         public bool TryPickupBy(BrawlerState carrier)
         {
-            return TryPickupBy(carrier, transform.position);
+            return TryPickupBy(carrier, transform.position, null);
         }
 
-        private bool TryPickupBy(BrawlerState carrier, Vector3 pickupFeedbackPosition)
+        private bool TryPickupBy(
+            BrawlerState carrier,
+            Vector3 pickupFeedbackPosition,
+            BrawlerController carrierController)
         {
             if (IsPickedUp || carrier == null || carrier.IsDead)
                 return false;
@@ -92,6 +96,14 @@ namespace MOBA.Core.Simulation
             IsPickedUp = true;
             carrier.AddPowerCubes(_value);
             PowerCubeEventBus.OnPowerCubePickedUp?.Invoke(carrier, _value);
+
+            if (carrierController != null && SoloShowdownMode.Instance != null)
+            {
+                SoloShowdownMode.Instance.GrantPowerCubeToLivingTeammates(
+                    carrierController,
+                    _value);
+            }
+
             PowerCubeEventBus.OnPowerCubePickedUpAt?.Invoke(pickupFeedbackPosition, _value);
 
             gameObject.SetActive(false);

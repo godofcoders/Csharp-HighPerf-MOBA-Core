@@ -279,6 +279,54 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void DuoPowerCubePickup_GrantsCubeToBothLivingTeammates()
+        {
+            GameModeId previousMode = SceneSelection.SelectedMode;
+            ShowdownVariant previousVariant = SceneSelection.SelectedShowdownVariant;
+            BrawlerDefinition definition = ScriptableObject.CreateInstance<BrawlerDefinition>();
+            definition.BaseHealth = 2000f;
+            definition.BaseDamage = 400f;
+            definition.BaseMoveSpeed = 5f;
+            definition.ProgressionBonuses = null;
+            definition.SuperChargeSources = null;
+
+            GameObject modeObject = new GameObject("DuoShowdownModeTest");
+            GameObject collectorObject = new GameObject("CollectorTest");
+            GameObject teammateObject = new GameObject("TeammateTest");
+            GameObject cubeObject = new GameObject("SharedPowerCubeTest");
+
+            try
+            {
+                SceneSelection.SelectedMode = GameModeId.SoloShowdown;
+                SceneSelection.SelectedShowdownVariant = ShowdownVariant.Duo;
+
+                SoloShowdownMode mode = modeObject.AddComponent<SoloShowdownMode>();
+                BrawlerController collector = collectorObject.AddComponent<BrawlerController>();
+                BrawlerController teammate = teammateObject.AddComponent<BrawlerController>();
+                collector.InitializeFromMatchmaking(definition, TeamType.Solo1);
+                teammate.InitializeFromMatchmaking(definition, TeamType.Solo1);
+                mode.RegisterBrawler(collector);
+                mode.RegisterBrawler(teammate);
+
+                PowerCube cube = cubeObject.AddComponent<PowerCube>();
+
+                Assert.IsTrue(cube.TryPickupBy(collector));
+                Assert.AreEqual(1, collector.State.PowerCubeCount);
+                Assert.AreEqual(1, teammate.State.PowerCubeCount);
+            }
+            finally
+            {
+                SceneSelection.SelectedMode = previousMode;
+                SceneSelection.SelectedShowdownVariant = previousVariant;
+                Object.DestroyImmediate(cubeObject);
+                Object.DestroyImmediate(teammateObject);
+                Object.DestroyImmediate(collectorObject);
+                Object.DestroyImmediate(modeObject);
+                Object.DestroyImmediate(definition);
+            }
+        }
+
+        [Test]
         public void SoloResults_ShowOnlyTheLocalPlayer()
         {
             Assert.IsTrue(ShowdownRules.ShouldShowResultEntry(

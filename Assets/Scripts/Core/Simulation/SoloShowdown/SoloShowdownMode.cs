@@ -165,6 +165,37 @@ namespace MOBA.Core.Simulation
             return brawler != null && _pendingDuoRespawns.ContainsKey(brawler);
         }
 
+        public int GrantPowerCubeToLivingTeammates(
+            BrawlerController collector,
+            int value)
+        {
+            if (!IsDuoShowdown ||
+                !IsAliveContestant(collector) ||
+                value <= 0)
+            {
+                return 0;
+            }
+
+            int grantedCount = 0;
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController teammate = _contestants[i];
+                if (teammate == null ||
+                    teammate == collector ||
+                    teammate.Team != collector.Team ||
+                    !IsAliveContestant(teammate) ||
+                    !teammate.State.AddPowerCubes(value))
+                {
+                    continue;
+                }
+
+                PowerCubeEventBus.OnPowerCubePickedUp?.Invoke(teammate.State, value);
+                grantedCount++;
+            }
+
+            return grantedCount;
+        }
+
         public bool TryGetDuoCohesionAnchor(
             BrawlerController brawler,
             out BrawlerController teammate)
