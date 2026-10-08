@@ -26,6 +26,11 @@ namespace MOBA.Core.Simulation
             return false;
         }
 
+        public void SetReloadSpeed(float reloadSpeed)
+        {
+            ReloadSpeed = Mathf.Max(0f, reloadSpeed);
+        }
+
         public void Tick(float deltaTime)
         {
             if (CurrentAmmo < MaxAmmo)

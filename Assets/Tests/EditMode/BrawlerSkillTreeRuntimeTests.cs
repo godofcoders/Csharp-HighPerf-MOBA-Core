@@ -108,7 +108,9 @@ namespace MOBA.Tests.EditMode
             state.SetPowerLevel(powerLevel, false);
 
             Assert.That(state.MaxHealth.Value, Is.EqualTo(expectedHealth).Within(0.001f));
-            Assert.That(state.Damage.Value, Is.EqualTo(expectedDamage).Within(0.001f));
+            Assert.That(
+                state.Damage.Value,
+                Is.EqualTo(BrawlerCombatBalance.ScaleDamage(expectedDamage)).Within(0.001f));
             Assert.That(state.MoveSpeed.Value, Is.EqualTo(expectedMoveSpeed).Within(0.001f));
         }
 
@@ -152,12 +154,16 @@ namespace MOBA.Tests.EditMode
 
             var state = new BrawlerState(brawler, TeamType.Neutral);
             state.SetPowerLevel(powerLevel, false);
-            Assert.That(state.Damage.Value, Is.EqualTo(baseDamage).Within(0.001f));
+            Assert.That(
+                state.Damage.Value,
+                Is.EqualTo(BrawlerCombatBalance.ScaleDamage(baseDamage)).Within(0.001f));
             Assert.That(state.MoveSpeed.Value, Is.EqualTo(baseMoveSpeed).Within(0.001f));
 
             state.SetPassiveLoadout(new[] { passive }, false);
 
-            Assert.That(state.Damage.Value, Is.EqualTo(expectedDamage).Within(0.001f));
+            Assert.That(
+                state.Damage.Value,
+                Is.EqualTo(BrawlerCombatBalance.ScaleDamage(expectedDamage)).Within(0.001f));
             Assert.That(state.MoveSpeed.Value, Is.EqualTo(expectedMoveSpeed).Within(0.001f));
         }
 

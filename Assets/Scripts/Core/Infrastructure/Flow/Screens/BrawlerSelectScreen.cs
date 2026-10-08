@@ -1991,7 +1991,8 @@ namespace MOBA.Core.Infrastructure
                 : Mathf.Max(0f, _previewed.BaseMoveSpeed + bonus.BonusMoveSpeed);
             float runtimeDamage = previewState != null
                 ? Mathf.Max(0f, previewState.Damage.Value)
-                : Mathf.Max(0f, _previewed.BaseDamage + bonus.BonusDamage);
+                : BrawlerCombatBalance.ScaleDamage(
+                    _previewed.BaseDamage + bonus.BonusDamage);
             float damageScale = runtimeDamage / Mathf.Max(1f, _previewed.BaseDamage);
             float attackSpeed = previewState != null
                 ? Mathf.Max(0.01f, previewState.AttackSpeed.Value)

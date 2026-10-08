@@ -268,7 +268,7 @@ namespace MOBA.Tests.EditMode
                 Assert.AreEqual(1, carrier.PowerCubeCount);
                 Assert.AreEqual(1, reportedCount);
                 Assert.AreEqual(2100f, carrier.MaxHealth.Value, 0.001f);
-                Assert.AreEqual(420f, carrier.Damage.Value, 0.001f);
+                Assert.AreEqual(378f, carrier.Damage.Value, 0.001f);
             }
             finally
             {

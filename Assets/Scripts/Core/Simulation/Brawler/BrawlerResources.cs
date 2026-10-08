@@ -1,5 +1,38 @@
+using UnityEngine;
+
 namespace MOBA.Core.Simulation
 {
+    public static class BrawlerCombatBalance
+    {
+        public const float DamageMultiplier = 0.9f;
+        public const float StandardReloadDurationSeconds = 2f;
+        public const float LongRangeStart = 9f;
+        public const float LongRangeFullPenaltyRange = 15f;
+        public const float LongRangeReloadDurationSeconds = 3.25f;
+
+        public static float ScaleDamage(float authoredDamage)
+        {
+            return Mathf.Max(0f, authoredDamage) * DamageMultiplier;
+        }
+
+        public static float ResolveAmmoReloadDuration(float attackRange)
+        {
+            float rangeFactor = Mathf.InverseLerp(
+                LongRangeStart,
+                LongRangeFullPenaltyRange,
+                Mathf.Max(0f, attackRange));
+            return Mathf.Lerp(
+                StandardReloadDurationSeconds,
+                LongRangeReloadDurationSeconds,
+                rangeFactor);
+        }
+
+        public static float ResolveAmmoReloadSpeed(float attackRange)
+        {
+            return 1f / ResolveAmmoReloadDuration(attackRange);
+        }
+    }
+
     /// <summary>
     /// Owns the brawler's depletable/rechargeable resources:
     ///   - Ammo (primary attack charges that regenerate over time)
@@ -39,6 +72,11 @@ namespace MOBA.Core.Simulation
         public void Tick(float deltaTime)
         {
             Ammo.Tick(deltaTime);
+        }
+
+        public void SetAmmoReloadSpeed(float reloadSpeed)
+        {
+            Ammo.SetReloadSpeed(reloadSpeed);
         }
 
         // ---------- Gadget charges ----------

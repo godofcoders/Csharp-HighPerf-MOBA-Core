@@ -1,5 +1,7 @@
 using NUnit.Framework;
+using MOBA.Core.Definitions;
 using MOBA.Core.Simulation;
+using UnityEngine;
 
 namespace MOBA.Tests.EditMode
 {
@@ -56,6 +58,67 @@ namespace MOBA.Tests.EditMode
             ammo.Tick(0.5f);
 
             Assert.AreEqual(1.5f, ammo.CurrentAmmo, 0.0001f);
+        }
+
+        [Test]
+        public void SetReloadSpeed_ChangesSubsequentRefillRate()
+        {
+            ResourceStorage ammo = new ResourceStorage(3, reloadSpeed: 1f);
+            ammo.Consume(3);
+
+            ammo.SetReloadSpeed(0.25f);
+            ammo.Tick(2f);
+
+            Assert.AreEqual(0.5f, ammo.CurrentAmmo, 0.0001f);
+        }
+
+        [Test]
+        public void CombatBalance_LongRangeAttacksReloadMoreSlowly()
+        {
+            float shortDuration = BrawlerCombatBalance.ResolveAmmoReloadDuration(4f);
+            float mediumDuration = BrawlerCombatBalance.ResolveAmmoReloadDuration(12f);
+            float longDuration = BrawlerCombatBalance.ResolveAmmoReloadDuration(15f);
+
+            Assert.AreEqual(2f, shortDuration, 0.0001f);
+            Assert.AreEqual(2.625f, mediumDuration, 0.0001f);
+            Assert.AreEqual(3.25f, longDuration, 0.0001f);
+            Assert.That(
+                BrawlerCombatBalance.ResolveAmmoReloadSpeed(15f),
+                Is.LessThan(BrawlerCombatBalance.ResolveAmmoReloadSpeed(4f)));
+        }
+
+        [Test]
+        public void BrawlerState_UsesCurrentMainAttackRangeForAmmoReload()
+        {
+            BrawlerDefinition brawler = ScriptableObject.CreateInstance<BrawlerDefinition>();
+            ProjectileAbilityDefinition attack =
+                ScriptableObject.CreateInstance<ProjectileAbilityDefinition>();
+
+            try
+            {
+                brawler.BaseHealth = 1000f;
+                brawler.BaseDamage = 100f;
+                brawler.BaseMoveSpeed = 5f;
+                brawler.MainAttack = attack;
+                brawler.ProgressionBonuses = null;
+                brawler.SuperChargeSources = null;
+                attack.Range = 15f;
+
+                BrawlerState state = new BrawlerState(brawler, TeamType.Blue);
+                state.Ammo.Consume(3);
+                state.UpdateResources(3.25f);
+
+                Assert.AreEqual(1f, state.Ammo.CurrentAmmo, 0.0001f);
+                Assert.AreEqual(
+                    BrawlerCombatBalance.ResolveAmmoReloadSpeed(15f),
+                    state.Ammo.ReloadSpeed,
+                    0.0001f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(attack);
+                Object.DestroyImmediate(brawler);
+            }
         }
 
         [Test]

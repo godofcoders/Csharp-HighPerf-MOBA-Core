@@ -70,7 +70,8 @@ namespace MOBA.Tests.EditMode
                 HitPosition = target.Position
             });
 
-            Assert.AreEqual(850f, target.State.CurrentHealth, 0.001f);
+            Assert.AreEqual(135f, attacker.State.Damage.Value, 0.001f);
+            Assert.AreEqual(865f, target.State.CurrentHealth, 0.001f);
         }
 
         private static BrawlerDefinition CreateDefinition(string name, float baseHealth, float baseDamage)

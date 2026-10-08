@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using MOBA.Core.Definitions;
+using MOBA.Core.Simulation;
 
 namespace MOBA.Core.Infrastructure
 {
@@ -107,7 +108,10 @@ namespace MOBA.Core.Infrastructure
 
             // Stat strip — integer rendering for snappier glance.
             SetText(_healthValueTmp, _healthValueLegacy, Mathf.RoundToInt(def.BaseHealth).ToString());
-            SetText(_damageValueTmp, _damageValueLegacy, Mathf.RoundToInt(def.BaseDamage).ToString());
+            SetText(
+                _damageValueTmp,
+                _damageValueLegacy,
+                Mathf.RoundToInt(BrawlerCombatBalance.ScaleDamage(def.BaseDamage)).ToString());
             SetText(_moveSpeedValueTmp, _moveSpeedValueLegacy, def.BaseMoveSpeed.ToString("0.0"));
 
             // Detail-panel extras — silently skipped on compact cards

@@ -319,7 +319,8 @@ namespace MOBA.Core.Simulation
 
             MaxHealth.SetBaseValue(Definition.BaseHealth + progression.BonusHealth);
             MoveSpeed.SetBaseValue(Definition.BaseMoveSpeed + progression.BonusMoveSpeed);
-            Damage.SetBaseValue(Definition.BaseDamage + progression.BonusDamage);
+            Damage.SetBaseValue(BrawlerCombatBalance.ScaleDamage(
+                Definition.BaseDamage + progression.BonusDamage));
 
             RestoreHealthAfterStatRefresh(oldMaxHealth, oldHealth, preserveHealthRatio);
         }
@@ -658,6 +659,12 @@ namespace MOBA.Core.Simulation
 
         public void UpdateResources(float deltaTime)
         {
+            AbilityDefinition mainAttack = GetCurrentMainAttackDefinition();
+            float attackRange = mainAttack != null
+                ? mainAttack.GetAIMaxRange()
+                : 0f;
+            Resources.SetAmmoReloadSpeed(
+                BrawlerCombatBalance.ResolveAmmoReloadSpeed(attackRange));
             Resources.Tick(deltaTime);
         }
 
