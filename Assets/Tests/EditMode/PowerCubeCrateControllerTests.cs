@@ -213,6 +213,9 @@ namespace MOBA.Tests.EditMode
                 crateHealthRatio: 0.35f,
                 selfHealthRatio: 1f,
                 powerCubeCount: 0,
+                rewardCubeCount: 2,
+                centerProximity: 1f,
+                personality: AIPersonalityType.Aggressive,
                 isCurrentTarget: false);
             float lowValueChest = ShowdownCrateTargetUtility.CalculateAITargetBonus(
                 distance: 9f,
@@ -220,6 +223,9 @@ namespace MOBA.Tests.EditMode
                 crateHealthRatio: 1f,
                 selfHealthRatio: 1f,
                 powerCubeCount: 6,
+                rewardCubeCount: 1,
+                centerProximity: 0f,
+                personality: AIPersonalityType.Balanced,
                 isCurrentTarget: false);
 
             Assert.That(usefulChest, Is.GreaterThan(lowValueChest));
@@ -231,13 +237,60 @@ namespace MOBA.Tests.EditMode
             Assert.That(
                 ShowdownCrateTargetUtility.ShouldSuppressForEnemyThreat(
                     nearestEnemyDistance: 4f,
-                    attackRange: 7f),
+                    attackRange: 7f,
+                    personality: AIPersonalityType.Balanced,
+                    selfHealthRatio: 1f),
                 Is.True);
             Assert.That(
                 ShowdownCrateTargetUtility.ShouldSuppressForEnemyThreat(
                     nearestEnemyDistance: 10f,
-                    attackRange: 7f),
+                    attackRange: 7f,
+                    personality: AIPersonalityType.Balanced,
+                    selfHealthRatio: 1f),
                 Is.False);
+        }
+
+        [Test]
+        public void CenterCache_AggressiveBotValuesRiskRewardMoreThanCautiousBot()
+        {
+            float aggressive = ShowdownCrateTargetUtility.CalculateCenterObjectiveBonus(
+                AIPersonalityType.Aggressive,
+                selfHealthRatio: 1f,
+                powerCubeCount: 0);
+            float cautious = ShowdownCrateTargetUtility.CalculateCenterObjectiveBonus(
+                AIPersonalityType.Cautious,
+                selfHealthRatio: 1f,
+                powerCubeCount: 0);
+
+            Assert.That(aggressive, Is.GreaterThan(50f));
+            Assert.That(cautious, Is.LessThan(0f));
+        }
+
+        [Test]
+        public void CenterCache_AggressiveBotAcceptsCloserThreatWhenHealthy()
+        {
+            bool aggressiveSuppresses =
+                ShowdownCrateTargetUtility.ShouldSuppressForEnemyThreat(
+                    nearestEnemyDistance: 4.5f,
+                    attackRange: 7f,
+                    personality: AIPersonalityType.Aggressive,
+                    selfHealthRatio: 1f);
+            bool cautiousSuppresses =
+                ShowdownCrateTargetUtility.ShouldSuppressForEnemyThreat(
+                    nearestEnemyDistance: 4.5f,
+                    attackRange: 7f,
+                    personality: AIPersonalityType.Cautious,
+                    selfHealthRatio: 1f);
+            bool injuredAggressiveSuppresses =
+                ShowdownCrateTargetUtility.ShouldSuppressForEnemyThreat(
+                    nearestEnemyDistance: 4.5f,
+                    attackRange: 7f,
+                    personality: AIPersonalityType.Aggressive,
+                    selfHealthRatio: 0f);
+
+            Assert.That(aggressiveSuppresses, Is.False);
+            Assert.That(cautiousSuppresses, Is.True);
+            Assert.That(injuredAggressiveSuppresses, Is.True);
         }
 
         [Test]

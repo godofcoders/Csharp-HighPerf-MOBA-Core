@@ -7,6 +7,8 @@ namespace MOBA.Core.Simulation
 {
     public static class ShowdownPowerCubeLayoutUtility
     {
+        public const string CenterObjectiveName = "Showdown Power Cube Center";
+
         public static int CalculateCenterCrateCount(int totalCrates, float centerFraction)
         {
             int safeTotal = Mathf.Max(0, totalCrates);

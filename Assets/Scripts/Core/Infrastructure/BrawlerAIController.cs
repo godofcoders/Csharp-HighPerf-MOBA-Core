@@ -836,7 +836,8 @@ $"Map={LastMapRouteDebug}";
                 _profile.DetectionRadius,
                 _profile.MemoryDurationTicks,
                 _targetScorer,
-                _profile.LogPerception);
+                _profile.LogPerception,
+                personality: _profile.Personality);
             _abilityDecider = new AIAbilityDecider(_brawler, _profile, _commandSource, _failureRecovery);
             _superDecider = new AISuperDecider(_brawler, _profile, _commandSource, _failureRecovery);
 
@@ -1125,7 +1126,8 @@ $"Map={LastMapRouteDebug}";
                 _profile.DetectionRadius,
                 _profile.MemoryDurationTicks,
                 _targetScorer,
-                _profile.LogPerception);
+                _profile.LogPerception,
+                personality: _profile.Personality);
 
             if (_profile.EnableDebugSnapshots)
                 AIDebugTracker.Register(_brawler);

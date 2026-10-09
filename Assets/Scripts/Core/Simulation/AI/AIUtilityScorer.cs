@@ -5200,6 +5200,22 @@ namespace MOBA.Core.Simulation.AI
             if (objective.IsRuntime)
                 _lastObjectiveScoreReason += "|runtime";
 
+            if (ShowdownCrateTargetUtility.IsCenterCubeObjective(objective))
+            {
+                float selfHealthRatio = _self.State != null
+                    ? _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value)
+                    : 1f;
+                int powerCubeCount = _self.State != null
+                    ? _self.State.PowerCubeCount
+                    : 0;
+                float centerDelta = ShowdownCrateTargetUtility.CalculateCenterObjectiveBonus(
+                    _profile.Personality,
+                    selfHealthRatio,
+                    powerCubeCount);
+                score += centerDelta;
+                _lastObjectiveScoreReason += $"|cube_center_{centerDelta:+0.0;-0.0}";
+            }
+
             if (isBrawlBallObjective)
             {
                 float ballDelta = macroState.Call == AIGameModeMacroCall.Reset

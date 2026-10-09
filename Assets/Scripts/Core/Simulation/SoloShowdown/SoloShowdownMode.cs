@@ -22,6 +22,7 @@ namespace MOBA.Core.Simulation
         [Header("Power Cubes")]
         [SerializeField] private bool _enablePowerCubeCrates = true;
         [SerializeField] private SoloShowdownPowerCubeSpawner _powerCubeSpawner;
+        [SerializeField, Min(0f)] private float _powerCubeCenterObjectiveWeight = 66f;
 
         private readonly List<BrawlerController> _contestants =
             new List<BrawlerController>(TeamRelationshipUtility.MaxSoloTeams);
@@ -291,6 +292,21 @@ namespace MOBA.Core.Simulation
             return CountAlive(team) > 0;
         }
 
+        public bool TryGetPowerCubeCenter(out Vector3 center, out float radius)
+        {
+            center = Vector3.zero;
+            radius = 0f;
+            if (_powerCubeSpawner == null ||
+                !_powerCubeSpawner.HasAvailableCenterRewards)
+            {
+                return false;
+            }
+
+            center = _powerCubeSpawner.CenterClusterPosition;
+            radius = Mathf.Max(1f, _powerCubeSpawner.CenterClusterRadius);
+            return true;
+        }
+
         public bool TryResolveMacroState(
             TeamType team,
             out AIGameModeMacroState state)
@@ -330,14 +346,33 @@ namespace MOBA.Core.Simulation
             out AIObjectiveCandidate objective)
         {
             objective = default;
-            if (!TeamRelationshipUtility.IsSoloTeam(team) ||
-                SoloShowdownPoisonZone.Instance == null)
-            {
+            if (!TeamRelationshipUtility.IsSoloTeam(team))
                 return false;
-            }
 
             SoloShowdownPoisonZone zone = SoloShowdownPoisonZone.Instance;
-            bool outsideSafeZone = !zone.IsInsideSafeZone(selfPosition);
+            bool outsideSafeZone =
+                zone != null && !zone.IsInsideSafeZone(selfPosition);
+
+            if (!outsideSafeZone &&
+                TryGetPowerCubeCenter(out Vector3 cubeCenter, out float cubeRadius) &&
+                (zone == null || zone.IsInsideSafeZone(cubeCenter)))
+            {
+                objective = new AIObjectiveCandidate(
+                    AIObjectiveType.MidControl,
+                    cubeCenter,
+                    _powerCubeCenterObjectiveWeight,
+                    cubeRadius,
+                    ShowdownPowerCubeLayoutUtility.CenterObjectiveName,
+                    true,
+                    AIObjectiveControlState.Neutral,
+                    friendlyPresence: 0,
+                    enemyPresence: 0);
+                return true;
+            }
+
+            if (zone == null)
+                return false;
+
             float weight = outsideSafeZone
                 ? _safeZoneObjectiveWeight + 30f
                 : _safeZoneObjectiveWeight;

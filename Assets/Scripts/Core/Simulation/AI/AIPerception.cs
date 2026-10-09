@@ -12,18 +12,21 @@ namespace MOBA.Core.Simulation.AI
         private readonly List<ISpatialEntity> _nearbyBuffer;
         private readonly AITargetScorer _targetScorer;
         private readonly bool _logPerception;
+        private readonly AIPersonalityType _personality;
 
         public AIPerception(
             float detectionRadius,
             uint memoryDurationTicks,
             AITargetScorer targetScorer,
             bool logPerception = false,
-            int initialBufferCapacity = 32)
+            int initialBufferCapacity = 32,
+            AIPersonalityType personality = AIPersonalityType.Balanced)
         {
             _detectionRadius = detectionRadius;
             _memoryDurationTicks = memoryDurationTicks;
             _targetScorer = targetScorer;
             _logPerception = logPerception;
+            _personality = personality;
             _nearbyBuffer = new List<ISpatialEntity>(initialBufferCapacity);
         }
 
@@ -152,10 +155,15 @@ namespace MOBA.Core.Simulation.AI
             float attackRange = attack != null
                 ? Mathf.Max(1f, attack.GetAIMaxRange())
                 : 6f;
+            float selfHealthRatio = self.State != null
+                ? self.State.CurrentHealth / Mathf.Max(1f, self.State.MaxHealth.Value)
+                : 1f;
 
             if (!ShowdownCrateTargetUtility.ShouldSuppressForEnemyThreat(
                     nearestEnemyDistance,
-                    attackRange))
+                    attackRange,
+                    _personality,
+                    selfHealthRatio))
             {
                 return;
             }

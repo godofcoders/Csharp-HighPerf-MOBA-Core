@@ -114,18 +114,33 @@ namespace MOBA.Core.Simulation.AI
                 int powerCubeCount = _self.State != null
                     ? _self.State.PowerCubeCount
                     : 0;
+                float centerProximity = 0f;
+                if (SoloShowdownMode.Instance != null &&
+                    SoloShowdownMode.Instance.TryGetPowerCubeCenter(
+                        out Vector3 cubeCenter,
+                        out float centerRadius))
+                {
+                    float centerDistance = Vector3.Distance(crate.Position, cubeCenter);
+                    centerProximity = 1f - Mathf.Clamp01(
+                        centerDistance / Mathf.Max(1f, centerRadius * 1.5f));
+                }
+
                 float crateBonus = ShowdownCrateTargetUtility.CalculateAITargetBonus(
                     distance,
                     ownAttackRange,
                     crateHealthRatio,
                     selfHealthRatio,
                     powerCubeCount,
+                    crate.RewardCubeCount,
+                    centerProximity,
+                    _profile.Personality,
                     isCurrentTarget);
 
                 score += crateBonus;
                 _candidateTargetContextDebug =
                     $"TargetCtx=PowerCubeChest range:{distance:0.0} " +
                     $"health:{crateHealthRatio:0.00} cubes:{powerCubeCount} " +
+                    $"reward:{crate.RewardCubeCount} center:{centerProximity:0.00} " +
                     $"bonus:{crateBonus:0.0}";
                 return score;
             }
