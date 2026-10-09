@@ -8,6 +8,7 @@ namespace MOBA.Core.Simulation
     public sealed class PowerCubeCrateController : MonoBehaviour, ISpatialEntity
     {
         private const string RuntimeChestRootName = "ChestVisual";
+        private const float RewardCubeSpacing = 0.72f;
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
@@ -49,6 +50,7 @@ namespace MOBA.Core.Simulation
         public float CurrentHealth => _currentHealth;
         public float MaxHealth => Mathf.Max(1f, _maxHealth);
         public bool IsDestroyed => _destroyed;
+        public int RewardCubeCount => Mathf.Max(1, _powerCubeValue);
 
         public void BuildFallbackPresentation()
         {
@@ -165,7 +167,7 @@ namespace MOBA.Core.Simulation
 
             if (!Application.isPlaying)
             {
-                SpawnPowerCube();
+                SpawnRewardPowerCubes();
                 return;
             }
 
@@ -188,13 +190,19 @@ namespace MOBA.Core.Simulation
             if (remainingDelay > 0f)
                 yield return new WaitForSeconds(remainingDelay);
 
-            SpawnPowerCube();
+            SpawnRewardPowerCubes();
             Destroy(gameObject);
         }
 
-        private void SpawnPowerCube()
+        private void SpawnRewardPowerCubes()
         {
-            Vector3 dropPosition = ResolveDropPosition();
+            int cubeCount = RewardCubeCount;
+            for (int i = 0; i < cubeCount; i++)
+                SpawnPowerCube(ResolveDropPosition(i));
+        }
+
+        private void SpawnPowerCube(Vector3 dropPosition)
+        {
             PowerCube cube;
             if (_powerCubePrefab != null)
             {
@@ -208,13 +216,16 @@ namespace MOBA.Core.Simulation
             }
 
             if (cube != null)
-                cube.SetValue(_powerCubeValue);
+                cube.SetValue(1);
         }
 
-        private Vector3 ResolveDropPosition()
+        private Vector3 ResolveDropPosition(int layoutIndex = 0)
         {
             Vector3 origin = _destroyed ? _lastKnownPosition : Position;
-            return origin + Vector3.up * Mathf.Max(0f, _dropHeightOffset);
+            Vector3 offset = GemPlacementUtility.GetClusterOffset(
+                Mathf.Max(0, layoutIndex),
+                RewardCubeSpacing);
+            return origin + offset + Vector3.up * Mathf.Max(0f, _dropHeightOffset);
         }
 
         private int GetEntityId()

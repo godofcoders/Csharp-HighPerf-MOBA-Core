@@ -5,6 +5,34 @@ using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
+    public static class ShowdownPowerCubeLayoutUtility
+    {
+        public static int CalculateCenterCrateCount(int totalCrates, float centerFraction)
+        {
+            int safeTotal = Mathf.Max(0, totalCrates);
+            return Mathf.Clamp(
+                Mathf.CeilToInt(safeTotal * Mathf.Clamp01(centerFraction)),
+                0,
+                safeTotal);
+        }
+
+        public static int CalculateRewardCubeCount(
+            bool isCenterCrate,
+            int baseCubeCount,
+            int centerCubeCount)
+        {
+            return Mathf.Max(1, isCenterCrate ? centerCubeCount : baseCubeCount);
+        }
+
+        public static float CalculateCenterRadius(Bounds bounds, float radiusFraction)
+        {
+            float shortestHalfExtent = Mathf.Min(
+                Mathf.Abs(bounds.extents.x),
+                Mathf.Abs(bounds.extents.z));
+            return Mathf.Max(1f, shortestHalfExtent * Mathf.Clamp01(radiusFraction));
+        }
+    }
+
     public sealed class SoloShowdownPowerCubeSpawner : MonoBehaviour
     {
         private const float DefaultFallbackBoundsSize = 44f;
@@ -17,6 +45,12 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0)] private int _crateCount = 12;
         [SerializeField, Min(1f)] private float _crateHealth = 4000f;
         [SerializeField, Min(1)] private int _powerCubeValuePerCrate = 1;
+
+        [Header("Center Cache")]
+        [SerializeField, Range(0f, 1f)] private float _centerCrateFraction = 0.65f;
+        [SerializeField, Min(1)] private int _centerPowerCubesPerCrate = 2;
+        [SerializeField, Range(0.1f, 0.6f)] private float _centerRadiusFraction = 0.32f;
+        [SerializeField, Min(1f)] private float _centerMinimumSpacing = 2.15f;
 
         [Header("Placement")]
         [SerializeField, Min(0.5f)] private float _edgeInset = 3f;
@@ -33,8 +67,27 @@ namespace MOBA.Core.Simulation
         private readonly List<Vector3> _deathDropReservedPositions = new List<Vector3>(12);
         private readonly List<PowerCubeCrateController> _spawnedCrates =
             new List<PowerCubeCrateController>(16);
+        private readonly List<PowerCubeCrateController> _centerCrates =
+            new List<PowerCubeCrateController>(12);
         private Coroutine _spawnRoutine;
         private bool _hasSpawnedInitialCrates;
+
+        public Vector3 CenterClusterPosition { get; private set; }
+        public float CenterClusterRadius { get; private set; }
+        public bool HasAvailableCenterRewards
+        {
+            get
+            {
+                for (int i = 0; i < _centerCrates.Count; i++)
+                {
+                    PowerCubeCrateController crate = _centerCrates[i];
+                    if (crate != null && !crate.IsDestroyed)
+                        return true;
+                }
+
+                return false;
+            }
+        }
 
         public void SpawnInitialCrates()
         {
@@ -56,24 +109,40 @@ namespace MOBA.Core.Simulation
 
             _hasSpawnedInitialCrates = true;
             _placedPositions.Clear();
+            _centerCrates.Clear();
             RefreshSpawnAvoidPositions();
 
             Bounds bounds = ResolvePlayableBounds();
+            CenterClusterPosition = ResolveGroundedPosition(bounds.center);
+            CenterClusterRadius = ShowdownPowerCubeLayoutUtility.CalculateCenterRadius(
+                bounds,
+                _centerRadiusFraction);
+            int centerCrateCount = ShowdownPowerCubeLayoutUtility.CalculateCenterCrateCount(
+                _crateCount,
+                _centerCrateFraction);
+
             for (int i = 0; i < _crateCount; i++)
             {
-                if (!TryResolvePlacement(bounds, out Vector3 position))
+                bool isCenterCrate = i < centerCrateCount;
+                if (!TryResolvePlacement(bounds, isCenterCrate, out Vector3 position))
                     continue;
 
-                PowerCubeCrateController crate = SpawnCrate(position);
+                int rewardCubeCount = ShowdownPowerCubeLayoutUtility.CalculateRewardCubeCount(
+                    isCenterCrate,
+                    _powerCubeValuePerCrate,
+                    _centerPowerCubesPerCrate);
+                PowerCubeCrateController crate = SpawnCrate(position, rewardCubeCount);
                 if (crate == null)
                     continue;
 
                 _spawnedCrates.Add(crate);
+                if (isCenterCrate)
+                    _centerCrates.Add(crate);
                 _placedPositions.Add(position);
             }
         }
 
-        private PowerCubeCrateController SpawnCrate(Vector3 position)
+        private PowerCubeCrateController SpawnCrate(Vector3 position, int rewardCubeCount)
         {
             PowerCubeCrateController crate;
             if (_cratePrefab != null)
@@ -90,7 +159,7 @@ namespace MOBA.Core.Simulation
             }
 
             if (crate != null)
-                crate.Configure(_powerCubePrefab, _crateHealth, _powerCubeValuePerCrate);
+                crate.Configure(_powerCubePrefab, _crateHealth, rewardCubeCount);
 
             return crate;
         }
@@ -137,7 +206,10 @@ namespace MOBA.Core.Simulation
             return cube;
         }
 
-        private bool TryResolvePlacement(Bounds bounds, out Vector3 position)
+        private bool TryResolvePlacement(
+            Bounds bounds,
+            bool preferCenter,
+            out Vector3 position)
         {
             float minX = bounds.min.x + _edgeInset;
             float maxX = bounds.max.x - _edgeInset;
@@ -151,13 +223,33 @@ namespace MOBA.Core.Simulation
 
             for (int attempt = 0; attempt < _maxPlacementAttemptsPerCrate; attempt++)
             {
-                Vector3 candidate = new Vector3(
-                    Random.Range(minX, maxX),
-                    bounds.center.y,
-                    Random.Range(minZ, maxZ));
+                Vector3 candidate;
+                if (preferCenter)
+                {
+                    float angle = Random.Range(0f, Mathf.PI * 2f);
+                    float radius = Mathf.Sqrt(Random.value) * CenterClusterRadius;
+                    candidate = bounds.center + new Vector3(
+                        Mathf.Cos(angle) * radius,
+                        0f,
+                        Mathf.Sin(angle) * radius);
+                }
+                else
+                {
+                    candidate = new Vector3(
+                        Random.Range(minX, maxX),
+                        bounds.center.y,
+                        Random.Range(minZ, maxZ));
+
+                    Vector3 fromCenter = candidate - bounds.center;
+                    fromCenter.y = 0f;
+                    float centerAvoidRadius = CenterClusterRadius + _minimumSpacing;
+                    if (fromCenter.sqrMagnitude < centerAvoidRadius * centerAvoidRadius)
+                        continue;
+                }
+
                 candidate = ResolveGroundedPosition(candidate);
 
-                if (!IsPlacementReadable(candidate))
+                if (!IsPlacementReadable(candidate, preferCenter))
                     continue;
 
                 position = candidate;
@@ -168,13 +260,16 @@ namespace MOBA.Core.Simulation
             return false;
         }
 
-        private bool IsPlacementReadable(Vector3 candidate)
+        private bool IsPlacementReadable(Vector3 candidate, bool isCenterCandidate)
         {
             if (IsTooCloseToSpawn(candidate))
                 return false;
 
             int clusterCount = 0;
-            float minSpacingSq = _minimumSpacing * _minimumSpacing;
+            float spacing = isCenterCandidate
+                ? _centerMinimumSpacing
+                : _minimumSpacing;
+            float minSpacingSq = spacing * spacing;
             float clusterRadiusSq = _clusterRadius * _clusterRadius;
             for (int i = 0; i < _placedPositions.Count; i++)
             {
@@ -188,7 +283,8 @@ namespace MOBA.Core.Simulation
                     clusterCount++;
             }
 
-            if (clusterCount > _maxExistingCratesInsideCluster)
+            if (!isCenterCandidate &&
+                clusterCount > _maxExistingCratesInsideCluster)
                 return false;
 
             int obstacleMask = ResolveObstacleMask();

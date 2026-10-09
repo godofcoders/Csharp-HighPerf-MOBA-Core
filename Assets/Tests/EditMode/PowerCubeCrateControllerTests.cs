@@ -112,6 +112,57 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void MultiCubeChest_DropsSeparateReadablePowerCubePickups()
+        {
+            _crateObject = new GameObject("MultiCubeChestTest");
+            PowerCubeCrateController crate =
+                _crateObject.AddComponent<PowerCubeCrateController>();
+            int cubeCountBefore = PowerCube.All.Count;
+
+            crate.Configure(null, 4000f, 3);
+            crate.DestroyCrate();
+
+            Assert.That(crate.RewardCubeCount, Is.EqualTo(3));
+            Assert.That(PowerCube.All.Count - cubeCountBefore, Is.EqualTo(3));
+
+            var spawned = new List<PowerCube>();
+            for (int i = cubeCountBefore; i < PowerCube.All.Count; i++)
+            {
+                PowerCube cube = PowerCube.All[i];
+                spawned.Add(cube);
+                _effects.Add(cube.gameObject);
+            }
+
+            for (int first = 0; first < spawned.Count; first++)
+            {
+                for (int second = first + 1; second < spawned.Count; second++)
+                {
+                    Assert.That(
+                        Vector3.Distance(
+                            spawned[first].transform.position,
+                            spawned[second].transform.position),
+                        Is.GreaterThan(0.6f));
+                }
+            }
+        }
+
+        [Test]
+        public void CenterCache_ContainsMostOfTheAvailableCubeRewards()
+        {
+            const int totalCrates = 12;
+            int centerCrates = ShowdownPowerCubeLayoutUtility.CalculateCenterCrateCount(
+                totalCrates,
+                0.65f);
+            int centerRewards = centerCrates *
+                ShowdownPowerCubeLayoutUtility.CalculateRewardCubeCount(true, 1, 2);
+            int outerRewards = (totalCrates - centerCrates) *
+                ShowdownPowerCubeLayoutUtility.CalculateRewardCubeCount(false, 1, 2);
+
+            Assert.That(centerCrates, Is.EqualTo(8));
+            Assert.That(centerRewards, Is.GreaterThan(outerRewards));
+        }
+
+        [Test]
         public void AimPriorityScore_PrefersNearestInRangePowerCubeChest()
         {
             _crateObject = new GameObject("NearPowerCubeChest");
