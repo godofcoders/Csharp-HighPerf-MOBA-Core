@@ -115,6 +115,21 @@ namespace MOBA.Tests.EditMode
                 Is.EqualTo(expected));
         }
 
+        [TestCase(BrawlerChargeRingKind.None, AimPreviewKind.Super, false)]
+        [TestCase(BrawlerChargeRingKind.Super, AimPreviewKind.None, false)]
+        [TestCase(BrawlerChargeRingKind.Super, AimPreviewKind.MainAttack, false)]
+        [TestCase(BrawlerChargeRingKind.Super, AimPreviewKind.Super, true)]
+        [TestCase(BrawlerChargeRingKind.Hypercharge, AimPreviewKind.Super, true)]
+        public void ChargeReadinessRing_RotatesOnlyWhileTargetingSuper(
+            BrawlerChargeRingKind ringKind,
+            AimPreviewKind previewKind,
+            bool expected)
+        {
+            Assert.That(
+                BrawlerChargeRingUtility.ShouldRotate(ringKind, previewKind),
+                Is.EqualTo(expected));
+        }
+
         // ---------- Activate ----------
 
         [Test]

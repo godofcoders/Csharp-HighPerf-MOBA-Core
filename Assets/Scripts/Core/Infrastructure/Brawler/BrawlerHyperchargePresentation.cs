@@ -25,6 +25,14 @@ namespace MOBA.Core.Infrastructure
                 ? BrawlerChargeRingKind.Super
                 : BrawlerChargeRingKind.None;
         }
+
+        public static bool ShouldRotate(
+            BrawlerChargeRingKind ringKind,
+            AimPreviewKind previewKind)
+        {
+            return ringKind != BrawlerChargeRingKind.None &&
+                previewKind == AimPreviewKind.Super;
+        }
     }
 
     public sealed class BrawlerHyperchargePresentation : MonoBehaviour
@@ -269,18 +277,21 @@ namespace MOBA.Core.Infrastructure
         [SerializeField, Min(0.02f)] private float _ringWidth = 0.10f;
         [SerializeField, Range(180f, 355f)] private float _arcDegrees = 330f;
         [SerializeField, Range(8, 96)] private int _segments = 48;
+        [SerializeField, Min(0f)] private float _targetingRotationSpeed = 150f;
 
         private GameObject _ringObject;
         private Mesh _ringMesh;
         private MeshRenderer _ringRenderer;
         private Material _ringMaterial;
         private BrawlerChargeRingKind _displayedKind;
+        private PlayerCommandSource _commandSource;
 
         private void Awake()
         {
             if (_brawler == null)
                 _brawler = GetComponent<BrawlerController>();
 
+            _commandSource = GetComponent<PlayerCommandSource>();
             EnsureRing();
             SetDisplayedKind(BrawlerChargeRingKind.None);
         }
@@ -299,6 +310,9 @@ namespace MOBA.Core.Infrastructure
         public void Bind(BrawlerController brawler)
         {
             _brawler = brawler;
+            _commandSource = brawler != null
+                ? brawler.GetComponent<PlayerCommandSource>()
+                : null;
             EnsureRing();
             RefreshState();
         }
@@ -306,6 +320,7 @@ namespace MOBA.Core.Infrastructure
         private void LateUpdate()
         {
             RefreshState();
+            UpdateTargetingRotation();
         }
 
         private void RefreshState()
@@ -329,9 +344,13 @@ namespace MOBA.Core.Infrastructure
 
         private void SetDisplayedKind(BrawlerChargeRingKind kind)
         {
+            bool kindChanged = _displayedKind != kind;
             _displayedKind = kind;
             if (_ringObject == null)
                 return;
+
+            if (kindChanged)
+                _ringObject.transform.localRotation = Quaternion.identity;
 
             bool visible = kind != BrawlerChargeRingKind.None;
             if (_ringObject.activeSelf != visible)
@@ -343,6 +362,23 @@ namespace MOBA.Core.Infrastructure
             _ringMaterial.color = kind == BrawlerChargeRingKind.Hypercharge
                 ? _hyperchargeColor
                 : _superColor;
+        }
+
+        private void UpdateTargetingRotation()
+        {
+            if (_ringObject == null || !_ringObject.activeSelf)
+                return;
+
+            AimPreviewKind previewKind = _commandSource != null
+                ? _commandSource.GetPreviewKind()
+                : AimPreviewKind.None;
+            if (!BrawlerChargeRingUtility.ShouldRotate(_displayedKind, previewKind))
+                return;
+
+            _ringObject.transform.Rotate(
+                Vector3.up,
+                Mathf.Max(0f, _targetingRotationSpeed) * Time.deltaTime,
+                Space.Self);
         }
 
         private void EnsureRing()
