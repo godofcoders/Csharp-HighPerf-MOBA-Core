@@ -21,6 +21,7 @@ namespace MOBA.Core.Simulation
         [Header("Reward")]
         [SerializeField] private PowerCube _powerCubePrefab;
         [SerializeField, Min(1)] private int _powerCubeValue = 1;
+        [SerializeField] private PowerCubeRewardType _rewardType = PowerCubeRewardType.StatBoost;
         [SerializeField, Min(0f)] private float _dropHeightOffset = 0.08f;
 
         [Header("Presentation")]
@@ -51,6 +52,7 @@ namespace MOBA.Core.Simulation
         public float MaxHealth => Mathf.Max(1f, _maxHealth);
         public bool IsDestroyed => _destroyed;
         public int RewardCubeCount => Mathf.Max(1, _powerCubeValue);
+        public PowerCubeRewardType RewardType => _rewardType;
 
         public void BuildFallbackPresentation()
         {
@@ -120,11 +122,13 @@ namespace MOBA.Core.Simulation
         public void Configure(
             PowerCube powerCubePrefab,
             float maxHealth,
-            int powerCubeValue)
+            int powerCubeValue,
+            PowerCubeRewardType rewardType = PowerCubeRewardType.StatBoost)
         {
             _powerCubePrefab = powerCubePrefab;
             _maxHealth = Mathf.Max(1f, maxHealth);
             _powerCubeValue = Mathf.Max(1, powerCubeValue);
+            _rewardType = rewardType;
             _currentHealth = MaxHealth;
             _destroyed = false;
             _lastKnownPosition = transform.position;
@@ -216,7 +220,10 @@ namespace MOBA.Core.Simulation
             }
 
             if (cube != null)
+            {
                 cube.SetValue(1);
+                cube.SetRewardType(_rewardType);
+            }
         }
 
         private Vector3 ResolveDropPosition(int layoutIndex = 0)

@@ -33,6 +33,16 @@ namespace MOBA.Core.Simulation
                 Mathf.Abs(bounds.extents.z));
             return Mathf.Max(1f, shortestHalfExtent * Mathf.Clamp01(radiusFraction));
         }
+
+        public static int CalculateChargeCrateCount(int totalCrates, float chargeFraction)
+        {
+            int safeTotal = Mathf.Max(0, totalCrates);
+            float safeFraction = Mathf.Clamp01(chargeFraction);
+            if (safeTotal == 0 || safeFraction <= 0f)
+                return 0;
+
+            return Mathf.Clamp(Mathf.RoundToInt(safeTotal * safeFraction), 1, safeTotal);
+        }
     }
 
     public sealed class SoloShowdownPowerCubeSpawner : MonoBehaviour
@@ -47,6 +57,7 @@ namespace MOBA.Core.Simulation
         [SerializeField, Min(0)] private int _crateCount = 12;
         [SerializeField, Min(1f)] private float _crateHealth = 4000f;
         [SerializeField, Min(1)] private int _powerCubeValuePerCrate = 1;
+        [SerializeField, Range(0f, 1f)] private float _chargeCubeCrateFraction = 0.25f;
 
         [Header("Center Cache")]
         [SerializeField, Range(0f, 1f)] private float _centerCrateFraction = 0.65f;
@@ -71,6 +82,7 @@ namespace MOBA.Core.Simulation
             new List<PowerCubeCrateController>(16);
         private readonly List<PowerCubeCrateController> _centerCrates =
             new List<PowerCubeCrateController>(12);
+        private readonly HashSet<int> _chargeRewardCrateIndices = new HashSet<int>();
         private Coroutine _spawnRoutine;
         private bool _hasSpawnedInitialCrates;
 
@@ -122,6 +134,7 @@ namespace MOBA.Core.Simulation
             int centerCrateCount = ShowdownPowerCubeLayoutUtility.CalculateCenterCrateCount(
                 _crateCount,
                 _centerCrateFraction);
+            SelectChargeRewardCrates();
 
             for (int i = 0; i < _crateCount; i++)
             {
@@ -133,7 +146,13 @@ namespace MOBA.Core.Simulation
                     isCenterCrate,
                     _powerCubeValuePerCrate,
                     _centerPowerCubesPerCrate);
-                PowerCubeCrateController crate = SpawnCrate(position, rewardCubeCount);
+                PowerCubeRewardType rewardType = _chargeRewardCrateIndices.Contains(i)
+                    ? PowerCubeRewardType.ChargeBoost
+                    : PowerCubeRewardType.StatBoost;
+                PowerCubeCrateController crate = SpawnCrate(
+                    position,
+                    rewardCubeCount,
+                    rewardType);
                 if (crate == null)
                     continue;
 
@@ -144,7 +163,10 @@ namespace MOBA.Core.Simulation
             }
         }
 
-        private PowerCubeCrateController SpawnCrate(Vector3 position, int rewardCubeCount)
+        private PowerCubeCrateController SpawnCrate(
+            Vector3 position,
+            int rewardCubeCount,
+            PowerCubeRewardType rewardType)
         {
             PowerCubeCrateController crate;
             if (_cratePrefab != null)
@@ -161,9 +183,38 @@ namespace MOBA.Core.Simulation
             }
 
             if (crate != null)
-                crate.Configure(_powerCubePrefab, _crateHealth, rewardCubeCount);
+                crate.Configure(
+                    _powerCubePrefab,
+                    _crateHealth,
+                    rewardCubeCount,
+                    rewardType);
 
             return crate;
+        }
+
+        private void SelectChargeRewardCrates()
+        {
+            _chargeRewardCrateIndices.Clear();
+            int chargeCrateCount = ShowdownPowerCubeLayoutUtility.CalculateChargeCrateCount(
+                _crateCount,
+                _chargeCubeCrateFraction);
+            if (chargeCrateCount <= 0)
+                return;
+
+            var indices = new List<int>(_crateCount);
+            for (int i = 0; i < _crateCount; i++)
+                indices.Add(i);
+
+            for (int i = indices.Count - 1; i > 0; i--)
+            {
+                int swapIndex = Random.Range(0, i + 1);
+                int value = indices[i];
+                indices[i] = indices[swapIndex];
+                indices[swapIndex] = value;
+            }
+
+            for (int i = 0; i < chargeCrateCount; i++)
+                _chargeRewardCrateIndices.Add(indices[i]);
         }
 
         public void SpawnDroppedPowerCubes(Vector3 center, int count)

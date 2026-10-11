@@ -4,6 +4,12 @@ using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
+    public enum PowerCubeRewardType
+    {
+        StatBoost,
+        ChargeBoost
+    }
+
     public sealed class PowerCube : SimulationEntity
     {
         private static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -14,11 +20,14 @@ namespace MOBA.Core.Simulation
         [Header("Pickup")]
         [SerializeField, Min(1)] private int _value = 1;
         [SerializeField, Min(0.1f)] private float _pickupRadius = 1.05f;
+        [SerializeField] private PowerCubeRewardType _rewardType = PowerCubeRewardType.StatBoost;
 
         [Header("Presentation")]
         [SerializeField] private bool _useRuntimeVisual = true;
         [SerializeField] private Color _cubeColor = new Color(0.48f, 1f, 0.16f, 1f);
         [SerializeField] private Color _coreColor = new Color(0.88f, 1f, 0.32f, 1f);
+        [SerializeField] private Color _chargeCubeColor = new Color(0.58f, 0.18f, 1f, 1f);
+        [SerializeField] private Color _chargeCoreColor = new Color(0.90f, 0.60f, 1f, 1f);
         [SerializeField, Min(0f)] private float _restHeight = 0.38f;
         [SerializeField, Min(0f)] private float _bobHeight = 0.055f;
         [SerializeField, Min(0.1f)] private float _bobSpeed = 3.2f;
@@ -30,6 +39,7 @@ namespace MOBA.Core.Simulation
 
         public static IReadOnlyList<PowerCube> All => AllCubes;
         public int Value => _value;
+        public PowerCubeRewardType RewardType => _rewardType;
         public bool IsPickedUp { get; private set; }
 
         protected override void Awake()
@@ -69,6 +79,29 @@ namespace MOBA.Core.Simulation
             _value = Mathf.Max(1, value);
         }
 
+        public void SetRewardType(PowerCubeRewardType rewardType)
+        {
+            _rewardType = rewardType;
+            ApplyVisualColors();
+        }
+
+        public bool CanBePickedUpBy(BrawlerState carrier)
+        {
+            if (IsPickedUp || carrier == null || carrier.IsDead)
+                return false;
+
+            if (_rewardType != PowerCubeRewardType.ChargeBoost)
+                return true;
+
+            bool needsSuper = carrier.SuperCharge != null && !carrier.SuperCharge.IsReady;
+            bool hasHypercharge = carrier.GetCurrentHyperchargeDefinition() != null;
+            bool needsHypercharge = hasHypercharge &&
+                carrier.Hypercharge != null &&
+                !carrier.Hypercharge.IsActive &&
+                carrier.Hypercharge.ChargePercent < 1f;
+            return needsSuper || needsHypercharge;
+        }
+
         public bool TryPickupBy(BrawlerController carrier)
         {
             if (carrier == null)
@@ -90,21 +123,30 @@ namespace MOBA.Core.Simulation
             Vector3 pickupFeedbackPosition,
             BrawlerController carrierController)
         {
-            if (IsPickedUp || carrier == null || carrier.IsDead)
+            if (!CanBePickedUpBy(carrier))
                 return false;
 
             IsPickedUp = true;
-            carrier.AddPowerCubes(_value);
-            PowerCubeEventBus.OnPowerCubePickedUp?.Invoke(carrier, _value);
-
-            if (carrierController != null && SoloShowdownMode.Instance != null)
+            if (_rewardType == PowerCubeRewardType.ChargeBoost)
             {
-                SoloShowdownMode.Instance.GrantPowerCubeToLivingTeammates(
-                    carrierController,
-                    _value);
+                carrier.Resources.AddSuperCharge(1f);
+                if (carrier.GetCurrentHyperchargeDefinition() != null)
+                    carrier.Resources.AddHypercharge(1f);
             }
+            else
+            {
+                carrier.AddPowerCubes(_value);
+                PowerCubeEventBus.OnPowerCubePickedUp?.Invoke(carrier, _value);
 
-            PowerCubeEventBus.OnPowerCubePickedUpAt?.Invoke(pickupFeedbackPosition, _value);
+                if (carrierController != null && SoloShowdownMode.Instance != null)
+                {
+                    SoloShowdownMode.Instance.GrantPowerCubeToLivingTeammates(
+                        carrierController,
+                        _value);
+                }
+
+                PowerCubeEventBus.OnPowerCubePickedUpAt?.Invoke(pickupFeedbackPosition, _value);
+            }
 
             gameObject.SetActive(false);
             if (Application.isPlaying)
@@ -192,7 +234,10 @@ namespace MOBA.Core.Simulation
                     continue;
 
                 cubeRenderer.GetPropertyBlock(_propertyBlock);
-                Color color = cubeRenderer.transform == _visual ? _cubeColor : _coreColor;
+                bool isChargeCube = _rewardType == PowerCubeRewardType.ChargeBoost;
+                Color color = cubeRenderer.transform == _visual
+                    ? (isChargeCube ? _chargeCubeColor : _cubeColor)
+                    : (isChargeCube ? _chargeCoreColor : _coreColor);
                 _propertyBlock.SetColor(ColorId, color);
                 _propertyBlock.SetColor(BaseColorId, color);
                 cubeRenderer.SetPropertyBlock(_propertyBlock);

@@ -327,6 +327,65 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void ChargeCube_FillsAvailableMetersWithoutAddingStatPower()
+        {
+            BrawlerDefinition definition = ScriptableObject.CreateInstance<BrawlerDefinition>();
+            HyperchargeDefinition hypercharge = ScriptableObject.CreateInstance<HyperchargeDefinition>();
+            GameObject cubeObject = new GameObject("ChargePowerCubeTest");
+
+            try
+            {
+                BrawlerState carrier = new BrawlerState(definition, TeamType.Solo1);
+                carrier.SetEquippedHypercharge(hypercharge);
+                carrier.Resources.AddSuperCharge(0.25f);
+                carrier.Resources.AddHypercharge(0.40f);
+
+                PowerCube cube = cubeObject.AddComponent<PowerCube>();
+                cube.SetRewardType(PowerCubeRewardType.ChargeBoost);
+
+                Assert.IsTrue(cube.TryPickupBy(carrier));
+                Assert.AreEqual(1f, carrier.SuperCharge.ChargePercent, 0.001f);
+                Assert.AreEqual(1f, carrier.Hypercharge.ChargePercent, 0.001f);
+                Assert.AreEqual(0, carrier.PowerCubeCount);
+            }
+            finally
+            {
+                Object.DestroyImmediate(cubeObject);
+                Object.DestroyImmediate(hypercharge);
+                Object.DestroyImmediate(definition);
+            }
+        }
+
+        [Test]
+        public void ChargeCube_RemainsWhenEveryAvailableMeterIsFull()
+        {
+            BrawlerDefinition definition = ScriptableObject.CreateInstance<BrawlerDefinition>();
+            HyperchargeDefinition hypercharge = ScriptableObject.CreateInstance<HyperchargeDefinition>();
+            GameObject cubeObject = new GameObject("FullChargePowerCubeTest");
+
+            try
+            {
+                BrawlerState carrier = new BrawlerState(definition, TeamType.Solo1);
+                carrier.SetEquippedHypercharge(hypercharge);
+                carrier.Resources.AddSuperCharge(1f);
+                carrier.Resources.AddHypercharge(1f);
+
+                PowerCube cube = cubeObject.AddComponent<PowerCube>();
+                cube.SetRewardType(PowerCubeRewardType.ChargeBoost);
+
+                Assert.IsFalse(cube.TryPickupBy(carrier));
+                Assert.IsFalse(cube.IsPickedUp);
+                Assert.IsTrue(cubeObject.activeSelf);
+            }
+            finally
+            {
+                Object.DestroyImmediate(cubeObject);
+                Object.DestroyImmediate(hypercharge);
+                Object.DestroyImmediate(definition);
+            }
+        }
+
+        [Test]
         public void SoloResults_ShowOnlyTheLocalPlayer()
         {
             Assert.IsTrue(ShowdownRules.ShouldShowResultEntry(

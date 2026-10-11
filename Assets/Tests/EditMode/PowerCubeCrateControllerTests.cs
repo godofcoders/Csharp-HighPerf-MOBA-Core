@@ -162,6 +162,21 @@ namespace MOBA.Tests.EditMode
             Assert.That(centerRewards, Is.GreaterThan(outerRewards));
         }
 
+        [TestCase(12, 0.25f, 3)]
+        [TestCase(5, 0.01f, 1)]
+        [TestCase(5, 0f, 0)]
+        public void ChargeRewardDistribution_UsesConfiguredFraction(
+            int totalCrates,
+            float fraction,
+            int expected)
+        {
+            Assert.That(
+                ShowdownPowerCubeLayoutUtility.CalculateChargeCrateCount(
+                    totalCrates,
+                    fraction),
+                Is.EqualTo(expected));
+        }
+
         [Test]
         public void AimPriorityScore_PrefersNearestInRangePowerCubeChest()
         {
