@@ -1,4 +1,5 @@
 using NUnit.Framework;
+using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
 
 namespace MOBA.Tests.EditMode
@@ -93,6 +94,25 @@ namespace MOBA.Tests.EditMode
 
             // Assert — silently ignored.
             Assert.AreEqual(0f, tracker.ChargePercent, 0.0001f);
+        }
+
+        [TestCase(false, false, false, BrawlerChargeRingKind.None)]
+        [TestCase(true, false, false, BrawlerChargeRingKind.Super)]
+        [TestCase(true, true, true, BrawlerChargeRingKind.Hypercharge)]
+        [TestCase(false, true, true, BrawlerChargeRingKind.Hypercharge)]
+        [TestCase(true, true, false, BrawlerChargeRingKind.Super)]
+        public void ChargeReadinessRing_ShowsOnlyHighestReadyCharge(
+            bool superReady,
+            bool hyperchargeAvailable,
+            bool hyperchargeReady,
+            BrawlerChargeRingKind expected)
+        {
+            Assert.That(
+                BrawlerChargeRingUtility.Resolve(
+                    superReady,
+                    hyperchargeAvailable,
+                    hyperchargeReady),
+                Is.EqualTo(expected));
         }
 
         // ---------- Activate ----------

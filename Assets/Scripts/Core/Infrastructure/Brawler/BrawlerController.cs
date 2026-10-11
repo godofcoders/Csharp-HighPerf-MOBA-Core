@@ -2336,6 +2336,13 @@ namespace MOBA.Core.Infrastructure
                 presentation = gameObject.AddComponent<BrawlerHyperchargePresentation>();
 
             presentation.Bind(this);
+
+            BrawlerChargeReadinessPresentation readiness =
+                GetComponent<BrawlerChargeReadinessPresentation>();
+            if (readiness == null)
+                readiness = gameObject.AddComponent<BrawlerChargeReadinessPresentation>();
+
+            readiness.Bind(this);
         }
 
         private void EnsureStealthPresentation()
