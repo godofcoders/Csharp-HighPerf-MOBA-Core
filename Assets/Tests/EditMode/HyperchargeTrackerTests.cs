@@ -130,6 +130,22 @@ namespace MOBA.Tests.EditMode
                 Is.EqualTo(expected));
         }
 
+        [TestCase(5f, true)]
+        [TestCase(45f, false)]
+        [TestCase(80f, true)]
+        [TestCase(175f, true)]
+        [TestCase(240f, false)]
+        [TestCase(287f, true)]
+        [TestCase(365f, true)]
+        public void ChargeReadinessRing_UsesAsymmetricCuts(
+            float angleDegrees,
+            bool expectedCut)
+        {
+            Assert.That(
+                BrawlerChargeRingUtility.IsCutAngle(angleDegrees),
+                Is.EqualTo(expectedCut));
+        }
+
         // ---------- Activate ----------
 
         [Test]

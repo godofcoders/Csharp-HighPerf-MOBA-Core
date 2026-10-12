@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using MOBA.Core.Simulation;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -32,6 +33,15 @@ namespace MOBA.Core.Infrastructure
         {
             return ringKind != BrawlerChargeRingKind.None &&
                 previewKind == AimPreviewKind.Super;
+        }
+
+        public static bool IsCutAngle(float angleDegrees)
+        {
+            float angle = Mathf.Repeat(angleDegrees, 360f);
+            return angle < 16f ||
+                (angle >= 76f && angle < 86f) ||
+                (angle >= 166f && angle < 188f) ||
+                (angle >= 282f && angle < 292f);
         }
     }
 
@@ -274,10 +284,9 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private Color _superColor = new Color(1f, 0.78f, 0.08f, 0.92f);
         [SerializeField] private Color _hyperchargeColor = new Color(0.68f, 0.24f, 1f, 0.95f);
         [SerializeField, Min(0.2f)] private float _innerRadius = 0.92f;
-        [SerializeField, Min(0.02f)] private float _ringWidth = 0.10f;
-        [SerializeField, Range(180f, 355f)] private float _arcDegrees = 330f;
-        [SerializeField, Range(8, 96)] private int _segments = 48;
-        [SerializeField, Min(0f)] private float _targetingRotationSpeed = 150f;
+        [SerializeField, Min(0.02f)] private float _ringWidth = 0.12f;
+        [SerializeField, Range(24, 144)] private int _segments = 72;
+        [SerializeField, Min(0f)] private float _targetingRotationSpeed = 210f;
 
         private GameObject _ringObject;
         private Mesh _ringMesh;
@@ -416,37 +425,53 @@ namespace MOBA.Core.Infrastructure
 
         private Mesh BuildRingMesh()
         {
-            int safeSegments = Mathf.Clamp(_segments, 8, 96);
+            int safeSegments = Mathf.Clamp(_segments, 24, 144);
             float inner = Mathf.Max(0.2f, _innerRadius);
             float outer = inner + Mathf.Max(0.02f, _ringWidth);
-            float radians = Mathf.Clamp(_arcDegrees, 180f, 355f) * Mathf.Deg2Rad;
-            var vertices = new Vector3[(safeSegments + 1) * 2];
-            var triangles = new int[safeSegments * 6];
+            var vertices = new List<Vector3>(safeSegments * 4);
+            var triangles = new List<int>(safeSegments * 6);
 
-            for (int i = 0; i <= safeSegments; i++)
+            for (int i = 0; i < safeSegments; i++)
             {
-                float angle = radians * i / safeSegments;
-                float x = Mathf.Sin(angle);
-                float z = Mathf.Cos(angle);
-                int vertex = i * 2;
-                vertices[vertex] = new Vector3(x * inner, 0f, z * inner);
-                vertices[vertex + 1] = new Vector3(x * outer, 0f, z * outer);
-
-                if (i == safeSegments)
+                float startDegrees = 360f * i / safeSegments;
+                float endDegrees = 360f * (i + 1) / safeSegments;
+                if (BrawlerChargeRingUtility.IsCutAngle(
+                    (startDegrees + endDegrees) * 0.5f))
+                {
                     continue;
+                }
 
-                int triangle = i * 6;
-                triangles[triangle] = vertex;
-                triangles[triangle + 1] = vertex + 1;
-                triangles[triangle + 2] = vertex + 2;
-                triangles[triangle + 3] = vertex + 1;
-                triangles[triangle + 4] = vertex + 3;
-                triangles[triangle + 5] = vertex + 2;
+                float start = startDegrees * Mathf.Deg2Rad;
+                float end = endDegrees * Mathf.Deg2Rad;
+                int vertex = vertices.Count;
+                vertices.Add(new Vector3(
+                    Mathf.Sin(start) * inner,
+                    0f,
+                    Mathf.Cos(start) * inner));
+                vertices.Add(new Vector3(
+                    Mathf.Sin(start) * outer,
+                    0f,
+                    Mathf.Cos(start) * outer));
+                vertices.Add(new Vector3(
+                    Mathf.Sin(end) * inner,
+                    0f,
+                    Mathf.Cos(end) * inner));
+                vertices.Add(new Vector3(
+                    Mathf.Sin(end) * outer,
+                    0f,
+                    Mathf.Cos(end) * outer));
+
+                triangles.Add(vertex);
+                triangles.Add(vertex + 1);
+                triangles.Add(vertex + 2);
+                triangles.Add(vertex + 1);
+                triangles.Add(vertex + 3);
+                triangles.Add(vertex + 2);
             }
 
             var mesh = new Mesh { name = "RuntimeChargeReadinessRing" };
-            mesh.vertices = vertices;
-            mesh.triangles = triangles;
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             return mesh;
