@@ -500,9 +500,6 @@ namespace MOBA.Core.Infrastructure
                 modelProfile.CameraSize);
             camera.targetTexture = _modelRenderTexture;
             CreateModelLights(_modelStageRoot.transform);
-            CreateModelStageFloor(
-                _modelStageRoot.transform,
-                modelProfile.FloorWidth);
             SpawnResultModels(
                 entries,
                 frame.transform,
@@ -564,7 +561,6 @@ namespace MOBA.Core.Infrastructure
                         4.2f,
                         0f,
                         360,
-                        11f,
                         280f,
                         58f,
                         25);
@@ -576,7 +572,6 @@ namespace MOBA.Core.Infrastructure
                     0f,
                     0f,
                     460,
-                    7f,
                     380f,
                     64f,
                     30);
@@ -588,7 +583,6 @@ namespace MOBA.Core.Infrastructure
                 2.80f,
                 5.20f,
                 300,
-                20f,
                 190f,
                 50f,
                 18);
@@ -640,23 +634,6 @@ namespace MOBA.Core.Infrastructure
             rim.intensity = 0.72f;
             rim.color = new Color(0.42f, 0.62f, 1f, 1f);
             rim.shadows = LightShadows.None;
-        }
-
-        private static void CreateModelStageFloor(Transform parent, float width)
-        {
-            GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            floor.name = "ResultsStageFloor";
-            floor.transform.SetParent(parent, false);
-            floor.transform.localPosition = new Vector3(0f, -0.08f, 0.55f);
-            floor.transform.localScale = new Vector3(width, 0.08f, 2.2f);
-
-            Renderer renderer = floor.GetComponent<Renderer>();
-            if (renderer != null)
-                renderer.material.color = new Color(0.08f, 0.10f, 0.16f, 1f);
-
-            Collider collider = floor.GetComponent<Collider>();
-            if (collider != null)
-                collider.enabled = false;
         }
 
         private void SpawnResultModels(
@@ -1117,7 +1094,6 @@ namespace MOBA.Core.Infrastructure
             public readonly float Spacing;
             public readonly float TeamCenterX;
             public readonly int RenderHeight;
-            public readonly float FloorWidth;
             public readonly float NameplateWidth;
             public readonly float NameplateHeight;
             public readonly int NameFontSize;
@@ -1131,7 +1107,6 @@ namespace MOBA.Core.Infrastructure
                 float spacing,
                 float teamCenterX,
                 int renderHeight,
-                float floorWidth,
                 float nameplateWidth,
                 float nameplateHeight,
                 int nameFontSize)
@@ -1141,7 +1116,6 @@ namespace MOBA.Core.Infrastructure
                 Spacing = spacing;
                 TeamCenterX = teamCenterX;
                 RenderHeight = renderHeight;
-                FloorWidth = floorWidth;
                 NameplateWidth = nameplateWidth;
                 NameplateHeight = nameplateHeight;
                 NameFontSize = nameFontSize;
