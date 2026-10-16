@@ -38,6 +38,7 @@ namespace MOBA.Core.Simulation
             new Dictionary<BrawlerController, Coroutine>();
         private readonly Dictionary<BrawlerController, object> _duoSpawnProtectionSources =
             new Dictionary<BrawlerController, object>();
+        private readonly DuoTeamCommandStore _duoTeamCommands = new DuoTeamCommandStore();
 
         private int _nextPlacement = 1;
         private bool _matchEnding;
@@ -104,6 +105,7 @@ namespace MOBA.Core.Simulation
         {
             CancelAllDuoRespawns();
             ClearAllDuoSpawnProtection();
+            _duoTeamCommands.ClearAll();
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
@@ -232,6 +234,146 @@ namespace MOBA.Core.Simulation
             }
 
             return false;
+        }
+
+        public DuoTeamCommandIssueResult TryIssueDuoTeamCommand(
+            BrawlerController issuer,
+            DuoTeamCommandType commandType,
+            int targetEntityId,
+            Vector3 targetPosition,
+            uint currentTick,
+            out DuoTeamCommandDirective directive)
+        {
+            directive = default;
+            if (!IsDuoShowdown)
+                return DuoTeamCommandIssueResult.NotDuoShowdown;
+
+            bool issuerAvailable = IsAliveContestant(issuer) &&
+                issuer.GetComponent<PlayerCommandSource>() != null;
+            BrawlerController teammate = issuerAvailable
+                ? FindLivingTeammate(issuer)
+                : null;
+            bool targetValid = ValidateDuoTeamCommandTarget(
+                commandType,
+                issuer,
+                teammate,
+                targetEntityId,
+                out Vector3 resolvedTargetPosition);
+
+            Vector3 finalTargetPosition = targetValid
+                ? resolvedTargetPosition
+                : targetPosition;
+            if (commandType == DuoTeamCommandType.Regroup && issuer != null)
+                finalTargetPosition = issuer.Position;
+
+            return _duoTeamCommands.TryIssue(
+                issuer != null ? issuer.Team : TeamType.Neutral,
+                issuer != null ? issuer.EntityID : 0,
+                commandType,
+                targetEntityId,
+                finalTargetPosition,
+                currentTick,
+                issuerAvailable,
+                teammate != null,
+                targetValid,
+                out directive);
+        }
+
+        public bool TryGetActiveDuoTeamCommand(
+            BrawlerController recipient,
+            uint currentTick,
+            out DuoTeamCommandDirective directive)
+        {
+            directive = default;
+            if (!IsDuoShowdown || !IsAliveContestant(recipient))
+                return false;
+            if (!_duoTeamCommands.TryGetActive(recipient.Team, currentTick, out directive))
+                return false;
+            if (directive.IssuerEntityId == recipient.EntityID)
+                return false;
+
+            BrawlerController issuer = FindContestant(directive.IssuerEntityId);
+            if (!IsAliveContestant(issuer) || FindLivingTeammate(issuer) == null)
+            {
+                _duoTeamCommands.ClearTeam(recipient.Team);
+                directive = default;
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ValidateDuoTeamCommandTarget(
+            DuoTeamCommandType commandType,
+            BrawlerController issuer,
+            BrawlerController teammate,
+            int targetEntityId,
+            out Vector3 targetPosition)
+        {
+            targetPosition = issuer != null ? issuer.Position : Vector3.zero;
+            if (!ShowdownRules.DuoTeamCommandRequiresTarget(commandType))
+                return true;
+            if (issuer == null || teammate == null || targetEntityId == 0)
+                return false;
+
+            if (commandType == DuoTeamCommandType.Attack)
+            {
+                ISpatialEntity attackTarget = CombatRegistry.GetEntity(targetEntityId);
+                targetPosition = attackTarget != null
+                    ? attackTarget.Position
+                    : targetPosition;
+                return attackTarget is BrawlerController enemy &&
+                    enemy.State != null &&
+                    !enemy.State.IsDead &&
+                    TeamRelationshipUtility.AreEnemies(issuer.Team, enemy.Team);
+            }
+
+            IReadOnlyList<PowerCube> cubes = PowerCube.All;
+            for (int i = 0; i < cubes.Count; i++)
+            {
+                PowerCube cube = cubes[i];
+                if (cube == null || cube.gameObject.GetInstanceID() != targetEntityId)
+                    continue;
+
+                targetPosition = cube.transform.position;
+                return !cube.IsPickedUp && cube.CanBePickedUpBy(teammate.State);
+            }
+
+            ISpatialEntity target = CombatRegistry.GetEntity(targetEntityId);
+            targetPosition = target != null ? target.Position : targetPosition;
+            return target is PowerCubeCrateController crate && !crate.IsDestroyed;
+        }
+
+        private BrawlerController FindLivingTeammate(BrawlerController brawler)
+        {
+            if (brawler == null)
+                return null;
+
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController candidate = _contestants[i];
+                if (candidate != null &&
+                    candidate != brawler &&
+                    candidate.Team == brawler.Team &&
+                    IsAliveContestant(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private BrawlerController FindContestant(int entityId)
+        {
+            for (int i = 0; i < _contestants.Count; i++)
+            {
+                BrawlerController candidate = _contestants[i];
+                if (candidate != null && candidate.EntityID == entityId)
+                    return candidate;
+            }
+
+            return null;
         }
 
         public bool TryGetPendingTeammateRespawn(
@@ -405,6 +547,7 @@ namespace MOBA.Core.Simulation
             if (dying == null)
                 return;
 
+            _duoTeamCommands.ClearTeam(dying.Team);
             CancelDuoSpawnProtection(dying);
             DropPowerCubesFrom(dying);
 

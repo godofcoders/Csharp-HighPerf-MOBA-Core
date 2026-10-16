@@ -167,6 +167,110 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void DuoCommandStore_AcceptsThenExpiresCommand()
+        {
+            var store = new DuoTeamCommandStore();
+            uint issuedTick = 100u;
+
+            DuoTeamCommandIssueResult result = store.TryIssue(
+                TeamType.Solo1,
+                10,
+                DuoTeamCommandType.Regroup,
+                0,
+                new Vector3(3f, 0f, 4f),
+                issuedTick,
+                issuerAvailable: true,
+                teammateAvailable: true,
+                targetValid: true,
+                out DuoTeamCommandDirective issued);
+
+            Assert.AreEqual(DuoTeamCommandIssueResult.Accepted, result);
+            Assert.AreEqual(DuoTeamCommandType.Regroup, issued.CommandType);
+            Assert.IsTrue(store.TryGetActive(
+                TeamType.Solo1,
+                issued.ExpiresTick,
+                out _));
+            Assert.IsFalse(store.TryGetActive(
+                TeamType.Solo1,
+                issued.ExpiresTick + 1u,
+                out _));
+        }
+
+        [Test]
+        public void DuoCommandStore_EnforcesCooldownThenReplacesCommand()
+        {
+            var store = new DuoTeamCommandStore();
+            Assert.AreEqual(
+                DuoTeamCommandIssueResult.Accepted,
+                store.TryIssue(
+                    TeamType.Solo2,
+                    20,
+                    DuoTeamCommandType.Regroup,
+                    0,
+                    Vector3.zero,
+                    50u,
+                    true,
+                    true,
+                    true,
+                    out _));
+
+            Assert.AreEqual(
+                DuoTeamCommandIssueResult.Cooldown,
+                store.TryIssue(
+                    TeamType.Solo2,
+                    20,
+                    DuoTeamCommandType.Retreat,
+                    0,
+                    Vector3.zero,
+                    50u + ShowdownRules.DuoTeamCommandCooldownTicks - 1u,
+                    true,
+                    true,
+                    true,
+                    out _));
+
+            uint replacementTick = 50u + ShowdownRules.DuoTeamCommandCooldownTicks;
+            Assert.AreEqual(
+                DuoTeamCommandIssueResult.Accepted,
+                store.TryIssue(
+                    TeamType.Solo2,
+                    20,
+                    DuoTeamCommandType.Retreat,
+                    0,
+                    new Vector3(1f, 0f, 1f),
+                    replacementTick,
+                    true,
+                    true,
+                    true,
+                    out DuoTeamCommandDirective replacement));
+            Assert.AreEqual(DuoTeamCommandType.Retreat, replacement.CommandType);
+        }
+
+        [TestCase(false, true, true, DuoTeamCommandIssueResult.IssuerUnavailable)]
+        [TestCase(true, false, true, DuoTeamCommandIssueResult.TeammateUnavailable)]
+        [TestCase(true, true, false, DuoTeamCommandIssueResult.InvalidTarget)]
+        public void DuoCommandStore_RejectsUnavailableParticipantsAndTargets(
+            bool issuerAvailable,
+            bool teammateAvailable,
+            bool targetValid,
+            DuoTeamCommandIssueResult expected)
+        {
+            var store = new DuoTeamCommandStore();
+            DuoTeamCommandIssueResult result = store.TryIssue(
+                TeamType.Solo3,
+                30,
+                DuoTeamCommandType.Attack,
+                99,
+                Vector3.zero,
+                10u,
+                issuerAvailable,
+                teammateAvailable,
+                targetValid,
+                out _);
+
+            Assert.AreEqual(expected, result);
+        }
+
+        [Test]
         public void DuoSpawnProtection_BlocksDamageUntilItsModifierIsRemoved()
         {
             object source = new object();

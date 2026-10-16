@@ -1,8 +1,140 @@
+using System.Collections.Generic;
 using MOBA.Core.Infrastructure;
 using UnityEngine;
 
 namespace MOBA.Core.Simulation
 {
+    public enum DuoTeamCommandType
+    {
+        None,
+        Regroup,
+        Attack,
+        Retreat,
+        TakeCube
+    }
+
+    public enum DuoTeamCommandIssueResult
+    {
+        Accepted,
+        NotDuoShowdown,
+        InvalidCommand,
+        IssuerUnavailable,
+        TeammateUnavailable,
+        InvalidTarget,
+        Cooldown
+    }
+
+    public readonly struct DuoTeamCommandDirective
+    {
+        public readonly DuoTeamCommandType CommandType;
+        public readonly TeamType Team;
+        public readonly int IssuerEntityId;
+        public readonly int TargetEntityId;
+        public readonly Vector3 TargetPosition;
+        public readonly uint IssuedTick;
+        public readonly uint ExpiresTick;
+
+        public bool IsValid => CommandType != DuoTeamCommandType.None;
+
+        public DuoTeamCommandDirective(
+            DuoTeamCommandType commandType,
+            TeamType team,
+            int issuerEntityId,
+            int targetEntityId,
+            Vector3 targetPosition,
+            uint issuedTick,
+            uint expiresTick)
+        {
+            CommandType = commandType;
+            Team = team;
+            IssuerEntityId = issuerEntityId;
+            TargetEntityId = targetEntityId;
+            TargetPosition = targetPosition;
+            IssuedTick = issuedTick;
+            ExpiresTick = expiresTick;
+        }
+    }
+
+    public sealed class DuoTeamCommandStore
+    {
+        private readonly Dictionary<TeamType, DuoTeamCommandDirective> _activeByTeam =
+            new Dictionary<TeamType, DuoTeamCommandDirective>();
+        private readonly Dictionary<TeamType, uint> _nextIssueTickByTeam =
+            new Dictionary<TeamType, uint>();
+
+        public DuoTeamCommandIssueResult TryIssue(
+            TeamType team,
+            int issuerEntityId,
+            DuoTeamCommandType commandType,
+            int targetEntityId,
+            Vector3 targetPosition,
+            uint currentTick,
+            bool issuerAvailable,
+            bool teammateAvailable,
+            bool targetValid,
+            out DuoTeamCommandDirective directive)
+        {
+            directive = default;
+            if (!ShowdownRules.IsDuoTeam(team))
+                return DuoTeamCommandIssueResult.NotDuoShowdown;
+            if (commandType == DuoTeamCommandType.None)
+                return DuoTeamCommandIssueResult.InvalidCommand;
+            if (!issuerAvailable || issuerEntityId == 0)
+                return DuoTeamCommandIssueResult.IssuerUnavailable;
+            if (!teammateAvailable)
+                return DuoTeamCommandIssueResult.TeammateUnavailable;
+            if (ShowdownRules.DuoTeamCommandRequiresTarget(commandType) && !targetValid)
+                return DuoTeamCommandIssueResult.InvalidTarget;
+            if (_nextIssueTickByTeam.TryGetValue(team, out uint nextTick) &&
+                currentTick < nextTick)
+            {
+                return DuoTeamCommandIssueResult.Cooldown;
+            }
+
+            uint durationTicks = ShowdownRules.GetDuoTeamCommandDurationTicks(commandType);
+            directive = new DuoTeamCommandDirective(
+                commandType,
+                team,
+                issuerEntityId,
+                targetEntityId,
+                targetPosition,
+                currentTick,
+                currentTick + durationTicks);
+            _activeByTeam[team] = directive;
+            _nextIssueTickByTeam[team] =
+                currentTick + ShowdownRules.DuoTeamCommandCooldownTicks;
+            return DuoTeamCommandIssueResult.Accepted;
+        }
+
+        public bool TryGetActive(
+            TeamType team,
+            uint currentTick,
+            out DuoTeamCommandDirective directive)
+        {
+            if (!_activeByTeam.TryGetValue(team, out directive))
+                return false;
+
+            if (currentTick <= directive.ExpiresTick)
+                return true;
+
+            _activeByTeam.Remove(team);
+            directive = default;
+            return false;
+        }
+
+        public void ClearTeam(TeamType team)
+        {
+            _activeByTeam.Remove(team);
+            _nextIssueTickByTeam.Remove(team);
+        }
+
+        public void ClearAll()
+        {
+            _activeByTeam.Clear();
+            _nextIssueTickByTeam.Clear();
+        }
+    }
+
     public static class ShowdownRules
     {
         public const int DuoTeamCount = 5;
@@ -16,6 +148,8 @@ namespace MOBA.Core.Simulation
         public const float DuoCohesionHardLeashDistance = 9f;
         public const float DuoCohesionUrgentDistance = 12f;
         public const float DuoCohesionPriorityScore = 110f;
+        public static readonly uint DuoTeamCommandCooldownTicks =
+            SimulationClock.SecondsToTicks(1f);
 
         public static bool IsDuoSelected =>
             SceneSelection.SelectedMode == GameModeId.SoloShowdown &&
@@ -38,6 +172,35 @@ namespace MOBA.Core.Simulation
         {
             int teamIndex = (int)team - (int)TeamType.Solo1;
             return teamIndex >= 0 && teamIndex < DuoTeamCount;
+        }
+
+        public static bool DuoTeamCommandRequiresTarget(DuoTeamCommandType commandType)
+        {
+            return commandType == DuoTeamCommandType.Attack ||
+                commandType == DuoTeamCommandType.TakeCube;
+        }
+
+        public static uint GetDuoTeamCommandDurationTicks(DuoTeamCommandType commandType)
+        {
+            float seconds;
+            switch (commandType)
+            {
+                case DuoTeamCommandType.Regroup:
+                case DuoTeamCommandType.TakeCube:
+                    seconds = 6f;
+                    break;
+                case DuoTeamCommandType.Attack:
+                    seconds = 5f;
+                    break;
+                case DuoTeamCommandType.Retreat:
+                    seconds = 4f;
+                    break;
+                default:
+                    seconds = 0f;
+                    break;
+            }
+
+            return SimulationClock.SecondsToTicks(seconds);
         }
 
         public static int GetDuoSpawnOrdinal(TeamType team, int teammateIndex)
