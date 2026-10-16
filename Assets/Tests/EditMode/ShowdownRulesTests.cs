@@ -1,6 +1,7 @@
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
+using MOBA.Core.Simulation.AI;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -268,6 +269,56 @@ namespace MOBA.Tests.EditMode
                 out _);
 
             Assert.AreEqual(expected, result);
+        }
+
+        [Test]
+        public void DuoCommandAI_RegroupAndRetreatPrioritizeSafeActions()
+        {
+            Assert.AreEqual(
+                112f,
+                DuoTeamCommandAIUtility.GetActionScoreFloor(
+                    DuoTeamCommandType.Regroup,
+                    AIActionType.Regroup,
+                    1f));
+            Assert.AreEqual(
+                118f,
+                DuoTeamCommandAIUtility.GetActionScoreFloor(
+                    DuoTeamCommandType.Retreat,
+                    AIActionType.Retreat,
+                    1f));
+            Assert.AreEqual(
+                0f,
+                DuoTeamCommandAIUtility.GetActionScorePenalty(
+                    DuoTeamCommandType.Retreat,
+                    AIActionType.Evade));
+            Assert.Less(
+                DuoTeamCommandAIUtility.GetActionScorePenalty(
+                    DuoTeamCommandType.Retreat,
+                    AIActionType.Approach),
+                0f);
+        }
+
+        [Test]
+        public void DuoCommandAI_OffensiveCommandsYieldAtLowHealth()
+        {
+            Assert.AreEqual(
+                0f,
+                DuoTeamCommandAIUtility.GetActionScoreFloor(
+                    DuoTeamCommandType.Attack,
+                    AIActionType.Approach,
+                    0.34f));
+            Assert.AreEqual(
+                0f,
+                DuoTeamCommandAIUtility.GetActionScoreFloor(
+                    DuoTeamCommandType.TakeCube,
+                    AIActionType.Objective,
+                    0.29f));
+            Assert.Greater(
+                DuoTeamCommandAIUtility.GetActionScoreFloor(
+                    DuoTeamCommandType.TakeCube,
+                    AIActionType.Objective,
+                    0.80f),
+                100f);
         }
 
         [Test]

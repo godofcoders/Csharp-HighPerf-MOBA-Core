@@ -105,6 +105,52 @@ namespace MOBA.Core.Simulation.AI
                     _self.State.CarriedGemCount,
                     currentTick);
             }
+
+            ApplyPlayerDuoCommand(currentTick);
+        }
+
+        private void ApplyPlayerDuoCommand(uint currentTick)
+        {
+            SoloShowdownMode mode = SoloShowdownMode.Instance;
+            if (mode == null ||
+                !mode.TryGetActiveDuoTeamCommand(
+                    _self,
+                    currentTick,
+                    out DuoTeamCommandDirective directive))
+            {
+                return;
+            }
+
+            if (directive.CommandType == DuoTeamCommandType.Attack)
+            {
+                ISpatialEntity target = CombatRegistry.GetEntity(directive.TargetEntityId);
+                if (target is BrawlerController enemy &&
+                    enemy.State != null &&
+                    !enemy.State.IsDead)
+                {
+                    AITeamBlackboard.ReportFocusTarget(
+                        _self.Team,
+                        enemy,
+                        currentTick,
+                        5f,
+                        "player_duo_command");
+                }
+
+                return;
+            }
+
+            if (directive.CommandType == DuoTeamCommandType.Regroup ||
+                directive.CommandType == DuoTeamCommandType.Retreat)
+            {
+                float urgency = directive.CommandType == DuoTeamCommandType.Retreat
+                    ? 5f
+                    : 4f;
+                AITeamBlackboard.ReportRegroupPoint(
+                    _self.Team,
+                    directive.TargetPosition,
+                    currentTick,
+                    urgency);
+            }
         }
 
         public AITeamPlaybookState UpdatePlaybook(

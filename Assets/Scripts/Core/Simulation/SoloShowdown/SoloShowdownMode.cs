@@ -293,7 +293,14 @@ namespace MOBA.Core.Simulation
                 return false;
 
             BrawlerController issuer = FindContestant(directive.IssuerEntityId);
-            if (!IsAliveContestant(issuer) || FindLivingTeammate(issuer) == null)
+            BrawlerController teammate = FindLivingTeammate(issuer);
+            bool targetValid = ValidateDuoTeamCommandTarget(
+                directive.CommandType,
+                issuer,
+                teammate,
+                directive.TargetEntityId,
+                out _);
+            if (!IsAliveContestant(issuer) || teammate == null || !targetValid)
             {
                 _duoTeamCommands.ClearTeam(recipient.Team);
                 directive = default;

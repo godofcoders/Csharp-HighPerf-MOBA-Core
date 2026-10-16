@@ -6,6 +6,83 @@ using MOBA.Core.Definitions;
 
 namespace MOBA.Core.Simulation.AI
 {
+    public static class DuoTeamCommandAIUtility
+    {
+        public static float GetActionScoreFloor(
+            DuoTeamCommandType commandType,
+            AIActionType actionType,
+            float healthRatio)
+        {
+            float health = Mathf.Clamp01(healthRatio);
+            if ((commandType == DuoTeamCommandType.Attack && health < 0.35f) ||
+                (commandType == DuoTeamCommandType.TakeCube && health < 0.30f))
+            {
+                return 0f;
+            }
+
+            switch (commandType)
+            {
+                case DuoTeamCommandType.Regroup:
+                    return actionType == AIActionType.Regroup ? 112f : 0f;
+
+                case DuoTeamCommandType.Attack:
+                    if (actionType == AIActionType.Approach)
+                        return 108f;
+                    if (actionType == AIActionType.HoldRange)
+                        return 104f;
+                    return actionType == AIActionType.UseSuper ? 102f : 0f;
+
+                case DuoTeamCommandType.Retreat:
+                    if (actionType == AIActionType.Retreat)
+                        return 118f;
+                    return actionType == AIActionType.Reposition ? 108f : 0f;
+
+                case DuoTeamCommandType.TakeCube:
+                    if (actionType == AIActionType.Objective)
+                        return 112f;
+                    return actionType == AIActionType.Approach ? 92f : 0f;
+
+                default:
+                    return 0f;
+            }
+        }
+
+        public static float GetActionScorePenalty(
+            DuoTeamCommandType commandType,
+            AIActionType actionType)
+        {
+            switch (commandType)
+            {
+                case DuoTeamCommandType.Regroup:
+                    if (actionType == AIActionType.Approach)
+                        return -36f;
+                    return actionType == AIActionType.Objective ? -28f : 0f;
+
+                case DuoTeamCommandType.Attack:
+                    if (actionType == AIActionType.Objective)
+                        return -35f;
+                    if (actionType == AIActionType.Wander)
+                        return -50f;
+                    return actionType == AIActionType.Search ? -30f : 0f;
+
+                case DuoTeamCommandType.Retreat:
+                    if (actionType == AIActionType.Approach)
+                        return -90f;
+                    if (actionType == AIActionType.HoldRange)
+                        return -65f;
+                    if (actionType == AIActionType.UseSuper)
+                        return -75f;
+                    return actionType == AIActionType.Objective ? -80f : 0f;
+
+                case DuoTeamCommandType.TakeCube:
+                    return actionType == AIActionType.UseSuper ? -25f : 0f;
+
+                default:
+                    return 0f;
+            }
+        }
+    }
+
     public sealed class AIUtilityScorer
     {
         private readonly BrawlerController _self;
@@ -57,6 +134,7 @@ namespace MOBA.Core.Simulation.AI
         private string _lastWinConditionDebug = "Win=None";
         private string _lastBrawlerIdentityDebug = "Identity=None";
         private string _lastPoisonAvoidanceDebug = "Poison=None";
+        private string _lastPlayerCommandDebug = "PlayerCmd=None";
         private uint _lastLaneEvaluationTick;
         private bool _hasLaneEvaluation;
         private bool _lastCanHoldLane;
@@ -90,6 +168,7 @@ namespace MOBA.Core.Simulation.AI
         public string LastWinConditionDebug => _lastWinConditionDebug;
         public string LastBrawlerIdentityDebug => _lastBrawlerIdentityDebug;
         public string LastPoisonAvoidanceDebug => _lastPoisonAvoidanceDebug;
+        public string LastPlayerCommandDebug => _lastPlayerCommandDebug;
 
         public AIUtilityScorer(
             BrawlerController self,
@@ -198,7 +277,64 @@ namespace MOBA.Core.Simulation.AI
                 macroState,
                 results);
             ApplyDuoCohesionPriority(targetInfo, results);
+            ApplyPlayerDuoCommandPriority(currentTick, results);
             ApplyShowdownPoisonAvoidance(targetInfo, results);
+        }
+
+        private void ApplyPlayerDuoCommandPriority(
+            uint currentTick,
+            List<AIActionScore> results)
+        {
+            SoloShowdownMode mode = SoloShowdownMode.Instance;
+            if (mode == null ||
+                !mode.TryGetActiveDuoTeamCommand(
+                    _self,
+                    currentTick,
+                    out DuoTeamCommandDirective directive))
+            {
+                _lastPlayerCommandDebug = "PlayerCmd=None";
+                return;
+            }
+
+            float healthRatio = _self != null && _self.State != null
+                ? _self.State.CurrentHealth / Mathf.Max(1f, _self.State.MaxHealth.Value)
+                : 0f;
+            int raised = 0;
+            int lowered = 0;
+            for (int i = 0; i < results.Count; i++)
+            {
+                AIActionScore action = results[i];
+                float floor = DuoTeamCommandAIUtility.GetActionScoreFloor(
+                    directive.CommandType,
+                    action.ActionType,
+                    healthRatio);
+                float penalty = DuoTeamCommandAIUtility.GetActionScorePenalty(
+                    directive.CommandType,
+                    action.ActionType);
+                float adjusted = action.Score;
+                if (floor > 0f && floor > adjusted)
+                {
+                    adjusted = floor;
+                    raised++;
+                }
+
+                if (penalty < 0f)
+                {
+                    adjusted = Mathf.Max(MinActionScore, adjusted + penalty);
+                    lowered++;
+                }
+
+                results[i] = new AIActionScore(
+                    action.ActionType,
+                    ClampActionScore(action.ActionType, adjusted, true));
+            }
+
+            _lastPlayerCommandDebug =
+                $"PlayerCmd={directive.CommandType} raised:{raised} lowered:{lowered} " +
+                $"hp:{healthRatio:0.00}";
+            AppendObjectiveIntentDebug(
+                "PlayerCmd",
+                $"{directive.CommandType}_r{raised}_l{lowered}");
         }
 
         private void ApplyShowdownPoisonAvoidance(
