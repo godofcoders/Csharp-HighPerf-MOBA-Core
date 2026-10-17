@@ -75,6 +75,7 @@ namespace MOBA.Core.Infrastructure
                 return;
 
             _installed = true;
+            DuoTeamCommandHUD.EnsureInstalled();
 
             GameObject canvasGo = new GameObject(
                 "MatchHUDCanvas",

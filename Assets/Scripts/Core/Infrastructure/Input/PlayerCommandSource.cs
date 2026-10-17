@@ -61,6 +61,108 @@ namespace MOBA.Core.Infrastructure
                 _controlledBrawler = GetComponent<BrawlerController>();
         }
 
+        private readonly List<ISpatialEntity> _duoCommandCandidates = new List<ISpatialEntity>(32);
+        private readonly List<BrawlerController> _duoCommandBrawlers = new List<BrawlerController>(12);
+
+        public Vector3 CommandAimPoint => GetCurrentAimWorldPoint();
+
+        public DuoTeamCommandIssueResult IssueDuoTeamCommand(
+            DuoTeamCommandType command, Vector3 aimPoint)
+        {
+            SoloShowdownMode mode = SoloShowdownMode.Instance;
+            if (mode == null || !mode.IsDuoShowdown)
+                return DuoTeamCommandIssueResult.NotDuoShowdown;
+            if (!MatchStateUtility.IsCombatResolutionOpen() || _controlledBrawler == null ||
+                _controlledBrawler.State == null || _controlledBrawler.State.IsDead ||
+                !ServiceProvider.TryGet<ISimulationClock>(out var clock))
+                return DuoTeamCommandIssueResult.IssuerUnavailable;
+            if (!mode.TryGetDuoCohesionAnchor(_controlledBrawler, out var teammate))
+                return DuoTeamCommandIssueResult.TeammateUnavailable;
+
+            int targetId = 0;
+            Vector3 targetPoint = _controlledBrawler.Position;
+            float bestScore = float.PositiveInfinity;
+            if (command == DuoTeamCommandType.Attack)
+            {
+                CombatRegistry.GetBrawlersNonAlloc(_duoCommandBrawlers);
+                for (int i = 0; i < _duoCommandBrawlers.Count; i++)
+                {
+                    var enemy = _duoCommandBrawlers[i];
+                    if (enemy.State == null || enemy.State.IsDead ||
+                        enemy.State.IsHiddenTo(_controlledBrawler.Team) ||
+                        !TeamRelationshipUtility.AreEnemies(_controlledBrawler.Team, enemy.Team) ||
+                        !IsDuoCommandTargetSafe(enemy.Position) ||
+                        (enemy.Position - _controlledBrawler.Position).sqrMagnitude > 196f)
+                        continue;
+                    float aimDistance = (enemy.Position - aimPoint).sqrMagnitude;
+                    // Nearby aimed enemies win; otherwise choose the closest visible enemy.
+                    float score = aimDistance <= 16f ? aimDistance :
+                        1000f + (enemy.Position - _controlledBrawler.Position).sqrMagnitude;
+                    if (score >= bestScore) continue;
+                    bestScore = score;
+                    targetId = enemy.EntityID;
+                    targetPoint = enemy.Position;
+                }
+            }
+            else if (command == DuoTeamCommandType.TakeCube)
+            {
+                var cubes = PowerCube.All;
+                for (int i = 0; i < cubes.Count; i++)
+                {
+                    var cube = cubes[i];
+                    if (cube == null || cube.IsPickedUp || !cube.CanBePickedUpBy(teammate.State))
+                        continue;
+                    ConsiderDuoCubeTarget(teammate, cube.gameObject.GetInstanceID(),
+                        cube.transform.position, ref bestScore, ref targetId, ref targetPoint);
+                }
+                if (targetId == 0 && SimulationClock.Grid != null)
+                {
+                    SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                        _controlledBrawler.Position, ShowdownRules.DuoCohesionHardLeashDistance,
+                        _duoCommandCandidates);
+                    for (int i = 0; i < _duoCommandCandidates.Count; i++)
+                    {
+                        if (_duoCommandCandidates[i] is PowerCubeCrateController crate && !crate.IsDestroyed)
+                            ConsiderDuoCubeTarget(teammate, crate.EntityID, crate.Position,
+                                ref bestScore, ref targetId, ref targetPoint);
+                    }
+                }
+            }
+            return mode.TryIssueDuoTeamCommand(_controlledBrawler, command, targetId,
+                targetPoint, clock.CurrentTick, out _);
+        }
+
+        private void ConsiderDuoCubeTarget(BrawlerController teammate, int id, Vector3 point,
+            ref float bestScore, ref int targetId, ref Vector3 targetPoint)
+        {
+            if (!IsDuoCommandTargetSafe(point) ||
+                (point - _controlledBrawler.Position).sqrMagnitude >
+                    ShowdownRules.DuoCohesionHardLeashDistance * ShowdownRules.DuoCohesionHardLeashDistance)
+                return;
+            float score = (point - teammate.Position).sqrMagnitude;
+            if (score >= bestScore) return;
+            var pathfinder = SimulationClock.Pathfinder;
+            if (pathfinder != null)
+            {
+                var start = pathfinder.GetGridCoords(teammate.Position);
+                var end = pathfinder.GetGridCoords(point);
+                if (!pathfinder.TryGetPathLength(start.x, start.y, end.x, end.y, out int length))
+                    return;
+                score = length * pathfinder.CellSize;
+                score *= score;
+                if (score >= bestScore) return;
+            }
+            bestScore = score;
+            targetId = id;
+            targetPoint = point;
+        }
+
+        private static bool IsDuoCommandTargetSafe(Vector3 point)
+        {
+            var zone = SoloShowdownPoisonZone.Instance;
+            return zone == null || !zone.IsHazardActive || !zone.IsInDangerBand(point);
+        }
+
         private Vector3 GetCurrentAimWorldPoint()
         {
             if (_controlledBrawler == null)
@@ -908,6 +1010,8 @@ namespace MOBA.Core.Infrastructure
 
         private void QueueMainAttackCommand(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
         {
+            if (DuoTeamCommandHUD.IsPointerOverControls())
+                return;
             direction = NormalizeFireDirection(direction);
             if (direction.sqrMagnitude <= 0.001f)
                 return;
