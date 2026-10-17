@@ -8,6 +8,30 @@ namespace MOBA.Core.Simulation.AI
 {
     public static class DuoTeamCommandAIUtility
     {
+        public static bool CanExecute(
+            DuoTeamCommandType command, AIActionType action, float healthRatio)
+        {
+            // Only specialize actions selected by the utility scorer. Safety
+            // actions remain free to win over a player's directive.
+            if (action == AIActionType.Evade || action == AIActionType.None)
+                return false;
+            switch (command)
+            {
+                case DuoTeamCommandType.Attack:
+                    return healthRatio >= 0.35f &&
+                        (action == AIActionType.Approach || action == AIActionType.HoldRange ||
+                         action == AIActionType.UseSuper);
+                case DuoTeamCommandType.TakeCube:
+                    return healthRatio >= 0.30f && action == AIActionType.Objective;
+                case DuoTeamCommandType.Regroup:
+                    return action == AIActionType.Regroup;
+                case DuoTeamCommandType.Retreat:
+                    return action == AIActionType.Retreat || action == AIActionType.Reposition;
+                default:
+                    return false;
+            }
+        }
+
         public static float GetActionScoreFloor(
             DuoTeamCommandType commandType,
             AIActionType actionType,

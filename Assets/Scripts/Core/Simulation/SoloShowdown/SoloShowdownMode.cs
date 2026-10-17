@@ -299,7 +299,7 @@ namespace MOBA.Core.Simulation
                 issuer,
                 teammate,
                 directive.TargetEntityId,
-                out _);
+                out Vector3 liveTargetPosition);
             if (!IsAliveContestant(issuer) || teammate == null || !targetValid)
             {
                 _duoTeamCommands.ClearTeam(recipient.Team);
@@ -307,6 +307,12 @@ namespace MOBA.Core.Simulation
                 return false;
             }
 
+            // Resolve moving players, enemies and pickups on every read without
+            // extending the original command lifetime.
+            directive = new DuoTeamCommandDirective(
+                directive.CommandType, directive.Team, directive.IssuerEntityId,
+                directive.TargetEntityId, liveTargetPosition,
+                directive.IssuedTick, directive.ExpiresTick);
             return true;
         }
 

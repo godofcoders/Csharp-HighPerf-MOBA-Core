@@ -9,6 +9,21 @@ namespace MOBA.Tests.EditMode
 {
     public class ShowdownRulesTests
     {
+        [TestCase(DuoTeamCommandType.Attack, AIActionType.Evade, 1f, false)]
+        [TestCase(DuoTeamCommandType.Attack, AIActionType.Retreat, 1f, false)]
+        [TestCase(DuoTeamCommandType.Attack, AIActionType.Approach, 0.34f, false)]
+        [TestCase(DuoTeamCommandType.Attack, AIActionType.HoldRange, 0.8f, true)]
+        [TestCase(DuoTeamCommandType.TakeCube, AIActionType.Objective, 0.29f, false)]
+        [TestCase(DuoTeamCommandType.TakeCube, AIActionType.Objective, 0.8f, true)]
+        [TestCase(DuoTeamCommandType.Regroup, AIActionType.Retreat, 0.1f, false)]
+        [TestCase(DuoTeamCommandType.Regroup, AIActionType.Regroup, 0.8f, true)]
+        [TestCase(DuoTeamCommandType.Retreat, AIActionType.Reposition, 0.8f, true)]
+        public void DuoExecution_PreservesSelectedSafetyActions(
+            DuoTeamCommandType command, AIActionType action, float health, bool expected)
+        {
+            Assert.AreEqual(expected, DuoTeamCommandAIUtility.CanExecute(command, action, health));
+        }
+
         [Test]
         public void DuoRoster_AssignsTwoPlayersToEachOfFiveTeams()
         {
@@ -430,6 +445,71 @@ namespace MOBA.Tests.EditMode
                 if (cubeObject != null)
                     Object.DestroyImmediate(cubeObject);
                 Object.DestroyImmediate(definition);
+            }
+        }
+
+        [TestCase(DuoTeamCommandType.Regroup)]
+        [TestCase(DuoTeamCommandType.Retreat)]
+        [TestCase(DuoTeamCommandType.Attack)]
+        [TestCase(DuoTeamCommandType.TakeCube)]
+        public void DuoCommand_ReadResolvesMovingTargetWithoutExtendingExpiry(DuoTeamCommandType command)
+        {
+            GameModeId previousMode = SceneSelection.SelectedMode;
+            ShowdownVariant previousVariant = SceneSelection.SelectedShowdownVariant;
+            var definition = ScriptableObject.CreateInstance<BrawlerDefinition>();
+            definition.BaseHealth = 2000f;
+            definition.BaseMoveSpeed = 5f;
+            var modeObject = new GameObject("CommandMode");
+            var playerObject = new GameObject("CommandPlayer");
+            var botObject = new GameObject("CommandBot");
+            var targetObject = new GameObject("CommandTarget");
+            BrawlerController enemy = null;
+            try
+            {
+                SceneSelection.SelectedMode = GameModeId.SoloShowdown;
+                SceneSelection.SelectedShowdownVariant = ShowdownVariant.Duo;
+                var mode = modeObject.AddComponent<SoloShowdownMode>();
+                var player = playerObject.AddComponent<BrawlerController>();
+                var bot = botObject.AddComponent<BrawlerController>();
+                player.InitializeFromMatchmaking(definition, TeamType.Solo1);
+                bot.InitializeFromMatchmaking(definition, TeamType.Solo1);
+                playerObject.AddComponent<PlayerCommandSource>();
+                mode.RegisterBrawler(player);
+                mode.RegisterBrawler(bot);
+                int targetId = 0;
+                if (command == DuoTeamCommandType.Attack)
+                {
+                    enemy = targetObject.AddComponent<BrawlerController>();
+                    enemy.InitializeFromMatchmaking(definition, TeamType.Solo2);
+                    CombatRegistry.Register(enemy);
+                    targetId = enemy.EntityID;
+                }
+                else if (command == DuoTeamCommandType.TakeCube)
+                {
+                    targetObject.AddComponent<PowerCube>();
+                    targetId = targetObject.GetInstanceID();
+                }
+                Assert.AreEqual(DuoTeamCommandIssueResult.Accepted,
+                    mode.TryIssueDuoTeamCommand(player, command, targetId,
+                        Vector3.zero, 10u, out var issued));
+                Transform movingTarget = ShowdownRules.DuoTeamCommandRequiresTarget(command)
+                    ? targetObject.transform : playerObject.transform;
+                movingTarget.position = new Vector3(3f, 0f, 4f);
+                Assert.IsTrue(mode.TryGetActiveDuoTeamCommand(bot, 11u, out var active));
+                Assert.AreEqual(movingTarget.position, active.TargetPosition);
+                Assert.AreEqual(issued.ExpiresTick, active.ExpiresTick);
+                Assert.IsFalse(mode.TryGetActiveDuoTeamCommand(player, 11u, out _));
+            }
+            finally
+            {
+                if (enemy != null) CombatRegistry.Unregister(enemy);
+                Object.DestroyImmediate(targetObject);
+                Object.DestroyImmediate(botObject);
+                Object.DestroyImmediate(playerObject);
+                Object.DestroyImmediate(modeObject);
+                Object.DestroyImmediate(definition);
+                SceneSelection.SelectedMode = previousMode;
+                SceneSelection.SelectedShowdownVariant = previousVariant;
             }
         }
 

@@ -7,6 +7,7 @@ namespace MOBA.Core.Simulation.AI
 {
     public sealed class AIActionExecutor
     {
+        private readonly AITargetInfo _duoCommandTarget = new AITargetInfo();
         private readonly BrawlerController _brawler;
         private readonly BrawlerAIProfile _profile;
         private readonly NavigationAgent _navAgent;
@@ -152,6 +153,10 @@ namespace MOBA.Core.Simulation.AI
             float superRange)
         {
             _currentExecuteTick = currentTick;
+
+            if (TryExecuteDuoCommand(actionType, targetInfo, currentTick,
+                    attackRange, idealRange, superRange))
+                return;
 
             if (TryExecuteDuoCohesionOverride(
                     targetInfo,
@@ -2811,6 +2816,67 @@ namespace MOBA.Core.Simulation.AI
             }
 
             RunFallbackWander(currentTick);
+        }
+
+        private bool TryExecuteDuoCommand(
+            AIActionType action, AITargetInfo targetInfo, uint tick,
+            float attackRange, float idealRange, float superRange)
+        {
+            SoloShowdownMode mode = SoloShowdownMode.Instance;
+            if (mode == null || _brawler.State == null ||
+                !mode.TryGetActiveDuoTeamCommand(_brawler, tick, out var directive) ||
+                !DuoTeamCommandAIUtility.CanExecute(directive.CommandType, action,
+                    _brawler.State.CurrentHealth / Mathf.Max(1f, _brawler.State.MaxHealth.Value)))
+                return false;
+
+            SoloShowdownPoisonZone zone = SoloShowdownPoisonZone.Instance;
+            if (zone != null && zone.IsHazardActive && zone.IsInDangerBand(_brawler.Position))
+                return false;
+
+            if (directive.CommandType == DuoTeamCommandType.Regroup)
+                return TryRunDuoTeammateRegroup(targetInfo, tick, attackRange, superRange);
+
+            if (directive.CommandType == DuoTeamCommandType.Retreat)
+            {
+                Vector3 destination = directive.TargetPosition;
+                bool hasThreat = targetInfo != null && targetInfo.HasLiveTarget;
+                Vector3 threat = hasThreat ? targetInfo.Target.Position : destination;
+                if (hasThreat)
+                {
+                    Vector3 away = destination - threat;
+                    away.y = 0f;
+                    destination += away.normalized * ShowdownRules.DuoCohesionFollowDistance;
+                }
+                RequestMapAwareDestination(destination, 0.8f, AIMapRouteIntent.CombatRetreat,
+                    hasThreat, threat, idealRange);
+                return true;
+            }
+
+            // Aggressive commands never bypass the hard leash or chase poison targets.
+            if (!mode.TryGetDuoCohesionAnchor(_brawler, out var teammate) ||
+                ShowdownRules.ShouldForceDuoRegroup(Vector3.Distance(_brawler.Position, teammate.Position)) ||
+                (zone != null && zone.IsHazardActive && zone.IsInDangerBand(directive.TargetPosition)))
+                return false;
+
+            ISpatialEntity entity = CombatRegistry.GetEntity(directive.TargetEntityId);
+            if (directive.CommandType == DuoTeamCommandType.TakeCube &&
+                !(entity is PowerCubeCrateController))
+            {
+                RequestMapAwareDestination(directive.TargetPosition, 0.35f, AIMapRouteIntent.Objective);
+                return true;
+            }
+
+            if (entity == null ||
+                (entity is BrawlerController enemy && enemy.State.IsHiddenTo(_brawler.Team)))
+                return false;
+            _duoCommandTarget.Remember(entity, tick);
+            if (action == AIActionType.UseSuper)
+                RunUseSuper(_duoCommandTarget, tick, attackRange, idealRange, superRange);
+            else if (action == AIActionType.HoldRange)
+                RunHoldRange(_duoCommandTarget, tick, attackRange, idealRange, superRange);
+            else
+                RunApproach(_duoCommandTarget, tick, attackRange, idealRange, superRange);
+            return true;
         }
 
         private bool TryExecuteDuoCohesionOverride(
