@@ -469,24 +469,25 @@ namespace MOBA.Tests.EditMode
                 SceneSelection.SelectedMode = GameModeId.SoloShowdown;
                 SceneSelection.SelectedShowdownVariant = ShowdownVariant.Duo;
                 var mode = modeObject.AddComponent<SoloShowdownMode>();
+                DuoCommandTestUtility.Invoke(mode, "Awake");
                 var player = playerObject.AddComponent<BrawlerController>();
                 var bot = botObject.AddComponent<BrawlerController>();
-                player.InitializeFromMatchmaking(definition, TeamType.Solo1);
-                bot.InitializeFromMatchmaking(definition, TeamType.Solo1);
-                playerObject.AddComponent<PlayerCommandSource>();
+                DuoCommandTestUtility.Initialize(player, definition, TeamType.Solo1);
+                DuoCommandTestUtility.Initialize(bot, definition, TeamType.Solo1);
+                DuoCommandTestUtility.AddPlayer(playerObject);
                 mode.RegisterBrawler(player);
                 mode.RegisterBrawler(bot);
                 int targetId = 0;
                 if (command == DuoTeamCommandType.Attack)
                 {
                     enemy = targetObject.AddComponent<BrawlerController>();
-                    enemy.InitializeFromMatchmaking(definition, TeamType.Solo2);
+                    DuoCommandTestUtility.Initialize(enemy, definition, TeamType.Solo2);
                     CombatRegistry.Register(enemy);
                     targetId = enemy.EntityID;
                 }
                 else if (command == DuoTeamCommandType.TakeCube)
                 {
-                    targetObject.AddComponent<PowerCube>();
+                    DuoCommandTestUtility.AddCube(targetObject);
                     targetId = targetObject.GetInstanceID();
                 }
                 Assert.AreEqual(DuoTeamCommandIssueResult.Accepted,
@@ -536,10 +537,11 @@ namespace MOBA.Tests.EditMode
                 SceneSelection.SelectedShowdownVariant = ShowdownVariant.Duo;
 
                 SoloShowdownMode mode = modeObject.AddComponent<SoloShowdownMode>();
+                DuoCommandTestUtility.Invoke(mode, "Awake");
                 BrawlerController collector = collectorObject.AddComponent<BrawlerController>();
                 BrawlerController teammate = teammateObject.AddComponent<BrawlerController>();
-                collector.InitializeFromMatchmaking(definition, TeamType.Solo1);
-                teammate.InitializeFromMatchmaking(definition, TeamType.Solo1);
+                DuoCommandTestUtility.Initialize(collector, definition, TeamType.Solo1);
+                DuoCommandTestUtility.Initialize(teammate, definition, TeamType.Solo1);
                 mode.RegisterBrawler(collector);
                 mode.RegisterBrawler(teammate);
 

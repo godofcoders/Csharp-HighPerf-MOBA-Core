@@ -47,7 +47,7 @@ namespace MOBA.Tests.EditMode
     {
         private sealed class Clock : ISimulationClock
         {
-            public uint CurrentTick => 100u;
+            public uint CurrentTick { get; set; } = 100u;
             public float TickDelta => SimulationClock.TickDeltaTime;
         }
 
@@ -71,18 +71,20 @@ namespace MOBA.Tests.EditMode
                 SceneSelection.SelectedShowdownVariant = ShowdownVariant.Duo;
                 ServiceProvider.Register<ISimulationClock>(clock);
                 var mode = modeObject.AddComponent<SoloShowdownMode>();
+                DuoCommandTestUtility.Invoke(mode, "Awake");
                 var player = playerObject.AddComponent<BrawlerController>();
                 var bot = botObject.AddComponent<BrawlerController>();
-                player.InitializeFromMatchmaking(definition, TeamType.Solo1);
-                bot.InitializeFromMatchmaking(definition, TeamType.Solo1);
-                playerObject.AddComponent<PlayerCommandSource>();
+                DuoCommandTestUtility.Initialize(player, definition, TeamType.Solo1);
+                DuoCommandTestUtility.Initialize(bot, definition, TeamType.Solo1);
+                DuoCommandTestUtility.AddPlayer(playerObject);
                 mode.RegisterBrawler(player);
                 mode.RegisterBrawler(bot);
                 DuoTeamCommandHUD.EnsureInstalled();
                 hud = Object.FindObjectOfType<DuoTeamCommandHUD>();
+                DuoCommandTestUtility.Invoke(hud, "Awake");
                 DuoTeamCommandHUD.EnsureInstalled();
                 Assert.AreEqual(1, Object.FindObjectsOfType<DuoTeamCommandHUD>().Length);
-                hud.SendMessage("Update");
+                DuoCommandTestUtility.Invoke(hud, "Update");
                 var root = hud.transform.Find("DuoCommandCanvas/DuoCommands");
                 Assert.IsTrue(root.gameObject.activeSelf);
                 var wheel = root.Find("CommandWheel").gameObject;
@@ -93,9 +95,20 @@ namespace MOBA.Tests.EditMode
                 Assert.IsFalse(wheel.activeSelf);
                 Assert.IsTrue(mode.TryGetActiveDuoTeamCommand(bot, clock.CurrentTick, out var directive));
                 Assert.AreEqual(DuoTeamCommandType.Regroup, directive.CommandType);
+                DuoCommandTestUtility.Invoke(hud, "Update");
+                Assert.That(root.Find("ActiveCommand").GetComponent<UnityEngine.UI.Text>().text, Does.Contain("REGROUP"));
+                Assert.That(root.Find("Cooldown").GetComponent<UnityEngine.UI.Text>().text, Does.Contain("READY IN"));
+                Assert.IsFalse(wheel.transform.Find("ATTACK").GetComponent<UnityEngine.UI.Button>().interactable);
+                clock.CurrentTick += ShowdownRules.DuoTeamCommandCooldownTicks;
+                DuoCommandTestUtility.Invoke(hud, "Update");
+                Assert.IsTrue(wheel.transform.Find("ATTACK").GetComponent<UnityEngine.UI.Button>().interactable);
+                clock.CurrentTick = directive.ExpiresTick + 1u;
+                DuoCommandTestUtility.Invoke(hud, "Update");
+                Assert.AreEqual(string.Empty, root.Find("ActiveCommand").GetComponent<UnityEngine.UI.Text>().text);
+                Assert.IsFalse(root.Find("CommandDuration").gameObject.activeSelf);
 
                 SceneSelection.SelectedShowdownVariant = ShowdownVariant.Solo;
-                hud.SendMessage("Update");
+                DuoCommandTestUtility.Invoke(hud, "Update");
                 Assert.IsFalse(root.gameObject.activeSelf);
             }
             finally
