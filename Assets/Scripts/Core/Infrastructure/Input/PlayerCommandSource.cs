@@ -1010,7 +1010,7 @@ namespace MOBA.Core.Infrastructure
 
         private void QueueMainAttackCommand(Vector3 direction, Vector3 targetPoint, bool hasTargetPoint)
         {
-            if (DuoTeamCommandHUD.IsPointerOverControls())
+            if (DuoTeamCommandHUD.IsPointerOverControls() || CombatHitFeedbackView.IsPointerOverControls())
                 return;
             direction = NormalizeFireDirection(direction);
             if (direction.sqrMagnitude <= 0.001f)

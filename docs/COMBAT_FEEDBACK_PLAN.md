@@ -7,6 +7,7 @@
 2. `feat(feedback): confirm hits and shield absorption`
    - Confirm resolved local-player hits, including fully absorbed shield hits.
    - Distinct shield indicator and sound; throttle rapid-hit audio.
+   - Ensure ordinary shield pools absorb incoming damage without requiring a separate modifier.
    - Saved effects-volume control, separate from background music.
 3. Ability-readiness cues
    - Distinct super/hypercharge ready transitions and restrained sounds.

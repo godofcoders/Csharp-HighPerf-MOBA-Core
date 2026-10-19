@@ -24,6 +24,7 @@ namespace MOBA.Core.Simulation
                 return;
 
             float workingDamage = ctx.Damage;
+            float healthBefore = 0f;
             float shieldBefore = 0f;
             float shieldAfter = 0f;
 
@@ -34,6 +35,7 @@ namespace MOBA.Core.Simulation
             {
                 wasAliveBefore = !targetBrawler.State.IsDead;
                 shieldBefore = targetBrawler.State.ShieldHealth;
+                healthBefore = targetBrawler.State.CurrentHealth;
             }
             else if (targetBreakable != null)
             {
@@ -54,7 +56,7 @@ namespace MOBA.Core.Simulation
                 if (targetBrawler != null && targetBrawler.State != null)
                 {
                     float remainingShield = targetBrawler.State.ShieldHealth;
-                    workingDamage = targetBrawler.State.IncomingDamageModifiers.ApplyIncoming(workingDamage, ref remainingShield);
+                    workingDamage = ApplyIncomingWithShield(targetBrawler.State, workingDamage, ref remainingShield);
                     shieldAfter = remainingShield;
 
                     if (shieldAfter != targetBrawler.State.ShieldHealth)
@@ -98,7 +100,7 @@ namespace MOBA.Core.Simulation
                 if (targetBrawler != null && targetBrawler.State != null)
                 {
                     float remainingShield = targetBrawler.State.ShieldHealth;
-                    workingDamage = targetBrawler.State.IncomingDamageModifiers.ApplyIncoming(workingDamage, ref remainingShield);
+                    workingDamage = ApplyIncomingWithShield(targetBrawler.State, workingDamage, ref remainingShield);
                     shieldAfter = remainingShield;
 
                     if (shieldAfter != targetBrawler.State.ShieldHealth)
@@ -128,7 +130,9 @@ namespace MOBA.Core.Simulation
                 Damage = ctx,
                 WasFatal = wasFatal,
                 FinalDamageApplied = workingDamage,
-                ShieldAbsorbed = shieldBefore - shieldAfter
+                ShieldAbsorbed = Mathf.Max(0f, shieldBefore - shieldAfter),
+                HealthDamageApplied = targetBrawler != null && targetBrawler.State != null
+                    ? Mathf.Max(0f, healthBefore - targetBrawler.State.CurrentHealth) : 0f
             };
 
             DamageEventBus.RaiseDamageApplied(result);
@@ -152,6 +156,17 @@ namespace MOBA.Core.Simulation
 
             if (targetBreakable != null && wasFatal)
                 combatLog.AddEntry(CombatLogEntry.CreateBreakableDestroyed(currentTick, result));
+        }
+
+        private static float ApplyIncomingWithShield(BrawlerState target, float damage, ref float remainingShield)
+        {
+            float result = target.IncomingDamageModifiers.ApplyIncoming(damage, ref remainingShield);
+            // AddShield grants a numeric pool (including support shields). A
+            // separately-authored Shield modifier must not be required to use it.
+            // If a modifier already absorbed damage, only the remainder reaches here.
+            float absorbed = Mathf.Min(Mathf.Max(0f, result), Mathf.Max(0f, remainingShield));
+            remainingShield -= absorbed;
+            return result - absorbed;
         }
 
         private float ApplyOutgoingDamage(BrawlerController attacker, float damage)
