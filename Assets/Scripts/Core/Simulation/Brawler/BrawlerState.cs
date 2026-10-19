@@ -521,7 +521,7 @@ namespace MOBA.Core.Simulation
                     AbilityDefinition = null,
                     Position = Owner.transform.position,
                     Direction = Owner.transform.forward,
-                    Value = amount,
+                    Value = Mathf.Max(0f, beforeHealth - CurrentHealth),
                     Tick = currentTick
                 });
             }
@@ -655,6 +655,17 @@ namespace MOBA.Core.Simulation
             IsHealthRegenerating = true;
             LastHealthRegenAmount = healingDone;
             OnHealthChanged?.Invoke(CurrentHealth);
+            if (Owner != null)
+            {
+                BrawlerPresentationEventBus.Raise(new BrawlerPresentationEvent
+                {
+                    EventType = BrawlerPresentationEventType.Healed,
+                    Source = Owner,
+                    Position = Owner.Position,
+                    Value = healingDone,
+                    Tick = currentTick
+                });
+            }
         }
 
         public void UpdateResources(float deltaTime)
