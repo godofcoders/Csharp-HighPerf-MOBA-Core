@@ -236,6 +236,29 @@ namespace MOBA.Core.Simulation
             return false;
         }
 
+        public bool TryGetLivingDuoTeammate(BrawlerController brawler, out BrawlerController teammate)
+        {
+            teammate = IsDuoShowdown && IsAliveContestant(brawler) ? FindLivingTeammate(brawler) : null;
+            return teammate != null;
+        }
+
+        // Presentation reads the same validated directive as the AI, including
+        // live target positions and cancellation, without making the issuer a recipient.
+        public bool TryGetIssuedDuoTeamCommand(BrawlerController issuer, uint currentTick,
+            out BrawlerController teammate, out DuoTeamCommandDirective directive)
+        {
+            directive = default;
+            return TryGetLivingDuoTeammate(issuer, out teammate) &&
+                TryGetActiveDuoTeamCommand(teammate, currentTick, out directive) &&
+                directive.IssuerEntityId == issuer.EntityID;
+        }
+
+        public uint GetDuoTeamCommandCooldownTicks(BrawlerController issuer, uint currentTick)
+        {
+            return IsDuoShowdown && IsAliveContestant(issuer)
+                ? _duoTeamCommands.GetCooldownRemainingTicks(issuer.Team, currentTick) : 0u;
+        }
+
         public DuoTeamCommandIssueResult TryIssueDuoTeamCommand(
             BrawlerController issuer,
             DuoTeamCommandType commandType,

@@ -76,7 +76,7 @@ namespace MOBA.Core.Infrastructure
                 _controlledBrawler.State == null || _controlledBrawler.State.IsDead ||
                 !ServiceProvider.TryGet<ISimulationClock>(out var clock))
                 return DuoTeamCommandIssueResult.IssuerUnavailable;
-            if (!mode.TryGetDuoCohesionAnchor(_controlledBrawler, out var teammate))
+            if (!mode.TryGetLivingDuoTeammate(_controlledBrawler, out var teammate))
                 return DuoTeamCommandIssueResult.TeammateUnavailable;
 
             int targetId = 0;

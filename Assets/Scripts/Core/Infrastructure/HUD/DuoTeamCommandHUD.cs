@@ -15,6 +15,13 @@ namespace MOBA.Core.Infrastructure
         private Button _toggle;
         private Button[] _commands;
         private Text _status;
+        private Text _activeCommand;
+        private Text _cooldown;
+        private Text _teammateMarker;
+        private Text _targetMarker;
+        private Image _durationFill;
+        private RectTransform _canvasRect;
+        private static readonly Color CommandBlue = new Color(0.025f, 0.09f, 0.19f, 0.96f);
         private PlayerCommandSource _source;
         private BrawlerController _player;
         private float _nextSearch;
@@ -55,16 +62,17 @@ namespace MOBA.Core.Infrastructure
             var canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 85;
+            _canvasRect = (RectTransform)canvasObject.transform;
             var scaler = canvasObject.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
-            _root = Rect("DuoCommands", canvasObject.transform, new Vector2(0f, 190f), new Vector2(320f, 260f));
+            _root = Rect("DuoCommands", canvasObject.transform, new Vector2(0f, 190f), new Vector2(340f, 260f));
             var rootRect = (RectTransform)_root.transform;
             rootRect.anchorMin = rootRect.anchorMax = new Vector2(0.5f, 0f);
             _toggle = MakeButton("CommandToggle", _root.transform, Vector2.zero,
                 new Vector2(104f, 60f), "TEAM [T]", Toggle);
-            _wheel = Rect("CommandWheel", _root.transform, Vector2.zero, new Vector2(320f, 260f));
+            _wheel = Rect("CommandWheel", _root.transform, Vector2.zero, new Vector2(340f, 260f));
             Vector2[] offsets = { new Vector2(0f, 84f), new Vector2(112f, 0f),
                 new Vector2(0f, -84f), new Vector2(-112f, 0f) };
             _commands = new Button[4];
@@ -76,6 +84,20 @@ namespace MOBA.Core.Infrastructure
             }
             _status = MakeText(_root.transform, "Status", new Vector2(0f, 130f),
                 new Vector2(450f, 34f), 18);
+            _activeCommand = MakeText(_root.transform, "ActiveCommand", new Vector2(0f, 170f),
+                new Vector2(450f, 32f), 20);
+            _cooldown = MakeText(_root.transform, "Cooldown", new Vector2(0f, -130f),
+                new Vector2(360f, 30f), 16);
+            var duration = Rect("CommandDuration", _root.transform, new Vector2(0f, 151f), new Vector2(240f, 4f));
+            _durationFill = duration.AddComponent<Image>();
+            _durationFill.color = new Color(0.16f, 0.78f, 1f);
+            _durationFill.raycastTarget = false;
+            _teammateMarker = MakeText(canvasObject.transform, "TeammateCommandMarker", Vector2.zero,
+                new Vector2(260f, 38f), 19);
+            _targetMarker = MakeText(canvasObject.transform, "CommandTargetMarker", Vector2.zero,
+                new Vector2(220f, 38f), 19);
+            _teammateMarker.gameObject.SetActive(false);
+            _targetMarker.gameObject.SetActive(false);
             _wheel.SetActive(false);
             _root.SetActive(false);
         }
@@ -107,13 +129,45 @@ namespace MOBA.Core.Infrastructure
             if (!visible)
             {
                 _wheel.SetActive(false);
+                HideMarkers();
+                _feedbackUntil = 0f;
                 return;
             }
             // Keep the last world aim while the pointer moves onto UI controls.
             if (!_wheel.activeSelf && !IsPointerOverControls() && _source != null)
                 _aimPoint = _source.CommandAimPoint;
-            bool available = mode.TryGetDuoCohesionAnchor(_player, out _);
-            for (int i = 0; i < _commands.Length; i++) _commands[i].interactable = available;
+            bool available = mode.TryGetLivingDuoTeammate(_player, out _);
+            uint tick = ServiceProvider.TryGet<ISimulationClock>(out var clock) ? clock.CurrentTick : 0u;
+            bool active = mode.TryGetIssuedDuoTeamCommand(_player, tick, out var teammate, out var directive);
+            uint cooldownTicks = mode.GetDuoTeamCommandCooldownTicks(_player, tick);
+            for (int i = 0; i < _commands.Length; i++)
+            {
+                _commands[i].interactable = available && cooldownTicks == 0u;
+                _commands[i].targetGraphic.color = active && (int)directive.CommandType == i + 1
+                    ? new Color(0.08f, 0.5f, 0.65f, 1f) : CommandBlue;
+            }
+            _cooldown.text = cooldownTicks > 0u
+                ? $"READY IN {cooldownTicks * SimulationClock.TickDeltaTime:0.0}s" : string.Empty;
+            _durationFill.gameObject.SetActive(active);
+            _activeCommand.text = active
+                ? $"{GetLabel(directive.CommandType)}  {(directive.ExpiresTick - tick) * SimulationClock.TickDeltaTime:0.0}s"
+                : string.Empty;
+            if (active)
+            {
+                float duration = Mathf.Max(1f, directive.ExpiresTick - directive.IssuedTick);
+                _durationFill.rectTransform.localScale = new Vector3((directive.ExpiresTick - tick) / duration, 1f, 1f);
+                bool acknowledging = tick - directive.IssuedTick < SimulationClock.SecondsToTicks(1.5f);
+                _teammateMarker.text = acknowledging ? $"ON IT: {GetLabel(directive.CommandType)}"
+                    : $"TEAM: {GetLabel(directive.CommandType)}";
+                PositionMarker(_teammateMarker, teammate.Position + Vector3.up * 2.4f);
+                bool targeted = ShowdownRules.DuoTeamCommandRequiresTarget(directive.CommandType);
+                _targetMarker.text = $"▼ {GetLabel(directive.CommandType)}";
+                _targetMarker.color = directive.CommandType == DuoTeamCommandType.Attack
+                    ? new Color(1f, 0.35f, 0.3f) : new Color(1f, 0.8f, 0.2f);
+                if (targeted) PositionMarker(_targetMarker, directive.TargetPosition + Vector3.up * 1.2f);
+                else _targetMarker.gameObject.SetActive(false);
+            }
+            else HideMarkers();
             if (Time.unscaledTime >= _feedbackUntil)
                 _status.text = available ? (_wheel.activeSelf ? "CHOOSE A TEAM COMMAND" : string.Empty)
                     : "TEAMMATE UNAVAILABLE";
@@ -126,6 +180,41 @@ namespace MOBA.Core.Infrastructure
             else if (keyboard.digit2Key.wasPressedThisFrame) Issue(1);
             else if (keyboard.digit3Key.wasPressedThisFrame) Issue(2);
             else if (keyboard.digit4Key.wasPressedThisFrame) Issue(3);
+        }
+
+        private static string GetLabel(DuoTeamCommandType command)
+        {
+            int index = (int)command - 1;
+            return index >= 0 && index < Labels.Length ? Labels[index] : string.Empty;
+        }
+
+        private void PositionMarker(Text marker, Vector3 worldPosition)
+        {
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                marker.gameObject.SetActive(false);
+                return;
+            }
+            Vector3 screen = camera.WorldToScreenPoint(worldPosition);
+            bool visible = screen.z > 0f && screen.x >= 0f && screen.x <= Screen.width &&
+                screen.y >= 0f && screen.y <= Screen.height;
+            marker.gameObject.SetActive(visible);
+            if (visible && RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    _canvasRect, screen, null, out Vector2 local))
+                marker.rectTransform.anchoredPosition = local;
+        }
+
+        private void HideMarkers()
+        {
+            _teammateMarker.gameObject.SetActive(false);
+            _targetMarker.gameObject.SetActive(false);
+        }
+
+        private void OnDisable()
+        {
+            if (_root != null) _root.SetActive(false);
+            if (_teammateMarker != null) HideMarkers();
         }
 
         private void Toggle()

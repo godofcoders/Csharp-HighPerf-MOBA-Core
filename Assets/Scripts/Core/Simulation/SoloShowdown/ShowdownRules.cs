@@ -122,6 +122,12 @@ namespace MOBA.Core.Simulation
             return false;
         }
 
+        public uint GetCooldownRemainingTicks(TeamType team, uint currentTick)
+        {
+            return _nextIssueTickByTeam.TryGetValue(team, out uint readyTick) && readyTick > currentTick
+                ? readyTick - currentTick : 0u;
+        }
+
         public void ClearTeam(TeamType team)
         {
             _activeByTeam.Remove(team);
