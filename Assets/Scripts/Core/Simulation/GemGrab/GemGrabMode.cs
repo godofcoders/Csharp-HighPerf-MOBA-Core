@@ -33,7 +33,7 @@ namespace MOBA.Core.Simulation
     /// Start. If brawlers spawn dynamically post-Start, call
     /// <see cref="RegisterBrawler"/> manually.
     /// </summary>
-    public sealed class GemGrabMode : MonoBehaviour
+    public sealed class GemGrabMode : MonoBehaviour, ITickable
     {
         // Singleton, same shape as MatchManager. AI reads this to factor
         // gem-state into utility scoring; null-safe so non-Gem-Grab matches
@@ -77,6 +77,7 @@ namespace MOBA.Core.Simulation
 
         private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
         private readonly List<Vector3> _deathDropReservedPositions = new List<Vector3>(12);
+        private bool _started;
 
         private void Awake()
         {
@@ -89,8 +90,20 @@ namespace MOBA.Core.Simulation
             EnsureGemPickupFeedbackView();
         }
 
+        private void OnEnable()
+        {
+            if (_started)
+                SimulationClock.Registry?.Register(this, TickPhase.PostTick);
+        }
+
+        private void OnDisable()
+        {
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
+        }
+
         private void OnDestroy()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
             if (Instance == this) Instance = null;
         }
 
@@ -105,6 +118,9 @@ namespace MOBA.Core.Simulation
             BrawlerController[] discovered = FindObjectsOfType<BrawlerController>();
             for (int i = 0; i < discovered.Length; i++)
                 RegisterBrawler(discovered[i]);
+
+            _started = true;
+            SimulationClock.Registry?.Register(this, TickPhase.PostTick);
         }
 
         /// <summary>Gem total for the supplied team. Used by AI scoring.</summary>
@@ -185,14 +201,14 @@ namespace MOBA.Core.Simulation
             dying.State.CarriedGems.Clear();
         }
 
-        private void Update()
+        public void Tick(uint currentTick)
         {
             if (MatchManager.Instance != null && MatchManager.Instance.CurrentState != MatchState.Active)
                 return;
 
             UpdateTeamTotals();
-            UpdateWinTimer(Time.deltaTime);
-            UpdateMatchTimer(Time.deltaTime);
+            UpdateWinTimer(SimulationTiming.TickDeltaSeconds);
+            UpdateMatchTimer(SimulationTiming.TickDeltaSeconds);
         }
 
         private void UpdateMatchTimer(float deltaTime)

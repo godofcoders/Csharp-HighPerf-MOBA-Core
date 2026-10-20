@@ -6,7 +6,8 @@ namespace MOBA.Core.Simulation
 {
     public sealed class HotZoneMode : MonoBehaviour,
         IAIGameModeMacroStateProvider,
-        IAIRuntimeObjectiveProvider
+        IAIRuntimeObjectiveProvider,
+        ITickable
     {
         public static HotZoneMode Instance { get; private set; }
 
@@ -24,9 +25,10 @@ namespace MOBA.Core.Simulation
         public GameModeId ModeId => GameModeId.HotZone;
 
         private bool _matchScored;
-        private int _controlCacheFrame = -1;
+        private uint _controlCacheTick = uint.MaxValue;
         private float _cachedBlueControl;
         private float _cachedRedControl;
+        private bool _started;
 
         private void Awake()
         {
@@ -45,11 +47,14 @@ namespace MOBA.Core.Simulation
             {
                 ServiceProvider.Register<IAIGameModeMacroStateProvider>(this);
                 ServiceProvider.Register<IAIRuntimeObjectiveProvider>(this);
+                if (_started)
+                    SimulationClock.Registry?.Register(this, TickPhase.PostTick);
             }
         }
 
         private void OnDisable()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
@@ -61,10 +66,14 @@ namespace MOBA.Core.Simulation
             {
                 _controlPoints = FindObjectsOfType<HotZoneControlPoint>(false);
             }
+
+            _started = true;
+            SimulationClock.Registry?.Register(this, TickPhase.PostTick);
         }
 
         private void OnDestroy()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
             if (Instance == this)
                 Instance = null;
 
@@ -72,16 +81,16 @@ namespace MOBA.Core.Simulation
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
-        private void Update()
+        public void Tick(uint currentTick)
         {
             if (_matchScored || _controlPoints == null || _controlPoints.Length == 0)
                 return;
 
-            RefreshControlCache();
+            RefreshControlCache(currentTick);
 
             float blueControl = _cachedBlueControl;
             float redControl = _cachedRedControl;
-            float delta = Time.deltaTime * _progressPerSecond;
+            float delta = SimulationTiming.TickDeltaSeconds * _progressPerSecond;
 
             if (blueControl > 0f)
                 BlueProgress = Mathf.Min(_progressToWin, BlueProgress + delta * blueControl);
@@ -219,7 +228,7 @@ namespace MOBA.Core.Simulation
 
         private float GetControlWeight(TeamType team)
         {
-            RefreshControlCache();
+            RefreshControlCache(ResolveCurrentTick());
 
             if (team == TeamType.Blue)
                 return _cachedBlueControl;
@@ -241,12 +250,12 @@ namespace MOBA.Core.Simulation
             return TeamType.Neutral;
         }
 
-        private void RefreshControlCache()
+        private void RefreshControlCache(uint currentTick)
         {
-            if (_controlCacheFrame == Time.frameCount)
+            if (_controlCacheTick == currentTick)
                 return;
 
-            _controlCacheFrame = Time.frameCount;
+            _controlCacheTick = currentTick;
             _cachedBlueControl = 0f;
             _cachedRedControl = 0f;
 
@@ -265,6 +274,13 @@ namespace MOBA.Core.Simulation
                 else if (controllingTeam == TeamType.Red)
                     _cachedRedControl += point.ControlWeight;
             }
+        }
+
+        private static uint ResolveCurrentTick()
+        {
+            return ServiceProvider.TryGet(out ISimulationClock clock)
+                ? clock.CurrentTick
+                : 0u;
         }
 
         private void ScoreMatch(TeamType winner)

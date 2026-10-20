@@ -8,7 +8,8 @@ namespace MOBA.Core.Simulation
 {
     public sealed class BrawlBallMode : MonoBehaviour,
         IAIGameModeMacroStateProvider,
-        IAIRuntimeObjectiveProvider
+        IAIRuntimeObjectiveProvider,
+        ITickable
     {
         public static BrawlBallMode Instance { get; private set; }
 
@@ -51,6 +52,7 @@ namespace MOBA.Core.Simulation
         private TeamType _resolvedWinner = TeamType.Neutral;
         private Coroutine _roundResetRoutine;
         private bool _ballSpawnNavigationResolved;
+        private bool _started;
 
         private const float GoalPlacementClearance = 0.12f;
         private const float GoalPlacementProbeHeight = 1.4f;
@@ -131,6 +133,8 @@ namespace MOBA.Core.Simulation
             {
                 ServiceProvider.Register<IAIGameModeMacroStateProvider>(this);
                 ServiceProvider.Register<IAIRuntimeObjectiveProvider>(this);
+                if (_started)
+                    SimulationClock.Registry?.Register(this, TickPhase.PostTick);
             }
         }
 
@@ -143,12 +147,14 @@ namespace MOBA.Core.Simulation
             }
 
             ClearGoalBlockers();
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
         private void OnDestroy()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
             if (Instance == this)
                 Instance = null;
 
@@ -166,20 +172,25 @@ namespace MOBA.Core.Simulation
         private void Start()
         {
             PlaceModeObjectsFromMap();
+            _started = true;
+            SimulationClock.Registry?.Register(this, TickPhase.PostTick);
         }
 
         private void Update()
         {
             EnsureInitialBallSpawnIsNavigable();
             RefreshGoalBlockerNavigationIfNeeded();
+        }
 
+        public void Tick(uint currentTick)
+        {
             MatchManager matchManager = MatchManager.Instance;
             if (matchManager == null)
                 return;
 
             if (matchManager.CurrentState == MatchState.Active)
             {
-                AdvanceMatchClock(Time.deltaTime);
+                AdvanceMatchClock(SimulationTiming.TickDeltaSeconds);
                 return;
             }
 
