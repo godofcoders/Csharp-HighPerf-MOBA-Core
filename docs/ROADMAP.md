@@ -47,6 +47,10 @@ with focused tests and small commits rather than broad rewrites.
 
 - `[ ]` Add profiler markers and repeatable 6/10-brawler performance scenarios.
 - `[~]` Unify simulation timing around one authoritative tick rate and migrate gameplay timing away from frame-time APIs.
+  - `[x]` Establish a shared 30 Hz timing contract and route cooldown/status calculations through it.
+  - `[x]` Tick match countdowns, mode clocks, round transitions, hazards, Showdown respawns, and spawn immunity.
+  - `[ ]` Migrate multi-shot ability sequences, leap/minefield landing resolution, and power-cube crate reveal delays.
+  - `[ ]` Add deterministic long-frame/catch-up and repeat-run validation for timing-sensitive gameplay.
 - `[ ]` Remove per-shot projectile allocations and cache pooled projectile components.
 - `[ ]` Add deterministic match-scoped cleanup for services, registries, event buses, and AI telemetry.
 - `[ ]` Stagger expensive AI decisions and add explicit per-bot decision budgets.
