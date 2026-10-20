@@ -1,3 +1,5 @@
+using System;
+using MOBA.Core.Simulation;
 using NUnit.Framework;
 
 namespace MOBA.Tests.EditMode
@@ -51,6 +53,58 @@ namespace MOBA.Tests.EditMode
 
             // 0.0166s ≈ 0.498 ticks → rounds to 0.
             Assert.AreEqual(0u, SimulationClock.SecondsToTicks(0.0166f));
+        }
+    }
+
+    public class SimulationTimingTests
+    {
+        [Test]
+        public void Contract_UsesThirtyDeterministicTicksPerSecond()
+        {
+            Assert.AreEqual(30, SimulationTiming.TicksPerSecond);
+            Assert.AreEqual(1f / 30f, SimulationTiming.TickDeltaSeconds);
+            Assert.AreEqual(30u, SimulationTiming.SecondsToTicks(1f));
+            Assert.AreEqual(1f, SimulationTiming.TicksToSeconds(30u));
+        }
+
+        [TestCase(-1f)]
+        [TestCase(0f)]
+        public void SecondsToTicks_NonPositiveDurationsReturnZero(float seconds)
+        {
+            Assert.AreEqual(0u, SimulationTiming.SecondsToTicks(seconds));
+        }
+
+        [Test]
+        public void SecondsToTicks_InvalidAndExcessiveDurationsAreSafe()
+        {
+            Assert.AreEqual(0u, SimulationTiming.SecondsToTicks(float.NaN));
+            Assert.AreEqual(uint.MaxValue, SimulationTiming.SecondsToTicks(float.PositiveInfinity));
+        }
+
+        [Test]
+        public void TickProcessor_UsesConfiguredRateWithoutFloatDrift()
+        {
+            TickProcessor processor = new TickProcessor(60);
+
+            int processed = 0;
+            for (int i = 0; i < 60; i++)
+                processed += processor.Update(1f / 60f);
+
+            Assert.AreEqual(60, processed);
+            Assert.AreEqual(60u, processor.CurrentTick);
+            Assert.AreEqual(1f / 60f, processor.TickDelta);
+        }
+
+        [Test]
+        public void TickProcessor_RejectsInvalidRatesAndDeltas()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new TickProcessor(0));
+
+            TickProcessor processor = new TickProcessor(SimulationTiming.TicksPerSecond);
+            Assert.AreEqual(0, processor.Update(float.NaN));
+            Assert.AreEqual(0, processor.Update(float.PositiveInfinity));
+            Assert.AreEqual(0, processor.Update(-1f));
+            Assert.AreEqual(0u, processor.CurrentTick);
         }
     }
 }

@@ -5,50 +5,28 @@ using UnityEngine;
 
 public class SimulationClock : MonoBehaviour, ISimulationClock
 {
-    [SerializeField] private int _ticksPerSecond = 30;
-
     private TickProcessor _processor;
     private CombatEventRouter _combatEventRouter;
     private SimulationRegistry _registry;
     private VisibilityTickSystem _visibilityTickSystem;
-    public const float TickDeltaTime = 1f / 30f;
+    public const int TicksPerSecond = SimulationTiming.TicksPerSecond;
+    public const float TickDeltaTime = SimulationTiming.TickDeltaSeconds;
 
     /// <summary>
-    /// Converts a duration in seconds to an integer tick count, rounded to the
-    /// nearest tick. Single source of truth for seconds→ticks conversion across
-    /// the entire simulation — gameplay code (cooldowns, status effects,
-    /// deployables, hypercharge) MUST go through this helper rather than
-    /// open-coding the math, for two reasons:
-    ///
-    ///  1) IEEE float precision. TickDeltaTime is 1f/30f, which is roughly
-    ///     0.033333335f, NOT exactly 1/30. A naive (uint)(seconds / TickDeltaTime)
-    ///     truncates 1.0s to 29 ticks instead of 30 — a silent ~33ms underrun
-    ///     on every clean-second value a designer types. The `+ 0.5f` here
-    ///     rounds to nearest before the truncating uint cast.
-    ///
-    ///  2) TPS coupling. Some legacy code uses (uint)(seconds * 30f). That
-    ///     happens to be correct at 30 TPS for whole-second inputs but breaks
-    ///     silently if the simulation ever runs at a different rate (slow-mo,
-    ///     server tick variation, future replay scrubbing). Routing every
-    ///     conversion through this helper gives a single place to change.
-    ///
-    /// Behaviour for negative inputs is undefined (the (uint) cast on a
-    /// negative float is implementation-defined in C#). Callers that accept
-    /// designer-tunable durations should validate non-negative upstream — see
-    /// HyperchargeTracker.Activate's `if (durationSeconds &lt;= 0f)` guard.
-    ///
-    /// Pinned by SimulationClockSecondsToTicksTests.
+    /// Compatibility entry point for older callers. New simulation code should
+    /// use <see cref="SimulationTiming.SecondsToTicks"/> directly so timing does
+    /// not depend on the Unity-facing clock component.
     /// </summary>
     public static uint SecondsToTicks(float seconds)
     {
-        return (uint)(seconds / TickDeltaTime + 0.5f);
+        return SimulationTiming.SecondsToTicks(seconds);
     }
     public static SimulationRegistry Registry { get; private set; }
     public static SpatialGrid Grid { get; private set; }
     public static AStarSolver Pathfinder { get; private set; }
 
     public uint CurrentTick => _processor?.CurrentTick ?? 0;
-    public float TickDelta => 1f / _ticksPerSecond;
+    public float TickDelta => SimulationTiming.TickDeltaSeconds;
 
     private static SimulationClock _instance;
 
@@ -71,7 +49,7 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
         ServiceProvider.Register<IDeployableRegistry>(new DeployableRegistry());
         ServiceProvider.Register<IDeployableService>(new DeployableService());
 
-        _processor = new TickProcessor(_ticksPerSecond);
+        _processor = new TickProcessor(SimulationTiming.TicksPerSecond);
         _registry = new SimulationRegistry();
         Registry = _registry;
         Grid = new SpatialGrid(4f);
