@@ -1,4 +1,5 @@
 using System;
+using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation;
 using NUnit.Framework;
 
@@ -105,6 +106,50 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(0, processor.Update(float.PositiveInfinity));
             Assert.AreEqual(0, processor.Update(-1f));
             Assert.AreEqual(0u, processor.CurrentTick);
+        }
+    }
+
+    public class SimulationCountdownTests
+    {
+        [Test]
+        public void Schedule_HoldsFullDurationDuringLeadInThenCountsDown()
+        {
+            var countdown = new SimulationCountdown();
+
+            countdown.Schedule(currentTick: 100u, leadInTicks: 30u, durationTicks: 150u);
+
+            Assert.AreEqual(150u, countdown.GetRemainingTicks(100u));
+            Assert.AreEqual(150u, countdown.GetRemainingTicks(130u));
+            Assert.AreEqual(75u, countdown.GetRemainingTicks(205u));
+            Assert.IsFalse(countdown.HasElapsed(279u));
+            Assert.IsTrue(countdown.HasElapsed(280u));
+        }
+
+        [Test]
+        public void ExtendTo_OnlyMovesDeadlineLater()
+        {
+            var countdown = new SimulationCountdown();
+            countdown.Schedule(currentTick: 100u, leadInTicks: 30u, durationTicks: 150u);
+
+            Assert.IsTrue(countdown.ExtendTo(currentTick: 250u, minimumRemainingTicks: 90u));
+            Assert.AreEqual(90u, countdown.GetRemainingTicks(250u));
+            Assert.AreEqual(340u, countdown.EndTick);
+            Assert.AreEqual(210u, countdown.DurationTicks);
+            Assert.IsFalse(countdown.ExtendTo(currentTick: 250u, minimumRemainingTicks: 60u));
+            Assert.AreEqual(340u, countdown.EndTick);
+        }
+
+        [Test]
+        public void Clear_RemovesScheduledDeadline()
+        {
+            var countdown = new SimulationCountdown();
+            countdown.Schedule(currentTick: 10u, leadInTicks: 0u, durationTicks: 30u);
+
+            countdown.Clear();
+
+            Assert.IsFalse(countdown.IsScheduled);
+            Assert.AreEqual(0u, countdown.GetRemainingTicks(40u));
+            Assert.IsFalse(countdown.HasElapsed(40u));
         }
     }
 }
