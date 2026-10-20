@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
@@ -50,7 +49,8 @@ namespace MOBA.Core.Simulation
         private bool _isOvertime;
         private bool _matchResolved;
         private TeamType _resolvedWinner = TeamType.Neutral;
-        private Coroutine _roundResetRoutine;
+        private bool _roundResetScheduled;
+        private uint _roundResetTick;
         private bool _ballSpawnNavigationResolved;
         private bool _started;
 
@@ -140,11 +140,7 @@ namespace MOBA.Core.Simulation
 
         private void OnDisable()
         {
-            if (_roundResetRoutine != null)
-            {
-                StopCoroutine(_roundResetRoutine);
-                _roundResetRoutine = null;
-            }
+            _roundResetScheduled = false;
 
             ClearGoalBlockers();
             SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
@@ -184,6 +180,12 @@ namespace MOBA.Core.Simulation
 
         public void Tick(uint currentTick)
         {
+            if (_roundResetScheduled && currentTick >= _roundResetTick)
+            {
+                _roundResetScheduled = false;
+                CompleteRoundResetAfterGoal();
+            }
+
             MatchManager matchManager = MatchManager.Instance;
             if (matchManager == null)
                 return;
@@ -710,29 +712,26 @@ namespace MOBA.Core.Simulation
 
         private void StartRoundResetAfterGoal()
         {
-            if (_roundResetRoutine != null)
-            {
-                StopCoroutine(_roundResetRoutine);
-                _roundResetRoutine = null;
-            }
-
             MatchManager matchManager = MatchManager.Instance;
             if (matchManager != null)
                 matchManager.StartRoundResetCountdown(_goalCelebrationSeconds);
 
-            _roundResetRoutine = StartCoroutine(RoundResetAfterGoalRoutine());
+            uint delayTicks = SimulationTiming.SecondsToTicks(_goalCelebrationSeconds);
+            if (delayTicks == 0u)
+            {
+                CompleteRoundResetAfterGoal();
+                return;
+            }
+
+            _roundResetTick = ResolveCurrentTick() + delayTicks;
+            _roundResetScheduled = true;
         }
 
-        private IEnumerator RoundResetAfterGoalRoutine()
+        private void CompleteRoundResetAfterGoal()
         {
-            float delaySeconds = Mathf.Max(0f, _goalCelebrationSeconds);
-            if (delaySeconds > 0f)
-                yield return new WaitForSeconds(delaySeconds);
-
             ResetBall();
             DeployableMatchCleanup.DespawnAllActiveDeployables();
             ResetBrawlersForNextRound();
-            _roundResetRoutine = null;
         }
 
         private void PlaceModeObjectsFromMap()
@@ -1443,6 +1442,13 @@ namespace MOBA.Core.Simulation
                    carrier.State != null &&
                    !carrier.State.IsDead &&
                    carrier.gameObject.activeInHierarchy;
+        }
+
+        private static uint ResolveCurrentTick()
+        {
+            return ServiceProvider.TryGet(out ISimulationClock clock)
+                ? clock.CurrentTick
+                : 0u;
         }
 
         private static bool IsScoringTeam(TeamType team)
