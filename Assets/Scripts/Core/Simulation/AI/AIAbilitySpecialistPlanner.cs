@@ -1238,7 +1238,7 @@ namespace MOBA.Core.Simulation.AI
                 uint tickDelta = currentTick - previous.Tick;
                 if (tickDelta > 0 && tickDelta <= TargetMotionForgetTicks)
                 {
-                    float seconds = tickDelta * SimulationClock.TickDeltaTime;
+                    float seconds = tickDelta * SimulationTiming.TickDeltaSeconds;
                     velocity = (currentPosition - previous.Position) / Mathf.Max(0.001f, seconds);
                     velocity.y = 0f;
                 }

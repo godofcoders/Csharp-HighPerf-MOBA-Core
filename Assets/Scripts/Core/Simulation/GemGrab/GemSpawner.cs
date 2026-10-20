@@ -67,7 +67,7 @@ namespace MOBA.Core.Simulation
         {
             if (!_initialized)
             {
-                _nextSpawnTick = currentTick + SimulationClock.SecondsToTicks(_spawnIntervalSeconds);
+                _nextSpawnTick = currentTick + SimulationTiming.SecondsToTicks(_spawnIntervalSeconds);
                 _initialized = true;
                 return;
             }
@@ -77,7 +77,7 @@ namespace MOBA.Core.Simulation
 
             // Re-arm the cooldown REGARDLESS of whether we actually spawn —
             // if we're at cap, we still want the next attempt to be paced.
-            _nextSpawnTick = currentTick + SimulationClock.SecondsToTicks(_spawnIntervalSeconds);
+            _nextSpawnTick = currentTick + SimulationTiming.SecondsToTicks(_spawnIntervalSeconds);
 
             PruneNullReferences();
             if (_active.Count >= _maxActiveGems)

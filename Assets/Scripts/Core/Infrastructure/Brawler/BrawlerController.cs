@@ -642,7 +642,7 @@ namespace MOBA.Core.Infrastructure
 
             if (MatchManager.Instance.CurrentState != MatchState.Active)
             {
-                State.UpdateResources(SimulationClock.TickDeltaTime);
+                State.UpdateResources(SimulationTiming.TickDeltaSeconds);
                 return;
             }
 
@@ -664,9 +664,9 @@ namespace MOBA.Core.Infrastructure
 
             State.TickEffects(currentTick);
             State.TickPassives(currentTick);
-            State.TickSuperChargeSources(SimulationClock.TickDeltaTime, currentTick);
+            State.TickSuperChargeSources(SimulationTiming.TickDeltaSeconds, currentTick);
             State.UpdateActionState(currentTick);
-            State.UpdateResources(SimulationClock.TickDeltaTime);
+            State.UpdateResources(SimulationTiming.TickDeltaSeconds);
 
             State.Hypercharge.Tick(currentTick, () =>
             {
@@ -714,7 +714,7 @@ namespace MOBA.Core.Infrastructure
             _mainAttack?.Tick(currentTick);
             _superAbility?.Tick(currentTick);
             _gadgetLogic?.Tick(currentTick);
-            State.TickHealthRegeneration(currentTick, SimulationClock.TickDeltaTime);
+            State.TickHealthRegeneration(currentTick, SimulationTiming.TickDeltaSeconds);
 
             UpdateVisualStealth();
             UpdateDebugSnapshot(currentTick);
@@ -1200,7 +1200,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             return durationSeconds > 0f
-                ? SimulationClock.SecondsToTicks(durationSeconds)
+                ? SimulationTiming.SecondsToTicks(durationSeconds)
                 : 0u;
         }
 

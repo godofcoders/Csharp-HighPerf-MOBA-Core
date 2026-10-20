@@ -155,7 +155,7 @@ namespace MOBA.Core.Simulation
         public const float DuoCohesionUrgentDistance = 12f;
         public const float DuoCohesionPriorityScore = 110f;
         public static readonly uint DuoTeamCommandCooldownTicks =
-            SimulationClock.SecondsToTicks(1f);
+            SimulationTiming.SecondsToTicks(1f);
 
         public static bool IsDuoSelected =>
             SceneSelection.SelectedMode == GameModeId.SoloShowdown &&
@@ -206,7 +206,7 @@ namespace MOBA.Core.Simulation
                     break;
             }
 
-            return SimulationClock.SecondsToTicks(seconds);
+            return SimulationTiming.SecondsToTicks(seconds);
         }
 
         public static int GetDuoSpawnOrdinal(TeamType team, int teammateIndex)

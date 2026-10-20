@@ -615,7 +615,7 @@ namespace MOBA.Core.Simulation
         {
             LastHealthRegenAmount = 0f;
 
-            uint delayTicks = SimulationClock.SecondsToTicks(
+            uint delayTicks = SimulationTiming.SecondsToTicks(
                 BrawlerHealthRegenUtility.DefaultDelaySeconds);
 
             if (!BrawlerHealthRegenUtility.CanRegenerate(

@@ -123,7 +123,7 @@ namespace MOBA.Core.Simulation.AI
             {
                 uint tickDelta = currentTick - record.LastUpdatedTick;
                 sampleWeight = Mathf.Clamp(tickDelta / 15f, 0.10f, 1f);
-                float seconds = tickDelta * SimulationClock.TickDeltaTime;
+                float seconds = tickDelta * SimulationTiming.TickDeltaSeconds;
                 if (seconds > 0.001f)
                 {
                     velocity = (opponentPosition - record.LastPosition) / seconds;

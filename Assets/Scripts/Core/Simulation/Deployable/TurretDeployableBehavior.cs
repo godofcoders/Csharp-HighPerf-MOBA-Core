@@ -80,7 +80,7 @@ namespace MOBA.Core.Simulation
             };
 
             logic.Execute(_controller.AbilityUser, context);
-            _nextActionTick = currentTick + SimulationClock.SecondsToTicks(_controller.Definition.ActionIntervalSeconds);
+            _nextActionTick = currentTick + SimulationTiming.SecondsToTicks(_controller.Definition.ActionIntervalSeconds);
         }
     }
 }

@@ -147,16 +147,16 @@ namespace MOBA.Core.Infrastructure
                     ? new Color(0.08f, 0.5f, 0.65f, 1f) : CommandBlue;
             }
             _cooldown.text = cooldownTicks > 0u
-                ? $"READY IN {cooldownTicks * SimulationClock.TickDeltaTime:0.0}s" : string.Empty;
+                ? $"READY IN {cooldownTicks * SimulationTiming.TickDeltaSeconds:0.0}s" : string.Empty;
             _durationFill.gameObject.SetActive(active);
             _activeCommand.text = active
-                ? $"{GetLabel(directive.CommandType)}  {(directive.ExpiresTick - tick) * SimulationClock.TickDeltaTime:0.0}s"
+                ? $"{GetLabel(directive.CommandType)}  {(directive.ExpiresTick - tick) * SimulationTiming.TickDeltaSeconds:0.0}s"
                 : string.Empty;
             if (active)
             {
                 float duration = Mathf.Max(1f, directive.ExpiresTick - directive.IssuedTick);
                 _durationFill.rectTransform.localScale = new Vector3((directive.ExpiresTick - tick) / duration, 1f, 1f);
-                bool acknowledging = tick - directive.IssuedTick < SimulationClock.SecondsToTicks(1.5f);
+                bool acknowledging = tick - directive.IssuedTick < SimulationTiming.SecondsToTicks(1.5f);
                 _teammateMarker.text = acknowledging ? $"ON IT: {GetLabel(directive.CommandType)}"
                     : $"TEAM: {GetLabel(directive.CommandType)}";
                 PositionMarker(_teammateMarker, teammate.Position + Vector3.up * 2.4f);

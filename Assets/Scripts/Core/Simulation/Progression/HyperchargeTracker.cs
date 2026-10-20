@@ -30,11 +30,11 @@ namespace MOBA.Core.Simulation
             IsActive = true;
             ChargePercent = 0f;
 
-            // Convert seconds → ticks via SimulationClock.SecondsToTicks, the
+            // Convert seconds → ticks via SimulationTiming.SecondsToTicks, the
             // single source of truth for the conversion. Pinned by
             // HyperchargeTrackerTests.Activate_ConvertsDurationSeconds_ToTicks_AtTPS
             // and the zero-duration fallback test in the same fixture.
-            uint durationTicks = SimulationClock.SecondsToTicks(durationSeconds);
+            uint durationTicks = SimulationTiming.SecondsToTicks(durationSeconds);
             _startTick = startTick;
             _durationTicks = durationTicks;
             _endTick = startTick + durationTicks;
@@ -69,7 +69,7 @@ namespace MOBA.Core.Simulation
             if (!IsActive || currentTick >= _endTick)
                 return 0f;
 
-            return (_endTick - currentTick) * SimulationClock.TickDeltaTime;
+            return (_endTick - currentTick) * SimulationTiming.TickDeltaSeconds;
         }
 
         public float GetRemainingPercent(uint currentTick)

@@ -61,7 +61,7 @@ namespace MOBA.Core.Simulation
 
         private IStatusEffectInstance CreateInstance(StatusEffectContext context, uint currentTick)
         {
-            uint durationTicks = SimulationClock.SecondsToTicks(context.Duration);
+            uint durationTicks = SimulationTiming.SecondsToTicks(context.Duration);
             uint endTick = currentTick + durationTicks;
 
             switch (context.Type)

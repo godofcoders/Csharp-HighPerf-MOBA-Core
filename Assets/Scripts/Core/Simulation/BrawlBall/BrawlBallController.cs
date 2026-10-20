@@ -282,7 +282,7 @@ namespace MOBA.Core.Simulation
 
             _looseVelocity = direction * Mathf.Max(0.5f, speed);
             _remainingTravelDistance = Mathf.Max(0.5f, range);
-            _pickupUnlockTick = currentTick + SimulationClock.SecondsToTicks(_pickupLockoutSeconds);
+            _pickupUnlockTick = currentTick + SimulationTiming.SecondsToTicks(_pickupLockoutSeconds);
 
             if (_mode != null)
                 _mode.NotifyBallKicked(kicker, transform.position, direction, isSuperKick);
@@ -307,7 +307,7 @@ namespace MOBA.Core.Simulation
                 return;
             }
 
-            float remainingTickSeconds = SimulationClock.TickDeltaTime;
+            float remainingTickSeconds = SimulationTiming.TickDeltaSeconds;
             if (remainingTickSeconds <= BallCollisionEpsilon)
             {
                 StopLooseMotion();

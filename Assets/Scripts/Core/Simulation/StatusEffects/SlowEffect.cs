@@ -16,7 +16,7 @@ namespace MOBA.Core.Simulation
             _durationSeconds = durationSeconds;
             _sourceToken = sourceToken;
             StartTick = currentTick;
-            EndTick = currentTick + SimulationClock.SecondsToTicks(durationSeconds);
+            EndTick = currentTick + SimulationTiming.SecondsToTicks(durationSeconds);
         }
 
         public void Apply(IStatusTarget target, uint currentTick)
@@ -45,7 +45,7 @@ namespace MOBA.Core.Simulation
 
         public void Merge(StatusEffectContext context, uint currentTick)
         {
-            uint durationTicks = SimulationClock.SecondsToTicks(context.Duration);
+            uint durationTicks = SimulationTiming.SecondsToTicks(context.Duration);
             uint newEndTick = currentTick + durationTicks;
 
             if (newEndTick > EndTick)

@@ -45,7 +45,7 @@ namespace MOBA.Core.Simulation
 
         /// <summary>
         /// Starts a cooldown on the given slot. Converts seconds → ticks via
-        /// SimulationClock.SecondsToTicks, the single source of truth for the
+        /// SimulationTiming.SecondsToTicks, the single source of truth for the
         /// conversion (handles float-precision rounding and stays decoupled
         /// from the hardcoded TPS constant).
         /// Pinned by BrawlerCooldownsTests.StartCooldown_ConvertsFractionalSeconds_ToTicks
@@ -53,7 +53,7 @@ namespace MOBA.Core.Simulation
         /// </summary>
         public void StartCooldown(AbilityRuntimeSlot slot, uint currentTick, float cooldownSeconds)
         {
-            uint cooldownTicks = SimulationClock.SecondsToTicks(cooldownSeconds);
+            uint cooldownTicks = SimulationTiming.SecondsToTicks(cooldownSeconds);
 
             switch (slot)
             {

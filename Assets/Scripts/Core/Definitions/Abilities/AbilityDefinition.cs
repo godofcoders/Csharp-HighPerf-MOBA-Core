@@ -1,4 +1,5 @@
 using MOBA.Core.Infrastructure;
+using MOBA.Core.Simulation;
 using UnityEngine;
 
 namespace MOBA.Core.Definitions
@@ -77,7 +78,7 @@ namespace MOBA.Core.Definitions
 
         public uint GetCastDurationTicks()
         {
-            return SimulationClock.SecondsToTicks(CastDurationSeconds);
+            return SimulationTiming.SecondsToTicks(CastDurationSeconds);
         }
 
         public bool HasTag(AbilityTag tag)

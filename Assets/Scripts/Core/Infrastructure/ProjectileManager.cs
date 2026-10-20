@@ -157,7 +157,7 @@ namespace MOBA.Core.Infrastructure
                 if (p.DeliveryType == ProjectileDeliveryType.ThrownImpactAoE && p.UseArcMotion)
                 {
                     float totalDistance = Mathf.Max(0.01f, p.TravelDistance);
-                    float distanceStep = p.Speed * SimulationClock.TickDeltaTime;
+                    float distanceStep = p.Speed * SimulationTiming.TickDeltaSeconds;
 
                     p.TravelProgress += distanceStep / totalDistance;
                     p.TravelProgress = Mathf.Clamp01(p.TravelProgress);
@@ -176,7 +176,7 @@ namespace MOBA.Core.Infrastructure
                 {
                     Vector3 previousPosition = p.GameObject.transform.position;
                     directCollisionStart = previousPosition;
-                    Vector3 movement = p.Direction * (p.Speed * SimulationClock.TickDeltaTime);
+                    Vector3 movement = p.Direction * (p.Speed * SimulationTiming.TickDeltaSeconds);
                     Vector3 nextPosition = previousPosition + movement;
 
                     if (p.DeliveryType != ProjectileDeliveryType.ThrownImpactAoE)
@@ -230,7 +230,7 @@ namespace MOBA.Core.Infrastructure
                     ProjectileVisualController visualController = p.GameObject.GetComponent<ProjectileVisualController>();
                     if (visualController != null)
                     {
-                        visualController.TickVisual(SimulationClock.TickDeltaTime);
+                        visualController.TickVisual(SimulationTiming.TickDeltaSeconds);
 
                         if (visualController.ShouldFaceMovementDirection())
                         {

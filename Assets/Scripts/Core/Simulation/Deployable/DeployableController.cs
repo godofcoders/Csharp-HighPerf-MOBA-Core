@@ -67,7 +67,7 @@ namespace MOBA.Core.Simulation
             _owner = request.Owner;
             _team = request.Team;
             _spawnTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
-            _expiryTick = _spawnTick + SimulationClock.SecondsToTicks(_definition.LifetimeSeconds);
+            _expiryTick = _spawnTick + SimulationTiming.SecondsToTicks(_definition.LifetimeSeconds);
             _currentHealth = _definition.MaxHealth;
             _abilityUser = new DeployableAbilityUser(this);
             _abilityLogic = _definition.AbilityDefinition != null
@@ -114,7 +114,7 @@ namespace MOBA.Core.Simulation
 
             _lastKnownPosition = Position;
             _behavior?.Tick(currentTick);
-            _presentationView?.TickPresentation(SimulationClock.TickDeltaTime);
+            _presentationView?.TickPresentation(SimulationTiming.TickDeltaSeconds);
         }
 
         public void SetPresentationAimDirection(Vector3 direction)

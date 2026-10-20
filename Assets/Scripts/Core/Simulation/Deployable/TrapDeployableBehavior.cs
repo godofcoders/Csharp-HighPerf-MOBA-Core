@@ -30,7 +30,7 @@ namespace MOBA.Core.Simulation
             uint currentTick = ServiceProvider.Get<ISimulationClock>().CurrentTick;
             float armDelay = _definition != null ? Mathf.Max(0f, _definition.ArmDelaySeconds) : 0f;
             _spawnTick = currentTick;
-            _armTick = currentTick + SimulationClock.SecondsToTicks(armDelay);
+            _armTick = currentTick + SimulationTiming.SecondsToTicks(armDelay);
             _triggerTick = 0;
             _detonationTick = 0;
             _armed = armDelay <= 0f;
@@ -63,7 +63,7 @@ namespace MOBA.Core.Simulation
 
                 _triggered = true;
                 _triggerTick = currentTick;
-                _detonationTick = currentTick + SimulationClock.SecondsToTicks(
+                _detonationTick = currentTick + SimulationTiming.SecondsToTicks(
                     Mathf.Max(0f, _definition.DetonationDelaySeconds));
                 UpdateVisibility(currentTick);
                 return;

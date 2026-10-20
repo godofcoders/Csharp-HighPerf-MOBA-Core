@@ -11,7 +11,7 @@ namespace MOBA.Core.Simulation
         public InvisibilityEffect(float durationSeconds, object sourceToken, uint currentTick)
         {
             StartTick = currentTick;
-            EndTick = currentTick + SimulationClock.SecondsToTicks(durationSeconds);
+            EndTick = currentTick + SimulationTiming.SecondsToTicks(durationSeconds);
             _sourceToken = sourceToken;
         }
 
@@ -48,7 +48,7 @@ namespace MOBA.Core.Simulation
 
         public void Merge(StatusEffectContext context, uint currentTick)
         {
-            uint durationTicks = SimulationClock.SecondsToTicks(context.Duration);
+            uint durationTicks = SimulationTiming.SecondsToTicks(context.Duration);
             uint newEndTick = currentTick + durationTicks;
 
             if (newEndTick > EndTick)

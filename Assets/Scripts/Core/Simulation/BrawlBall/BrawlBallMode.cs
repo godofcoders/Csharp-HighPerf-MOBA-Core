@@ -277,7 +277,7 @@ namespace MOBA.Core.Simulation
                     continue;
 
                 _goalScoreUnlockTick = currentTick +
-                    SimulationClock.SecondsToTicks(_goalScoreLockoutSeconds);
+                    SimulationTiming.SecondsToTicks(_goalScoreLockoutSeconds);
                 ConsumeBallAfterGoal();
                 RecordGoal(scoringTeam);
                 return true;

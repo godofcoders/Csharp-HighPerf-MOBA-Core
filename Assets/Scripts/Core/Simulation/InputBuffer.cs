@@ -27,7 +27,7 @@ namespace MOBA.Core.Simulation
 
         public InputBuffer(float bufferWindowSeconds = 0.22f)
         {
-            _bufferWindowTicks = SimulationClock.SecondsToTicks(Mathf.Max(0f, bufferWindowSeconds));
+            _bufferWindowTicks = SimulationTiming.SecondsToTicks(Mathf.Max(0f, bufferWindowSeconds));
         }
 
         public void Enqueue(

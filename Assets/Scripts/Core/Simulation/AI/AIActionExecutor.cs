@@ -2462,7 +2462,7 @@ namespace MOBA.Core.Simulation.AI
             }
 
             _commandSource.QueueMainAttack(direction, probePoint, true);
-            uint cooldownTicks = SimulationClock.SecondsToTicks(BushProbeCooldownSeconds);
+            uint cooldownTicks = SimulationTiming.SecondsToTicks(BushProbeCooldownSeconds);
             if (_profile.AttackCadenceTicks > cooldownTicks)
                 cooldownTicks = _profile.AttackCadenceTicks;
 
