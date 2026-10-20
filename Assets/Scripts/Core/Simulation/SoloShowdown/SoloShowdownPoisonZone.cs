@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace MOBA.Core.Simulation
 {
-    public sealed class SoloShowdownPoisonZone : MonoBehaviour
+    public sealed class SoloShowdownPoisonZone : MonoBehaviour, ITickable
     {
         public static SoloShowdownPoisonZone Instance { get; private set; }
 
@@ -93,34 +93,46 @@ namespace MOBA.Core.Simulation
             ConfigureFromMapBounds();
             EnsureVisuals();
             UpdateVisuals();
+            SimulationClock.Registry?.Register(this, TickPhase.StatusEffectTick);
+        }
+
+        private void OnEnable()
+        {
+            SimulationClock.Registry?.Register(this, TickPhase.StatusEffectTick);
         }
 
         private void OnDestroy()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.StatusEffectTick);
             if (Instance == this)
                 Instance = null;
         }
 
         private void OnDisable()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.StatusEffectTick);
             SetVisualsVisible(false);
         }
 
         private void Update()
         {
-            if (!ShouldSimulatePoison())
-            {
+            if (ShouldSimulatePoison())
+                UpdateVisuals();
+            else
                 SetVisualsVisible(false);
-                return;
-            }
+        }
 
-            float deltaTime = Time.deltaTime;
+        public void Tick(uint currentTick)
+        {
+            if (!ShouldSimulatePoison())
+                return;
+
+            float deltaTime = SimulationTiming.TickDeltaSeconds;
             _elapsedActiveSeconds += deltaTime;
             _tickTimer += deltaTime;
             _cacheRefreshTimer += deltaTime;
 
             UpdateSafeZone();
-            UpdateVisuals();
 
             if (_cacheRefreshTimer >= _cacheRefreshSeconds)
             {

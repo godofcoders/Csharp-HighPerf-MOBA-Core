@@ -6,7 +6,7 @@ using UnityEngine.SceneManagement;
 
 namespace MOBA.Core.Simulation
 {
-    public sealed class KnockoutPoisonCloud : MonoBehaviour
+    public sealed class KnockoutPoisonCloud : MonoBehaviour, ITickable
     {
         public static KnockoutPoisonCloud Instance { get; private set; }
 
@@ -83,32 +83,43 @@ namespace MOBA.Core.Simulation
             CurrentHalfExtents = SanitizeHalfExtents(_initialHalfExtents);
         }
 
+        private void OnEnable()
+        {
+            SimulationClock.Registry?.Register(this, TickPhase.StatusEffectTick);
+        }
+
         private void OnDestroy()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.StatusEffectTick);
             if (Instance == this)
                 Instance = null;
         }
 
         private void OnDisable()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.StatusEffectTick);
             SetVisualsVisible(false);
         }
 
         private void Update()
         {
-            if (!ShouldSimulatePoison())
-            {
+            if (ShouldSimulatePoison())
+                UpdateVisuals();
+            else
                 SetVisualsVisible(false);
-                return;
-            }
+        }
 
-            float deltaTime = Time.deltaTime;
+        public void Tick(uint currentTick)
+        {
+            if (!ShouldSimulatePoison())
+                return;
+
+            float deltaTime = SimulationTiming.TickDeltaSeconds;
             _elapsedActiveSeconds += deltaTime;
             _tickTimer += deltaTime;
             _cacheRefreshTimer += deltaTime;
 
             UpdateSafeZone();
-            UpdateVisuals();
 
             if (_cacheRefreshTimer >= _cacheRefreshSeconds)
             {

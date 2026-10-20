@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 
 namespace MOBA.Core.Simulation
 {
-    public class AreaHazardController : MonoBehaviour
+    public class AreaHazardController : MonoBehaviour, ITickable
     {
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
@@ -66,10 +66,22 @@ namespace MOBA.Core.Simulation
             transform.position = request.Position;
 
             BuildVisual();
+            SimulationClock.Registry?.Register(this, TickPhase.StatusEffectTick);
+        }
+
+        private void OnEnable()
+        {
+            SimulationClock.Registry?.Register(this, TickPhase.StatusEffectTick);
+        }
+
+        private void OnDisable()
+        {
+            SimulationClock.Registry?.Unregister(this, TickPhase.StatusEffectTick);
         }
 
         private void OnDestroy()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.StatusEffectTick);
             _hazardService?.Unregister(this);
         }
 
@@ -96,14 +108,19 @@ namespace MOBA.Core.Simulation
 
         private void Update()
         {
+            TickVisuals();
+        }
+
+        public void Tick(uint currentTick)
+        {
             if (_definition == null)
             {
                 Destroy(gameObject);
                 return;
             }
 
-            _elapsedLifetime += Time.deltaTime;
-            _tickTimer += Time.deltaTime;
+            _elapsedLifetime += SimulationTiming.TickDeltaSeconds;
+            _tickTimer += SimulationTiming.TickDeltaSeconds;
 
             if (_tickTimer >= _definition.TickIntervalSeconds)
             {
@@ -115,8 +132,6 @@ namespace MOBA.Core.Simulation
             {
                 Destroy(gameObject);
             }
-
-            TickVisuals();
         }
 
         private void ApplyTick()
