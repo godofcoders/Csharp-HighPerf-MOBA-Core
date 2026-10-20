@@ -105,6 +105,16 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void DuoRespawnCountdown_UsesSimulationTicks()
+        {
+            uint readyTick = 600u;
+
+            Assert.AreEqual(5f, ShowdownRules.GetRespawnSecondsRemaining(readyTick, 450u));
+            Assert.AreEqual(0f, ShowdownRules.GetRespawnSecondsRemaining(readyTick, readyTick));
+            Assert.AreEqual(0f, ShowdownRules.GetRespawnSecondsRemaining(readyTick, 750u));
+        }
+
+        [Test]
         public void DuoCohesion_BotFollowsPlayerAndAiPairChoosesOneFollower()
         {
             Assert.IsTrue(ShowdownRules.ShouldUseTeammateAsCohesionAnchor(

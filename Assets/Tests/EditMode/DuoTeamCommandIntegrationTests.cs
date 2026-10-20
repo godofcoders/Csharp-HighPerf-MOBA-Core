@@ -161,6 +161,30 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void DuoRespawn_ExpiresOnSimulationTickDeadline()
+        {
+            DuoCommandTestUtility.Invoke(_mode, "QueueDuoRespawn", _bot);
+
+            Assert.IsTrue(_mode.TryGetPendingTeammateRespawn(
+                _player,
+                out BrawlerController teammate,
+                out float initialSeconds));
+            Assert.AreSame(_bot, teammate);
+            Assert.AreEqual(ShowdownRules.DuoRespawnDelaySeconds, initialSeconds);
+
+            _clock.CurrentTick += SimulationTiming.SecondsToTicks(1f);
+            Assert.IsTrue(_mode.TryGetPendingTeammateRespawn(
+                _player,
+                out _,
+                out float remainingSeconds));
+            Assert.AreEqual(ShowdownRules.DuoRespawnDelaySeconds - 1f, remainingSeconds);
+
+            _clock.CurrentTick += SimulationTiming.SecondsToTicks(remainingSeconds);
+            _mode.Tick(_clock.CurrentTick);
+            Assert.IsFalse(_mode.IsRespawnPending(_bot));
+        }
+
+        [Test]
         public void Input_ReplacesAtCooldownBoundaryAndExpiresWithoutAffectingEnemyTeams()
         {
             var enemy = Brawler("Enemy", TeamType.Solo2, Vector3.forward * 3f);

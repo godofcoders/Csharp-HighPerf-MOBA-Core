@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using MOBA.Core.Infrastructure;
 using MOBA.Core.Simulation.AI;
@@ -8,7 +7,8 @@ namespace MOBA.Core.Simulation
 {
     public sealed class SoloShowdownMode : MonoBehaviour,
         IAIGameModeMacroStateProvider,
-        IAIRuntimeObjectiveProvider
+        IAIRuntimeObjectiveProvider,
+        ITickable
     {
         public static SoloShowdownMode Instance { get; private set; }
 
@@ -30,18 +30,22 @@ namespace MOBA.Core.Simulation
             new Dictionary<TeamType, int>(TeamRelationshipUtility.MaxSoloTeams);
         private readonly HashSet<TeamType> _eliminatedTeams =
             new HashSet<TeamType>();
-        private readonly Dictionary<BrawlerController, Coroutine> _pendingDuoRespawns =
-            new Dictionary<BrawlerController, Coroutine>();
-        private readonly Dictionary<BrawlerController, float> _duoRespawnReadyTimes =
-            new Dictionary<BrawlerController, float>();
-        private readonly Dictionary<BrawlerController, Coroutine> _duoSpawnProtectionRoutines =
-            new Dictionary<BrawlerController, Coroutine>();
+        private readonly Dictionary<BrawlerController, uint> _duoRespawnReadyTicks =
+            new Dictionary<BrawlerController, uint>();
+        private readonly Dictionary<BrawlerController, uint> _duoSpawnProtectionEndTicks =
+            new Dictionary<BrawlerController, uint>();
         private readonly Dictionary<BrawlerController, object> _duoSpawnProtectionSources =
             new Dictionary<BrawlerController, object>();
+        private readonly List<BrawlerController> _dueBrawlers =
+            new List<BrawlerController>(ShowdownRules.DuoPlayersPerTeam);
         private readonly DuoTeamCommandStore _duoTeamCommands = new DuoTeamCommandStore();
 
         private int _nextPlacement = 1;
         private bool _matchEnding;
+        private bool _matchEndScheduled;
+        private bool _started;
+        private uint _matchEndTick;
+        private uint _nextDiscoveryTick;
 
         public GameModeId ModeId => GameModeId.SoloShowdown;
         public int RegisteredCount => _contestants.Count;
@@ -70,6 +74,8 @@ namespace MOBA.Core.Simulation
             {
                 ServiceProvider.Register<IAIGameModeMacroStateProvider>(this);
                 ServiceProvider.Register<IAIRuntimeObjectiveProvider>(this);
+                if (_started)
+                    SimulationClock.Registry?.Register(this, TickPhase.PostTick);
             }
         }
 
@@ -86,12 +92,28 @@ namespace MOBA.Core.Simulation
                 EnsurePowerCubeSpawner();
                 _powerCubeSpawner?.SpawnInitialCrates();
             }
+
+            _started = true;
+            _nextDiscoveryTick = ResolveCurrentTick() + SimulationTiming.TicksPerSecond;
+            SimulationClock.Registry?.Register(this, TickPhase.PostTick);
         }
 
-        private void Update()
+        public void Tick(uint currentTick)
         {
-            if (_autoDiscoverContestants && Time.frameCount % 30 == 0)
+            if (_autoDiscoverContestants && currentTick >= _nextDiscoveryTick)
+            {
                 DiscoverContestants();
+                _nextDiscoveryTick = currentTick + SimulationTiming.TicksPerSecond;
+            }
+
+            ProcessDuoRespawns(currentTick);
+            ProcessDuoSpawnProtection(currentTick);
+
+            if (_matchEndScheduled && currentTick >= _matchEndTick)
+            {
+                _matchEndScheduled = false;
+                EndMatchNow();
+            }
 
             if (!_matchEnding &&
                 MatchManager.Instance != null &&
@@ -103,15 +125,18 @@ namespace MOBA.Core.Simulation
 
         private void OnDisable()
         {
+            _matchEndScheduled = false;
             CancelAllDuoRespawns();
             ClearAllDuoSpawnProtection();
             _duoTeamCommands.ClearAll();
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
         private void OnDestroy()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
             if (Instance == this)
                 Instance = null;
 
@@ -165,7 +190,7 @@ namespace MOBA.Core.Simulation
 
         public bool IsRespawnPending(BrawlerController brawler)
         {
-            return brawler != null && _pendingDuoRespawns.ContainsKey(brawler);
+            return brawler != null && _duoRespawnReadyTicks.ContainsKey(brawler);
         }
 
         public int GrantPowerCubeToLivingTeammates(
@@ -426,13 +451,13 @@ namespace MOBA.Core.Simulation
                 return false;
             }
 
-            foreach (KeyValuePair<BrawlerController, float> entry in _duoRespawnReadyTimes)
+            uint currentTick = ResolveCurrentTick();
+            foreach (KeyValuePair<BrawlerController, uint> entry in _duoRespawnReadyTicks)
             {
                 BrawlerController candidate = entry.Key;
                 if (candidate == null ||
                     candidate == livingPlayer ||
-                    candidate.Team != livingPlayer.Team ||
-                    !_pendingDuoRespawns.ContainsKey(candidate))
+                    candidate.Team != livingPlayer.Team)
                 {
                     continue;
                 }
@@ -440,7 +465,7 @@ namespace MOBA.Core.Simulation
                 teammate = candidate;
                 secondsRemaining = ShowdownRules.GetRespawnSecondsRemaining(
                     entry.Value,
-                    Time.time);
+                    currentTick);
                 return true;
             }
 
@@ -668,37 +693,46 @@ namespace MOBA.Core.Simulation
         private void QueueDuoRespawn(BrawlerController brawler)
         {
             CancelDuoRespawn(brawler);
-            _duoRespawnReadyTimes[brawler] =
-                Time.time + ShowdownRules.DuoRespawnDelaySeconds;
-            _pendingDuoRespawns[brawler] = StartCoroutine(DuoRespawnRoutine(brawler));
+            _duoRespawnReadyTicks[brawler] = ResolveCurrentTick() +
+                SimulationTiming.SecondsToTicks(ShowdownRules.DuoRespawnDelaySeconds);
         }
 
-        private IEnumerator DuoRespawnRoutine(BrawlerController brawler)
+        private void ProcessDuoRespawns(uint currentTick)
         {
-            yield return new WaitForSeconds(ShowdownRules.DuoRespawnDelaySeconds);
+            _dueBrawlers.Clear();
+            foreach (KeyValuePair<BrawlerController, uint> entry in _duoRespawnReadyTicks)
+            {
+                if (currentTick >= entry.Value)
+                    _dueBrawlers.Add(entry.Key);
+            }
 
-            _pendingDuoRespawns.Remove(brawler);
-            _duoRespawnReadyTimes.Remove(brawler);
+            for (int i = 0; i < _dueBrawlers.Count; i++)
+                CompleteDuoRespawn(_dueBrawlers[i], currentTick);
+        }
+
+        private void CompleteDuoRespawn(BrawlerController brawler, uint currentTick)
+        {
+            _duoRespawnReadyTicks.Remove(brawler);
             if (brawler == null ||
                 _matchEnding ||
                 _eliminatedTeams.Contains(brawler.Team) ||
                 !IsTeamAlive(brawler.Team) ||
                 SpawnManager.Instance == null)
             {
-                yield break;
+                return;
             }
 
             BrawlerController survivingTeammate = FindLivingContestant(brawler.Team);
             if (survivingTeammate == null)
-                yield break;
+                return;
 
             SpawnManager.Instance.ForceRespawnAt(
                 brawler,
                 survivingTeammate.Position);
-            GrantDuoSpawnProtection(brawler);
+            GrantDuoSpawnProtection(brawler, currentTick);
         }
 
-        private void GrantDuoSpawnProtection(BrawlerController brawler)
+        private void GrantDuoSpawnProtection(BrawlerController brawler, uint currentTick)
         {
             if (brawler == null || brawler.State == null)
                 return;
@@ -709,26 +743,21 @@ namespace MOBA.Core.Simulation
             brawler.State.AddIncomingDamageModifier(
                 new DamageModifier(DamageModifierType.PercentReduction, 1f, source));
             _duoSpawnProtectionSources[brawler] = source;
-            _duoSpawnProtectionRoutines[brawler] = StartCoroutine(
-                DuoSpawnProtectionRoutine(brawler, source));
+            _duoSpawnProtectionEndTicks[brawler] = currentTick +
+                SimulationTiming.SecondsToTicks(ShowdownRules.DuoSpawnImmunitySeconds);
         }
 
-        private IEnumerator DuoSpawnProtectionRoutine(
-            BrawlerController brawler,
-            object source)
+        private void ProcessDuoSpawnProtection(uint currentTick)
         {
-            yield return new WaitForSeconds(ShowdownRules.DuoSpawnImmunitySeconds);
-
-            if (brawler != null && brawler.State != null)
-                brawler.State.RemoveIncomingDamageModifiersFromSource(source);
-
-            if (brawler != null &&
-                _duoSpawnProtectionSources.TryGetValue(brawler, out object activeSource) &&
-                ReferenceEquals(activeSource, source))
+            _dueBrawlers.Clear();
+            foreach (KeyValuePair<BrawlerController, uint> entry in _duoSpawnProtectionEndTicks)
             {
-                _duoSpawnProtectionSources.Remove(brawler);
-                _duoSpawnProtectionRoutines.Remove(brawler);
+                if (currentTick >= entry.Value)
+                    _dueBrawlers.Add(entry.Key);
             }
+
+            for (int i = 0; i < _dueBrawlers.Count; i++)
+                CancelDuoSpawnProtection(_dueBrawlers[i]);
         }
 
         private void CancelDuoSpawnProtection(BrawlerController brawler)
@@ -736,37 +765,25 @@ namespace MOBA.Core.Simulation
             if (brawler == null)
                 return;
 
-            if (_duoSpawnProtectionRoutines.TryGetValue(brawler, out Coroutine routine) &&
-                routine != null)
-            {
-                StopCoroutine(routine);
-            }
-
             if (_duoSpawnProtectionSources.TryGetValue(brawler, out object source) &&
                 brawler.State != null)
             {
                 brawler.State.RemoveIncomingDamageModifiersFromSource(source);
             }
 
-            _duoSpawnProtectionRoutines.Remove(brawler);
+            _duoSpawnProtectionEndTicks.Remove(brawler);
             _duoSpawnProtectionSources.Remove(brawler);
         }
 
         private void ClearAllDuoSpawnProtection()
         {
-            foreach (Coroutine routine in _duoSpawnProtectionRoutines.Values)
-            {
-                if (routine != null)
-                    StopCoroutine(routine);
-            }
-
             foreach (KeyValuePair<BrawlerController, object> entry in _duoSpawnProtectionSources)
             {
                 if (entry.Key != null && entry.Key.State != null)
                     entry.Key.State.RemoveIncomingDamageModifiersFromSource(entry.Value);
             }
 
-            _duoSpawnProtectionRoutines.Clear();
+            _duoSpawnProtectionEndTicks.Clear();
             _duoSpawnProtectionSources.Clear();
         }
 
@@ -782,16 +799,10 @@ namespace MOBA.Core.Simulation
 
         private void CancelDuoRespawn(BrawlerController brawler)
         {
-            if (brawler == null ||
-                !_pendingDuoRespawns.TryGetValue(brawler, out Coroutine routine))
-            {
+            if (brawler == null)
                 return;
-            }
 
-            if (routine != null)
-                StopCoroutine(routine);
-            _pendingDuoRespawns.Remove(brawler);
-            _duoRespawnReadyTimes.Remove(brawler);
+            _duoRespawnReadyTicks.Remove(brawler);
         }
 
         private void CancelAllDuoRespawns()
@@ -799,8 +810,7 @@ namespace MOBA.Core.Simulation
             for (int i = 0; i < _contestants.Count; i++)
                 CancelDuoRespawn(_contestants[i]);
 
-            _pendingDuoRespawns.Clear();
-            _duoRespawnReadyTimes.Clear();
+            _duoRespawnReadyTicks.Clear();
         }
 
         private void DropPowerCubesFrom(BrawlerController dying)
@@ -885,15 +895,27 @@ namespace MOBA.Core.Simulation
         {
             CancelAllDuoRespawns();
 
-            if (_endMatchDelaySeconds > 0f)
-                Invoke(nameof(EndMatchNow), _endMatchDelaySeconds);
-            else
+            uint delayTicks = SimulationTiming.SecondsToTicks(_endMatchDelaySeconds);
+            if (delayTicks == 0u)
+            {
                 EndMatchNow();
+                return;
+            }
+
+            _matchEndTick = ResolveCurrentTick() + delayTicks;
+            _matchEndScheduled = true;
         }
 
         private void EndMatchNow()
         {
             MatchManager.Instance?.EndMatch(WinningTeam);
+        }
+
+        private static uint ResolveCurrentTick()
+        {
+            return ServiceProvider.TryGet(out ISimulationClock clock)
+                ? clock.CurrentTick
+                : 0u;
         }
 
         private int CountAlive()

@@ -281,6 +281,14 @@ namespace MOBA.Core.Simulation
             return Mathf.Max(0f, readyAt - currentTime);
         }
 
+        public static float GetRespawnSecondsRemaining(uint readyTick, uint currentTick)
+        {
+            uint remainingTicks = readyTick > currentTick
+                ? readyTick - currentTick
+                : 0u;
+            return SimulationTiming.TicksToSeconds(remainingTicks);
+        }
+
         public static bool ShouldUseTeammateAsCohesionAnchor(
             bool selfIsPlayer,
             bool teammateIsPlayer,
