@@ -21,7 +21,8 @@ namespace MOBA.Core.Simulation
     /// </summary>
     public sealed class KnockoutMode : MonoBehaviour,
         IAIGameModeMacroStateProvider,
-        IAIRuntimeObjectiveProvider
+        IAIRuntimeObjectiveProvider,
+        ITickable
     {
         public static KnockoutMode Instance { get; private set; }
 
@@ -62,6 +63,10 @@ namespace MOBA.Core.Simulation
         private readonly List<BrawlerController> _brawlers = new List<BrawlerController>(8);
         private readonly List<TeamType> _roundWinners = new List<TeamType>(3);
         private bool _roundEnding;
+        private bool _roundStartScheduled;
+        private bool _started;
+        private uint _nextDiscoveryTick;
+        private uint _nextRoundStartTick;
 
         private void Awake()
         {
@@ -75,17 +80,22 @@ namespace MOBA.Core.Simulation
             {
                 ServiceProvider.Register<IAIGameModeMacroStateProvider>(this);
                 ServiceProvider.Register<IAIRuntimeObjectiveProvider>(this);
+                if (_started)
+                    SimulationClock.Registry?.Register(this, TickPhase.PostTick);
             }
         }
 
         private void OnDisable()
         {
+            _roundStartScheduled = false;
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
             ServiceProvider.Unregister<IAIRuntimeObjectiveProvider>(this);
         }
 
         private void OnDestroy()
         {
+            SimulationClock.Registry?.Unregister(this, TickPhase.PostTick);
             if (Instance == this) Instance = null;
             if (SpawnManager.Instance != null) SpawnManager.Instance.AllowAutoRespawn = true;
             ServiceProvider.Unregister<IAIGameModeMacroStateProvider>(this);
@@ -100,12 +110,24 @@ namespace MOBA.Core.Simulation
 
             DiscoverBrawlers();
             EnsurePoisonCloud();
+            _started = true;
+            _nextDiscoveryTick = ResolveCurrentTick() + SimulationTiming.TicksPerSecond;
+            SimulationClock.Registry?.Register(this, TickPhase.PostTick);
         }
 
-        private void Update()
+        public void Tick(uint currentTick)
         {
-            if (_autoDiscoverBrawlers && Time.frameCount % 30 == 0)
+            if (_autoDiscoverBrawlers && currentTick >= _nextDiscoveryTick)
+            {
                 DiscoverBrawlers();
+                _nextDiscoveryTick = currentTick + SimulationTiming.TicksPerSecond;
+            }
+
+            if (_roundStartScheduled && currentTick >= _nextRoundStartTick)
+            {
+                _roundStartScheduled = false;
+                StartNextRound();
+            }
         }
 
         private void DiscoverBrawlers()
@@ -443,7 +465,9 @@ namespace MOBA.Core.Simulation
                 return; // do not start a new round
             }
 
-            Invoke(nameof(StartNextRound), _interRoundDelaySeconds);
+            _nextRoundStartTick = ResolveCurrentTick() +
+                SimulationTiming.SecondsToTicks(_interRoundDelaySeconds);
+            _roundStartScheduled = true;
         }
 
         private void StartNextRound()
@@ -493,6 +517,13 @@ namespace MOBA.Core.Simulation
                 _poisonCloud = GetComponent<KnockoutPoisonCloud>();
 
             return _poisonCloud;
+        }
+
+        private static uint ResolveCurrentTick()
+        {
+            return ServiceProvider.TryGet(out ISimulationClock clock)
+                ? clock.CurrentTick
+                : 0u;
         }
     }
 
