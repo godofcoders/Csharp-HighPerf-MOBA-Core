@@ -1,6 +1,6 @@
 # MOBA Gameplay Roadmap
 
-Updated: 2026-06-15
+Updated: 2026-10-20
 
 This roadmap is the forward source of truth for the next gameplay, UI, content, and polish passes. The rule for every item is the same as the AI work: build real systems, not temporary patches. Each milestone should finish with a short manual QA checklist and a focused commit.
 
@@ -38,6 +38,30 @@ These items are active now. We validate and fix the most disruptive gameplay-fee
 - `[~]` Gem readability
   - `[~]` Gem prefab should visually read as a gem, not a placeholder. Runtime Gem presentation now replaces the sphere mesh with a faceted diamond mesh, pops it up from ground, and settles it onto the ground plane while keeping pickup/collider behavior unchanged; needs Unity readability QA.
   - `[~]` Multiple spawned/dropped gems should scatter on the ground with readable spacing. Mine spawns and carrier death drops now use deterministic no-overlap cluster slots; needs Unity camera-readability QA.
+
+## Engineering Health Backlog
+
+These tasks track architecture, reliability, and performance improvements found
+during the October 2026 code audit. They should be implemented incrementally,
+with focused tests and small commits rather than broad rewrites.
+
+- `[ ]` Add profiler markers and repeatable 6/10-brawler performance scenarios.
+- `[~]` Unify simulation timing around one authoritative tick rate and migrate gameplay timing away from frame-time APIs.
+- `[ ]` Remove per-shot projectile allocations and cache pooled projectile components.
+- `[ ]` Add deterministic match-scoped cleanup for services, registries, event buses, and AI telemetry.
+- `[ ]` Stagger expensive AI decisions and add explicit per-bot decision budgets.
+- `[ ]` Split the runtime assembly into Definitions, Simulation, AI, Infrastructure, and Presentation boundaries.
+- `[ ]` Decompose oversized AI, brawler, and brawler-selection classes into focused modules.
+- `[ ]` Move stable runtime-generated UI structures into prefabs and use event-driven refreshes.
+- `[ ]` Extract shared game-mode lifecycle, roster, round, respawn, and result services.
+- `[ ]` Replace scene-wide object discovery with an explicit match context.
+- `[ ]` Pool transient gems, crates, hazards, deployables, destruction effects, and VFX.
+- `[ ]` Consolidate runtime material variants and use material property blocks for per-instance values.
+- `[ ]` Add PlayMode smoke tests, repeated-match lifecycle tests, and continuous integration.
+- `[ ]` Add immutable persistence IDs, save schema versions, migrations, and batched writes.
+- `[ ]` Add project-wide pre-build validation for gameplay definitions and map/mode compatibility.
+- `[ ]` Harden spatial registration with empty-cell cleanup, diagnostics, and controlled query results.
+- `[ ]` Reduce the project to a zero-warning build and reject newly introduced warnings.
 
 ## Milestone G-01: Hypercharge Completion
 
