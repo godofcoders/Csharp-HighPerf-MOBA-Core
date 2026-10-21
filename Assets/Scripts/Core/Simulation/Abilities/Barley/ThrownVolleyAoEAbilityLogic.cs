@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
@@ -9,8 +8,7 @@ namespace MOBA.Core.Simulation.Abilities
     /// Volley-of-arcing-bottles logic. Fires N arcing ThrownImpactAoE
     /// projectiles with per-shot landing spread + distance jitter + delay.
     /// Mirrors ThrownHybridAoEAbilityLogic's spawn shape for a single bottle
-    /// and sequences them via BrawlerController.RunTimedBurst (same coroutine
-    /// pattern Colt's BurstSequenceProjectileLogic uses).
+    /// and sequences them through the deterministic simulation tick queue.
     ///
     /// Landing pattern: bottles are distributed evenly across LandingSpreadAngle
     /// around the aim direction. DistanceJitter adds a small random offset to
@@ -36,12 +34,30 @@ namespace MOBA.Core.Simulation.Abilities
 
             Vector3 origin = context.Origin;
             Vector3 baseDirection = ResolveBaseDirection(brawler, context);
+            int count = Mathf.Max(1, _definition.ProjectileCount);
+            float totalSpread = _definition.LandingSpreadAngle;
+            float step = count > 1 ? totalSpread / (count - 1) : 0f;
+            float startAngle = -totalSpread * 0.5f;
+            IProjectileService projectileService = ServiceProvider.Get<IProjectileService>();
 
-            brawler.RunTimedBurst(FireVolleyRoutine(brawler, origin, baseDirection, context));
+            brawler.RunTickSequence(
+                context.StartTick,
+                count,
+                _definition.DelayBetweenShots,
+                shotIndex => FireSingleProjectile(
+                    projectileService,
+                    brawler,
+                    origin,
+                    baseDirection,
+                    context,
+                    shotIndex,
+                    count,
+                    startAngle,
+                    step));
 
             var result = AbilityExecutionResult.Succeeded(_definition, context.SlotType);
             result.SpawnedProjectile = true;
-            result.ProjectileCount = Mathf.Max(1, _definition.ProjectileCount);
+            result.ProjectileCount = count;
             result.ConsumedResource = true;
             return result;
         }
@@ -66,32 +82,40 @@ namespace MOBA.Core.Simulation.Abilities
             return brawler.transform.forward;
         }
 
-        private IEnumerator FireVolleyRoutine(BrawlerController brawler, Vector3 origin, Vector3 baseDirection, AbilityExecutionContext context)
+        private void FireSingleProjectile(
+            IProjectileService projectileService,
+            BrawlerController brawler,
+            Vector3 origin,
+            Vector3 baseDirection,
+            AbilityExecutionContext context,
+            int shotIndex,
+            int shotCount,
+            float startAngle,
+            float angleStep)
         {
-            int count = Mathf.Max(1, _definition.ProjectileCount);
-            float totalSpread = _definition.LandingSpreadAngle;
-            float step = count > 1 ? totalSpread / (count - 1) : 0f;
-            float startAngle = -totalSpread * 0.5f;
+            float angle = shotCount > 1
+                ? startAngle + angleStep * shotIndex
+                : 0f;
+            Vector3 shotDirection =
+                (Quaternion.Euler(0f, angle, 0f) * baseDirection).normalized;
 
-            var projectileService = ServiceProvider.Get<IProjectileService>();
+            float jitter = _definition.DistanceJitter > 0f
+                ? 1f + Random.Range(-_definition.DistanceJitter, _definition.DistanceJitter)
+                : 1f;
 
-            for (int i = 0; i < count; i++)
-            {
-                float angle = count > 1 ? startAngle + step * i : 0f;
-                Vector3 shotDirection = (Quaternion.Euler(0f, angle, 0f) * baseDirection).normalized;
+            float shotDistance = Mathf.Clamp(
+                _definition.ThrowRange * jitter,
+                0.1f,
+                _definition.ThrowRange);
+            Vector3 shotTarget = origin + shotDirection * shotDistance;
 
-                float jitter = _definition.DistanceJitter > 0f
-                    ? 1f + Random.Range(-_definition.DistanceJitter, _definition.DistanceJitter)
-                    : 1f;
-
-                float shotDistance = Mathf.Clamp(_definition.ThrowRange * jitter, 0.1f, _definition.ThrowRange);
-                Vector3 shotTarget = origin + shotDirection * shotDistance;
-
-                projectileService.FireProjectile(BuildSpawnContext(brawler, origin, shotDirection, shotTarget, shotDistance, context));
-
-                if (i < count - 1 && _definition.DelayBetweenShots > 0f)
-                    yield return new WaitForSeconds(_definition.DelayBetweenShots);
-            }
+            projectileService.FireProjectile(BuildSpawnContext(
+                brawler,
+                origin,
+                shotDirection,
+                shotTarget,
+                shotDistance,
+                context));
         }
 
         private ProjectileSpawnContext BuildSpawnContext(
