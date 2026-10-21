@@ -23,6 +23,55 @@ namespace MOBA.Core.Simulation
         {
             return ticks * TickDeltaSeconds;
         }
+
+        public static uint SecondsToIntervalTicks(float seconds)
+        {
+            if (float.IsNaN(seconds) || seconds <= 0f)
+                return 0u;
+
+            return Math.Max(1u, SecondsToTicks(seconds));
+        }
+    }
+
+    public sealed class SimulationStepSequence
+    {
+        public int StepCount { get; }
+        public int NextStepIndex { get; private set; }
+        public uint NextStepTick { get; private set; }
+        public uint IntervalTicks { get; }
+        public bool IsComplete => NextStepIndex >= StepCount;
+
+        public SimulationStepSequence(
+            int stepCount,
+            uint firstStepTick,
+            uint intervalTicks)
+        {
+            if (stepCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(stepCount));
+
+            StepCount = stepCount;
+            NextStepTick = firstStepTick;
+            IntervalTicks = intervalTicks;
+        }
+
+        public bool TryTakeStep(uint currentTick, out int stepIndex)
+        {
+            stepIndex = -1;
+            if (IsComplete || currentTick < NextStepTick)
+                return false;
+
+            stepIndex = NextStepIndex++;
+            if (!IsComplete)
+                NextStepTick = AddSaturated(NextStepTick, IntervalTicks);
+
+            return true;
+        }
+
+        private static uint AddSaturated(uint left, uint right)
+        {
+            ulong sum = (ulong)left + right;
+            return sum >= uint.MaxValue ? uint.MaxValue : (uint)sum;
+        }
     }
 
     public class TickProcessor

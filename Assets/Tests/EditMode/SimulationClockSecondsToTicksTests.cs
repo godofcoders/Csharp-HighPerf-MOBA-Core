@@ -107,6 +107,62 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(0, processor.Update(-1f));
             Assert.AreEqual(0u, processor.CurrentTick);
         }
+
+        [Test]
+        public void IntervalTicks_PositiveSubTickDelayStillTakesOneTick()
+        {
+            Assert.AreEqual(0u, SimulationTiming.SecondsToIntervalTicks(0f));
+            Assert.AreEqual(1u, SimulationTiming.SecondsToIntervalTicks(0.001f));
+            Assert.AreEqual(2u, SimulationTiming.SecondsToIntervalTicks(0.05f));
+        }
+    }
+
+    public class SimulationStepSequenceTests
+    {
+        [Test]
+        public void Steps_AdvanceAtExactTickCadence()
+        {
+            var sequence = new SimulationStepSequence(
+                stepCount: 3,
+                firstStepTick: 100u,
+                intervalTicks: 2u);
+
+            Assert.IsTrue(sequence.TryTakeStep(100u, out int first));
+            Assert.AreEqual(0, first);
+            Assert.IsFalse(sequence.TryTakeStep(101u, out _));
+            Assert.IsTrue(sequence.TryTakeStep(102u, out int second));
+            Assert.AreEqual(1, second);
+            Assert.IsTrue(sequence.TryTakeStep(104u, out int third));
+            Assert.AreEqual(2, third);
+            Assert.IsTrue(sequence.IsComplete);
+            Assert.IsFalse(sequence.TryTakeStep(105u, out _));
+        }
+
+        [Test]
+        public void CatchUp_CanConsumeEveryOverdueStep()
+        {
+            var sequence = new SimulationStepSequence(
+                stepCount: 4,
+                firstStepTick: 20u,
+                intervalTicks: 2u);
+            int consumed = 0;
+
+            while (sequence.TryTakeStep(30u, out int stepIndex))
+            {
+                Assert.AreEqual(consumed, stepIndex);
+                consumed++;
+            }
+
+            Assert.AreEqual(4, consumed);
+            Assert.IsTrue(sequence.IsComplete);
+        }
+
+        [Test]
+        public void Constructor_RejectsEmptySequences()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new SimulationStepSequence(0, 0u, 1u));
+        }
     }
 
     public class SimulationCountdownTests
