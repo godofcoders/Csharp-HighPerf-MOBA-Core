@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Simulation;
@@ -61,6 +62,15 @@ namespace MOBA.Core.Infrastructure
         private IAbilityLogic _mainAttack;
         private IAbilityLogic _superAbility;
         private IAbilityLogic _gadgetLogic;
+
+        private sealed class PendingAbilitySequence
+        {
+            public SimulationStepSequence Timing;
+            public Action<int> ExecuteStep;
+        }
+
+        private readonly List<PendingAbilitySequence> _pendingAbilitySequences =
+            new List<PendingAbilitySequence>(2);
 
         private bool _isInitialized;
 
@@ -637,14 +647,23 @@ namespace MOBA.Core.Infrastructure
 
         public override void Tick(uint currentTick)
         {
-            if (!_isInitialized || State == null || State.IsDead)
+            if (!_isInitialized || State == null)
                 return;
+
+            if (State.IsDead)
+            {
+                CancelPendingAbilitySequences();
+                return;
+            }
 
             if (MatchManager.Instance.CurrentState != MatchState.Active)
             {
+                CancelPendingAbilitySequences();
                 State.UpdateResources(SimulationTiming.TickDeltaSeconds);
                 return;
             }
+
+            TickPendingAbilitySequences(currentTick);
 
             _commandBuffer.Clear();
             _commandSource?.CollectCommands(_commandBuffer, currentTick);
@@ -1220,6 +1239,7 @@ namespace MOBA.Core.Infrastructure
         protected override void OnDisable()
         {
             base.OnDisable();
+            CancelPendingAbilitySequences();
             CancelPresentationLeap();
             _lastKnownPosition = Position;
             SimulationClock.Grid?.Remove(this, _lastKnownPosition);
@@ -2234,6 +2254,61 @@ namespace MOBA.Core.Infrastructure
         public Coroutine RunTimedBurst(IEnumerator routine)
         {
             return StartCoroutine(routine);
+        }
+
+        public void RunTickSequence(
+            uint firstStepTick,
+            int stepCount,
+            float intervalSeconds,
+            Action<int> executeStep)
+        {
+            if (stepCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(stepCount));
+
+            if (executeStep == null)
+                throw new ArgumentNullException(nameof(executeStep));
+
+            var pending = new PendingAbilitySequence
+            {
+                Timing = new SimulationStepSequence(
+                    stepCount,
+                    firstStepTick,
+                    SimulationTiming.SecondsToIntervalTicks(intervalSeconds)),
+                ExecuteStep = executeStep
+            };
+
+            AdvanceAbilitySequence(pending, firstStepTick);
+            if (!pending.Timing.IsComplete)
+                _pendingAbilitySequences.Add(pending);
+        }
+
+        private void TickPendingAbilitySequences(uint currentTick)
+        {
+            for (int i = _pendingAbilitySequences.Count - 1; i >= 0; i--)
+            {
+                PendingAbilitySequence pending = _pendingAbilitySequences[i];
+                AdvanceAbilitySequence(pending, currentTick);
+                if (pending.Timing.IsComplete)
+                    _pendingAbilitySequences.RemoveAt(i);
+            }
+        }
+
+        private void AdvanceAbilitySequence(
+            PendingAbilitySequence pending,
+            uint currentTick)
+        {
+            while (isActiveAndEnabled &&
+                   State != null &&
+                   !State.IsDead &&
+                   pending.Timing.TryTakeStep(currentTick, out int stepIndex))
+            {
+                pending.ExecuteStep(stepIndex);
+            }
+        }
+
+        private void CancelPendingAbilitySequences()
+        {
+            _pendingAbilitySequences.Clear();
         }
 
         public void PlayPresentationLeapArc(

@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
@@ -26,7 +25,16 @@ namespace MOBA.Core.Simulation
                 ? context.Direction.normalized
                 : brawler.transform.forward;
 
-            brawler.RunTimedBurst(FireBurstRoutine(brawler, baseDirection, context));
+            int count = Mathf.Max(1, _definition.ProjectileCount);
+            brawler.RunTickSequence(
+                context.StartTick,
+                count,
+                _definition.DelayBetweenShots,
+                shotIndex => FireSingleProjectile(
+                    brawler,
+                    baseDirection,
+                    context,
+                    shotIndex));
 
             return AbilityExecutionResult.Succeeded(_definition, context.SlotType);
         }
@@ -35,31 +43,26 @@ namespace MOBA.Core.Simulation
         {
         }
 
-        private IEnumerator FireBurstRoutine(BrawlerController brawler, Vector3 baseDirection, AbilityExecutionContext context)
+        private void FireSingleProjectile(
+            BrawlerController brawler,
+            Vector3 baseDirection,
+            AbilityExecutionContext context,
+            int shotIndex)
         {
-            int count = Mathf.Max(1, _definition.ProjectileCount);
+            Vector3 shotOrigin = ResolveShotOrigin(brawler, shotIndex);
+            Vector3 shotDirection = ApplySpread(baseDirection);
 
-            for (int i = 0; i < count; i++)
-            {
-                Vector3 shotOrigin = ResolveShotOrigin(brawler, i);
-                Vector3 shotDirection = ApplySpread(baseDirection);
-
-                brawler.FireProjectile(
-     shotOrigin,
-     shotDirection,
-     _definition.Speed,
-     _definition.Range,
-     _definition.Damage,
-     _definition,
-     context.SlotType,
-     context.IsSuper,
-     context.IsGadget,
-     _definition.PresentationProfile
- );
-
-                if (i < count - 1 && _definition.DelayBetweenShots > 0f)
-                    yield return new WaitForSeconds(_definition.DelayBetweenShots);
-            }
+            brawler.FireProjectile(
+                shotOrigin,
+                shotDirection,
+                _definition.Speed,
+                _definition.Range,
+                _definition.Damage,
+                _definition,
+                context.SlotType,
+                context.IsSuper,
+                context.IsGadget,
+                _definition.PresentationProfile);
         }
 
         private Vector3 ResolveShotOrigin(BrawlerController brawler, int shotIndex)

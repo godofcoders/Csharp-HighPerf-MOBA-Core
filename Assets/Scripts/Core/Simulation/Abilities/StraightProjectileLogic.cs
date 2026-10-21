@@ -1,4 +1,3 @@
-using System.Collections;
 using MOBA.Core.Definitions;
 using MOBA.Core.Infrastructure;
 using UnityEngine;
@@ -61,7 +60,15 @@ namespace MOBA.Core.Simulation.Abilities
                 _delayBetweenProjectiles > 0f &&
                 user is BrawlerController brawler)
             {
-                brawler.RunTimedBurst(FireSequenceRoutine(user, context, baseDirection));
+                brawler.RunTickSequence(
+                    context.StartTick,
+                    _projectileCount,
+                    _delayBetweenProjectiles,
+                    shotIndex => FireSingleProjectile(
+                        user,
+                        context,
+                        baseDirection,
+                        shotIndex));
             }
             else
             {
@@ -77,20 +84,6 @@ namespace MOBA.Core.Simulation.Abilities
             result.ConsumedResource = true;
 
             return result;
-        }
-
-        private IEnumerator FireSequenceRoutine(
-            IAbilityUser user,
-            AbilityExecutionContext context,
-            Vector3 baseDirection)
-        {
-            for (int i = 0; i < _projectileCount; i++)
-            {
-                FireSingleProjectile(user, context, baseDirection, i);
-
-                if (i < _projectileCount - 1)
-                    yield return new WaitForSeconds(_delayBetweenProjectiles);
-            }
         }
 
         private void FireSingleProjectile(
