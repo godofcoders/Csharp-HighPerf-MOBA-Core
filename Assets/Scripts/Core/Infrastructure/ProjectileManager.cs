@@ -15,6 +15,8 @@ namespace MOBA.Core.Infrastructure
 
         private SimpleObjectPool _pool;
         private readonly List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>(64);
+        private readonly Stack<ActiveProjectile> _inactiveProjectileStates =
+            new Stack<ActiveProjectile>(64);
         private readonly Dictionary<GameObject, ProjectileVisualController> _visualControllers =
             new Dictionary<GameObject, ProjectileVisualController>(32);
         private readonly Collider[] _projectileWorldHitOverlapBuffer =
@@ -68,9 +70,6 @@ namespace MOBA.Core.Infrastructure
             go.transform.position = context.Origin;
             go.transform.rotation = Quaternion.LookRotation(context.Direction);
             bool isHypercharged = ResolveIsHypercharged(context);
-            HashSet<int> ignoredEntityIds = new HashSet<int>();
-            if (SpatialEntityUtility.TryGetEntityId(context.Owner, out int ownerEntityId))
-                ignoredEntityIds.Add(ownerEntityId);
 
             ProjectileVisualController visualController = ResolveVisualController(go);
             if (visualController != null)
@@ -81,56 +80,9 @@ namespace MOBA.Core.Infrastructure
                     isHypercharged);
             }
 
-            _activeProjectiles.Add(new ActiveProjectile
-            {
-                Owner = context.Owner,
-                SourceAbility = context.SourceAbility,
-                SlotType = context.SlotType,
-                IsSuper = context.IsSuper,
-                IsHypercharged = isHypercharged,
-                IsGadget = context.IsGadget,
-
-                GameObject = go,
-                VisualController = visualController,
-                Origin = context.Origin,
-                Direction = context.Direction.normalized,
-                Speed = context.Speed,
-                MaxRange = Mathf.Max(0.01f, context.Range),
-                MaxRangeSq = context.Range * context.Range,
-                Damage = context.Damage,
-                DamageScalesWithDistance = context.DamageScalesWithDistance,
-                MinDamageMultiplier = context.MinDamageMultiplier,
-                DamageScaleStartRatio = context.DamageScaleStartRatio,
-                Team = context.Team,
-
-                IsHybrid = context.IsHybrid,
-                AllyHealAmount = context.AllyHealAmount,
-                EnemyDamageAmount = context.EnemyDamageAmount,
-                HitTeamRule = context.HitTeamRule,
-
-                DeliveryType = context.DeliveryType,
-                TargetPoint = context.TargetPoint,
-
-                HasHybridAoEImpact = context.HasHybridAoEImpact,
-                ImpactRadius = context.ImpactRadius,
-                ImpactEnemyDamage = context.ImpactEnemyDamage,
-                ImpactAllyHeal = context.ImpactAllyHeal,
-                LingeringHazardDefinition = context.LingeringHazardDefinition,
-
-
-                UseArcMotion = context.UseArcMotion,
-                ArcHeight = context.ArcHeight,
-                TravelDistance = context.TravelDistance,
-                TravelProgress = 0f,
-
-                PresentationProfile = context.PresentationProfile,
-                IsChainProjectile = context.IsChainProjectile,
-                RemainingBounces = context.RemainingBounces,
-                BounceRadius = context.BounceRadius,
-                HitEntityIds = ignoredEntityIds,
-                CanAffectEnemiesOnImpact = context.CanAffectEnemiesOnImpact,
-                CanAffectAlliesOnImpact = context.CanAffectAlliesOnImpact,
-            });
+            ActiveProjectile projectile = RentProjectileState();
+            projectile.Initialize(in context, go, visualController, isHypercharged);
+            _activeProjectiles.Add(projectile);
 
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
             {
@@ -874,6 +826,7 @@ namespace MOBA.Core.Infrastructure
 
             _pool.ReturnToPool(p.GameObject);
             _activeProjectiles.RemoveAt(index);
+            ReturnProjectileState(p);
         }
 
         private void RaiseProjectileEndEvent(
@@ -932,19 +885,34 @@ namespace MOBA.Core.Infrastructure
             for (int i = _activeProjectiles.Count - 1; i >= 0; i--)
             {
                 ActiveProjectile projectile = _activeProjectiles[i];
-                if (projectile?.GameObject == null)
-                    continue;
+                if (projectile.GameObject != null)
+                {
+                    ProjectileVisualController visualController = projectile.VisualController;
 
-                ProjectileVisualController visualController = projectile.VisualController;
+                    if (visualController != null)
+                        visualController.ResetForPool();
 
-                if (visualController != null)
-                    visualController.ResetForPool();
+                    projectile.GameObject.SetActive(false);
+                }
 
-                projectile.GameObject.SetActive(false);
+                ReturnProjectileState(projectile);
             }
 
             _activeProjectiles.Clear();
             _visualControllers.Clear();
+        }
+
+        private ActiveProjectile RentProjectileState()
+        {
+            return _inactiveProjectileStates.Count > 0
+                ? _inactiveProjectileStates.Pop()
+                : new ActiveProjectile();
+        }
+
+        private void ReturnProjectileState(ActiveProjectile projectile)
+        {
+            projectile.ResetForPool();
+            _inactiveProjectileStates.Push(projectile);
         }
 
         private ProjectileVisualController ResolveVisualController(GameObject projectileObject)
@@ -1067,11 +1035,78 @@ namespace MOBA.Core.Infrastructure
             public bool IsChainProjectile;
             public int RemainingBounces;
             public float BounceRadius;
-            public System.Collections.Generic.HashSet<int> HitEntityIds;
+            public readonly HashSet<int> HitEntityIds = new HashSet<int>();
             public AreaHazardDefinition LingeringHazardDefinition;
 
             public bool CanAffectEnemiesOnImpact;
             public bool CanAffectAlliesOnImpact;
+
+            public void Initialize(
+                in ProjectileSpawnContext context,
+                GameObject projectileObject,
+                ProjectileVisualController visualController,
+                bool isHypercharged)
+            {
+                Owner = context.Owner;
+                SourceAbility = context.SourceAbility;
+                SlotType = context.SlotType;
+                IsSuper = context.IsSuper;
+                IsHypercharged = isHypercharged;
+                IsGadget = context.IsGadget;
+
+                GameObject = projectileObject;
+                VisualController = visualController;
+                Origin = context.Origin;
+                Direction = context.Direction.normalized;
+                Speed = context.Speed;
+                MaxRange = Mathf.Max(0.01f, context.Range);
+                MaxRangeSq = context.Range * context.Range;
+                Damage = context.Damage;
+                DamageScalesWithDistance = context.DamageScalesWithDistance;
+                MinDamageMultiplier = context.MinDamageMultiplier;
+                DamageScaleStartRatio = context.DamageScaleStartRatio;
+                Team = context.Team;
+
+                IsHybrid = context.IsHybrid;
+                AllyHealAmount = context.AllyHealAmount;
+                EnemyDamageAmount = context.EnemyDamageAmount;
+                HitTeamRule = context.HitTeamRule;
+
+                DeliveryType = context.DeliveryType;
+                TargetPoint = context.TargetPoint;
+                HasHybridAoEImpact = context.HasHybridAoEImpact;
+                ImpactRadius = context.ImpactRadius;
+                ImpactEnemyDamage = context.ImpactEnemyDamage;
+                ImpactAllyHeal = context.ImpactAllyHeal;
+                LingeringHazardDefinition = context.LingeringHazardDefinition;
+
+                UseArcMotion = context.UseArcMotion;
+                ArcHeight = context.ArcHeight;
+                TravelDistance = context.TravelDistance;
+                TravelProgress = 0f;
+
+                PresentationProfile = context.PresentationProfile;
+                IsChainProjectile = context.IsChainProjectile;
+                RemainingBounces = context.RemainingBounces;
+                BounceRadius = context.BounceRadius;
+                CanAffectEnemiesOnImpact = context.CanAffectEnemiesOnImpact;
+                CanAffectAlliesOnImpact = context.CanAffectAlliesOnImpact;
+
+                HitEntityIds.Clear();
+                if (SpatialEntityUtility.TryGetEntityId(context.Owner, out int ownerEntityId))
+                    HitEntityIds.Add(ownerEntityId);
+            }
+
+            public void ResetForPool()
+            {
+                Owner = null;
+                SourceAbility = null;
+                GameObject = null;
+                VisualController = null;
+                PresentationProfile = null;
+                LingeringHazardDefinition = null;
+                HitEntityIds.Clear();
+            }
         }
 
         private enum ProjectileEndReason
