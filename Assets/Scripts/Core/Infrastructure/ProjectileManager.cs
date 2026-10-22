@@ -17,6 +17,8 @@ namespace MOBA.Core.Infrastructure
         private readonly List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>(64);
         private readonly Stack<ActiveProjectile> _inactiveProjectileStates =
             new Stack<ActiveProjectile>(64);
+        private readonly Dictionary<ProjectilePoolKey, Stack<GameObject>> _availableProjectileObjects =
+            new Dictionary<ProjectilePoolKey, Stack<GameObject>>(16);
         private readonly Dictionary<GameObject, ProjectileVisualController> _visualControllers =
             new Dictionary<GameObject, ProjectileVisualController>(32);
         private readonly List<ISpatialEntity> _hybridImpactTargets = new List<ISpatialEntity>(16);
@@ -68,10 +70,14 @@ namespace MOBA.Core.Infrastructure
 
         public void FireProjectile(in ProjectileSpawnContext context)
         {
-            GameObject go = _pool.Get();
+            bool isHypercharged = ResolveIsHypercharged(context);
+            var poolKey = new ProjectilePoolKey(
+                context.PresentationProfile,
+                context.IsSuper,
+                isHypercharged);
+            GameObject go = RentProjectileObject(poolKey);
             go.transform.position = context.Origin;
             go.transform.rotation = Quaternion.LookRotation(context.Direction);
-            bool isHypercharged = ResolveIsHypercharged(context);
 
             ProjectileVisualController visualController = ResolveVisualController(go);
             if (visualController != null)
@@ -83,7 +89,7 @@ namespace MOBA.Core.Infrastructure
             }
 
             ActiveProjectile projectile = RentProjectileState();
-            projectile.Initialize(in context, go, visualController, isHypercharged);
+            projectile.Initialize(in context, go, visualController, isHypercharged, poolKey);
             _activeProjectiles.Add(projectile);
 
             CombatPresentationEventBus.Raise(new CombatPresentationEvent
@@ -828,7 +834,7 @@ namespace MOBA.Core.Infrastructure
             if (visualController != null)
                 visualController.ResetForPool();
 
-            _pool.ReturnToPool(p.GameObject);
+            ReturnProjectileObject(p.PoolKey, p.GameObject);
             _activeProjectiles.RemoveAt(index);
             ReturnProjectileState(p);
         }
@@ -903,7 +909,38 @@ namespace MOBA.Core.Infrastructure
             }
 
             _activeProjectiles.Clear();
+            _availableProjectileObjects.Clear();
             _visualControllers.Clear();
+        }
+
+        private GameObject RentProjectileObject(ProjectilePoolKey poolKey)
+        {
+            if (_availableProjectileObjects.TryGetValue(
+                    poolKey,
+                    out Stack<GameObject> available) &&
+                available.Count > 0)
+            {
+                GameObject projectileObject = available.Pop();
+                projectileObject.SetActive(true);
+                return projectileObject;
+            }
+
+            return _pool.Get();
+        }
+
+        private void ReturnProjectileObject(ProjectilePoolKey poolKey, GameObject projectileObject)
+        {
+            projectileObject.SetActive(false);
+
+            if (!_availableProjectileObjects.TryGetValue(
+                    poolKey,
+                    out Stack<GameObject> available))
+            {
+                available = new Stack<GameObject>(4);
+                _availableProjectileObjects.Add(poolKey, available);
+            }
+
+            available.Push(projectileObject);
         }
 
         private ActiveProjectile RentProjectileState()
@@ -1007,6 +1044,7 @@ namespace MOBA.Core.Infrastructure
 
             public GameObject GameObject;
             public ProjectileVisualController VisualController;
+            public ProjectilePoolKey PoolKey;
             public Vector3 Origin;
             public Vector3 Direction;
             public float Speed;
@@ -1051,7 +1089,8 @@ namespace MOBA.Core.Infrastructure
                 in ProjectileSpawnContext context,
                 GameObject projectileObject,
                 ProjectileVisualController visualController,
-                bool isHypercharged)
+                bool isHypercharged,
+                ProjectilePoolKey poolKey)
             {
                 Owner = context.Owner;
                 SourceAbility = context.SourceAbility;
@@ -1062,6 +1101,7 @@ namespace MOBA.Core.Infrastructure
 
                 GameObject = projectileObject;
                 VisualController = visualController;
+                PoolKey = poolKey;
                 Origin = context.Origin;
                 Direction = context.Direction.normalized;
                 Speed = context.Speed;
@@ -1112,6 +1152,45 @@ namespace MOBA.Core.Infrastructure
                 PresentationProfile = null;
                 LingeringHazardDefinition = null;
                 HitEntityIds.Clear();
+            }
+        }
+
+        private readonly struct ProjectilePoolKey : System.IEquatable<ProjectilePoolKey>
+        {
+            private readonly ProjectilePresentationProfile _profile;
+            private readonly bool _isSuper;
+            private readonly bool _isHypercharged;
+
+            public ProjectilePoolKey(
+                ProjectilePresentationProfile profile,
+                bool isSuper,
+                bool isHypercharged)
+            {
+                _profile = profile;
+                _isSuper = isSuper;
+                _isHypercharged = isHypercharged;
+            }
+
+            public bool Equals(ProjectilePoolKey other)
+            {
+                return ReferenceEquals(_profile, other._profile) &&
+                       _isSuper == other._isSuper &&
+                       _isHypercharged == other._isHypercharged;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is ProjectilePoolKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hash = ReferenceEquals(_profile, null) ? 0 : _profile.GetInstanceID();
+                    hash = (hash * 397) ^ (_isSuper ? 1 : 0);
+                    return (hash * 397) ^ (_isHypercharged ? 1 : 0);
+                }
             }
         }
 
