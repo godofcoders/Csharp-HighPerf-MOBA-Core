@@ -35,6 +35,10 @@ namespace MOBA.Core.Infrastructure
         private Material _runtimeFxMaterial;
         private ParticleSystem _sparkParticles;
         private ParticleSystemRenderer _sparkParticleRenderer;
+        private Gradient _particleGradient;
+        private GradientColorKey[] _particleGradientColorKeys;
+        private GradientAlphaKey[] _particleGradientAlphaKeys;
+        private AnimationCurve _particleSizeCurve;
         private ProjectileVisualStyle _currentStyle;
         private ElementalProjectileView _elementalView;
         private ProjectilePresentationProfile _preparedProfile;
@@ -50,6 +54,14 @@ namespace MOBA.Core.Infrastructure
         {
             if (_visualRoot == null)
                 _visualRoot = transform;
+
+            _particleGradient = new Gradient();
+            _particleGradientColorKeys = new GradientColorKey[3];
+            _particleGradientAlphaKeys = new GradientAlphaKey[3];
+            _particleSizeCurve = new AnimationCurve(
+                new Keyframe(0f, 1f),
+                new Keyframe(0.65f, 0.62f),
+                new Keyframe(1f, 0f));
         }
 
         private void OnDestroy()
@@ -659,32 +671,26 @@ namespace MOBA.Core.Infrastructure
 
             var colorOverLifetime = particles.colorOverLifetime;
             colorOverLifetime.enabled = true;
-            Gradient gradient = new Gradient();
             Color fadeColor = style.ParticleColor;
             fadeColor.a = 0f;
-            gradient.SetKeys(
-                new[]
-                {
-                    new GradientColorKey(style.ParticleColor, 0f),
-                    new GradientColorKey(style.ParticleColor, 0.35f),
-                    new GradientColorKey(fadeColor, 1f)
-                },
-                new[]
-                {
-                    new GradientAlphaKey(style.ParticleColor.a, 0f),
-                    new GradientAlphaKey(style.ParticleColor.a * 0.55f, 0.45f),
-                    new GradientAlphaKey(0f, 1f)
-                });
-            colorOverLifetime.color = gradient;
+            _particleGradientColorKeys[0] = new GradientColorKey(style.ParticleColor, 0f);
+            _particleGradientColorKeys[1] = new GradientColorKey(style.ParticleColor, 0.35f);
+            _particleGradientColorKeys[2] = new GradientColorKey(fadeColor, 1f);
+            _particleGradientAlphaKeys[0] = new GradientAlphaKey(style.ParticleColor.a, 0f);
+            _particleGradientAlphaKeys[1] = new GradientAlphaKey(
+                style.ParticleColor.a * 0.55f,
+                0.45f);
+            _particleGradientAlphaKeys[2] = new GradientAlphaKey(0f, 1f);
+            _particleGradient.SetKeys(
+                _particleGradientColorKeys,
+                _particleGradientAlphaKeys);
+            colorOverLifetime.color = _particleGradient;
 
             var sizeOverLifetime = particles.sizeOverLifetime;
             sizeOverLifetime.enabled = true;
             sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(
                 1f,
-                new AnimationCurve(
-                    new Keyframe(0f, 1f),
-                    new Keyframe(0.65f, 0.62f),
-                    new Keyframe(1f, 0f)));
+                _particleSizeCurve);
 
             if (_sparkParticleRenderer == null)
                 _sparkParticleRenderer = particles.GetComponent<ParticleSystemRenderer>();
@@ -718,11 +724,7 @@ namespace MOBA.Core.Infrastructure
             bool isSuper,
             bool isHypercharged)
         {
-            string profileName = profile != null && !string.IsNullOrEmpty(profile.name)
-                ? profile.name.ToLowerInvariant()
-                : string.Empty;
-
-            if (profileName.Contains("barley"))
+            if (ProfileNameContains(profile, "barley"))
             {
                 if (isHypercharged)
                 {
@@ -758,7 +760,7 @@ namespace MOBA.Core.Infrastructure
                     isSuper ? 0.040f : 0.030f);
             }
 
-            if (profileName.Contains("byron"))
+            if (ProfileNameContains(profile, "byron"))
             {
                 if (isHypercharged)
                 {
@@ -800,7 +802,7 @@ namespace MOBA.Core.Infrastructure
                     isSuper ? 0.046f : 0.032f);
             }
 
-            if (profileName.Contains("jesse") || profileName.Contains("jessie"))
+            if (ProfileNameContains(profile, "jesse") || ProfileNameContains(profile, "jessie"))
             {
                 return new ProjectileVisualStyle(
                     new Color(1f, 0.92f, 0.10f, 1f),
@@ -817,7 +819,7 @@ namespace MOBA.Core.Infrastructure
                     0.038f);
             }
 
-            if (profileName.Contains("scrappy"))
+            if (ProfileNameContains(profile, "scrappy"))
             {
                 return new ProjectileVisualStyle(
                     new Color(1f, 0.88f, 0.08f, 1f),
@@ -834,7 +836,7 @@ namespace MOBA.Core.Infrastructure
                     0.034f);
             }
 
-            if (profileName.Contains("colt"))
+            if (ProfileNameContains(profile, "colt"))
             {
                 if (isHypercharged)
                 {
@@ -876,7 +878,7 @@ namespace MOBA.Core.Infrastructure
                     isSuper ? 0.042f : 0.032f);
             }
 
-            if (profileName.Contains("piper"))
+            if (ProfileNameContains(profile, "piper"))
             {
                 return new ProjectileVisualStyle(
                     new Color(0.86f, 0.98f, 1f, 1f),
@@ -893,7 +895,7 @@ namespace MOBA.Core.Infrastructure
                     0.034f);
             }
 
-            if (profileName.Contains("leon"))
+            if (ProfileNameContains(profile, "leon"))
             {
                 return new ProjectileVisualStyle(
                     new Color(0.18f, 0.08f, 0.34f, 1f),
@@ -910,7 +912,7 @@ namespace MOBA.Core.Infrastructure
                     0.040f);
             }
 
-            if (profileName.Contains("bo") || profileName.Contains("arrow"))
+            if (ProfileNameContains(profile, "bo") || ProfileNameContains(profile, "arrow"))
             {
                 return new ProjectileVisualStyle(
                     new Color(0.90f, 1f, 1f, 1f),
@@ -947,11 +949,7 @@ namespace MOBA.Core.Infrastructure
             bool isSuper,
             bool isHypercharged)
         {
-            string profileName = profile != null && !string.IsNullOrEmpty(profile.name)
-                ? profile.name.ToLowerInvariant()
-                : string.Empty;
-
-            if (profileName.Contains("colt"))
+            if (ProfileNameContains(profile, "colt"))
             {
                 if (isHypercharged)
                     return 1.16f;
@@ -959,7 +957,7 @@ namespace MOBA.Core.Infrastructure
                 return isSuper ? 1.08f : 1f;
             }
 
-            if (profileName.Contains("barley"))
+            if (ProfileNameContains(profile, "barley"))
             {
                 if (isHypercharged)
                     return 1.28f;
@@ -971,6 +969,17 @@ namespace MOBA.Core.Infrastructure
                 return 1.85f;
 
             return isSuper ? 1.38f : 1f;
+        }
+
+        private static bool ProfileNameContains(
+            ProjectilePresentationProfile profile,
+            string fragment)
+        {
+            return profile != null &&
+                   !string.IsNullOrEmpty(profile.name) &&
+                   profile.name.IndexOf(
+                       fragment,
+                       System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private static Material CreateUnlitMaterial(Color color)
