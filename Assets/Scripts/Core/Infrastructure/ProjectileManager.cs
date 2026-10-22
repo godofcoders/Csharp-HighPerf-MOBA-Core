@@ -19,6 +19,8 @@ namespace MOBA.Core.Infrastructure
             new Stack<ActiveProjectile>(64);
         private readonly Dictionary<GameObject, ProjectileVisualController> _visualControllers =
             new Dictionary<GameObject, ProjectileVisualController>(32);
+        private readonly List<ISpatialEntity> _hybridImpactTargets = new List<ISpatialEntity>(16);
+        private readonly List<ISpatialEntity> _chainTargetCandidates = new List<ISpatialEntity>(16);
         private readonly Collider[] _projectileWorldHitOverlapBuffer =
             new Collider[ProjectileWorldHitOverlapBufferSize];
 
@@ -702,15 +704,17 @@ namespace MOBA.Core.Infrastructure
             if (!p.HasHybridAoEImpact || SimulationClock.Grid == null || p.Owner == null)
                 return;
 
-            List<ISpatialEntity> targets = new List<ISpatialEntity>(16);
-            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(impactPosition, p.ImpactRadius, targets);
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                impactPosition,
+                p.ImpactRadius,
+                _hybridImpactTargets);
 
             var damageService = ServiceProvider.Get<IDamageService>();
             float sqrRadius = p.ImpactRadius * p.ImpactRadius;
 
-            for (int i = 0; i < targets.Count; i++)
+            for (int i = 0; i < _hybridImpactTargets.Count; i++)
             {
-                ISpatialEntity target = targets[i];
+                ISpatialEntity target = _hybridImpactTargets[i];
                 if (!SpatialEntityUtility.IsAlive(target))
                     continue;
 
@@ -958,15 +962,17 @@ namespace MOBA.Core.Infrastructure
             if (SimulationClock.Grid == null || currentTarget == null)
                 return null;
 
-            List<ISpatialEntity> candidates = new List<ISpatialEntity>(16);
-            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(currentTarget.Position, p.BounceRadius, candidates);
+            SimulationClock.Grid.GetEntitiesInRadiusNonAlloc(
+                currentTarget.Position,
+                p.BounceRadius,
+                _chainTargetCandidates);
 
             float bestDistSq = float.MaxValue;
             BrawlerController best = null;
 
-            for (int j = 0; j < candidates.Count; j++)
+            for (int j = 0; j < _chainTargetCandidates.Count; j++)
             {
-                BrawlerController candidate = candidates[j] as BrawlerController;
+                BrawlerController candidate = _chainTargetCandidates[j] as BrawlerController;
                 if (candidate == null)
                     continue;
 
