@@ -15,6 +15,8 @@ namespace MOBA.Core.Infrastructure
 
         private SimpleObjectPool _pool;
         private readonly List<ActiveProjectile> _activeProjectiles = new List<ActiveProjectile>(64);
+        private readonly Dictionary<GameObject, ProjectileVisualController> _visualControllers =
+            new Dictionary<GameObject, ProjectileVisualController>(32);
         private readonly Collider[] _projectileWorldHitOverlapBuffer =
             new Collider[ProjectileWorldHitOverlapBufferSize];
 
@@ -70,7 +72,7 @@ namespace MOBA.Core.Infrastructure
             if (SpatialEntityUtility.TryGetEntityId(context.Owner, out int ownerEntityId))
                 ignoredEntityIds.Add(ownerEntityId);
 
-            ProjectileVisualController visualController = go.GetComponent<ProjectileVisualController>();
+            ProjectileVisualController visualController = ResolveVisualController(go);
             if (visualController != null)
             {
                 visualController.ApplyProfile(
@@ -89,6 +91,7 @@ namespace MOBA.Core.Infrastructure
                 IsGadget = context.IsGadget,
 
                 GameObject = go,
+                VisualController = visualController,
                 Origin = context.Origin,
                 Direction = context.Direction.normalized,
                 Speed = context.Speed,
@@ -227,7 +230,7 @@ namespace MOBA.Core.Infrastructure
 
                     p.GameObject.transform.position = nextPosition;
 
-                    ProjectileVisualController visualController = p.GameObject.GetComponent<ProjectileVisualController>();
+                    ProjectileVisualController visualController = p.VisualController;
                     if (visualController != null)
                     {
                         visualController.TickVisual(SimulationTiming.TickDeltaSeconds);
@@ -864,9 +867,7 @@ namespace MOBA.Core.Infrastructure
             if (raiseEvent)
                 RaiseProjectileEndEvent(p, reason, position, target);
 
-            ProjectileVisualController visualController = p.GameObject != null
-                ? p.GameObject.GetComponent<ProjectileVisualController>()
-                : null;
+            ProjectileVisualController visualController = p.VisualController;
 
             if (visualController != null)
                 visualController.ResetForPool();
@@ -934,8 +935,7 @@ namespace MOBA.Core.Infrastructure
                 if (projectile?.GameObject == null)
                     continue;
 
-                ProjectileVisualController visualController =
-                    projectile.GameObject.GetComponent<ProjectileVisualController>();
+                ProjectileVisualController visualController = projectile.VisualController;
 
                 if (visualController != null)
                     visualController.ResetForPool();
@@ -944,6 +944,27 @@ namespace MOBA.Core.Infrastructure
             }
 
             _activeProjectiles.Clear();
+            _visualControllers.Clear();
+        }
+
+        private ProjectileVisualController ResolveVisualController(GameObject projectileObject)
+        {
+            if (projectileObject == null)
+                return null;
+
+            if (_visualControllers.TryGetValue(
+                    projectileObject,
+                    out ProjectileVisualController cached))
+            {
+                return cached;
+            }
+
+            ProjectileVisualController resolved =
+                projectileObject.GetComponent<ProjectileVisualController>();
+            if (resolved != null)
+                _visualControllers[projectileObject] = resolved;
+
+            return resolved;
         }
 
         private void EnsureImpactFeedbackView()
@@ -1011,6 +1032,7 @@ namespace MOBA.Core.Infrastructure
             public bool IsGadget;
 
             public GameObject GameObject;
+            public ProjectileVisualController VisualController;
             public Vector3 Origin;
             public Vector3 Direction;
             public float Speed;
