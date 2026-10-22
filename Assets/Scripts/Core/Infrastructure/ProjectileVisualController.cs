@@ -37,6 +37,10 @@ namespace MOBA.Core.Infrastructure
         private ParticleSystemRenderer _sparkParticleRenderer;
         private ProjectileVisualStyle _currentStyle;
         private ElementalProjectileView _elementalView;
+        private ProjectilePresentationProfile _preparedProfile;
+        private bool _preparedIsSuper;
+        private bool _preparedIsHypercharged;
+        private bool _hasPreparedVisual;
 
         private Vector3 _spinEulerPerSecond;
         private bool _useSpin;
@@ -60,13 +64,20 @@ namespace MOBA.Core.Infrastructure
             bool isSuper = false,
             bool isHypercharged = false)
         {
+            bool canReusePreparedVisual =
+                _hasPreparedVisual &&
+                ReferenceEquals(_preparedProfile, profile) &&
+                _preparedIsSuper == isSuper &&
+                _preparedIsHypercharged == isHypercharged;
+
+            if (!canReusePreparedVisual)
+                ClearVisual();
+
             _currentProfile = profile;
             _currentStyle = ResolveStyle(profile, isSuper, isHypercharged);
             _powerVisualScale = ResolvePowerVisualScale(profile, isSuper, isHypercharged);
             _spinEulerPerSecond = Vector3.zero;
             _useSpin = false;
-
-            ClearVisual();
 
             if (profile != null && profile.RuntimeShape == ProjectileRuntimeShape.BlasterBolt)
             {
@@ -85,15 +96,26 @@ namespace MOBA.Core.Infrastructure
                     _elementalView = elementalRoot.AddComponent<ElementalProjectileView>();
                 }
                 _elementalView.Configure(profile, isHypercharged ? 1.22f : (isSuper ? 1.12f : 1f));
+                MarkVisualPrepared(profile, isSuper, isHypercharged);
                 return;
             }
 
             ConfigureTrail(_currentProfile, _currentStyle);
 
+            if (canReusePreparedVisual)
+            {
+                SetNonElementVisualsActive(true);
+                ResetPreparedVisualTransform();
+                ConfigurePreparedVisualSpin();
+                ConfigureProjectileParticles(_currentStyle);
+                return;
+            }
+
             if (ShouldUseRuntimeShape(_currentProfile))
             {
                 CreateFallbackVisual(_currentStyle);
                 ConfigureProjectileParticles(_currentStyle);
+                MarkVisualPrepared(profile, isSuper, isHypercharged);
                 return;
             }
 
@@ -110,6 +132,7 @@ namespace MOBA.Core.Infrastructure
             ApplyStyleToRenderers(_currentVisualInstance, _currentStyle);
             CreateRuntimeGlow(_currentStyle);
             ConfigureProjectileParticles(_currentStyle);
+            MarkVisualPrepared(profile, isSuper, isHypercharged);
         }
 
         public void TickVisual(float deltaTime)
@@ -433,6 +456,10 @@ namespace MOBA.Core.Infrastructure
             }
 
             _currentVisualInstance = null;
+            _preparedProfile = null;
+            _preparedIsSuper = false;
+            _preparedIsHypercharged = false;
+            _hasPreparedVisual = false;
         }
 
         public void ResetForPool()
@@ -443,7 +470,7 @@ namespace MOBA.Core.Infrastructure
                 _trailRenderer.Clear();
             }
 
-            ClearVisual();
+            DeactivatePreparedVisual();
             _currentProfile = null;
             _spinEulerPerSecond = Vector3.zero;
             _useSpin = false;
@@ -454,6 +481,60 @@ namespace MOBA.Core.Infrastructure
                 _sparkParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
                 _sparkParticles.Clear(true);
             }
+        }
+
+        private void DeactivatePreparedVisual()
+        {
+            if (_elementalView != null)
+                _elementalView.Clear();
+
+            SetNonElementVisualsActive(false);
+        }
+
+        private void SetNonElementVisualsActive(bool isActive)
+        {
+            for (int i = 0; i < _visualRoot.childCount; i++)
+            {
+                GameObject child = _visualRoot.GetChild(i).gameObject;
+                if (_elementalView != null && child == _elementalView.gameObject)
+                    continue;
+
+                child.SetActive(isActive);
+            }
+        }
+
+        private void ResetPreparedVisualTransform()
+        {
+            if (_currentVisualInstance == null)
+                return;
+
+            _currentVisualInstance.transform.localPosition = _currentProfile != null
+                ? _currentProfile.LocalPosition
+                : Vector3.zero;
+            _currentVisualInstance.transform.localRotation = _currentProfile != null
+                ? Quaternion.Euler(_currentProfile.LocalRotationEuler)
+                : Quaternion.identity;
+            _currentVisualInstance.transform.localScale = ResolveRuntimeShapeScale(_currentProfile);
+        }
+
+        private void ConfigurePreparedVisualSpin()
+        {
+            if (_currentProfile == null)
+                return;
+
+            _useSpin = _currentProfile.UseSpin;
+            _spinEulerPerSecond = _currentProfile.SpinEulerPerSecond;
+        }
+
+        private void MarkVisualPrepared(
+            ProjectilePresentationProfile profile,
+            bool isSuper,
+            bool isHypercharged)
+        {
+            _preparedProfile = profile;
+            _preparedIsSuper = isSuper;
+            _preparedIsHypercharged = isHypercharged;
+            _hasPreparedVisual = true;
         }
 
         private Material ResolveFallbackVisualMaterial()
