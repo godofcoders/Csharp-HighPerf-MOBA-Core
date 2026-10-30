@@ -6,9 +6,29 @@ namespace MOBA.Core.Simulation
 {
     public class SpatialGrid
     {
+        private struct GridMembership
+        {
+            public Vector2Int Cell;
+            public int Index;
+            public int Order;
+
+            public GridMembership(Vector2Int cell, int index, int order)
+            {
+                Cell = cell;
+                Index = index;
+                Order = order;
+            }
+        }
+
         private readonly float _cellSize;
         // Map: Cell Coordinate -> List of Entities in that cell
-        private readonly Dictionary<Vector2Int, List<ISpatialEntity>> _cells = new Dictionary<Vector2Int, List<ISpatialEntity>>();
+        private readonly Dictionary<Vector2Int, List<ISpatialEntity>> _cells =
+            new Dictionary<Vector2Int, List<ISpatialEntity>>(128);
+        // EntityID -> exact cell/index. This removes the old linear Contains
+        // check on every registration and lets movement/removal use swap-back.
+        private readonly Dictionary<int, GridMembership> _memberships =
+            new Dictionary<int, GridMembership>(128);
+        private int _nextMembershipOrder;
         public SpatialGrid(float cellSize) => _cellSize = cellSize;
 
         // Converts a 3D world position into a 2D Grid Coordinate
@@ -19,21 +39,52 @@ namespace MOBA.Core.Simulation
 
         public void Add(ISpatialEntity entity)
         {
-            if (!SpatialEntityUtility.IsAlive(entity))
+            if (!SpatialEntityUtility.TryGetEntityId(entity, out int entityId))
                 return;
 
             var cell = GetCellCoords(entity.Position);
-            if (!_cells.ContainsKey(cell)) _cells[cell] = new List<ISpatialEntity>();
-            if (!_cells[cell].Contains(entity))
-                _cells[cell].Add(entity);
+            if (_memberships.TryGetValue(entityId, out GridMembership membership))
+            {
+                if (membership.Cell == cell &&
+                    IsSameReference(membership.Cell, membership.Index, entity))
+                {
+                    return;
+                }
+
+                RemoveAt(membership.Cell, membership.Index);
+            }
+
+            if (!_cells.TryGetValue(cell, out List<ISpatialEntity> list))
+            {
+                list = new List<ISpatialEntity>(4);
+                _cells.Add(cell, list);
+            }
+
+            int index = list.Count;
+            list.Add(entity);
+            _memberships[entityId] = new GridMembership(cell, index, _nextMembershipOrder++);
         }
 
         public void Remove(ISpatialEntity entity, Vector3 lastKnownPos)
         {
+            if (SpatialEntityUtility.TryGetEntityIdEvenIfDestroyed(entity, out int entityId) &&
+                _memberships.TryGetValue(entityId, out GridMembership membership))
+            {
+                RemoveAt(membership.Cell, membership.Index);
+                return;
+            }
+
             var cell = GetCellCoords(lastKnownPos);
             if (_cells.TryGetValue(cell, out var list))
             {
-                list.Remove(entity);
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (!ReferenceEquals(list[i], entity))
+                        continue;
+
+                    RemoveAt(cell, i);
+                    return;
+                }
             }
         }
 
@@ -76,12 +127,15 @@ namespace MOBA.Core.Simulation
                     Vector2Int neighbor = cell + new Vector2Int(x, y);
                     if (_cells.TryGetValue(neighbor, out var entities))
                     {
+                        ISpatialEntity firstCollisionInCell = null;
+                        int firstCollisionOrder = int.MaxValue;
+
                         for (int i = 0; i < entities.Count; i++)
                         {
                             var target = entities[i];
                             if (!SpatialEntityUtility.IsAlive(target))
                             {
-                                entities.RemoveAt(i);
+                                RemoveAt(neighbor, i);
                                 i--;
                                 continue;
                             }
@@ -118,9 +172,17 @@ namespace MOBA.Core.Simulation
 
                             if (distSq <= (combinedRadius * combinedRadius))
                             {
-                                return target;
+                                int targetOrder = GetMembershipOrder(target);
+                                if (firstCollisionInCell == null || targetOrder < firstCollisionOrder)
+                                {
+                                    firstCollisionInCell = target;
+                                    firstCollisionOrder = targetOrder;
+                                }
                             }
                         }
+
+                        if (firstCollisionInCell != null)
+                            return firstCollisionInCell;
                     }
                 }
             }
@@ -156,6 +218,7 @@ namespace MOBA.Core.Simulation
             ISpatialEntity best = null;
             float bestT = float.PositiveInfinity;
             float bestDistanceSq = float.PositiveInfinity;
+            int bestOrder = int.MaxValue;
 
             for (int x = minCell.x - 1; x <= maxCell.x + 1; x++)
             {
@@ -170,7 +233,7 @@ namespace MOBA.Core.Simulation
                         var target = entities[i];
                         if (!SpatialEntityUtility.IsAlive(target))
                         {
-                            entities.RemoveAt(i);
+                            RemoveAt(cell, i);
                             i--;
                             continue;
                         }
@@ -205,13 +268,18 @@ namespace MOBA.Core.Simulation
                         if (distanceSq > combinedRadius * combinedRadius)
                             continue;
 
+                        int targetOrder = GetMembershipOrder(target);
                         if (best == null ||
                             t < bestT ||
-                            (Mathf.Abs(t - bestT) <= 0.0001f && distanceSq < bestDistanceSq))
+                            (Mathf.Abs(t - bestT) <= 0.0001f &&
+                             (distanceSq < bestDistanceSq ||
+                              (Mathf.Abs(distanceSq - bestDistanceSq) <= 0.0001f &&
+                               targetOrder < bestOrder))))
                         {
                             best = target;
                             bestT = t;
                             bestDistanceSq = distanceSq;
+                            bestOrder = targetOrder;
                         }
                     }
                 }
@@ -242,7 +310,7 @@ namespace MOBA.Core.Simulation
                             var entity = entities[i];
                             if (!SpatialEntityUtility.IsAlive(entity))
                             {
-                                entities.RemoveAt(i);
+                                RemoveAt(centerCell + new Vector2Int(x, y), i);
                                 i--;
                                 continue;
                             }
@@ -285,6 +353,56 @@ namespace MOBA.Core.Simulation
                 hitRule,
                 attackerTeam,
                 target.Team);
+        }
+
+        private bool IsSameReference(Vector2Int cell, int index, ISpatialEntity expected)
+        {
+            return _cells.TryGetValue(cell, out List<ISpatialEntity> list) &&
+                   index >= 0 &&
+                   index < list.Count &&
+                   ReferenceEquals(list[index], expected);
+        }
+
+        private void RemoveAt(Vector2Int cell, int index)
+        {
+            if (!_cells.TryGetValue(cell, out List<ISpatialEntity> list) ||
+                index < 0 ||
+                index >= list.Count)
+            {
+                return;
+            }
+
+            int lastIndex = list.Count - 1;
+            ISpatialEntity removed = list[index];
+            ISpatialEntity moved = list[lastIndex];
+
+            if (index != lastIndex)
+            {
+                list[index] = moved;
+                if (SpatialEntityUtility.TryGetEntityIdEvenIfDestroyed(moved, out int movedId))
+                {
+                    int movedOrder = _memberships.TryGetValue(movedId, out GridMembership existing)
+                        ? existing.Order
+                        : _nextMembershipOrder++;
+                    _memberships[movedId] = new GridMembership(cell, index, movedOrder);
+                }
+            }
+
+            list.RemoveAt(lastIndex);
+
+            if (SpatialEntityUtility.TryGetEntityIdEvenIfDestroyed(removed, out int removedId))
+                _memberships.Remove(removedId);
+
+            if (list.Count == 0)
+                _cells.Remove(cell);
+        }
+
+        private int GetMembershipOrder(ISpatialEntity entity)
+        {
+            return SpatialEntityUtility.TryGetEntityIdEvenIfDestroyed(entity, out int entityId) &&
+                   _memberships.TryGetValue(entityId, out GridMembership membership)
+                ? membership.Order
+                : int.MaxValue;
         }
 
         private static float PlanarDistanceSq(Vector3 a, Vector3 b)

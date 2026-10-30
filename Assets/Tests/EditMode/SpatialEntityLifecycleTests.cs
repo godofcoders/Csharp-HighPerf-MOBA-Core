@@ -75,6 +75,32 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void SpatialGrid_DuplicateAdd_DoesNotDuplicateEntity()
+        {
+            SpatialGrid grid = new SpatialGrid(4f);
+            DummySpatialEntity entity = CreateEntity(Vector3.zero, TeamType.Red);
+
+            grid.Add(entity);
+            grid.Add(entity);
+
+            Assert.AreEqual(1, grid.GetEntitiesInCell(Vector3.zero).Count);
+        }
+
+        [Test]
+        public void SpatialGrid_UpdateEntity_MovesMembershipToNewCell()
+        {
+            SpatialGrid grid = new SpatialGrid(4f);
+            DummySpatialEntity entity = CreateEntity(Vector3.zero, TeamType.Red);
+
+            grid.Add(entity);
+            entity.transform.position = new Vector3(8f, 0f, 0f);
+            grid.UpdateEntity(entity, Vector3.zero, entity.transform.position);
+
+            Assert.IsNull(grid.GetEntitiesInCell(Vector3.zero));
+            Assert.AreEqual(1, grid.GetEntitiesInCell(entity.transform.position).Count);
+        }
+
+        [Test]
         public void CombatRegistry_GetEntity_PrunesDestroyedUnityEntity()
         {
             DummySpatialEntity entity = CreateEntity(Vector3.zero, TeamType.Red);
