@@ -14,8 +14,7 @@ namespace MOBA.Core.Simulation.AI
         private float _cellSize;
         private readonly List<PathNode> _touchedNodes = new List<PathNode>(256);
         private readonly List<PathNode> _neighborBuffer = new List<PathNode>(8);
-        private readonly List<PathNode> _openList = new List<PathNode>(256);
-        private readonly HashSet<PathNode> _closedSet = new HashSet<PathNode>();
+        private readonly PathNodeMinHeap _openHeap = new PathNodeMinHeap(256);
 
         public int Width => _width;
         public int Height => _height;
@@ -512,6 +511,7 @@ namespace MOBA.Core.Simulation.AI
             int obstacleClearanceCells = 1)
         {
             ResetPathState();
+            _openHeap.Clear();
 
             PathNode startNode = GetNode(startX, startY);
             PathNode endNode = GetNode(endX, endY);
@@ -535,23 +535,11 @@ namespace MOBA.Core.Simulation.AI
             startNode.GCost = 0;
             startNode.HCost = GetDistance(startNode, endNode);
 
-            _openList.Clear();
-            _closedSet.Clear();
-            _openList.Add(startNode);
+            _openHeap.Push(startNode);
 
-            while (_openList.Count > 0)
+            while (_openHeap.Count > 0)
             {
-                // Find node with lowest F cost
-                int currentIndex = 0;
-                PathNode current = _openList[0];
-                for (int i = 1; i < _openList.Count; i++)
-                {
-                    if (_openList[i].FCost < current.FCost)
-                    {
-                        current = _openList[i];
-                        currentIndex = i;
-                    }
-                }
+                PathNode current = _openHeap.Pop();
 
                 if (current == endNode)
                 {
@@ -559,8 +547,7 @@ namespace MOBA.Core.Simulation.AI
                     return endNode;
                 }
 
-                _openList.RemoveAt(currentIndex);
-                _closedSet.Add(current);
+                current.IsClosed = true;
 
                 GetNeighborsNonAlloc(
                     current,
@@ -576,20 +563,23 @@ namespace MOBA.Core.Simulation.AI
                             requireNavigationClearance,
                             boundaryClearanceCells,
                             obstacleClearanceCells) ||
-                        _closedSet.Contains(neighbor))
+                        neighbor.IsClosed)
                     {
                         continue;
                     }
 
                     int newCostToNeighbor = current.GCost + GetDistance(current, neighbor);
-                    bool alreadyOpen = _openList.Contains(neighbor);
+                    bool alreadyOpen = neighbor.IsOpen;
                     if (newCostToNeighbor < neighbor.GCost || !alreadyOpen)
                     {
                         TouchNode(neighbor);
                         neighbor.GCost = newCostToNeighbor;
                         neighbor.HCost = GetDistance(neighbor, endNode);
                         neighbor.Parent = current;
-                        if (!alreadyOpen) _openList.Add(neighbor);
+                        if (!alreadyOpen)
+                            _openHeap.Push(neighbor);
+                        else
+                            _openHeap.DecreaseKey(neighbor);
                     }
                 }
             }
@@ -695,6 +685,10 @@ namespace MOBA.Core.Simulation.AI
                 node.HCost = 0;
                 node.Parent = null;
                 node.IsPathTouched = false;
+                node.IsOpen = false;
+                node.IsClosed = false;
+                node.OpenHeapIndex = -1;
+                node.OpenOrder = 0;
             }
 
             _touchedNodes.Clear();
@@ -719,6 +713,121 @@ namespace MOBA.Core.Simulation.AI
                 currentTick,
                 success,
                 _touchedNodes.Count);
+        }
+
+        /// <summary>
+        /// Reusable binary min-heap for A*'s open set. The previous list-based
+        /// implementation scanned every open node and then called Contains for
+        /// every neighbour, turning a busy path query into O(n²) work. This
+        /// keeps the same deterministic F-cost ordering while making pop and
+        /// decrease-key O(log n), with no per-query allocations after warm-up.
+        /// </summary>
+        private sealed class PathNodeMinHeap
+        {
+            private readonly List<PathNode> _nodes;
+            private int _nextOrder;
+
+            public int Count => _nodes.Count;
+
+            public PathNodeMinHeap(int capacity)
+            {
+                _nodes = new List<PathNode>(capacity);
+            }
+
+            public void Clear()
+            {
+                _nodes.Clear();
+                _nextOrder = 0;
+            }
+
+            public void Push(PathNode node)
+            {
+                node.IsOpen = true;
+                node.OpenHeapIndex = _nodes.Count;
+                node.OpenOrder = _nextOrder++;
+                _nodes.Add(node);
+                SiftUp(node.OpenHeapIndex);
+            }
+
+            public PathNode Pop()
+            {
+                PathNode result = _nodes[0];
+                int lastIndex = _nodes.Count - 1;
+                result.IsOpen = false;
+                result.OpenHeapIndex = -1;
+
+                if (lastIndex == 0)
+                {
+                    _nodes.RemoveAt(0);
+                    return result;
+                }
+
+                PathNode last = _nodes[lastIndex];
+                _nodes[0] = last;
+                last.OpenHeapIndex = 0;
+                _nodes.RemoveAt(lastIndex);
+                SiftDown(0);
+                return result;
+            }
+
+            public void DecreaseKey(PathNode node)
+            {
+                if (node.OpenHeapIndex >= 0)
+                    SiftUp(node.OpenHeapIndex);
+            }
+
+            private void SiftUp(int index)
+            {
+                while (index > 0)
+                {
+                    int parent = (index - 1) / 2;
+                    if (!ComesBefore(_nodes[index], _nodes[parent]))
+                        break;
+
+                    Swap(index, parent);
+                    index = parent;
+                }
+            }
+
+            private void SiftDown(int index)
+            {
+                while (true)
+                {
+                    int left = index * 2 + 1;
+                    if (left >= _nodes.Count)
+                        return;
+
+                    int right = left + 1;
+                    int best = left;
+                    if (right < _nodes.Count && ComesBefore(_nodes[right], _nodes[left]))
+                        best = right;
+
+                    if (!ComesBefore(_nodes[best], _nodes[index]))
+                        return;
+
+                    Swap(index, best);
+                    index = best;
+                }
+            }
+
+            private void Swap(int left, int right)
+            {
+                PathNode temp = _nodes[left];
+                _nodes[left] = _nodes[right];
+                _nodes[right] = temp;
+                _nodes[left].OpenHeapIndex = left;
+                _nodes[right].OpenHeapIndex = right;
+            }
+
+            private static bool ComesBefore(PathNode left, PathNode right)
+            {
+                if (left.FCost != right.FCost)
+                    return left.FCost < right.FCost;
+
+                // The old list scan retained insertion order for equal FCost
+                // nodes. Preserve that tie-breaker for deterministic paths.
+                return left.OpenOrder < right.OpenOrder;
+            }
         }
     }
 }

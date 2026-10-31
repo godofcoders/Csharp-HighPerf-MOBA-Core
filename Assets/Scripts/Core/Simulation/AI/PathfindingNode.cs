@@ -13,6 +13,12 @@ namespace MOBA.Core.Simulation.AI
         public PathNode Parent;
         public bool IsPathTouched;
 
+        // Search-local state used by AStarSolver's reusable open heap.
+        public bool IsOpen;
+        public bool IsClosed;
+        public int OpenHeapIndex = -1;
+        public int OpenOrder;
+
         public PathNode(int x, int y, bool walkable)
         {
             X = x;
