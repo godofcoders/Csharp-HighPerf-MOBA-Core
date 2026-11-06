@@ -39,6 +39,15 @@ These items are active now. We validate and fix the most disruptive gameplay-fee
   - `[~]` Gem prefab should visually read as a gem, not a placeholder. Runtime Gem presentation now replaces the sphere mesh with a faceted diamond mesh, pops it up from ground, and settles it onto the ground plane while keeping pickup/collider behavior unchanged; needs Unity readability QA.
   - `[~]` Multiple spawned/dropped gems should scatter on the ground with readable spacing. Mine spawns and carrier death drops now use deterministic no-overlap cluster slots; needs Unity camera-readability QA.
 
+### Unity playtest checklist
+
+Run these checks in order using the Unity version in `ProjectSettings/ProjectVersion.txt`. For each failure, record the mode, brawler and loadout, input device, and reproduction steps. Keep the queue entries open until their checks pass.
+
+- [ ] **Aim.** With Colt, tap attack with an enemy in range, then hold attack and strafe before releasing. Confirm that tapping fires without drawing the preview, holding draws it after the delay, and the shot follows the preview on release. Repeat near cover and check for jitter, wall clipping, and the absence of an end marker on directional aim. Compare the super preview color and check an end marker with a point-targeted ability.
+- [ ] **Projectiles.** Fire Colt's multi-shot attack while stationary and while changing movement direction during the burst. Confirm that the bullets keep distinct lanes and that movement does not bend or shift their paths. Check projectile size, trails, and impact effects at the normal gameplay camera distance.
+- [ ] **AI movement.** Observe bots rounding cover, approaching an objective, and dodging incoming shots. Look for repeated direction flips or dodges with no readable lead-in. Check the same movement routes as the player for unexpected changes in control.
+- [ ] **Gems.** In Gem Grab, observe the mine while multiple gems are on the ground, then defeat a carrier holding several gems. Confirm that individual gems remain recognizable and separated after settling, and that they can be picked up where they appear.
+
 ## Engineering Health Backlog
 
 These tasks track architecture, reliability, and performance improvements found
