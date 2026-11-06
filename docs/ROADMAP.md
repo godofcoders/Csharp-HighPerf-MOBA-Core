@@ -89,7 +89,14 @@ Goal: make hypercharge feel like a complete, readable combat system rather than 
 - `[~]` Add activation feedback: VFX, SFX hook, camera impulse, character highlight. Runtime character highlight/aura is wired; SFX/camera impulse still future polish.
 - `[~]` Add end feedback: cleanup VFX, state return, no lingering modifiers. Runtime highlight cleans up on end/death/disable; manual expiry/death QA still open.
 - `[ ]` Add debug/validation hooks for charge, activation, expiry, enhanced-super usage.
-- `[ ]` Manual QA: activate, die during activation, respawn, use enhanced super, verify no duplicate modifiers.
+- `[ ]` Run the Hypercharge playtest checklist below.
+
+### Hypercharge playtest checklist
+
+- [ ] **Charge and readiness.** Start with the spawn-ready debug option disabled. Land attacks and confirm that eligible charge grants update both meters using the equipped Hypercharge's tuning. Try activating below full charge, then confirm that reaching full charge shows the ready state.
+- [ ] **Activation and enhanced super.** With Colt, Barley, Jessie, and Byron, activate with both meters ready and cast the super while Hypercharge is active. Confirm that activation consumes Hypercharge charge once, the HUD shows the active countdown, and the brawler uses the equipped enhanced super. Try activating again during the same window.
+- [ ] **Expiry.** Let Hypercharge expire naturally in a separate run. Confirm that the HUD and highlight clear, the next super uses its normal definition, and temporary modifiers return to their pre-activation values. Repeat activation to check that the modifiers do not stack.
+- [ ] **Death and respawn.** In a mode with respawns, die while Hypercharge is active. Confirm that the HUD, highlight, and temporary modifiers clear, and check the normal super and equipped loadout after respawning. Recharge and activate again to check for duplicate modifiers.
 
 ## Milestone G-02: Core Combat And Aiming Polish
 
