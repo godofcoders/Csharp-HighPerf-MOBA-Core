@@ -20,7 +20,7 @@ namespace MOBA.Core.Infrastructure
         [Tooltip("Log routine initialization, ability use, and Hypercharge transitions.")]
         [SerializeField] private bool _debugLogCombatEvents;
         [Tooltip("Temporary playtest helper: the locally controlled brawler starts and respawns with full super + hypercharge.")]
-        [SerializeField] private bool _debugReadySuperAndHyperchargeForPlayer = true;
+        [SerializeField] private bool _debugReadySuperAndHyperchargeForPlayer;
 
         [SerializeField] private Transform _visualRoot;
 
