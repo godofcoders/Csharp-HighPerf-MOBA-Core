@@ -17,6 +17,8 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private int _startingPowerLevel = 11;
 
         [Header("Debug / Testing")]
+        [Tooltip("Log routine initialization, ability use, and Hypercharge transitions.")]
+        [SerializeField] private bool _debugLogCombatEvents;
         [Tooltip("Temporary playtest helper: the locally controlled brawler starts and respawns with full super + hypercharge.")]
         [SerializeField] private bool _debugReadySuperAndHyperchargeForPlayer = true;
 
@@ -270,7 +272,8 @@ namespace MOBA.Core.Infrastructure
             SimulationClock.Grid?.Add(this);
             State.OnDeath += HandleDeath;
 
-            Debug.Log($"[SIM] {gameObject.name} initialized as {_definition.BrawlerName} on Team {_team}");
+            if (_debugLogCombatEvents)
+                Debug.Log($"[SIM] {gameObject.name} initialized as {_definition.BrawlerName} on Team {_team}");
         }
 
         /// <summary>
@@ -702,7 +705,8 @@ namespace MOBA.Core.Infrastructure
                     Tick = currentTick
                 });
 
-                Debug.Log("[SIM] Hypercharge Ended");
+                if (_debugLogCombatEvents)
+                    Debug.Log("[SIM] Hypercharge Ended");
             });
 
             TryExecuteBufferedCommand(currentTick);
@@ -1530,7 +1534,8 @@ namespace MOBA.Core.Infrastructure
                         if (result.Success)
                         {
                             State.StartCooldownForAction(actionType, currentTick);
-                            Debug.Log($"[SIM] Gadget used! Remaining: {State.RemainingGadgets}");
+                            if (_debugLogCombatEvents)
+                                Debug.Log($"[SIM] Gadget used! Remaining: {State.RemainingGadgets}");
                         }
 
                         AbilityEventBus.Raise(new AbilityExecutionEvent
@@ -1590,7 +1595,8 @@ namespace MOBA.Core.Infrastructure
 
                 case InputCommandType.Super:
                     {
-                        Debug.Log("Executing Super");
+                        if (_debugLogCombatEvents)
+                            Debug.Log("Executing Super");
                         AbilityDefinition currentSuperDef = State.GetCurrentSuperDefinition();
                         BrawlerActionRequestType actionType = BrawlerActionRequestType.Super;
                         bool isHyperchargedSuper = State.Hypercharge != null &&
@@ -1850,7 +1856,8 @@ namespace MOBA.Core.Infrastructure
                 Tick = currentTick
             });
 
-            Debug.Log($"[SIM] Hypercharge Activated! {def.name} is now active.");
+            if (_debugLogCombatEvents)
+                Debug.Log($"[SIM] Hypercharge Activated! {def.name} is now active.");
         }
 
         private void HandleDeath()
