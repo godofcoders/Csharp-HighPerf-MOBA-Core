@@ -508,7 +508,8 @@ namespace MOBA.Core.Simulation
             // BrawlerState, the coordinator, so the POCO stays pure.
             bool justDied = Stats.ApplyDamage(amount);
 
-            Debug.Log($"[DAMAGE] Target={Owner?.name ?? "Unknown"} Team={Team} Damage={amount} Health: {beforeHealth} -> {CurrentHealth}");
+            if (Owner != null && Owner.DebugLogCombatEvents)
+                Debug.Log($"[DAMAGE] Target={Owner?.name ?? "Unknown"} Team={Team} Damage={amount} Health: {beforeHealth} -> {CurrentHealth}");
 
             OnHealthChanged?.Invoke(CurrentHealth);
 
@@ -578,7 +579,8 @@ namespace MOBA.Core.Simulation
             if (healingDone <= 0f)
                 return;
 
-            Debug.Log($"[HEAL] Target={Owner?.name ?? "Unknown"} Team={Team} Heal={healingDone} Health: {beforeHealth} -> {CurrentHealth}");
+            if (Owner != null && Owner.DebugLogCombatEvents)
+                Debug.Log($"[HEAL] Target={Owner?.name ?? "Unknown"} Team={Team} Heal={healingDone} Health: {beforeHealth} -> {CurrentHealth}");
 
             OnHealthChanged?.Invoke(CurrentHealth);
 

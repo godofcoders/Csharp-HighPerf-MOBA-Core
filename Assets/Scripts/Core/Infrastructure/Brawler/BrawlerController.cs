@@ -104,6 +104,7 @@ namespace MOBA.Core.Infrastructure
         public Transform PresentationFollowTarget => _presentationAnchor != null ? _presentationAnchor : transform;
         public GameObject VisualModel => _visualModel;
         public Vector3 PlanarVelocity => _planarVelocity;
+        public bool DebugLogCombatEvents => _debugLogCombatEvents;
         public bool DebugReadySuperAndHyperchargeForPlayer => _debugReadySuperAndHyperchargeForPlayer;
         public NanopowerDefinition ActiveNanopower => _activeNanopower;
 
