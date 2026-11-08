@@ -22,7 +22,8 @@ namespace MOBA.Core.Simulation.Abilities
             Vector3 dashVec = context.Direction.normalized * _dashForce;
             mb.transform.position += dashVec;
 
-            Debug.Log("[SIM] Gadget Executed: Dash");
+            if (context.Source != null && context.Source.DebugLogCombatEvents)
+                Debug.Log("[SIM] Gadget Executed: Dash");
 
             var result = AbilityExecutionResult.Succeeded(context.AbilityDefinition, context.SlotType);
             result.ConsumedResource = true;

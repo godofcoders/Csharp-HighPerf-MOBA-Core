@@ -72,7 +72,8 @@ namespace MOBA.Core.Simulation.Abilities
                             context.StartTick);
                     }
 
-                    Debug.Log($"[HYBRID AOE] {context.Source.name} healed ally {targetBrawler.name} for {_definition.AllyHeal}");
+                    if (context.Source != null && context.Source.DebugLogCombatEvents)
+                        Debug.Log($"[HYBRID AOE] {context.Source.name} healed ally {targetBrawler.name} for {_definition.AllyHeal}");
 
                     CombatPresentationEventBus.Raise(new CombatPresentationEvent
                     {
@@ -101,7 +102,8 @@ namespace MOBA.Core.Simulation.Abilities
                         IsSuper = context.IsSuper
                     });
 
-                    Debug.Log($"[HYBRID AOE] {context.Source.name} damaged enemy {targetBrawler.name} for {_definition.EnemyDamage}");
+                    if (context.Source != null && context.Source.DebugLogCombatEvents)
+                        Debug.Log($"[HYBRID AOE] {context.Source.name} damaged enemy {targetBrawler.name} for {_definition.EnemyDamage}");
 
                     CombatPresentationEventBus.Raise(new CombatPresentationEvent
                     {
