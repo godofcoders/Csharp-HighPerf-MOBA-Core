@@ -427,7 +427,8 @@ namespace MOBA.Core.Infrastructure
 
                 if (isAllyBrawler)
                 {
-                    Debug.Log($"[HYBRID PROJECTILE] {projectile.Owner.name} healed ally {targetBrawler.name} for {projectile.AllyHealAmount}");
+                    if (projectile.Owner != null && projectile.Owner.DebugLogCombatEvents)
+                        Debug.Log($"[HYBRID PROJECTILE] {projectile.Owner.name} healed ally {targetBrawler.name} for {projectile.AllyHealAmount}");
                     float beforeHealth = targetBrawler.State.CurrentHealth;
                     targetBrawler.State.Heal(projectile.AllyHealAmount, projectile.Owner, true);
                     float healingDone = targetBrawler.State.CurrentHealth - beforeHealth;
@@ -457,7 +458,8 @@ namespace MOBA.Core.Infrastructure
                 }
                 else
                 {
-                    Debug.Log($"[HYBRID PROJECTILE] {projectile.Owner.name} damaged target {hit.EntityID} for {projectile.EnemyDamageAmount}");
+                    if (projectile.Owner != null && projectile.Owner.DebugLogCombatEvents)
+                        Debug.Log($"[HYBRID PROJECTILE] {projectile.Owner.name} damaged target {hit.EntityID} for {projectile.EnemyDamageAmount}");
                     ApplyProjectileDamage(projectile, hit, projectile.EnemyDamageAmount, projectilePosition, targetBrawler);
                 }
             }
@@ -756,7 +758,8 @@ namespace MOBA.Core.Infrastructure
                                 p.IsSuper,
                                 AIReportCardTracker.GetCurrentTickOrZero());
                         }
-                        Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} healed ally {targetBrawler.name} for {p.ImpactAllyHeal}");
+                        if (p.Owner != null && p.Owner.DebugLogCombatEvents)
+                            Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} healed ally {targetBrawler.name} for {p.ImpactAllyHeal}");
                     }
                 }
                 else
@@ -778,7 +781,8 @@ namespace MOBA.Core.Infrastructure
                             IsSuper = p.IsSuper
                         });
 
-                        Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} damaged target {target.EntityID} for {p.ImpactEnemyDamage}");
+                        if (p.Owner != null && p.Owner.DebugLogCombatEvents)
+                            Debug.Log($"[THROWN HYBRID AOE] {p.Owner.name} damaged target {target.EntityID} for {p.ImpactEnemyDamage}");
                     }
                 }
             }
