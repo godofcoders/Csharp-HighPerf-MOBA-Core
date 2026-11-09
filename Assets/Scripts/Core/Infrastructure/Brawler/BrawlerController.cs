@@ -1596,8 +1596,6 @@ namespace MOBA.Core.Infrastructure
 
                 case InputCommandType.Super:
                     {
-                        if (_debugLogCombatEvents)
-                            Debug.Log("Executing Super");
                         AbilityDefinition currentSuperDef = State.GetCurrentSuperDefinition();
                         BrawlerActionRequestType actionType = BrawlerActionRequestType.Super;
                         bool isHyperchargedSuper = State.Hypercharge != null &&
@@ -1682,6 +1680,8 @@ namespace MOBA.Core.Infrastructure
                         if (result.Success)
                         {
                             State.StartCooldownForAction(actionType, currentTick);
+                            if (_debugLogCombatEvents)
+                                Debug.Log($"[SIM] {name} cast {currentSuperDef.name} at tick {currentTick} (Hypercharge active: {isHyperchargedSuper}).");
                         }
                         else
                         {
