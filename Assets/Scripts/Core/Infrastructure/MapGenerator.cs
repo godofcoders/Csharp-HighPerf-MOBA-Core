@@ -13,6 +13,7 @@ namespace MOBA.Core.Infrastructure
         public bool FitGridToGroundBounds = true;
         [Min(0f)] public float GroundBoundsPadding = 0f;
         public LayerMask ObstacleLayer;
+        [SerializeField] private bool _logMapBake;
 
         [Header("Grounding")]
         [Tooltip("Layer mask used to decide whether a grid cell has playable ground under it. If unset, all non-obstacle layers are probed.")]
@@ -104,7 +105,8 @@ namespace MOBA.Core.Infrastructure
 
             int semanticZoneCount = BakeSemanticZones ? BakeMapSemantics() : 0;
 
-            Debug.Log($"[MAP] Bake Complete: {gridWidth}x{gridHeight} grid. SemanticZones={semanticZoneCount}");
+            if (_logMapBake)
+                Debug.Log($"[MAP] Bake Complete: {gridWidth}x{gridHeight} grid. SemanticZones={semanticZoneCount}");
             return _mapData;
         }
 
