@@ -22,6 +22,7 @@ namespace MOBA.Core.Infrastructure
         [SerializeField] private int _maxSameBotBrawlerPerTeam = 1;
         [SerializeField] private int _maxSameArchetypePerTeam = 1;
         [SerializeField] private bool _logBotCompositionDraft = false;
+        [SerializeField] private bool _logLobbyLifecycle;
 
         private List<MatchParticipant> _roster = new List<MatchParticipant>();
         private readonly List<BrawlerDefinition> _botPickBag = new List<BrawlerDefinition>(8);
@@ -105,7 +106,8 @@ namespace MOBA.Core.Infrastructure
                 false,
                 selectedBuild,
                 selectedPowerLevel));
-            Debug.Log($"[Lobby] Player joined as {selected.BrawlerName}");
+            if (_logLobbyLifecycle)
+                Debug.Log($"[Lobby] Player joined as {selected.BrawlerName}");
             
             FillWithBots();
         }
@@ -146,7 +148,8 @@ namespace MOBA.Core.Infrastructure
                 }
             }
 
-            Debug.Log("[Lobby] Roster full. Initializing Spawn Sequence...");
+            if (_logLobbyLifecycle)
+                Debug.Log("[Lobby] Roster full. Initializing Spawn Sequence...");
             StartMatch();
         }
 
