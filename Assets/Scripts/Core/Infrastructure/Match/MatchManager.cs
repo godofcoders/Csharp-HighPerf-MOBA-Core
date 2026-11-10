@@ -75,6 +75,7 @@ namespace MOBA.Core.Infrastructure
 
         [Header("Settings")]
         [SerializeField] private float _countdownDuration = 5f;
+        [SerializeField] private bool _logMatchOutcome;
 
         // Match State
         public MatchState CurrentState { get; private set; } = MatchState.Waiting;
@@ -233,7 +234,8 @@ namespace MOBA.Core.Infrastructure
             _winnerKnown = winner != TeamType.Neutral;
             _countdown.Clear();
             ChangeState(MatchState.Ended);
-            Debug.Log($"Match Over! Winner: {winner}");
+            if (_logMatchOutcome)
+                Debug.Log($"Match Over! Winner: {winner}");
         }
 
         private void EnsureTeamScore(TeamType team)
