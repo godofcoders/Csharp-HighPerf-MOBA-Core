@@ -20,6 +20,7 @@ namespace MOBA.Core.Simulation.AI
         private readonly AICommandSource _commandSource;
         private readonly BrawlerAIProfile _profile;
 
+        private readonly List<PathNode> _pathBuffer = new List<PathNode>();
         private List<PathNode> _path;
         private int _pathIndex;
 
@@ -151,6 +152,7 @@ namespace MOBA.Core.Simulation.AI
                     ResetDestinationProgress(target);
 
                 _hasDestination = true;
+                _pathBuffer.Clear();
                 _path = null;
                 _pathIndex = 0;
                 _routeBlocked = false;
@@ -193,6 +195,7 @@ namespace MOBA.Core.Simulation.AI
                     ResetDestinationProgress(target);
 
                 _hasDestination = true;
+                _pathBuffer.Clear();
                 _path = null;
                 _pathIndex = 0;
                 _routeBlocked = true;
@@ -231,6 +234,7 @@ namespace MOBA.Core.Simulation.AI
                 _hasDestination = true;
                 if (!canKeepExistingPath)
                 {
+                    _pathBuffer.Clear();
                     _path = null;
                     _pathIndex = 0;
                     _consecutivePathBudgetDeferrals++;
@@ -254,17 +258,24 @@ namespace MOBA.Core.Simulation.AI
             }
 
             _consecutivePathBudgetDeferrals = 0;
-            _path = SimulationClock.Pathfinder.FindPathWithNavigationClearance(
+            AStarSolver pathfinder = SimulationClock.Pathfinder;
+            bool foundPath = pathfinder.TryFindPathNonAlloc(
                 start.x,
                 start.y,
                 end.x,
                 end.y,
+                _pathBuffer,
+                true,
                 BoundaryClearanceCells,
                 ObstacleClearanceCells);
 
-            if (_path == null)
-                _path = SimulationClock.Pathfinder.FindPath(start.x, start.y, end.x, end.y);
+            if (!foundPath)
+            {
+                foundPath = pathfinder.TryFindPathNonAlloc(
+                    start.x, start.y, end.x, end.y, _pathBuffer, false);
+            }
 
+            _path = foundPath ? _pathBuffer : null;
             _pathIndex = 0;
             _hasDestination = true;
             _routeBlocked = _path == null;
@@ -279,6 +290,7 @@ namespace MOBA.Core.Simulation.AI
         public void Stop()
         {
             _hasDestination = false;
+            _pathBuffer.Clear();
             _path = null;
             _pathIndex = 0;
             _routeBlocked = false;
@@ -295,6 +307,7 @@ namespace MOBA.Core.Simulation.AI
         public void ClearDestinationForFallback()
         {
             _hasDestination = false;
+            _pathBuffer.Clear();
             _path = null;
             _pathIndex = 0;
             _routeBlocked = false;

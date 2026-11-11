@@ -451,6 +451,27 @@ namespace MOBA.Core.Simulation.AI
             return endNode != null ? RetracePath(GetNode(startX, startY), endNode) : null;
         }
 
+        internal bool TryFindPathNonAlloc(
+            int startX,
+            int startY,
+            int endX,
+            int endY,
+            List<PathNode> results,
+            bool requireNavigationClearance,
+            int boundaryClearanceCells = 1,
+            int obstacleClearanceCells = 1)
+        {
+            results.Clear();
+            PathNode endNode = FindEndNode(
+                startX, startY, endX, endY, requireNavigationClearance,
+                boundaryClearanceCells, obstacleClearanceCells);
+            if (endNode == null)
+                return false;
+
+            RetracePath(GetNode(startX, startY), endNode, results);
+            return true;
+        }
+
         public bool TryGetPathLength(
             int startX,
             int startY,
@@ -656,10 +677,16 @@ namespace MOBA.Core.Simulation.AI
         private List<PathNode> RetracePath(PathNode start, PathNode end)
         {
             List<PathNode> path = new List<PathNode>();
-            PathNode curr = end;
-            while (curr != start) { path.Add(curr); curr = curr.Parent; }
-            path.Reverse();
+            RetracePath(start, end, path);
             return path;
+        }
+
+        private static void RetracePath(PathNode start, PathNode end, List<PathNode> path)
+        {
+            for (PathNode node = end; node != start; node = node.Parent)
+                path.Add(node);
+
+            path.Reverse();
         }
 
         private int CountPathLength(PathNode start, PathNode end)
