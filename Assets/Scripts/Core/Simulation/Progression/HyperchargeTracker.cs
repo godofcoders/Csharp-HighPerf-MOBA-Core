@@ -42,11 +42,17 @@ namespace MOBA.Core.Simulation
 
         public void Tick(uint currentTick, Action onDeactivate)
         {
-            if (IsActive && currentTick >= _endTick)
-            {
-                IsActive = false;
+            if (TryExpire(currentTick))
                 onDeactivate?.Invoke();
-            }
+        }
+
+        public bool TryExpire(uint currentTick)
+        {
+            if (!IsActive || currentTick < _endTick)
+                return false;
+
+            IsActive = false;
+            return true;
         }
 
         /// <summary>

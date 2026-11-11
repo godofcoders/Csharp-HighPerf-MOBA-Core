@@ -691,7 +691,7 @@ namespace MOBA.Core.Infrastructure
             State.UpdateActionState(currentTick);
             State.UpdateResources(SimulationTiming.TickDeltaSeconds);
 
-            State.Hypercharge.Tick(currentTick, () =>
+            if (State.Hypercharge.TryExpire(currentTick))
             {
                 State.ClearHyperchargeRuntimeModifiers();
 
@@ -708,7 +708,7 @@ namespace MOBA.Core.Infrastructure
 
                 if (_debugLogCombatEvents)
                     Debug.Log("[SIM] Hypercharge Ended");
-            });
+            }
 
             TryExecuteBufferedCommand(currentTick);
 
