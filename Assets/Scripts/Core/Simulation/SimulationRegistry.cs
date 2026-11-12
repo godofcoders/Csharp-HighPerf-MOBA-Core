@@ -20,30 +20,33 @@ namespace MOBA.Core.Simulation
         private static readonly TickPhase[] OrderedPhases =
             (TickPhase[])Enum.GetValues(typeof(TickPhase));
 
-        private readonly Dictionary<TickPhase, List<ITickable>> _byPhase;
+        private readonly Dictionary<TickPhase, int> _phaseIndices;
+        private readonly List<ITickable>[] _phaseBuckets;
 
         private List<ITickable> _dispatchingList;
         private int _nextIndex;
 
         public SimulationRegistry()
         {
-            // Pre-populate every phase bucket so Register() never allocates
-            // a new list during gameplay. Tiny detail, big frame-time win.
-            _byPhase = new Dictionary<TickPhase, List<ITickable>>(OrderedPhases.Length);
-            foreach (var phase in OrderedPhases)
-                _byPhase[phase] = new List<ITickable>(32);
+            _phaseIndices = new Dictionary<TickPhase, int>(OrderedPhases.Length);
+            _phaseBuckets = new List<ITickable>[OrderedPhases.Length];
+            for (int i = 0; i < OrderedPhases.Length; i++)
+            {
+                _phaseIndices.Add(OrderedPhases[i], i);
+                _phaseBuckets[i] = new List<ITickable>(32);
+            }
         }
 
         public void Register(ITickable tickable, TickPhase phase)
         {
-            var list = _byPhase[phase];
+            var list = _phaseBuckets[_phaseIndices[phase]];
             if (!list.Contains(tickable))
                 list.Add(tickable);
         }
 
         public void Unregister(ITickable tickable, TickPhase phase)
         {
-            var list = _byPhase[phase];
+            var list = _phaseBuckets[_phaseIndices[phase]];
             int index = list.IndexOf(tickable);
             if (index < 0)
                 return;
@@ -60,9 +63,9 @@ namespace MOBA.Core.Simulation
 
             try
             {
-                for (int p = 0; p < OrderedPhases.Length; p++)
+                for (int p = 0; p < _phaseBuckets.Length; p++)
                 {
-                    _dispatchingList = _byPhase[OrderedPhases[p]];
+                    _dispatchingList = _phaseBuckets[p];
                     _nextIndex = _dispatchingList.Count - 1;
                     while (_nextIndex >= 0)
                         _dispatchingList[_nextIndex--].Tick(currentTick);
