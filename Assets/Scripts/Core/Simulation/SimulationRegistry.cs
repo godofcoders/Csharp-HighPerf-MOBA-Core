@@ -7,9 +7,8 @@ namespace MOBA.Core.Simulation
     /// Groups tickables by phase, and within a single tick, runs each phase
     /// to completion in phase-order before the next phase starts.
     ///
-    /// Within a phase, execution order is insertion order (fine — the whole
-    /// point of phases is that order BETWEEN phases matters; order WITHIN a
-    /// phase is a don't-care for correctness).
+    /// Within a phase, tickables run in reverse registration order.
+    /// New entries in the current phase wait until the next tick.
     ///
     /// One entity may register to multiple phases (e.g. ProjectileManager
     /// registers to both Movement and Collision). It calls Register() twice.
@@ -22,6 +21,9 @@ namespace MOBA.Core.Simulation
             (TickPhase[])Enum.GetValues(typeof(TickPhase));
 
         private readonly Dictionary<TickPhase, List<ITickable>> _byPhase;
+
+        private List<ITickable> _dispatchingList;
+        private int _nextIndex;
 
         public SimulationRegistry()
         {
@@ -41,21 +43,34 @@ namespace MOBA.Core.Simulation
 
         public void Unregister(ITickable tickable, TickPhase phase)
         {
-            _byPhase[phase].Remove(tickable);
+            var list = _byPhase[phase];
+            int index = list.IndexOf(tickable);
+            if (index < 0)
+                return;
+
+            list.RemoveAt(index);
+            if (list == _dispatchingList && index <= _nextIndex)
+                _nextIndex--;
         }
 
         public void TickAll(uint currentTick)
         {
-            for (int p = 0; p < OrderedPhases.Length; p++)
-            {
-                var list = _byPhase[OrderedPhases[p]];
+            if (_dispatchingList != null)
+                throw new InvalidOperationException("Simulation tick dispatch cannot be nested.");
 
-                // Reverse iteration is deliberate. If a Tick() callback causes
-                // the entity to Unregister itself (common — e.g. a projectile
-                // hits, despawns, and removes itself from the registry), reverse
-                // iteration won't skip elements. Forward iteration would.
-                for (int i = list.Count - 1; i >= 0; i--)
-                    list[i].Tick(currentTick);
+            try
+            {
+                for (int p = 0; p < OrderedPhases.Length; p++)
+                {
+                    _dispatchingList = _byPhase[OrderedPhases[p]];
+                    _nextIndex = _dispatchingList.Count - 1;
+                    while (_nextIndex >= 0)
+                        _dispatchingList[_nextIndex--].Tick(currentTick);
+                }
+            }
+            finally
+            {
+                _dispatchingList = null;
             }
         }
     }

@@ -31,6 +31,7 @@ namespace MOBA.Tests.EditMode
         {
             private readonly TickPhase _identity;
             private readonly List<TickPhase> _orderObserved;
+            public System.Action OnTick { get; set; }
             public int TickCount { get; private set; }
             public uint LastCurrentTick { get; private set; }
 
@@ -45,6 +46,7 @@ namespace MOBA.Tests.EditMode
                 TickCount++;
                 LastCurrentTick = currentTick;
                 _orderObserved?.Add(_identity);
+                OnTick?.Invoke();
             }
         }
 
@@ -190,6 +192,35 @@ namespace MOBA.Tests.EditMode
             Assert.AreEqual(2, a.TickCount, "A still alive next tick");
             Assert.AreEqual(1, b.TickCount, "B is gone, must not tick again");
             Assert.AreEqual(2, c.TickCount, "C still alive next tick");
+        }
+
+        [Test]
+        public void TickAll_CrossRemovalAndRegistration_DoNotRepeatOrRunNewEntry()
+        {
+            const TickPhase phase = TickPhase.Movement;
+            var registry = new SimulationRegistry();
+            var remaining = new RecordingTickable(phase, null);
+            var removed = new RecordingTickable(phase, null);
+            var added = new RecordingTickable(phase, null);
+            var mutator = new RecordingTickable(phase, null);
+            mutator.OnTick = () =>
+            {
+                registry.Unregister(removed, phase);
+                registry.Register(added, phase);
+            };
+
+            registry.Register(remaining, phase);
+            registry.Register(removed, phase);
+            registry.Register(mutator, phase);
+            registry.TickAll(0);
+
+            Assert.AreEqual(1, remaining.TickCount);
+            Assert.AreEqual(0, removed.TickCount);
+            Assert.AreEqual(0, added.TickCount);
+            Assert.AreEqual(1, mutator.TickCount);
+
+            registry.TickAll(1);
+            Assert.AreEqual(1, added.TickCount);
         }
 
         [Test]
