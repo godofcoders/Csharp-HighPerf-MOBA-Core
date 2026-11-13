@@ -65,6 +65,8 @@ namespace MOBA.Core.Infrastructure
         private void OnDestroy()
         {
             SimulationClock.Registry?.Unregister(this, TickPhase.Collision);
+            ServiceProvider.Unregister<IProjectileService>(this);
+            ServiceProvider.Unregister<IProjectileThreatProvider>(this);
             ClearActiveProjectilesForShutdown();
         }
 
@@ -908,11 +910,12 @@ namespace MOBA.Core.Infrastructure
 
                     projectile.GameObject.SetActive(false);
                 }
-
-                ReturnProjectileState(projectile);
             }
 
             _activeProjectiles.Clear();
+            _inactiveProjectileStates.Clear();
+            _hybridImpactTargets.Clear();
+            _chainTargetCandidates.Clear();
             _availableProjectileObjects.Clear();
             _visualControllers.Clear();
         }
