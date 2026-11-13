@@ -73,8 +73,16 @@ public class SimulationClock : MonoBehaviour, ISimulationClock
         if (_registry != null && _visibilityTickSystem != null)
             _registry.Unregister(_visibilityTickSystem, TickPhase.PreTick);
 
+        _combatEventRouter?.Dispose();
+        ServiceProvider.Unregister<ISimulationClock>(this);
+
         if (_instance == this)
+        {
+            Registry = null;
+            Grid = null;
+            Pathfinder = null;
             _instance = null;
+        }
     }
 
     private void Update()
