@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using MOBA.Core.Infrastructure;
@@ -13,7 +14,6 @@ namespace MOBA.Core.Simulation.AI
         private UnityEngine.Vector3 _origin;
         private float _cellSize;
         private readonly List<PathNode> _touchedNodes = new List<PathNode>(256);
-        private readonly List<PathNode> _neighborBuffer = new List<PathNode>(8);
         private readonly PathNodeMinHeap _openHeap = new PathNodeMinHeap(256);
 
         public int Width => _width;
@@ -558,6 +558,7 @@ namespace MOBA.Core.Simulation.AI
 
             _openHeap.Push(startNode);
 
+            Span<int> neighbors = stackalloc int[8];
             while (_openHeap.Count > 0)
             {
                 PathNode current = _openHeap.Pop();
@@ -570,15 +571,15 @@ namespace MOBA.Core.Simulation.AI
 
                 current.IsClosed = true;
 
-                GetNeighborsNonAlloc(
+                int neighborCount = CollectNeighborIndices(
                     current,
-                    _neighborBuffer,
+                    neighbors,
                     requireNavigationClearance,
                     boundaryClearanceCells,
                     obstacleClearanceCells);
-                for (int i = 0; i < _neighborBuffer.Count; i++)
+                for (int i = 0; i < neighborCount; i++)
                 {
-                    PathNode neighbor = _neighborBuffer[i];
+                    PathNode neighbor = _grid[neighbors[i]];
                     if (!IsTraversalNodeValid(
                             neighbor,
                             requireNavigationClearance,
@@ -616,14 +617,14 @@ namespace MOBA.Core.Simulation.AI
             return (distX > distY) ? 14 * distY + 10 * (distX - distY) : 14 * distX + 10 * (distY - distX);
         }
 
-        private void GetNeighborsNonAlloc(
+        private int CollectNeighborIndices(
             PathNode node,
-            List<PathNode> results,
+            Span<int> results,
             bool requireNavigationClearance,
             int boundaryClearanceCells,
             int obstacleClearanceCells)
         {
-            results.Clear();
+            int count = 0;
 
             for (int x = -1; x <= 1; x++)
             {
@@ -650,10 +651,13 @@ namespace MOBA.Core.Simulation.AI
                         }
                     }
 
-                    PathNode n = GetNode(node.X + x, node.Y + y);
-                    if (n != null) results.Add(n);
+                    int neighborX = node.X + x;
+                    int neighborY = node.Y + y;
+                    if (neighborX >= 0 && neighborX < _width && neighborY >= 0 && neighborY < _height)
+                        results[count++] = GetCellIndex(neighborX, neighborY);
                 }
             }
+            return count;
         }
 
         private int GetCellIndex(int x, int y) => x * _height + y;
