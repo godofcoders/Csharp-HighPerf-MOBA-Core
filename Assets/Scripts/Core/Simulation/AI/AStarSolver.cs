@@ -7,7 +7,7 @@ namespace MOBA.Core.Simulation.AI
 {
     public class AStarSolver
     {
-        private PathNode[,] _grid;
+        private readonly PathNode[] _grid;
         private MapData _mapData;
         private int _width, _height;
         private UnityEngine.Vector3 _origin;
@@ -34,11 +34,11 @@ namespace MOBA.Core.Simulation.AI
             _cellSize = cellSize;
             _origin = origin;
 
-            _grid = new PathNode[_width, _height];
+            _grid = new PathNode[walkableMap.Length];
 
             for (int x = 0; x < _width; x++)
                 for (int y = 0; y < _height; y++)
-                    _grid[x, y] = new PathNode(x, y, walkableMap[x, y]);
+                    _grid[GetCellIndex(x, y)] = new PathNode(x, y, walkableMap[x, y]);
         }
 
         public UnityEngine.Vector2Int GetGridCoords(UnityEngine.Vector3 worldPos)
@@ -656,7 +656,12 @@ namespace MOBA.Core.Simulation.AI
             }
         }
 
-        private PathNode GetNode(int x, int y) => (x >= 0 && x < _width && y >= 0 && y < _height) ? _grid[x, y] : null;
+        private int GetCellIndex(int x, int y) => x * _height + y;
+
+        private PathNode GetNode(int x, int y) =>
+            x >= 0 && x < _width && y >= 0 && y < _height
+                ? _grid[GetCellIndex(x, y)]
+                : null;
 
         private bool IsTraversalNodeValid(
             PathNode node,
