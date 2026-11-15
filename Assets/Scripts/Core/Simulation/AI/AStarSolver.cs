@@ -13,8 +13,8 @@ namespace MOBA.Core.Simulation.AI
         private int _width, _height;
         private UnityEngine.Vector3 _origin;
         private float _cellSize;
-        private readonly List<PathNode> _touchedNodes = new List<PathNode>(256);
-        private readonly PathNodeMinHeap _openHeap = new PathNodeMinHeap(256);
+        private readonly List<int> _touchedNodes = new List<int>(256);
+        private readonly PathNodeMinHeap _openHeap;
 
         public int Width => _width;
         public int Height => _height;
@@ -35,6 +35,7 @@ namespace MOBA.Core.Simulation.AI
             _origin = origin;
 
             _grid = new PathNode[walkableMap.Length];
+            _openHeap = new PathNodeMinHeap(_grid, 256);
 
             for (int x = 0; x < _width; x++)
                 for (int y = 0; y < _height; y++)
@@ -552,16 +553,17 @@ namespace MOBA.Core.Simulation.AI
                 return null;
             }
 
-            TouchNode(startNode);
+            int startIndex = GetCellIndex(startX, startY);
+            TouchNode(startIndex);
             startNode.GCost = 0;
             startNode.HCost = GetDistance(startNode, endNode);
 
-            _openHeap.Push(startNode);
+            _openHeap.Push(startIndex);
 
             Span<int> neighbors = stackalloc int[8];
             while (_openHeap.Count > 0)
             {
-                PathNode current = _openHeap.Pop();
+                PathNode current = _grid[_openHeap.Pop()];
 
                 if (current == endNode)
                 {
@@ -579,7 +581,8 @@ namespace MOBA.Core.Simulation.AI
                     obstacleClearanceCells);
                 for (int i = 0; i < neighborCount; i++)
                 {
-                    PathNode neighbor = _grid[neighbors[i]];
+                    int neighborIndex = neighbors[i];
+                    PathNode neighbor = _grid[neighborIndex];
                     if (!IsTraversalNodeValid(
                             neighbor,
                             requireNavigationClearance,
@@ -594,12 +597,12 @@ namespace MOBA.Core.Simulation.AI
                     bool alreadyOpen = neighbor.IsOpen;
                     if (newCostToNeighbor < neighbor.GCost || !alreadyOpen)
                     {
-                        TouchNode(neighbor);
+                        TouchNode(neighborIndex);
                         neighbor.GCost = newCostToNeighbor;
                         neighbor.HCost = GetDistance(neighbor, endNode);
                         neighbor.Parent = current;
                         if (!alreadyOpen)
-                            _openHeap.Push(neighbor);
+                            _openHeap.Push(neighborIndex);
                         else
                             _openHeap.DecreaseKey(neighbor);
                     }
@@ -716,7 +719,7 @@ namespace MOBA.Core.Simulation.AI
         {
             for (int i = 0; i < _touchedNodes.Count; i++)
             {
-                PathNode node = _touchedNodes[i];
+                PathNode node = _grid[_touchedNodes[i]];
                 node.GCost = int.MaxValue;
                 node.HCost = 0;
                 node.Parent = null;
@@ -730,13 +733,14 @@ namespace MOBA.Core.Simulation.AI
             _touchedNodes.Clear();
         }
 
-        private void TouchNode(PathNode node)
+        private void TouchNode(int cellIndex)
         {
-            if (node == null || node.IsPathTouched)
+            PathNode node = _grid[cellIndex];
+            if (node.IsPathTouched)
                 return;
 
             node.IsPathTouched = true;
-            _touchedNodes.Add(node);
+            _touchedNodes.Add(cellIndex);
         }
 
         private void RecordPathQuery(bool success)
@@ -760,50 +764,54 @@ namespace MOBA.Core.Simulation.AI
         /// </summary>
         private sealed class PathNodeMinHeap
         {
-            private readonly List<PathNode> _nodes;
+            private readonly PathNode[] _grid;
+            private readonly List<int> _cells;
             private int _nextOrder;
 
-            public int Count => _nodes.Count;
+            public int Count => _cells.Count;
 
-            public PathNodeMinHeap(int capacity)
+            public PathNodeMinHeap(PathNode[] grid, int capacity)
             {
-                _nodes = new List<PathNode>(capacity);
+                _grid = grid;
+                _cells = new List<int>(capacity);
             }
 
             public void Clear()
             {
-                _nodes.Clear();
+                _cells.Clear();
                 _nextOrder = 0;
             }
 
-            public void Push(PathNode node)
+            public void Push(int cellIndex)
             {
+                PathNode node = _grid[cellIndex];
                 node.IsOpen = true;
-                node.OpenHeapIndex = _nodes.Count;
+                node.OpenHeapIndex = _cells.Count;
                 node.OpenOrder = _nextOrder++;
-                _nodes.Add(node);
+                _cells.Add(cellIndex);
                 SiftUp(node.OpenHeapIndex);
             }
 
-            public PathNode Pop()
+            public int Pop()
             {
-                PathNode result = _nodes[0];
-                int lastIndex = _nodes.Count - 1;
+                int cellIndex = _cells[0];
+                PathNode result = _grid[cellIndex];
+                int lastIndex = _cells.Count - 1;
                 result.IsOpen = false;
                 result.OpenHeapIndex = -1;
 
                 if (lastIndex == 0)
                 {
-                    _nodes.RemoveAt(0);
-                    return result;
+                    _cells.RemoveAt(0);
+                    return cellIndex;
                 }
 
-                PathNode last = _nodes[lastIndex];
-                _nodes[0] = last;
-                last.OpenHeapIndex = 0;
-                _nodes.RemoveAt(lastIndex);
+                int last = _cells[lastIndex];
+                _cells[0] = last;
+                _grid[last].OpenHeapIndex = 0;
+                _cells.RemoveAt(lastIndex);
                 SiftDown(0);
-                return result;
+                return cellIndex;
             }
 
             public void DecreaseKey(PathNode node)
@@ -817,7 +825,7 @@ namespace MOBA.Core.Simulation.AI
                 while (index > 0)
                 {
                     int parent = (index - 1) / 2;
-                    if (!ComesBefore(_nodes[index], _nodes[parent]))
+                    if (!ComesBefore(_cells[index], _cells[parent]))
                         break;
 
                     Swap(index, parent);
@@ -830,15 +838,15 @@ namespace MOBA.Core.Simulation.AI
                 while (true)
                 {
                     int left = index * 2 + 1;
-                    if (left >= _nodes.Count)
+                    if (left >= _cells.Count)
                         return;
 
                     int right = left + 1;
                     int best = left;
-                    if (right < _nodes.Count && ComesBefore(_nodes[right], _nodes[left]))
+                    if (right < _cells.Count && ComesBefore(_cells[right], _cells[left]))
                         best = right;
 
-                    if (!ComesBefore(_nodes[best], _nodes[index]))
+                    if (!ComesBefore(_cells[best], _cells[index]))
                         return;
 
                     Swap(index, best);
@@ -848,15 +856,17 @@ namespace MOBA.Core.Simulation.AI
 
             private void Swap(int left, int right)
             {
-                PathNode temp = _nodes[left];
-                _nodes[left] = _nodes[right];
-                _nodes[right] = temp;
-                _nodes[left].OpenHeapIndex = left;
-                _nodes[right].OpenHeapIndex = right;
+                int temp = _cells[left];
+                _cells[left] = _cells[right];
+                _cells[right] = temp;
+                _grid[_cells[left]].OpenHeapIndex = left;
+                _grid[_cells[right]].OpenHeapIndex = right;
             }
 
-            private static bool ComesBefore(PathNode left, PathNode right)
+            private bool ComesBefore(int leftIndex, int rightIndex)
             {
+                PathNode left = _grid[leftIndex];
+                PathNode right = _grid[rightIndex];
                 if (left.FCost != right.FCost)
                     return left.FCost < right.FCost;
 
