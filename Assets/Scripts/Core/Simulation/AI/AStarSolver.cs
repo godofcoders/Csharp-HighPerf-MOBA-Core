@@ -604,7 +604,7 @@ namespace MOBA.Core.Simulation.AI
                         if (!alreadyOpen)
                             _openHeap.Push(neighborIndex);
                         else
-                            _openHeap.DecreaseKey(neighbor);
+                            _openHeap.DecreaseKey(neighbor.OpenHeapIndex);
                     }
                 }
             }
@@ -814,11 +814,7 @@ namespace MOBA.Core.Simulation.AI
                 return cellIndex;
             }
 
-            public void DecreaseKey(PathNode node)
-            {
-                if (node.OpenHeapIndex >= 0)
-                    SiftUp(node.OpenHeapIndex);
-            }
+            public void DecreaseKey(int heapIndex) => SiftUp(heapIndex);
 
             private void SiftUp(int index)
             {
