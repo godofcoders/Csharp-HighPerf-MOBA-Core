@@ -9,10 +9,10 @@ namespace MOBA.Core.Simulation.AI
     public class AStarSolver
     {
         private readonly PathNode[] _grid;
-        private MapData _mapData;
-        private int _width, _height;
-        private UnityEngine.Vector3 _origin;
-        private float _cellSize;
+        private readonly MapData _mapData;
+        private readonly int _width, _height;
+        private readonly UnityEngine.Vector3 _origin;
+        private readonly float _cellSize;
         private readonly List<int> _touchedNodes = new List<int>(256);
         private readonly PathNodeMinHeap _openHeap;
 
