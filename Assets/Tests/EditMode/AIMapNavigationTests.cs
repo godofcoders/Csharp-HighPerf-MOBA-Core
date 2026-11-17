@@ -100,6 +100,19 @@ namespace MOBA.Tests.EditMode
         }
 
         [Test]
+        public void AStarSolver_EqualCostRoutesKeepNeighborInsertionOrder()
+        {
+            MapData map = MakeMap(3, 2, true);
+            AStarSolver solver = new AStarSolver(map);
+
+            // Straight then diagonal and diagonal then straight both cost 24.
+            var path = solver.FindPath(0, 0, 2, 1);
+
+            Assert.That(path.Count, Is.EqualTo(2));
+            Assert.That(new Vector2Int(path[0].X, path[0].Y), Is.EqualTo(new Vector2Int(1, 0)));
+        }
+
+        [Test]
         public void AStarSolver_ResetsNodeStateBetweenQueries()
         {
             MapData map = MakeMap(5, 5, true);
