@@ -863,8 +863,10 @@ namespace MOBA.Core.Simulation.AI
             {
                 PathNode left = _grid[leftIndex];
                 PathNode right = _grid[rightIndex];
-                if (left.FCost != right.FCost)
-                    return left.FCost < right.FCost;
+                int leftCost = left.FCost;
+                int rightCost = right.FCost;
+                if (leftCost != rightCost)
+                    return leftCost < rightCost;
 
                 // The old list scan retained insertion order for equal FCost
                 // nodes. Preserve that tie-breaker for deterministic paths.
