@@ -818,14 +818,24 @@ namespace MOBA.Core.Simulation.AI
 
             private void SiftUp(int index)
             {
+                int cell = _cells[index];
+                int start = index;
                 while (index > 0)
                 {
                     int parent = (index - 1) / 2;
-                    if (!ComesBefore(_cells[index], _cells[parent]))
+                    int parentCell = _cells[parent];
+                    if (!ComesBefore(cell, parentCell))
                         break;
 
-                    Swap(index, parent);
+                    _cells[index] = parentCell;
+                    _grid[parentCell].OpenHeapIndex = index;
                     index = parent;
+                }
+
+                if (index != start)
+                {
+                    _cells[index] = cell;
+                    _grid[cell].OpenHeapIndex = index;
                 }
             }
 
