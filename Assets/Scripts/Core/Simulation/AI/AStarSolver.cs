@@ -841,32 +841,33 @@ namespace MOBA.Core.Simulation.AI
 
             private void SiftDown(int index)
             {
+                int cell = _cells[index];
+                int start = index;
                 while (true)
                 {
                     int left = index * 2 + 1;
                     if (left >= _cells.Count)
-                        return;
+                        break;
 
                     int right = left + 1;
                     int best = left;
                     if (right < _cells.Count && ComesBefore(_cells[right], _cells[left]))
                         best = right;
 
-                    if (!ComesBefore(_cells[best], _cells[index]))
-                        return;
+                    int child = _cells[best];
+                    if (!ComesBefore(child, cell))
+                        break;
 
-                    Swap(index, best);
+                    _cells[index] = child;
+                    _grid[child].OpenHeapIndex = index;
                     index = best;
                 }
-            }
 
-            private void Swap(int left, int right)
-            {
-                int temp = _cells[left];
-                _cells[left] = _cells[right];
-                _cells[right] = temp;
-                _grid[_cells[left]].OpenHeapIndex = left;
-                _grid[_cells[right]].OpenHeapIndex = right;
+                if (index != start)
+                {
+                    _cells[index] = cell;
+                    _grid[cell].OpenHeapIndex = index;
+                }
             }
 
             private bool ComesBefore(int leftIndex, int rightIndex)
