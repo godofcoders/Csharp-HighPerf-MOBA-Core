@@ -31,13 +31,27 @@ namespace MOBA.Core.Simulation.AI
                     _openHeapIndexValue = value;
             }
         }
-        public int OpenOrder;
+        private int[] _openOrder;
+        private int _openOrderValue = 0;
 
-        internal PathNode(int x, int y, bool walkable, int cellIndex, int[] heapIndices)
+        public int OpenOrder
+        {
+            get => _openOrder != null ? _openOrder[_cellIndex] : _openOrderValue;
+            set
+            {
+                if (_openOrder != null)
+                    _openOrder[_cellIndex] = value;
+                else
+                    _openOrderValue = value;
+            }
+        }
+
+        internal PathNode(int x, int y, bool walkable, int cellIndex, int[] heapIndices, int[] openOrders)
             : this(x, y, walkable)
         {
             _cellIndex = cellIndex;
             _openHeapIndex = heapIndices;
+            _openOrder = openOrders;
             OpenHeapIndex = -1;
         }
 

@@ -37,10 +37,11 @@ namespace MOBA.Core.Simulation.AI
             _grid = new PathNode[walkableMap.Length];
             _openHeap = new PathNodeMinHeap(_grid, 256);
             int[] heapIndices = new int[_grid.Length];
+            int[] openOrders = new int[_grid.Length];
 
             for (int x = 0; x < _width; x++)
                 for (int y = 0; y < _height; y++)
-                    _grid[GetCellIndex(x, y)] = new PathNode(x, y, walkableMap[x, y], GetCellIndex(x, y), heapIndices);
+                    _grid[GetCellIndex(x, y)] = new PathNode(x, y, walkableMap[x, y], GetCellIndex(x, y), heapIndices, openOrders);
         }
 
         public UnityEngine.Vector2Int GetGridCoords(UnityEngine.Vector3 worldPos)
